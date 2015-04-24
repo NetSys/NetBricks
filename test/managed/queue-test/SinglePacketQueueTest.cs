@@ -35,10 +35,12 @@ public class SinglePacketTest {
 
   private int producerCore_;
   private int consumerCore_;
-  public SinglePacketTest(int producerCore, int consumerCore) { 
+  private int nbufs_;
+  public SinglePacketTest(int producerCore, int consumerCore, int nbuffers) { 
     queue_ = new ConcurrentQueue<Packet>();
     producerCore_ = producerCore;
     consumerCore_ = consumerCore;
+    nbufs_ = nbuffers;
   }
 
   protected void SetAffinity (int core) {
@@ -67,14 +69,17 @@ public class SinglePacketTest {
 
   protected void ProducerStart() {
     SetAffinity(producerCore_);
+    //Packet[] packets = new Packet[nbufs_];
     Stopwatch stopwatch = new Stopwatch();
     stopwatch.Start();
     long lastSec = stopwatch.ElapsedMilliseconds / 1000;
     long count = 0;
     long absCount = 0;
+    long buf = 0;
     while (true) {
       long currSec = stopwatch.ElapsedMilliseconds / 1000;
       queue_.Enqueue(new Packet(absCount));
+      //buf = (buf + 1) % nbufs_;
       count++;
       absCount++;
       if (currSec != lastSec) {
@@ -125,7 +130,7 @@ public class QueueTest {
     #else
     Console.WriteLine("Windows");
     #endif
-    SinglePacketTest sp = new SinglePacketTest(0, 1);
+    SinglePacketTest sp = new SinglePacketTest(0, 1, 100);
     sp.Start();
   }
 }
