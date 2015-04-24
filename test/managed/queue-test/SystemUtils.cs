@@ -44,7 +44,7 @@ public class SysUtils {
   }
 
   public static long GetSecond (Stopwatch stopwatch) {
-    stopwatch.ElapsedMilliseconds / 1000  
+    return stopwatch.ElapsedMilliseconds / 1000; 
   }
 
 }

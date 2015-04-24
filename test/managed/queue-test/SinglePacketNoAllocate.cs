@@ -4,29 +4,23 @@ using System.Threading;
 using System.Diagnostics;
 
 namespace E2D2 {
-public class Packet {
-  Int64 id_;
-  public Int64 id 
-  {
-      get {return id_;}
-  }
-  public Packet(Int64 id) {
-    id_ = id;
-  }
-}
-
-public class SinglePacketTestAllocate {
+public class SinglePacketTestReuse {
 
   protected internal ConcurrentQueue<Packet> queue_;
 
   private int producerCore_;
   private int consumerCore_;
   public long received_;
-  public SinglePacketTestAllocate(int producerCore, int consumerCore) { 
+  private Packet[] packets_;
+  public SinglePacketTestReuse(int producerCore, int consumerCore, int nbufs) { 
     queue_ = new ConcurrentQueue<Packet>();
     producerCore_ = producerCore;
     consumerCore_ = consumerCore;
     received_ = 0;
+    packets_ = new Packet[nbufs];
+    for (int i = 0; i < nbufs; i++) {
+      packets_[i] = new Packet(i);
+    }
   }
 
   protected void ProducerStart() {
@@ -38,7 +32,9 @@ public class SinglePacketTestAllocate {
     long absCount = 0;
     while (true) {
       long currSec = SysUtils.GetSecond(stopwatch);
-      queue_.Enqueue(new Packet(absCount));
+      Packet packet = packets_[(int)(absCount % packets_.Length)];
+      Debug.Assert(packet != null);
+      queue_.Enqueue(packet);
       count++;
       absCount++;
       if (currSec != lastSec) {
@@ -63,10 +59,11 @@ public class SinglePacketTestAllocate {
       }
       long currSec = SysUtils.GetSecond(stopwatch);
       if (currSec != lastSec) {
-        lastSec = currSec;
         long currElapsed = stopwatch.ElapsedMilliseconds;
-        Console.WriteLine(SysUtils.GetCurrentCpu() + " " 
+        Debug.Assert(currElapsed - lastElapsed > 0);
+        Console.WriteLine(lastSec + " " + currSec + " " + SysUtils.GetCurrentCpu() + " " 
                         + count + " " + received_ + " " + (currElapsed - lastElapsed));
+        lastSec = currSec;
         lastElapsed = currElapsed;
         count = 0;
       }
@@ -80,28 +77,6 @@ public class SinglePacketTestAllocate {
     consumer.Start();
     producer.Join();
     consumer.Join();
-  }
-}
-
-
-
-public class QueueTest {
-  public static void Main (string[] args) {
-    #if __MonoCS__
-    Console.WriteLine("Running Mono");
-    #else
-    Console.WriteLine("Running Windows");
-    #endif
-
-    #if REUSE
-    Console.WriteLine("Reusing buffers");
-    SinglePacketTestReuse sp = new SinglePacketTestReuse(0, 1, 10000000);
-    #else
-    Console.WriteLine("Allocating new packets");
-    SinglePacketTestAllocate sp = new SinglePacketTestAllocate(0, 1);
-    #endif
-    
-    sp.Start();
   }
 }
 }
