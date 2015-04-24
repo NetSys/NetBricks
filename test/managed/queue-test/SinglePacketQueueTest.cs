@@ -71,13 +71,15 @@ public class SinglePacketTest {
     stopwatch.Start();
     long lastSec = stopwatch.ElapsedMilliseconds / 1000;
     long count = 0;
+    long absCount = 0;
     while (true) {
       long currSec = stopwatch.ElapsedMilliseconds / 1000;
-      queue_.Enqueue(new Packet(currSec + count));
+      queue_.Enqueue(new Packet(absCount));
       count++;
+      absCount++;
       if (currSec != lastSec) {
         lastSec = currSec;
-        Console.WriteLine("Produce " + GetCurrentCpu() + " " + count);
+        // Console.WriteLine locks, so let us further reduce contention here
         count = 0;
       }
     }
@@ -89,15 +91,17 @@ public class SinglePacketTest {
     stopwatch.Start();
     long lastSec = stopwatch.ElapsedMilliseconds / 1000;
     long count = 0;
+    long received = 0;
     while (true) {
       Packet pkt;
       if (queue_.TryDequeue(out pkt)) {
         count++;
+        received = pkt.id;
       }
       long currSec = stopwatch.ElapsedMilliseconds / 1000;
       if (currSec != lastSec) {
         lastSec = currSec;
-        Console.WriteLine("Consume " + GetCurrentCpu() + " " + count);
+        Console.WriteLine("Consume " + GetCurrentCpu() + " " + count + " " + received);
         count = 0;
       }
     }
