@@ -2,31 +2,23 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Diagnostics;
+using E2D2.Collections.Concurrent;
 
 namespace E2D2 {
-public class Packet {
-  Int64 id_;
-  public Int64 id 
-  {
-      get {return id_;}
-  }
-  public Packet(Int64 id) {
-    id_ = id;
-  }
-}
+public class BatchPacketTestAllocate {
 
-public class SinglePacketTestAllocate {
-
-  protected internal ConcurrentQueue<Packet> queue_;
+  protected internal ConcurrentQueueBatch<Packet> queue_;
 
   private int producerCore_;
   private int consumerCore_;
   public long received_;
-  public SinglePacketTestAllocate(int producerCore, int consumerCore) { 
-    queue_ = new ConcurrentQueue<Packet>();
+  public long produceBatchSize_;
+  public BatchPacketTestAllocate(int producerCore, int consumerCore, int produceBatchSize) { 
+    queue_ = new ConcurrentQueueBatch<Packet>();
     producerCore_ = producerCore;
     consumerCore_ = consumerCore;
     received_ = 0;
+    produceBatchSize_ = produceBatchSize;
   }
 
   protected void ProducerStart() {
@@ -38,9 +30,13 @@ public class SinglePacketTestAllocate {
     long absCount = 0;
     while (true) {
       long currSec = SysUtils.GetSecond(stopwatch);
-      queue_.Enqueue(new Packet(absCount));
-      count++;
-      absCount++;
+      Packet[] batch = new Packet[produceBatchSize_];
+      for (int i = 0; i < batch.Length; i++) {
+          batch[i] = new Packet(absCount);
+          count++;
+          absCount++;
+      }
+      queue_.EnqueueBatch(batch);
       if (currSec != lastSec) {
         lastSec = currSec;
         count = 0;
@@ -66,7 +62,8 @@ public class SinglePacketTestAllocate {
         lastSec = currSec;
         long currElapsed = stopwatch.ElapsedMilliseconds;
         Console.WriteLine(SysUtils.GetCurrentCpu() + " " 
-                        + count + " " + received_ + " " + (currElapsed - lastElapsed));
+                        + count + " " + received_ + " " + (currElapsed - lastElapsed) +
+                        " " + queue_.ToArray().Length);
         lastElapsed = currElapsed;
         count = 0;
       }
@@ -83,9 +80,22 @@ public class SinglePacketTestAllocate {
   }
 }
 
-
-#if false
-public class QueueTest {
+public class BatchQueueTest {
+  public static void Test () {
+    ConcurrentQueueBatch<Int32> queue = new ConcurrentQueueBatch<Int32>();
+    Int32[] batch = new Int32[10];
+    for (int i = 0; i < batch.Length; i++) {
+      batch[i] = i;
+    }
+    queue.EnqueueBatch(batch);
+    Console.WriteLine("Is queue empty? " + queue.IsEmpty);
+    while (!queue.IsEmpty) {
+      Int32 x;
+      if (queue.TryDequeue(out x)) {
+        Console.WriteLine("Dequeued " + x);
+      }
+    }
+  }
   public static void Main (string[] args) {
     #if __MonoCS__
     Console.WriteLine("Running Mono");
@@ -93,16 +103,10 @@ public class QueueTest {
     Console.WriteLine("Running Windows");
     #endif
 
-    #if REUSE
-    Console.WriteLine("Reusing buffers");
-    SinglePacketTestReuse sp = new SinglePacketTestReuse(0, 1, 10000000);
-    #else
-    Console.WriteLine("Allocating new packets");
-    SinglePacketTestAllocate sp = new SinglePacketTestAllocate(0, 1);
-    #endif
-    
-    sp.Start();
+    //Test();
+    BatchPacketTestAllocate bp = new BatchPacketTestAllocate(0, 1, 10);
+
+    bp.Start();
   }
 }
-#endif
 }
