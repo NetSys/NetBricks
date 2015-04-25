@@ -38,7 +38,7 @@ public class BatchPacketTestAllocate {
     while (true) {
       long currSec = SysUtils.GetSecond(stopwatch);
       count++;
-      queue_.EnqueueBatch(batch);
+      queue_.EnqueueBatch(ref batch);
       if (currSec != lastSec) {
         lastSec = currSec;
         count = 0;
@@ -55,7 +55,7 @@ public class BatchPacketTestAllocate {
     long count = 0;
     Packet[] batch = new Packet[receiveBatchSize_];
     while (true) {
-      int dequed = queue_.DequeueBatch(batch);
+      int dequed = queue_.DequeueBatch(ref batch);
       if (dequed > 0) {
         received_ = batch[dequed - 1].id;
       }
@@ -89,11 +89,11 @@ public class BatchQueueTest {
     for (int i = 0; i < batch.Length; i++) {
       batch[i] = i;
     }
-    queue.EnqueueBatch(batch);
+    queue.EnqueueBatch(ref batch);
     Console.WriteLine("Is queue empty? " + queue.IsEmpty);
     while (!queue.IsEmpty) {
       Int32[] x = new Int32[20];
-      int count = queue.DequeueBatch(x);
+      int count = queue.DequeueBatch(ref x);
       Console.WriteLine("Dequed batch of " + count);
       for(int i = 0; i < count; i++) {
           Console.WriteLine("Dequeued " + x[i]);
