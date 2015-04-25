@@ -30,7 +30,7 @@ public class RingThroughputTestNoAllocate {
                                  uint ringSize,
                                  int produceBatchSize, 
                                  int receiveBatch) { 
-    queue_ = new LLRing<Packet>(ringSize, false, false);
+    queue_ = new LLRing<Packet>(ringSize, true, true);
     producerCore_ = producerCore;
     consumerCore_ = consumerCore;
     received_ = 0;

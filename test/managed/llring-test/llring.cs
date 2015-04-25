@@ -37,15 +37,16 @@ namespace E2D2.Collections.Concurrent
         [StructLayout(LayoutKind.Sequential, Pack = CACHELINE_SIZE)]
         #endif
         internal protected struct Producer {
-            public volatile UInt32 head;
-            public volatile UInt32 tail;
+            public volatile UInt32 head; // The head marks the maximum reserved by any 
+                                         // producer.
+            public volatile UInt32 tail; // The tail marks the maximum committed by any producer.
         }
         #if (!__MonoCS__)
         [StructLayout(LayoutKind.Sequential, Pack = CACHELINE_SIZE)]
         #endif
         internal protected struct Consumer {
-            public volatile UInt32 head;
-            public volatile UInt32 tail;
+            public volatile UInt32 head; // Similarly, the head marks the maximum reserved to be read by any consumer.
+            public volatile UInt32 tail; // Tail marks what has been committed.
         }
         internal protected Common common;
         internal protected Producer prod;
