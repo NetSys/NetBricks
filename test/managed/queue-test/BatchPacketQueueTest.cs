@@ -108,7 +108,7 @@ public class BatchQueueTest {
     #endif
 
     //Test();
-    BatchPacketTestAllocate bp = new BatchPacketTestAllocate(0, 1, 500, 1000);
+    BatchPacketTestAllocate bp = new BatchPacketTestAllocate(0, 1, 500, 500);
 
     bp.Start();
   }
