@@ -25,36 +25,64 @@ namespace E2D2.Collections.Concurrent
         public const UInt32 RING_QUOT_EXCEED = 1u << 31;
         #if (!__MonoCS__)
         [StructLayout(LayoutKind.Sequential, Pack = CACHELINE_SIZE)]
+        private struct Common {
+        #else
+        [StructLayout(LayoutKind.Sequential)]
+        private unsafe struct Common {
         #endif
-        internal protected struct Common {
             public UInt32 slots;
+            // Padding to fake the Pack parameter
+            #if (__MonoCS__)
+            fixed byte _pad0[CACHELINE_SIZE];
+            #endif
             public UInt32 mask;
+            #if (__MonoCS__)
+            fixed byte _pad1[CACHELINE_SIZE];
+            #endif
             public UInt32 watermark;
+            #if (__MonoCS__)
+            fixed byte _pad2[CACHELINE_SIZE];
+            #endif
             public bool sp_enqueue;
+            #if (__MonoCS__)
+            fixed byte _pad3[CACHELINE_SIZE];
+            #endif
             public bool sc_dequeue;
         }
         #if (!__MonoCS__)
         [StructLayout(LayoutKind.Sequential, Pack = CACHELINE_SIZE)]
+        private struct Producer {
+        #else
+        [StructLayout(LayoutKind.Sequential)]
+        private unsafe struct Producer {
         #endif
-        internal protected struct Producer {
             public volatile UInt32 head; // The head marks the maximum reserved by any 
                                          // producer.
+            #if (__MonoCS__)
+            fixed byte _pad0[CACHELINE_SIZE];
+            #endif
             public volatile UInt32 tail; // The tail marks the maximum committed by any producer.
         }
         #if (!__MonoCS__)
         [StructLayout(LayoutKind.Sequential, Pack = CACHELINE_SIZE)]
+        private struct Consumer {
+        #else
+        [StructLayout(LayoutKind.Sequential)]
+        private unsafe struct Consumer {
         #endif
-        internal protected struct Consumer {
             public volatile UInt32 head; // Similarly, the head marks the maximum reserved to be read by any consumer.
+            #if (__MonoCS__)
+            fixed byte _pad0[CACHELINE_SIZE];
+            #endif
             public volatile UInt32 tail; // Tail marks what has been committed.
         }
-        internal protected Common common;
-        internal protected Producer prod;
-        internal protected Consumer cons;
+        private Common common;
+        private Producer prod;
+        private Consumer cons;
         // TODO: Can make this happen with unsafe, but should we, in particular
         // ring is not guaranteed to be even in the same place.
         //private fixed byte padding[CACHELINE_SIZE];
-        internal protected volatile T[] ring;
+        private T[] ring;
         
         /// Construct
         public LLRing(uint slots, bool sp, bool sc) {
