@@ -13,12 +13,14 @@ public class BatchPacketTestAllocate {
   private int consumerCore_;
   public long received_;
   public long produceBatchSize_;
-  public BatchPacketTestAllocate(int producerCore, int consumerCore, int produceBatchSize) { 
+  public long receiveBatchSize_;
+  public BatchPacketTestAllocate(int producerCore, int consumerCore, int produceBatchSize, int receiveBatch) { 
     queue_ = new ConcurrentQueueBatch<Packet>();
     producerCore_ = producerCore;
     consumerCore_ = consumerCore;
     received_ = 0;
     produceBatchSize_ = produceBatchSize;
+    receiveBatchSize_ = receiveBatch;
   }
 
   protected void ProducerStart() {
@@ -28,14 +30,14 @@ public class BatchPacketTestAllocate {
     long lastSec = SysUtils.GetSecond(stopwatch);
     long count = 0;
     long absCount = 0;
+    Packet[] batch = new Packet[produceBatchSize_]; 
+    for (int i = 0; i < batch.Length; i++) {
+        batch[i] = new Packet(absCount);
+        absCount++;
+    }
     while (true) {
       long currSec = SysUtils.GetSecond(stopwatch);
-      Packet[] batch = new Packet[produceBatchSize_];
-      for (int i = 0; i < batch.Length; i++) {
-          batch[i] = new Packet(absCount);
-          count++;
-          absCount++;
-      }
+      count++;
       queue_.EnqueueBatch(batch);
       if (currSec != lastSec) {
         lastSec = currSec;
@@ -51,19 +53,19 @@ public class BatchPacketTestAllocate {
     long lastSec = SysUtils.GetSecond(stopwatch);
     long lastElapsed = stopwatch.ElapsedMilliseconds;
     long count = 0;
+    Packet[] batch = new Packet[receiveBatchSize_];
     while (true) {
-      Packet pkt;
-      if (queue_.TryDequeue(out pkt)) {
-        count++;
-        received_ = pkt.id;
+      int dequed = queue_.DequeueBatch(batch);
+      if (dequed > 0) {
+        received_ = batch[dequed - 1].id;
       }
+      count += dequed;
       long currSec = SysUtils.GetSecond(stopwatch);
       if (currSec != lastSec) {
         lastSec = currSec;
         long currElapsed = stopwatch.ElapsedMilliseconds;
-        Console.WriteLine(SysUtils.GetCurrentCpu() + " " 
-                        + count + " " + received_ + " " + (currElapsed - lastElapsed) +
-                        " " + queue_.ToArray().Length);
+        Console.WriteLine(SysUtils.GetCurrentCpu() + " " + dequed + " "  
+                        + count + " " + received_ + " " + (currElapsed - lastElapsed));
         lastElapsed = currElapsed;
         count = 0;
       }
@@ -90,9 +92,11 @@ public class BatchQueueTest {
     queue.EnqueueBatch(batch);
     Console.WriteLine("Is queue empty? " + queue.IsEmpty);
     while (!queue.IsEmpty) {
-      Int32 x;
-      if (queue.TryDequeue(out x)) {
-        Console.WriteLine("Dequeued " + x);
+      Int32[] x = new Int32[20];
+      int count = queue.DequeueBatch(x);
+      Console.WriteLine("Dequed batch of " + count);
+      for(int i = 0; i < count; i++) {
+          Console.WriteLine("Dequeued " + x[i]);
       }
     }
   }
@@ -104,7 +108,7 @@ public class BatchQueueTest {
     #endif
 
     //Test();
-    BatchPacketTestAllocate bp = new BatchPacketTestAllocate(0, 1, 10);
+    BatchPacketTestAllocate bp = new BatchPacketTestAllocate(0, 1, 500, 1000);
 
     bp.Start();
   }
