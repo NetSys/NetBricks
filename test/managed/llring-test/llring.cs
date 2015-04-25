@@ -136,7 +136,7 @@ namespace E2D2.Collections.Concurrent
             }
         }
 
-        // CLS compliance dictates that Interlocked.CompareExchange in C# only handles unsigned variables
+        // CLS compliance dictates that Interlocked.CompareExchange in C# only handles signed variables
         // (yes there were stupid decisions). As a result need to build one that does unsigned for this class.
         unsafe UInt32 CompareExchange(ref UInt32 target, UInt32 val, UInt32 cmp) {
             fixed(UInt32* p = &target) {
