@@ -16,17 +16,21 @@ public class Packet {
   }
 }
 
-public class BatchPacketTestAllocate {
+public class RingThroughputTestNoAllocate {
 
-  protected internal ConcurrentQueueBatch<Packet> queue_;
+  protected internal LLRing<Packet> queue_;
 
   private int producerCore_;
   private int consumerCore_;
   public long received_;
   public long produceBatchSize_;
   public long receiveBatchSize_;
-  public BatchPacketTestAllocate(int producerCore, int consumerCore, int produceBatchSize, int receiveBatch) { 
-    queue_ = new ConcurrentQueueBatch<Packet>();
+  public RingThroughputTestNoAllocate(int producerCore, 
+                                 int consumerCore, 
+                                 uint ringSize,
+                                 int produceBatchSize, 
+                                 int receiveBatch) { 
+    queue_ = new LLRing<Packet>(ringSize, true, true);
     producerCore_ = producerCore;
     consumerCore_ = consumerCore;
     received_ = 0;
@@ -66,7 +70,8 @@ public class BatchPacketTestAllocate {
     long count = 0;
     Packet[] batch = new Packet[receiveBatchSize_];
     while (true) {
-      int dequed = queue_.DequeueBatch(ref batch);
+      int dequed = (int)queue_.DequeueBatch(ref batch);
+      
       if (dequed > 0) {
         received_ = batch[dequed - 1].id;
       }
@@ -92,24 +97,23 @@ public class BatchPacketTestAllocate {
     consumer.Join();
   }
 }
-
-public class BatchQueueTest {
+public class RingThroughputTest {
   public static void Test () {
-    ConcurrentQueueBatch<Int32> queue = new ConcurrentQueueBatch<Int32>();
-    Int32[] batch = new Int32[10];
-    for (int i = 0; i < batch.Length; i++) {
-      batch[i] = i;
-    }
-    queue.EnqueueBatch(ref batch);
-    Console.WriteLine("Is queue empty? " + queue.IsEmpty);
-    while (!queue.IsEmpty) {
-      Int32[] x = new Int32[20];
-      int count = queue.DequeueBatch(ref x);
-      Console.WriteLine("Dequed batch of " + count);
-      for(int i = 0; i < count; i++) {
-          Console.WriteLine("Dequeued " + x[i]);
+      LLRing<Int64> llring = new LLRing<Int64>(256, true, true);
+      Int64[] arr = new Int64[257];
+      Int64[] arr2 = new Int64[25];
+      for (int i = 0; i < arr.Length; i++) {
+          arr[i] = i;
       }
-    }
+      UInt32 ret = llring.EnqueueBatch(ref arr);
+      Debug.Assert((ret & (~LLRing<Int64>.RING_QUOT_EXCEED)) < 256);
+      Console.WriteLine("Enqueued " + ret);
+      while ((ret = llring.DequeueBatch(ref arr2)) != 0) {
+          for (int i = 0; i < ret; i++) {
+              Console.WriteLine("Dequeued " + arr2[i]);
+          }
+      }
+    
   }
   public static void Main (string[] args) {
     #if __MonoCS__
@@ -117,11 +121,10 @@ public class BatchQueueTest {
     #else
     Console.WriteLine("Running Windows");
     #endif
-
     //Test();
-    BatchPacketTestAllocate bp = new BatchPacketTestAllocate(0, 1, 500, 500);
-
-    bp.Start();
+    //
+    RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(0, 1, (1u << 12), 512, 512);
+    rt.Start();
   }
 }
 }
