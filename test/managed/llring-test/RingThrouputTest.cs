@@ -118,7 +118,7 @@ public class RingThroughputTest {
     //Test();
     // Heat up the JIT
     do {
-        RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(0, 1, (1u << 16), buffer, buffer, (1 << 5));
+        RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(0, 1, (1u << 16), 2, 2, (1 << 5));
         rt.Start();
     } while (false);
     
