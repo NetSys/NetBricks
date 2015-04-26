@@ -123,7 +123,7 @@ public class RingThroughputTest {
     } while (false);
     
     // Actual test
-    for (int i = 0, i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
         int buffer = (1 << i);
         RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(0, 1, (1u << 16), buffer, buffer, (1 << 8));
         rt.Start();
