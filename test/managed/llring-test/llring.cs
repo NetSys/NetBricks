@@ -2,6 +2,9 @@
 /* A pure C# implementation of llring
  *
  */
+// If use this to disable fixed enqueueing 
+#define ENQUEUE_FIXED 
+//#define DEQUEUE_FIXED
 
 using System;
 using System.Collections;
@@ -101,6 +104,15 @@ namespace E2D2.Collections.Concurrent
             ring = new T[slots];
         }
 
+        public void SetWatermark (uint count) {
+            Contract.Requires((count < common.slots),
+                              "Can't set watermark higher than number of slots");
+            if (count == 0) {
+                count = common.slots;
+            }
+            common.watermark = count;
+        }
+
         public UInt32 EnqueueBatch (ref T[] objects) {
             if(common.sp_enqueue) {
                 return SingleProducerEnqueue(ref objects);
@@ -131,10 +143,18 @@ namespace E2D2.Collections.Concurrent
                 // we would never allow inserts in that way). As a result this can only return between
                 // 0 and slots - 1
                 free = mask + ctail - phead;
-                if (free == 0) {
-                    return 0;
+                if (n > free) {
+                #if (ENQUEUE_FIXED)
+                   // Do not insert anything, just return 0 for now.
+                   return 0;
+                #else
+                    if (free == 0) {
+                        return 0;
+                    }
+                    n = free;
+                #endif
                 }
-                n = Math.Min(free, n);
+
                 UInt32 pnext = phead + n;
 
                 // Single producer, don't need to do anything interesting here (no more than one writer, etc.)
@@ -201,10 +221,17 @@ namespace E2D2.Collections.Concurrent
                     // we would never allow inserts in that way). As a result this can only return between
                     // 0 and slots - 1
                     free = mask + ctail - phead;
-                    if (free == 0) {
-                        return 0;
+                    if (n > free) {
+                    #if (ENQUEUE_FIXED)
+                       // Do not insert anything, just return 0 for now.
+                       return 0;
+                    #else
+                        if (free == 0) {
+                            return 0;
+                        }
+                        n = free;
+                    #endif
                     }
-                    n = Math.Min(free, n);
                     pnext = phead + n;
 
                 } while (CompareExchange(ref prod.head, pnext, phead) != phead);
@@ -256,12 +283,18 @@ namespace E2D2.Collections.Concurrent
                 UInt32 chead = cons.head;
                 UInt32 ptail = prod.tail;
                 UInt32 mask = common.mask;
-                UInt32 entries = ptail - chead; 
                 UInt32 n = (UInt32)array.Length;
-                if (entries == 0) {
-                    return 0;
+                UInt32 entries = ptail - chead; 
+                if (n > entries) {
+                   #if (DEQUEUE_FIXED)
+                   return 0;
+                   #else
+                   if (entries == 0) {
+                       return 0;
+                   }
+                   n = entries;
+                   #endif
                 }
-                n = Math.Min(n, entries);
                 UInt32 cnext = chead + n;
                 cons.head = cnext;
                 UInt32 idx = chead & mask;
@@ -311,7 +344,16 @@ namespace E2D2.Collections.Concurrent
                     if (entries == 0) {
                         return 0; // Short circuit, nothing to read
                     }
-                    n = Math.Min(n, entries);
+                    if (n > entries) {
+                       #if (DEQUEUE_FIXED)
+                       return 0;
+                       #else
+                       if (entries == 0) {
+                           return 0;
+                       }
+                       n = entries;
+                       #endif
+                    }
                     cnext = chead + n;
                 } while (CompareExchange(ref cons.head, cnext, chead) != chead);
 

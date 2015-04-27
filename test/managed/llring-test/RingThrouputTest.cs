@@ -85,8 +85,8 @@ public class RingThroughputTestNoAllocate {
                 + batchSize + " " + dequed + " "  
                 + count + " " + received_ + " " 
                 + (currElapsed - lastElapsed));
-            return;
-            //lastElapsed = currElapsed;
+            seconds = 0;
+            lastElapsed = currElapsed;
         }
       }
     }
@@ -110,18 +110,10 @@ public class RingThroughputTest {
     Console.WriteLine("Running Windows");
     #endif
     //Test();
-    // Heat up the JIT
-    do {
-        RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(0, 1, (1u << 16), 2, 2, (1 << 5));
-        rt.Start();
-    } while (false);
-    
     // Actual test
-    for (int i = 0; i < 11; i++) {
-        int buffer = (1 << i);
-        RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(0, 1, (1u << 16), buffer, buffer, (1 << 8));
-        rt.Start();
-    }
+    int buffer = 32;
+    RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(1, 2, 512u, buffer, buffer, (1 << 4));
+    rt.Start();
   }
 }
 }
