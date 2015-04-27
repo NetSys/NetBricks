@@ -45,8 +45,6 @@ public class RingThroughputTestNoAllocate {
     SysUtils.SetAffinity(producerCore_);
     Stopwatch stopwatch = new Stopwatch();
     stopwatch.Start();
-    long lastSec = SysUtils.GetSecond(stopwatch);
-    long count = 0;
     long absCount = 0;
     Packet[] batch = new Packet[produceBatchSize_]; 
     for (int i = 0; i < batch.Length; i++) {
