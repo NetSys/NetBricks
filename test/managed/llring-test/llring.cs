@@ -142,9 +142,18 @@ namespace E2D2.Collections.Concurrent
                 UInt32 slots = common.slots;
                 UInt32 idx = phead & mask;
                 if ((idx + n) < slots) {
+                    int i;
                     //TODO: For the C code this loop is unrolled, seems a bit premature to do this now.
-                    for (int i = 0; i < n; i++, idx++) {
+                    for (i = 0; i < (n & (~3u)); i+=4, idx+=4) {
                         ring[idx] = objects[i];
+                        ring[idx + 1] = objects[i + 1];
+                        ring[idx + 2] = objects[i + 2];
+                        ring[idx + 3] = objects[i + 3];
+                    }
+                    switch(n & 3) {
+                      case 3: ring[idx++] = objects[i++]; goto case 2;
+                      case 2: ring[idx++] = objects[i++]; goto case 1;
+                      case 1: ring[idx++] = objects[i++]; break;
                     }
                 } else {
                     int i;
@@ -203,9 +212,18 @@ namespace E2D2.Collections.Concurrent
                 UInt32 slots = common.slots;
                 UInt32 idx = phead & mask;
                 if ((idx + n) < slots) {
+                    int i;
                     //TODO: For the C code this loop is unrolled, seems a bit premature to do this now.
-                    for (int i = 0; i < n; i++, idx++) {
+                    for (i = 0; i < (n & (~3u)); i+=4, idx+=4) {
                         ring[idx] = objects[i];
+                        ring[idx + 1] = objects[i + 1];
+                        ring[idx + 2] = objects[i + 2];
+                        ring[idx + 3] = objects[i + 3];
+                    }
+                    switch(n & 3) {
+                      case 3: ring[idx++] = objects[i++]; goto case 2;
+                      case 2: ring[idx++] = objects[i++]; goto case 1;
+                      case 1: ring[idx++] = objects[i++]; break;
                     }
                 } else {
                     int i;
@@ -249,8 +267,17 @@ namespace E2D2.Collections.Concurrent
                 UInt32 idx = chead & mask;
                 UInt32 slots = common.slots;
                 if (idx + n < slots) {
-                    for (int i = 0; i < n; i++, idx++) {
+                    int i = 0;
+                    for (i = 0; i < (n & (~3u)); i+=4, idx+=4) {
                         array[i] = ring[idx];
+                        array[i + 1] = ring[idx + 1];
+                        array[i + 2] = ring[idx + 2];
+                        array[i + 3] = ring[idx + 3];
+                    }
+                    switch(n & 3) {
+                      case 3: array[i++] = ring[idx++]; goto case 2;
+                      case 2: array[i++] = ring[idx++]; goto case 1;
+                      case 1: array[i++] = ring[idx++]; break;
                     }
                 } else {
                     int i;
@@ -291,8 +318,17 @@ namespace E2D2.Collections.Concurrent
                 UInt32 idx = chead & mask;
                 UInt32 slots = common.slots;
                 if (idx + n < slots) {
-                    for (int i = 0; i < n; i++, idx++) {
+                    int i = 0;
+                    for (i = 0; i < (n & (~3u)); i+=4, idx+=4) {
                         array[i] = ring[idx];
+                        array[i + 1] = ring[idx + 1];
+                        array[i + 2] = ring[idx + 2];
+                        array[i + 3] = ring[idx + 3];
+                    }
+                    switch(n & 3) {
+                      case 3: array[i++] = ring[idx++]; goto case 2;
+                      case 2: array[i++] = ring[idx++]; goto case 1;
+                      case 1: array[i++] = ring[idx++]; break;
                     }
                 } else {
                     int i;
