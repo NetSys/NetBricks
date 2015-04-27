@@ -110,7 +110,7 @@ public class RingThroughputTest {
     Console.WriteLine("Running Windows");
     #endif
     //Test();
-    RingThrouhputTestNoAllocate jit = new RingThroughputTestNoAllocate(1, 2, 512u, 2, 2, (1 << 4));
+    RingThroughputTestNoAllocate jit = new RingThroughputTestNoAllocate(1, 2, 512u, 2, 2, (1 << 4));
     jit.Start();
     // Actual test
     for (int i = 0; i <= 11; i++) {
