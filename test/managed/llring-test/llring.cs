@@ -201,7 +201,7 @@ namespace E2D2.Collections.Concurrent
             }
         }
 
-        private UInt32 MultiProducerEnqueue(ref T[] objects) {
+        public UInt32 MultiProducerEnqueue(ref T[] objects) {
             // We don't care about no overflows
             unchecked {
                 UInt32 phead = prod.head;
@@ -326,7 +326,7 @@ namespace E2D2.Collections.Concurrent
             }
         }
 
-        private UInt32 MultiConsumerDequeue(ref T[] array) {
+        public UInt32 MultiConsumerDequeue(ref T[] array) {
             unchecked {
                 UInt32 chead = 0;
                 UInt32 ptail = 0;
