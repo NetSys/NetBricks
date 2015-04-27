@@ -84,6 +84,7 @@ public class RingThroughputTestNoAllocate {
                 + count + " " + received_ + " " 
                 + (currElapsed - lastElapsed));
             seconds = 0;
+            count = 0;
             lastElapsed = currElapsed;
         }
       }
