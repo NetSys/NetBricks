@@ -86,6 +86,7 @@ public class RingThroughputTestNoAllocate {
             seconds = 0;
             count = 0;
             lastElapsed = currElapsed;
+            return;
         }
       }
     }
@@ -109,10 +110,14 @@ public class RingThroughputTest {
     Console.WriteLine("Running Windows");
     #endif
     //Test();
+    RingThrouhputTestNoAllocate jit = new RingThroughputTestNoAllocate(1, 2, 512u, 2, 2, (1 << 4));
+    jit.Start();
     // Actual test
-    int buffer = 32;
-    RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(1, 2, 512u, buffer, buffer, (1 << 4));
-    rt.Start();
+    for (int i = 0; i <= 11; i++) {
+        int buffer = (1<<i);
+        RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(1, 2, 512u, buffer, buffer, (1 << 6));
+        rt.Start();
+    }
   }
 }
 }
