@@ -162,29 +162,14 @@ namespace E2D2.Collections.Concurrent
                 UInt32 slots = common.slots;
                 UInt32 idx = phead & mask;
                 if ((idx + n) < slots) {
-                    int i;
-                    //TODO: For the C code this loop is unrolled, seems a bit premature to do this now.
-                    for (i = 0; i < (n & (~3u)); i+=4, idx+=4) {
-                        ring[idx] = objects[i];
-                        ring[idx + 1] = objects[i + 1];
-                        ring[idx + 2] = objects[i + 2];
-                        ring[idx + 3] = objects[i + 3];
-                    }
-                    switch(n & 3) {
-                      case 3: ring[idx++] = objects[i++]; goto case 2;
-                      case 2: ring[idx++] = objects[i++]; goto case 1;
-                      case 1: ring[idx++] = objects[i++]; break;
-                    }
-                } else {
-                    int i;
-                    for (i = 0; idx < slots; i++, idx++) {
-                        ring[idx] = objects[i];
-                    }
-                    for (idx = 0; i < n; i++, idx++) {
-                        ring[idx] = objects[i];
-                    }
+                    Array.Copy(objects, 0, ring, idx, n);
                 }
-
+                else {
+                    Array.Copy(objects, 0, ring, idx, (slots - idx));
+                    Array.Copy(objects, (slots - idx), ring,
+                        0, (n - (slots - idx)));
+                }
+                
                 if (((mask + 1) - free + n) > common.watermark) {
                     n = n | RING_QUOT_EXCEED;
                 }
@@ -239,27 +224,11 @@ namespace E2D2.Collections.Concurrent
                 UInt32 slots = common.slots;
                 UInt32 idx = phead & mask;
                 if ((idx + n) < slots) {
-                    int i;
-                    //TODO: For the C code this loop is unrolled, seems a bit premature to do this now.
-                    for (i = 0; i < (n & (~3u)); i+=4, idx+=4) {
-                        ring[idx] = objects[i];
-                        ring[idx + 1] = objects[i + 1];
-                        ring[idx + 2] = objects[i + 2];
-                        ring[idx + 3] = objects[i + 3];
-                    }
-                    switch(n & 3) {
-                      case 3: ring[idx++] = objects[i++]; goto case 2;
-                      case 2: ring[idx++] = objects[i++]; goto case 1;
-                      case 1: ring[idx++] = objects[i++]; break;
-                    }
+                    Array.Copy(objects, 0, ring, idx, n);
                 } else {
-                    int i;
-                    for (i = 0; idx < slots; i++, idx++) {
-                        ring[idx] = objects[i];
-                    }
-                    for (idx = 0; i < n; i++, idx++) {
-                        ring[idx] = objects[i];
-                    }
+                    Array.Copy(objects, 0, ring, idx, (slots - idx));
+                    Array.Copy(objects, (slots - idx), ring, 
+                        0, (n - (slots - idx)));
                 }
 
                 if (((mask + 1) - free + n) > common.watermark) {
@@ -299,28 +268,20 @@ namespace E2D2.Collections.Concurrent
                 cons.head = cnext;
                 UInt32 idx = chead & mask;
                 UInt32 slots = common.slots;
-                if (idx + n < slots) {
+                if (idx + n < slots)
+                {
                     int i = 0;
-                    for (i = 0; i < (n & (~3u)); i+=4, idx+=4) {
-                        array[i] = ring[idx];
-                        array[i + 1] = ring[idx + 1];
-                        array[i + 2] = ring[idx + 2];
-                        array[i + 3] = ring[idx + 3];
-                    }
-                    switch(n & 3) {
-                      case 3: array[i++] = ring[idx++]; goto case 2;
-                      case 2: array[i++] = ring[idx++]; goto case 1;
-                      case 1: array[i++] = ring[idx++]; break;
-                    }
-                } else {
-                    int i;
-                    for (i = 0; idx < slots; i++, idx++) {
-                        array[i] = ring[idx];
-                    }
-                    for (idx = 0; i < n; i++, idx++) {
-                        array[i] = ring[idx];
-                    }
+                    Array.Copy(ring, idx, array, i, n);
+
                 }
+                else
+                {
+                    int i = 0;
+                    Array.Copy(ring, idx, array, i, (slots - idx));
+                    i += (int)(slots - idx);
+                    Array.Copy(ring, 0, array, i, (n - i));
+                }
+                
                 cons.tail = cnext;
                 return n;
             }
@@ -361,25 +322,13 @@ namespace E2D2.Collections.Concurrent
                 UInt32 slots = common.slots;
                 if (idx + n < slots) {
                     int i = 0;
-                    for (i = 0; i < (n & (~3u)); i+=4, idx+=4) {
-                        array[i] = ring[idx];
-                        array[i + 1] = ring[idx + 1];
-                        array[i + 2] = ring[idx + 2];
-                        array[i + 3] = ring[idx + 3];
-                    }
-                    switch(n & 3) {
-                      case 3: array[i++] = ring[idx++]; goto case 2;
-                      case 2: array[i++] = ring[idx++]; goto case 1;
-                      case 1: array[i++] = ring[idx++]; break;
-                    }
+                    Array.Copy(ring, idx, array, i, n);
+                    
                 } else {
-                    int i;
-                    for (i = 0; idx < slots; i++, idx++) {
-                        array[i] = ring[idx];
-                    }
-                    for (idx = 0; i < n; i++, idx++) {
-                        array[i] = ring[idx];
-                    }
+                    int i = 0;
+                    Array.Copy(ring, idx, array, i, (slots - idx));
+                    i += (int)(slots - idx);
+                    Array.Copy(ring, 0, array, i, (n - i));
                 }
                 // If there is someone else who is simultaneously dequeuinq (and started before us)
                 // they would have set cons.head but not cons.tail. We should wait until the dequeue
