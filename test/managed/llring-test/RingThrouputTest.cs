@@ -1,3 +1,4 @@
+//#define GRAPH
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -52,7 +53,7 @@ public class RingThroughputTestNoAllocate {
         absCount++;
     }
     while (true) {
-      queue_.EnqueueBatch(ref batch);
+      queue_.MultiProducerEnqueue(ref batch);
     }
   }
 
@@ -67,11 +68,7 @@ public class RingThroughputTestNoAllocate {
     Packet[] batch = new Packet[receiveBatchSize_];
     long batchSize = receiveBatchSize_;
     while (true) {
-      int dequed = (int)queue_.DequeueBatch(ref batch);
-      
-      if (dequed > 0) {
-        received_ = batch[dequed - 1].id;
-      }
+      int dequed = (int)queue_.MultiConsumerDequeue(ref batch);
       count += dequed;
       long currSec = SysUtils.GetSecond(stopwatch);
       if (currSec != lastSec) {
@@ -86,7 +83,9 @@ public class RingThroughputTestNoAllocate {
             seconds = 0;
             count = 0;
             lastElapsed = currElapsed;
+#if GRAPH
             return;
+#endif
         }
       }
     }
@@ -104,20 +103,30 @@ public class RingThroughputTestNoAllocate {
 }
 public class RingThroughputTest {
   public static void Main (string[] args) {
+    const uint RING_SIZE = 256;
+    const int BUFFER = 32;
     #if __MonoCS__
     Console.WriteLine("Running Mono");
     #else
     Console.WriteLine("Running Windows");
     #endif
     //Test();
+#if GRAPH
     RingThroughputTestNoAllocate jit = new RingThroughputTestNoAllocate(1, 2, 512u, 2, 2, (1 << 4));
     jit.Start();
+#endif
     // Actual test
+#if GRAPH
     for (int i = 0; i <= 11; i++) {
         int buffer = (1<<i);
+#else
+        int buffer = BUFFER;
+#endif
         RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(1, 2, 512u, buffer, buffer, (1 << 6));
         rt.Start();
+#if GRAPH
     }
+#endif
   }
 }
 }
