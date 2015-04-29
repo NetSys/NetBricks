@@ -16,10 +16,9 @@ public class Packet {
     id_ = id;
   }
 }
-
 public class RingThroughputTestNoAllocate {
 
-  protected internal LLRing<Packet> queue_;
+  protected internal LLRing queue_;
 
   private int producerCore_;
   private int consumerCore_;
@@ -37,7 +36,7 @@ public class RingThroughputTestNoAllocate {
                                  long measureTime,
                                  long warmTime) {
     ringSize_ = ringSize;
-    queue_ = new LLRing<Packet>(ringSize, false, false);
+    queue_ = new LLRing(ringSize);
     producerCore_ = producerCore;
     consumerCore_ = consumerCore;
     received_ = 0;
@@ -51,14 +50,14 @@ public class RingThroughputTestNoAllocate {
     SysUtils.SetAffinity(producerCore_);
     Stopwatch stopwatch = new Stopwatch();
     stopwatch.Start();
-    long absCount = 0;
-    Packet[] batch = new Packet[produceBatchSize_]; 
+    ulong absCount = 0;
+    UIntPtr[] batch = new UIntPtr[produceBatchSize_]; 
     for (int i = 0; i < batch.Length; i++) {
-        batch[i] = new Packet(absCount);
+        batch[i] = new UIntPtr(absCount);
         absCount++;
     }
     while (true) {
-      queue_.MultiProducerEnqueue(ref batch);
+      queue_.MultiProducerEnqueue(batch);
     }
   }
 
@@ -70,7 +69,7 @@ public class RingThroughputTestNoAllocate {
     long lastElapsed = stopwatch.ElapsedMilliseconds;
     long count = 0;
     long seconds = 0;
-    Packet[] batch = new Packet[receiveBatchSize_];
+    UIntPtr[] batch = new UIntPtr[receiveBatchSize_];
     long batchSize = receiveBatchSize_;
     while (SysUtils.GetSecond(stopwatch) - lastSec < warm_) {
         queue_.MultiConsumerDequeue(ref batch);
@@ -113,6 +112,7 @@ public class RingThroughputTestNoAllocate {
     producer.Join();
   }
 }
+
 public class RingThroughputTest {
   public static void Main (string[] args) {
     const uint RING_SIZE = 2048;
