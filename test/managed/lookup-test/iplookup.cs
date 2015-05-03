@@ -91,6 +91,39 @@ namespace E2D2.Collections {
     }
   }
   public class ThroughputTest {
+    static void Benchmark(ref IPLookup lookup, 
+            ref UInt32[] trace, 
+            long warm) {
+      lookup.ConstructFIB();
+      Stopwatch stopwatch = new Stopwatch();
+      stopwatch.Start();
+      long lastSec = SysUtils.GetSecond(stopwatch);
+      long lastElapsed = stopwatch.ElapsedMilliseconds;
+      UInt32 lookups = 0;
+      int length = trace.Length;
+      while (SysUtils.GetSecond(stopwatch) - lastSec < warm) {
+        lookup.RouteLookup(trace[lookups % length]);
+        lookups++;
+      }
+      lastSec = SysUtils.GetSecond(stopwatch);
+      lastElapsed = stopwatch.ElapsedMilliseconds;
+      long lastLookups = 0;
+      while (true) {
+        lookup.RouteLookup(trace[lookups % length]);
+        lookups++;
+        lastLookups++;
+        long currSec = SysUtils.GetSecond(stopwatch);
+        if (currSec != lastSec) {
+          long currElapsed = stopwatch.ElapsedMilliseconds;
+          long elapsedSec = (currElapsed - lastElapsed) / 1000;
+          Console.WriteLine(elapsedSec + " " + 
+              lastLookups/elapsedSec);
+          lastElapsed = currElapsed;
+          lastLookups = 0;
+          lastSec = currSec;
+        }
+      }
+    }
     static void Main(string[] args) {
       if(args.Length < 2) {
         Console.WriteLine("Usage: IPLookup <rib> <trace>");
@@ -118,9 +151,10 @@ namespace E2D2.Collections {
       while (traceReader.Peek() >= 0) {
           UInt32 address = Convert.ToUInt32(traceReader.ReadLine());
           trace.Add(address);
-          Console.WriteLine("{0} {1}", address, 
-                  lookup.RouteLookup(address));
       }
+      UInt32[] traceArray = trace.ToArray();
+      trace = null;
+      Benchmark(ref lookup, ref traceArray, 5);
     }
   }
 }
