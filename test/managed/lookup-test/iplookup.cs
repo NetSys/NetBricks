@@ -94,7 +94,8 @@ namespace E2D2.Collections {
     static void Benchmark(ref IPLookup lookup, 
             ref UInt32[] trace, 
             long warm,
-            long batch) {
+            long batch,
+            long batches) {
       lookup.ConstructFIB();
       Stopwatch stopwatch = new Stopwatch();
       stopwatch.Start();
@@ -111,7 +112,8 @@ namespace E2D2.Collections {
       lastSec = SysUtils.GetSecond(stopwatch);
       lastElapsed = stopwatch.ElapsedMilliseconds;
       long lastLookups = 0;
-      while (true) {
+      long tested = 0;
+      while (tested < batches) {
         for (int i = 0; i < batch; i++) {
           lookup.RouteLookup(trace[lookups % length]);
           lookups++;
@@ -119,6 +121,7 @@ namespace E2D2.Collections {
         }
         long currSec = SysUtils.GetSecond(stopwatch);
         if (currSec != lastSec) {
+          batches++;
           long currElapsed = stopwatch.ElapsedMilliseconds;
           long elapsedSec = (currElapsed - lastElapsed) / 1000;
           Console.WriteLine(elapsedSec + " " + 
@@ -160,8 +163,11 @@ namespace E2D2.Collections {
       UInt32[] traceArray = trace.ToArray();
       trace = null;
       const long WARM = 5;
-      const long BATCH = 128;
-      Benchmark(ref lookup, ref traceArray, WARM, BATCH);
+      const int BATCH_SIZE = 10;
+      const long BATCHES = 50;
+      for (int bexp = 0; bexp < BATCH_SIZE; bexp++) {
+        Benchmark(ref lookup, ref traceArray, WARM, (1L << bexp), BATCHES);
+      }
     }
   }
 }
