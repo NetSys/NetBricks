@@ -121,10 +121,11 @@ namespace E2D2.Collections {
         }
         long currSec = SysUtils.GetSecond(stopwatch);
         if (currSec != lastSec) {
-          batches++;
+          tested++;
           long currElapsed = stopwatch.ElapsedMilliseconds;
+          long elapsedMs = (currElapsed - lastElapsed);
           long elapsedSec = (currElapsed - lastElapsed) / 1000;
-          Console.WriteLine(elapsedSec + " " + 
+          Console.WriteLine(elapsedSec + " " + elapsedMs + " " + batch + " " +
               lastLookups/elapsedSec);
           lastElapsed = currElapsed;
           lastLookups = 0;
