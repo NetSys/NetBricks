@@ -68,6 +68,7 @@ namespace E2D2.Collections {
               }
               tbl24_[addr >> 8] = 
                   (UInt16)((currentTBLLong_ >> 8) | OVERFLOW_MASK);
+              currentTBLLong_ += 256;
             }
           } else {
               UInt32 start = (((UInt32)(tblDest & (~OVERFLOW_MASK)) << 8) + (addr & 0xff));
