@@ -165,7 +165,7 @@ namespace E2D2.Collections {
       trace = null;
       const long WARM = 5;
       const int BATCH_SIZE = 10;
-      const long BATCHES = 50;
+      const long BATCHES = 5;
       for (int bexp = 0; bexp < BATCH_SIZE; bexp++) {
         Benchmark(ref lookup, ref traceArray, WARM, (1L << bexp), BATCHES);
       }
