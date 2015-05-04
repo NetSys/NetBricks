@@ -93,7 +93,8 @@ namespace E2D2.Collections {
   public class ThroughputTest {
     static void Benchmark(ref IPLookup lookup, 
             ref UInt32[] trace, 
-            long warm) {
+            long warm,
+            long batch) {
       lookup.ConstructFIB();
       Stopwatch stopwatch = new Stopwatch();
       stopwatch.Start();
@@ -102,16 +103,20 @@ namespace E2D2.Collections {
       UInt32 lookups = 0;
       int length = trace.Length;
       while (SysUtils.GetSecond(stopwatch) - lastSec < warm) {
-        lookup.RouteLookup(trace[lookups % length]);
-        lookups++;
+        for (int i = 0; i < batch; i++) {
+          lookup.RouteLookup(trace[lookups % length]);
+          lookups++;
+        }
       }
       lastSec = SysUtils.GetSecond(stopwatch);
       lastElapsed = stopwatch.ElapsedMilliseconds;
       long lastLookups = 0;
       while (true) {
-        lookup.RouteLookup(trace[lookups % length]);
-        lookups++;
-        lastLookups++;
+        for (int i = 0; i < batch; i++) {
+          lookup.RouteLookup(trace[lookups % length]);
+          lookups++;
+          lastLookups++;
+        }
         long currSec = SysUtils.GetSecond(stopwatch);
         if (currSec != lastSec) {
           long currElapsed = stopwatch.ElapsedMilliseconds;
@@ -154,7 +159,9 @@ namespace E2D2.Collections {
       }
       UInt32[] traceArray = trace.ToArray();
       trace = null;
-      Benchmark(ref lookup, ref traceArray, 5);
+      const long WARM = 5;
+      const long BATCH = 128;
+      Benchmark(ref lookup, ref traceArray, WARM, BATCH);
     }
   }
 }
