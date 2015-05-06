@@ -109,7 +109,7 @@ static uint64_t get_sec(void) {
 #endif
 }
 
-static inline uint32_t rand_fast() {
+static uint32_t rand_fast() {
     static uint64_t seed = 0;
     seed = seed * 1103515245 + 12345;
     return (uint32_t)(seed >> 32);
@@ -130,9 +130,11 @@ void Benchmark(
     uint32_t batchComputed = 0;
     lastSec = get_sec();
     uint64_t lastLookups = 0;
+    uint32_t lastIP = 0;
     while (batchComputed < batches) {
         for (int i = 0; i < batch; i++) {
-            lookup->RouteLookup(rand_fast());
+            lastIP = rand_fast();
+            lookup->RouteLookup(lastIP);
             lastLookups++;
         }
         if (lastSec != get_sec()) {
@@ -140,7 +142,8 @@ void Benchmark(
             batchComputed++;
             std::cout << (currSec - lastSec) << " "
                       << batch << " "
-                      << (lastLookups / (currSec - lastSec)) << std::endl;
+                      << (lastLookups / (currSec - lastSec)) << 
+                      << " " << lastIP << std::endl;
             lastSec = get_sec();
             lastLookups = 0;
         }
