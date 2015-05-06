@@ -34,7 +34,10 @@ public:
     }
 
     void ConstructFIB() {
+        uint32_t entries = 0;
+        uint32_t long_entries = 0;
         for (int i = 0; i <= 24; i++) {
+            entries++;
             for (auto const& kv : prefixTable_[i]) {
                 uint32_t addr = kv.first;
                 uint16_t dest = kv.second;
@@ -46,6 +49,8 @@ public:
             }
         }
         for (int i = 25; i <= 32; i++) {
+            entries++;
+            long_entries++;
             for (auto kv : prefixTable_[i]) {
                 uint32_t addr = kv.first;
                 uint16_t dest = kv.second;
@@ -77,6 +82,7 @@ public:
                 }
             }
         }
+        std::cout << "Processed " << entries  << " entries and  " << long_entries << " long" << std::endl;
     }
 
     uint16_t RouteLookup(uint32_t ip) {
@@ -131,10 +137,11 @@ void Benchmark(
     lastSec = get_sec();
     uint64_t lastLookups = 0;
     uint32_t lastIP = 0;
+    uint64_t dests = 0;
     while (batchComputed < batches) {
         for (int i = 0; i < batch; i++) {
             lastIP = rand_fast();
-            lookup->RouteLookup(lastIP);
+            dests = lookup->RouteLookup(lastIP);
             lastLookups++;
         }
         if (lastSec != get_sec()) {
@@ -142,8 +149,9 @@ void Benchmark(
             batchComputed++;
             std::cout << (currSec - lastSec) << " "
                       << batch << " "
-                      << (lastLookups / (currSec - lastSec)) << 
-                      << " " << lastIP << std::endl;
+                      << (lastLookups / (currSec - lastSec)) 
+                      << " " << lastIP
+                      << " " << dests << std::endl;
             lastSec = get_sec();
             lastLookups = 0;
         }
