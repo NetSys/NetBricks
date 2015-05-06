@@ -1,5 +1,22 @@
+#define _GNU_SOURCE
 #include <unordered_map>
+#include <iostream>
+#include <cstdlib>
+#include <fstream>
 #include <cstring>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#if _MSC_VER
+#include <Windows.h>
+#else
+#include <sys/time.h>
+#endif
 class IPLookup {
 public:
     IPLookup() {
@@ -81,6 +98,87 @@ private:
     uint32_t currentTBLLong_;
 };
 
+static uint64_t get_sec(void) {
+#if _MSC_VER
+	return timeGetTime() / 1000;
+#else
+	struct timeval time;
+	gettimeofday(&time, NULL);
+	//long millis = (time.tv_sec * 1000) + (time.tv_usec / 1000);
+	return (uint64_t)time.tv_sec;
+#endif
+}
+
+static inline uint32_t rand_fast() {
+    static uint64_t seed = 0;
+    seed = seed * 1103515245 + 12345;
+    return (uint32_t)(seed >> 32);
+}
+
+void Benchmark(
+      IPLookup* lookup,
+      uint64_t warm,
+      uint32_t batch,
+      uint64_t batches) {
+    lookup->ConstructFIB();
+    uint64_t lastSec = get_sec();
+    while (get_sec() - lastSec < warm) {
+        for (uint32_t i = 0; i < batch; i++) {
+            lookup->RouteLookup(rand_fast());
+        }
+    }
+    uint32_t batchComputed = 0;
+    lastSec = get_sec();
+    uint64_t lastLookups = 0;
+    while (batchComputed < batches) {
+        for (int i = 0; i < batch; i++) {
+            lookup->RouteLookup(rand_fast());
+            lastLookups++;
+        }
+        if (lastSec != get_sec()) {
+            uint64_t currSec = get_sec();
+            batchComputed++;
+            std::cout << (currSec - lastSec) << " "
+                      << batch << " "
+                      << (lastLookups / (currSec - lastSec)) << std::endl;
+            lastSec = get_sec();
+            lastLookups = 0;
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
-    IPLookup lookup;
+    IPLookup *lookup = new IPLookup();
+    if (argc < 2) {
+        std::cout << "Usage: lookup rib" << std::endl;
+        return 1;
+    }
+    std::ifstream rib(argv[1]);
+    while (!rib.eof()) {
+        char line[512];
+        //std::string line;
+        //std::getline(rib, line);
+        rib.getline(line, 512);
+        //char* asString = line.c_str();
+        char* ipPart = std::strtok(line, " ");
+        char* dest = std::strtok(NULL, " ");
+        char* ip = std::strtok(ipPart, "/");
+        char* len = std::strtok(NULL, "/");
+        if (ipPart == NULL || dest == NULL || ip == NULL || len == NULL) {
+            continue;
+        }
+        uint32_t ipInt = 0;
+        int convert = inet_pton(AF_INET, ip, &ipInt);
+        if (!convert) {
+            std::cerr << "Error converting " << ip << std::endl;
+        }
+        ipInt = ntohl(ipInt);
+        lookup->AddRoute(ipInt, atoi(len), atoi(dest));
+    }
+    const uint64_t WARM = 5;
+    const uint32_t BATCH = 10;
+    const uint64_t BATCHES = 5;
+    for (int bexp = 0; bexp < BATCH; bexp++) {
+        Benchmark(lookup, WARM, (1L << bexp), BATCHES);
+    }
 }
