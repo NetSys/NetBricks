@@ -61,7 +61,7 @@ impl FIB {
                 self.tbl_long[pfx] = *nhop;
               }
             }
-            self.tbl24[(*addr << 8) as usize] = ((current_tbl_long >> 8) as u16) | TBL_LONG_MASK;
+            self.tbl24[(*addr >> 8) as usize] = ((current_tbl_long >> 8) as u16) | TBL_LONG_MASK;
             current_tbl_long += 256;
           } else {
             let long_idx = ((tbl24dest & !(TBL_LONG_MASK)) << 8) as usize;
@@ -140,6 +140,7 @@ fn benchmark(fib: &Box<FIB>,
       println!("{} {} {}", start.to(PreciseTime::now()), batch, lookups);
       done = done + 1;
       start = PreciseTime::now();
+      lookups = 0;
     }
   }
 }
@@ -173,7 +174,6 @@ fn main() {
               let addr = str_to_ipv4(addr_parts[0]);
               let nhop = parts[1].parse::<u16>().unwrap();
               hash[len].insert(addr, nhop);
-              println!("Inserting {}({}) {} {}", addr_parts[0], addr, len, nhop);
             }
           }
         }
