@@ -105,8 +105,6 @@ fn str_to_ipv4(addr: &str) -> u32 {
   }
 }
 
-
-
 // Do not call from many threads, makes things sad
 #[inline]
 fn rand_fast() -> u32 {

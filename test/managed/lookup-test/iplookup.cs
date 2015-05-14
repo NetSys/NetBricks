@@ -6,8 +6,6 @@ using System.Diagnostics.Contracts;
 using System.IO;
 using System.Net;
 using System.Runtime.CompilerServices; 
-
-
 namespace E2D2.Collections {
 #if INTERNAL
   internal 
@@ -90,16 +88,25 @@ namespace E2D2.Collections {
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public UInt16 RouteLookup(UInt32 ip) {
-        unchecked
-        {
+        unchecked {
             UInt16 tblDest = tbl24_[ip >> 8];
-            if ((tblDest & OVERFLOW_MASK) > 0)
-            {
+            if ((tblDest & OVERFLOW_MASK) > 0) {
                 int index = (int)(((UInt32)(tblDest & (~OVERFLOW_MASK)) << 8) + (ip & 0xff));
                 return tblLong_[index];
+            } else {
+                return tblDest;
             }
-            else
-            {
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static UInt16 RouteLookupStatic (IPLookup obj, UInt32 ip) {
+        unchecked {
+            UInt16 tblDest = obj.tbl24_[ip >> 8];
+            if ((tblDest & OVERFLOW_MASK) > 0) {
+                int index = (int)(((UInt32)(tblDest & (~OVERFLOW_MASK)) << 8) + (ip & 0xff));
+                return obj.tblLong_[index];
+            } else {
                 return tblDest;
             }
         }
@@ -130,7 +137,11 @@ namespace E2D2.Collections {
       //UInt32 lookups = 0;
       while (SysUtils.GetSecond(stopwatch) - lastSec < warm) {
         for (int i = 0; i < batch; i++) {
+          #if STATIC
+          IPLookup.RouteLookupStatic(lookup, rand_fast());
+          #else
           lookup.RouteLookup(rand_fast());
+          #endif
         }
       }
       lastSec = SysUtils.GetSecond(stopwatch);
@@ -140,18 +151,19 @@ namespace E2D2.Collections {
       UInt32[] ipaddrs = new UInt32[batch];
       while (tested < batches) {
         for (int i = 0; i < batch; i++){
+            #if STATIC
+            IPLookup.RouteLookupStatic(lookup, rand_fast());
+            #else
             lookup.RouteLookup(rand_fast());
+            #endif
             lastLookups++;
         }
         long currSec = SysUtils.GetSecond(stopwatch);
         if (currSec != lastSec) {
           tested++;
-          long currElapsed = stopwatch.ElapsedMilliseconds;
-          long elapsedMs = (currElapsed - lastElapsed);
-          long elapsedSec = (currElapsed - lastElapsed) / 1000;
-          Console.WriteLine(elapsedSec + " " + elapsedMs + " " + batch + " " +
+          long elapsedSec = currSec - lastSec;
+          Console.WriteLine(elapsedSec + " " + batch + " " +
               lastLookups/elapsedSec);
-          lastElapsed = currElapsed;
           lastLookups = 0;
           lastSec = currSec;
         }
@@ -164,6 +176,15 @@ namespace E2D2.Collections {
         Console.WriteLine("Usage: IPLookup <rib>");
         return;
       }
+#if INTERNAL
+      Console.WriteLine("Internal");
+#endif
+#if SEALED
+      Console.WriteLine("Sealed");
+#endif
+#if STATIC
+      Console.WriteLine("Static");
+#endif
       IPLookup lookup = new IPLookup();
       StreamReader ribReader = new StreamReader(args[0]);
       while (ribReader.Peek() >= 0) {
