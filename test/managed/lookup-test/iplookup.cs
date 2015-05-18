@@ -6,9 +6,13 @@ using System.Diagnostics.Contracts;
 using System.IO;
 using System.Net;
 using System.Runtime.CompilerServices; 
-
-
 namespace E2D2.Collections {
+#if INTERNAL
+  internal 
+#endif
+#if SEALED
+  sealed 
+#endif
   class IPLookup {
     private UInt16[] tbl24_;
     private UInt16[] tblLong_;
@@ -84,46 +88,32 @@ namespace E2D2.Collections {
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public UInt16 RouteLookup(UInt32 ip) {
-        unchecked
-        {
+        unchecked {
             UInt16 tblDest = tbl24_[ip >> 8];
-            if ((tblDest & OVERFLOW_MASK) > 0)
-            {
+            if ((tblDest & OVERFLOW_MASK) > 0) {
                 int index = (int)(((UInt32)(tblDest & (~OVERFLOW_MASK)) << 8) + (ip & 0xff));
                 return tblLong_[index];
-            }
-            else
-            {
+            } else {
                 return tblDest;
             }
         }
     }
-      [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public UInt16[] RouteLookupBatch(UInt32 []ips)
-    {
-        unchecked
-        {
-            UInt16[] dest = new UInt16[ips.Length];
-            for (int i = 0; i < ips.Length; i++)
-            {
-                UInt32 ip = ips[i];
-                UInt16 tblDest = tbl24_[ip >> 8];
-                if ((tblDest & OVERFLOW_MASK) > 0)
-                {
-                    int index = (int)(((UInt32)(tblDest & (~OVERFLOW_MASK)) << 8) + (ip & 0xff));
-                    dest[i] = tblLong_[index];
-                }
-                else
-                {
-                    dest[i] = tblDest;
-                }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static UInt16 RouteLookupStatic (IPLookup obj, UInt32 ip) {
+        unchecked {
+            UInt16 tblDest = obj.tbl24_[ip >> 8];
+            if ((tblDest & OVERFLOW_MASK) > 0) {
+                int index = (int)(((UInt32)(tblDest & (~OVERFLOW_MASK)) << 8) + (ip & 0xff));
+                return obj.tblLong_[index];
+            } else {
+                return tblDest;
             }
-            return dest;
         }
     }
   }
-  public class ThroughputTest {
 
+  public class ThroughputTest {
       static UInt64 seed = 0;
       [MethodImpl(MethodImplOptions.AggressiveInlining)]
       static UInt32 rand_fast()
@@ -136,7 +126,6 @@ namespace E2D2.Collections {
     }
 
     static void Benchmark(ref IPLookup lookup, 
-            ref UInt32[] trace, 
             long warm,
             long batch,
             long batches) {
@@ -146,10 +135,13 @@ namespace E2D2.Collections {
       long lastSec = SysUtils.GetSecond(stopwatch);
       long lastElapsed = stopwatch.ElapsedMilliseconds;
       //UInt32 lookups = 0;
-      int length = trace.Length;
       while (SysUtils.GetSecond(stopwatch) - lastSec < warm) {
         for (int i = 0; i < batch; i++) {
+          #if STATIC
+          IPLookup.RouteLookupStatic(lookup, rand_fast());
+          #else
           lookup.RouteLookup(rand_fast());
+          #endif
         }
       }
       lastSec = SysUtils.GetSecond(stopwatch);
@@ -158,51 +150,20 @@ namespace E2D2.Collections {
       long tested = 0;
       UInt32[] ipaddrs = new UInt32[batch];
       while (tested < batches) {
-#if false
-          for (int i = 0; i < ipaddrs.Length; i++)
-          {
-              seed = seed * 1103515245 + 12345;
-              ipaddrs[i] = (UInt32)(seed >> 32);
-          }
-          lookup.RouteLookupBatch(ipaddrs);
-          lastLookups += ipaddrs.Length;
-#endif
-#if false
-          for (int i = 0; i < ipaddrs.Length; i++)
-          {
-              ipaddrs[i] = rand_fast();
-          }
-          lookup.RouteLookupBatch(ipaddrs);
-          lastLookups += ipaddrs.Length;
-#endif
-
-#if false
-           for (int i = 0; i < ipaddrs.Length; i++)
-              ipaddrs[i] = rand_fast();
-         
-            for (int i = 0; i < ipaddrs.Length; i++) {
-              lookup.RouteLookup(ipaddrs[i]);
-          //lookups++;
-              lastLookups++;
-            }
-#endif
-#if true
-          for (int i = 0; i < batch; i++)
-          {
-              lookup.RouteLookup(rand_fast());
-              lastLookups++;
-          }
-#endif
-      
-          long currSec = SysUtils.GetSecond(stopwatch);
+        for (int i = 0; i < batch; i++){
+            #if STATIC
+            IPLookup.RouteLookupStatic(lookup, rand_fast());
+            #else
+            lookup.RouteLookup(rand_fast());
+            #endif
+            lastLookups++;
+        }
+        long currSec = SysUtils.GetSecond(stopwatch);
         if (currSec != lastSec) {
           tested++;
-          long currElapsed = stopwatch.ElapsedMilliseconds;
-          long elapsedMs = (currElapsed - lastElapsed);
-          long elapsedSec = (currElapsed - lastElapsed) / 1000;
-          Console.WriteLine(elapsedSec + " " + elapsedMs + " " + batch + " " +
+          long elapsedSec = currSec - lastSec;
+          Console.WriteLine(elapsedSec + " " + batch + " " +
               lastLookups/elapsedSec);
-          lastElapsed = currElapsed;
           lastLookups = 0;
           lastSec = currSec;
         }
@@ -211,11 +172,19 @@ namespace E2D2.Collections {
     static void Main(string[] args) {
         Console.WriteLine("Managed");
         SysUtils.SetAffinity(3);
-      if(args.Length < 2) {
-        Console.WriteLine("Usage: IPLookup <rib> <trace>");
+      if(args.Length < 1) {
+        Console.WriteLine("Usage: IPLookup <rib>");
         return;
       }
-      List<UInt32> trace = new List<UInt32>();
+#if INTERNAL
+      Console.WriteLine("Internal");
+#endif
+#if SEALED
+      Console.WriteLine("Sealed");
+#endif
+#if STATIC
+      Console.WriteLine("Static");
+#endif
       IPLookup lookup = new IPLookup();
       StreamReader ribReader = new StreamReader(args[0]);
       while (ribReader.Peek() >= 0) {
@@ -233,19 +202,18 @@ namespace E2D2.Collections {
       }
       lookup.ConstructFIB();
       ribReader.Close();
-      StreamReader traceReader = new StreamReader(args[1]);
-      while (traceReader.Peek() >= 0) {
-          UInt32 address = Convert.ToUInt32(traceReader.ReadLine());
-          trace.Add(address);
-      }
-      UInt32[] traceArray = trace.ToArray();
-      trace = null;
       const long WARM = 1;
-      const int BATCH_SIZE = 10;
+#if PERF
+      const int BATCH_SIZE = 512;
+      const long BATCHES = 1024;
+      Benchmark(ref lookup, WARM, BATCH_SIZE, BATCHES);
+#else 
+      const int BATCH_SIZE = 512;
       const long BATCHES = 5;
-      for (int bexp = 0; bexp < BATCH_SIZE; bexp++) {
-        Benchmark(ref lookup, ref traceArray, WARM, (1L << bexp), BATCHES);
+      for (int batch = 1; batch <= BATCH_SIZE; batch <<= 1) {
+        Benchmark(ref lookup, WARM, batch, BATCHES);
       }
+#endif
     }
   }
 }

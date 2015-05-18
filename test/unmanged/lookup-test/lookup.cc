@@ -187,9 +187,10 @@ int main(int argc, char* argv[]) {
         lookup->AddRoute(ipInt, atoi(len), atoi(dest));
     }
     const uint64_t WARM = 5;
-    const uint32_t BATCH = 10;
-    const uint64_t BATCHES = 5;
-    for (int bexp = 0; bexp < BATCH; bexp++) {
-        Benchmark(lookup, WARM, (1L << bexp), BATCHES);
-    }
+    const uint32_t BATCH = 512;
+    const uint64_t BATCHES = 1024;
+    Benchmark(lookup, WARM, BATCH, BATCHES);
+    //for (int bexp = 0; bexp < BATCH; bexp++) {
+        //Benchmark(lookup, WARM, (1L << bexp), BATCHES);
+    //}
 }
