@@ -18,6 +18,7 @@ using System.Security;
 using System.Security.Permissions;
 using System.Threading;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices; 
 
 namespace E2D2.Collections.Concurrent
 {
@@ -113,6 +114,7 @@ namespace E2D2.Collections.Concurrent
             common.watermark = count;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UInt32 EnqueueBatch (ref T[] objects) {
             if(common.sp_enqueue) {
                 return SingleProducerEnqueue(ref objects);
@@ -121,6 +123,7 @@ namespace E2D2.Collections.Concurrent
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UInt32 DequeueBatch (ref T[] array) {
             if(common.sc_dequeue) {
                 return SingleConsumerDequeue(ref array);
@@ -130,6 +133,7 @@ namespace E2D2.Collections.Concurrent
         }
         // TODO: Currently I am just implementing LLRING_QUEUE_VARIABLE, i.e., queue as many
         // as possible. It is not hard to implement the other one, but laziness.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private UInt32 SingleProducerEnqueue(ref T[] objects) {
             // We don't care about no overflows
             unchecked {
@@ -180,12 +184,14 @@ namespace E2D2.Collections.Concurrent
 
         // CLS compliance dictates that Interlocked.CompareExchange in C# only handles signed variables
         // (yes there were stupid decisions). As a result need to build one that does unsigned for this class.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe UInt32 CompareExchange(ref UInt32 target, UInt32 val, UInt32 cmp) {
             fixed(UInt32* p = &target) {
                 return (UInt32)Interlocked.CompareExchange(ref *(int*)p, (int)val, (int)cmp);
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UInt32 MultiProducerEnqueue(ref T[] objects) {
             // We don't care about no overflows
             unchecked {
@@ -287,6 +293,7 @@ namespace E2D2.Collections.Concurrent
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UInt32 MultiConsumerDequeue(ref T[] array) {
             unchecked {
                 UInt32 chead = 0;

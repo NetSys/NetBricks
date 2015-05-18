@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Diagnostics;
 using E2D2.Collections.Concurrent;
+using System.Runtime.CompilerServices; 
 
 namespace E2D2 {
 public class Packet {

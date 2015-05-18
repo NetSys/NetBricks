@@ -5,6 +5,7 @@ using System.Diagnostics;
 #if (!__MonoCS__)
 using System.Linq;
 #endif
+using System.Runtime.CompilerServices; 
 
 // System utilities for Queue Test
 namespace E2D2 {
@@ -35,6 +36,7 @@ public class SysUtils {
     #endif
   }
 
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static int GetCurrentCpu () {
     #if __MonoCS__
     return sched_getcpu();
@@ -43,6 +45,7 @@ public class SysUtils {
     #endif
   }
 
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static long GetSecond (Stopwatch stopwatch) {
     return stopwatch.ElapsedMilliseconds / 1000; 
   }
