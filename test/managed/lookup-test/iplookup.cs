@@ -148,6 +148,7 @@ namespace E2D2.Collections {
       lastElapsed = stopwatch.ElapsedMilliseconds;
       long lastLookups = 0;
       long tested = 0;
+      UInt32[] ipaddrs = new UInt32[batch];
       while (tested < batches) {
         for (int i = 0; i < batch; i++){
             #if STATIC
