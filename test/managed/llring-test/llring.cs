@@ -105,6 +105,7 @@ namespace E2D2.Collections.Concurrent
             ring = new T[slots];
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetWatermark (uint count) {
             Contract.Requires((count < common.slots),
                               "Can't set watermark higher than number of slots");
@@ -253,6 +254,7 @@ namespace E2D2.Collections.Concurrent
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private UInt32 SingleConsumerDequeue(ref T[] array) {
             unchecked {
                 UInt32 chead = cons.head;

@@ -18,9 +18,9 @@ public class Packet {
   }
 }
 
-public class RingThroughputTestNoAllocate {
+public sealed class RingThroughputTestNoAllocate {
 
-  protected internal LLRing<Packet> queue_;
+  private LLRing<Packet> queue_;
 
   private int producerCore_;
   private int consumerCore_;
@@ -30,6 +30,7 @@ public class RingThroughputTestNoAllocate {
   public long seconds_;
   public long warm_;
   public uint ringSize_;
+  private bool producerStop_;
   public RingThroughputTestNoAllocate(int producerCore, 
                                  int consumerCore, 
                                  uint ringSize,
@@ -46,9 +47,11 @@ public class RingThroughputTestNoAllocate {
     receiveBatchSize_ = receiveBatch;
     seconds_ = measureTime;
     warm_ = warmTime;
+    producerStop_ = false;
   }
 
-  protected void ProducerStart() {
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  private void ProducerStart() {
     SysUtils.SetAffinity(producerCore_);
     Stopwatch stopwatch = new Stopwatch();
     stopwatch.Start();
@@ -58,12 +61,13 @@ public class RingThroughputTestNoAllocate {
         batch[i] = new Packet(absCount);
         absCount++;
     }
-    while (true) {
+    while (!producerStop_) {
       queue_.MultiProducerEnqueue(ref batch);
     }
   }
 
-  protected void ConsumerStart() {
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  private void ConsumerStart() {
     SysUtils.SetAffinity(consumerCore_);
     Stopwatch stopwatch = new Stopwatch();
     stopwatch.Start();
@@ -105,13 +109,18 @@ public class RingThroughputTestNoAllocate {
   }
 
   public void Start() {
+    Console.WriteLine("Starting");
     Thread producer = new Thread(new ThreadStart(this.ProducerStart));
-    Thread consumer = new Thread(new ThreadStart(this.ConsumerStart));
+    //Thread consumer = new Thread(new ThreadStart(this.ConsumerStart));
     producer.Start();
-    consumer.Start();
-    consumer.Join();
+    Thread.Sleep(10000);
+    Console.WriteLine("Done sleeping");
+    //consumer.Start();
+    //consumer.Join();
     producer.Abort();
+//    producerStop_ = true;
     producer.Join();
+    Console.WriteLine("Done");
   }
 }
 public class RingThroughputTest {
@@ -141,7 +150,8 @@ public class RingThroughputTest {
             int buffer = (1 << batchp);
             uint slots = (1u << 14);
 #else
-        int buffer = BUFFER;
+            uint slots = (1u << 14);
+            int buffer = BUFFER;
 #endif
             RingThroughputTestNoAllocate rt = new RingThroughputTestNoAllocate(PCORE, CCORE, slots, buffer, buffer, RUN_TIME, WARM_TIME);
             rt.Start();
