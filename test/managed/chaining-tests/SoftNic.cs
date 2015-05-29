@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices; 
-namespace E2D2.SoftNic {
+namespace E2D2.SNApi {
     public sealed class Packet {
         internal IntPtr buf_addr;
         internal IntPtr pkt;
@@ -158,57 +158,44 @@ namespace E2D2.SoftNic {
 
     public sealed class PacketBuffer {
         internal IntPtr m_pktPointers;
-        internal Packet[] m_packets;
+        internal Packet m_packet;
         internal int m_available;
         internal int m_length;
+
+        public int Length {
+        	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        	get { return m_available; }
+		}
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal unsafe PacketBuffer(int size) {
             m_pktPointers = Marshal.AllocHGlobal(size * sizeof(UInt64));
-            m_packets = new Packet[size];
-            for (int i = 0; i < m_packets.Length; i++) {
-                m_packets[i] = new Packet();
-            }
+            m_packet = new Packet();
+            //for (int i = 0; i < m_packets.Length; i++) {
+                //m_packets[i] = new Packet();
+            //}
             m_available = 0;
             m_length = size;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal unsafe void PopulatePackets(int rcvd) {
-            Contract.Requires(m_available + rcvd < m_packets.Length, "Don't add packets from other places");
-			void** p = (void**)m_pktPointers;
-            for (int i = 0; i < rcvd; i++, m_available++) {
-                m_packets[m_available].SetPacket((IntPtr)(p[i]));
-            }
-        }
-
-        private unsafe Packet PopulatePacket (int i) {
-			void** p = (void**)m_pktPointers;
-			m_packets[i].SetPacket((IntPtr)(p[i]));
-			return m_packets[i];
-        }
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //internal unsafe void PopulatePackets(int rcvd) {
+            //Contract.Requires(m_available + rcvd < m_packets.Length, "Don't add packets from other places");
+			//void** p = (void**)m_pktPointers;
+            //for (int i = 0; i < rcvd; i++, m_available++) {
+                //m_packets[m_available].SetPacket((IntPtr)(p[i]));
+            //}
+        //}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void ZeroPackets (int start, int end) {
-		    Contract.Requires(start > 0, "Non negative index");
-		    Contract.Requires(end < m_packets.Length, "End must be less than length of array");
-            for (int i = start; i < end; i++) {
-                m_packets[i].ZeroPacket();
-            }
-            int oldLimit = m_available;
-            m_available = start;
-            for (int i = end; i < oldLimit; i++) {
-                Packet temp = m_packets[i];
-                m_packets[i] = m_packets[m_available];
-                m_packets[m_available] = temp;
-            }
+        public unsafe Packet PopulatePacket (int i) {
+			void** p = (void**)m_pktPointers;
+			m_packet.SetPacket((IntPtr)(p[i]));
+			return m_packet;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ZeroAll () {
-            foreach (Packet p in m_packets) {
-                p.ZeroPacket();
-            }
             m_available = 0;
         }
 
@@ -216,9 +203,6 @@ namespace E2D2.SoftNic {
         public Packet this[int i] {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
-                if (i > m_available) {
-                    throw new IndexOutOfRangeException();
-                }
                 return PopulatePacket (i);
             }
 
@@ -272,21 +256,6 @@ namespace E2D2.SoftNic {
             }
             pkts.m_available = 0;
             return sent;
-        }
-    }
-
-    public sealed class SoftNicTest {
-        public static void Main(string[] args) {
-			SoftNic.init_softnic (2, "test");
-			IntPtr port1 = SoftNic.init_port ("vport0");
-			IntPtr port2 = SoftNic.init_port ("vport1");
-			PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
-			while (true) {
-			    int rcvd = SoftNic.ReceiveBatch(port1, 0, ref pkts);
-			    if (rcvd > 0) {
-			        int sent = SoftNic.SendBatch(port2, 0, ref pkts);
-                }
-            }
         }
     }
 }

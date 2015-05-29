@@ -1,3 +1,4 @@
+#define SEALED
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,6 +10,8 @@ using System.Runtime.CompilerServices;
 namespace E2D2.Collections {
 #if INTERNAL
   internal 
+#else
+  public
 #endif
 #if SEALED
   sealed 
@@ -125,6 +128,7 @@ namespace E2D2.Collections {
           }
     }
 
+#if MAIN
     static void Benchmark(ref IPLookup lookup, 
             long warm,
             long batch,
@@ -215,5 +219,6 @@ namespace E2D2.Collections {
       }
 #endif
     }
+#endif
   }
 }
