@@ -16,7 +16,7 @@ namespace E2D2 {
 		public void PushBatch(ref PacketBuffer packets) {
 			int len = packets.Length;
 			for (int i = 0; i < len; i++) {
-				uint addr = packets.PopulatePacket(i).ipHdr.SrcIP;
+				uint addr = packets[i].ipHdr.SrcIP;
 				IPLookup.RouteLookupStatic(m_lookup, addr);
 			}
 		}
