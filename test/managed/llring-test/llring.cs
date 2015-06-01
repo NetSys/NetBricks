@@ -24,7 +24,7 @@ namespace E2D2.Collections.Concurrent
 {
     // A fixed size thread-safe ring buffer
     // TODO: Extend IProducerConsumer
-    public class LLRing<T> {
+    public sealed class LLRing<T> {
         private const int CACHELINE_SIZE = 64;
         public const UInt32 RING_QUOT_EXCEED = 1u << 31;
         #if (!__MonoCS__)
@@ -117,7 +117,7 @@ namespace E2D2.Collections.Concurrent
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public UInt32 EnqueueBatch (ref T[] objects) {
             if(common.sp_enqueue) {
-                return SingleProducerEnqueue(ref objects);
+                return SingleProducerEnqueue(ref objects, (uint)objects.Length);
             } else {
                 return MultiProducerEnqueue(ref objects);
             }
@@ -134,13 +134,12 @@ namespace E2D2.Collections.Concurrent
         // TODO: Currently I am just implementing LLRING_QUEUE_VARIABLE, i.e., queue as many
         // as possible. It is not hard to implement the other one, but laziness.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private UInt32 SingleProducerEnqueue(ref T[] objects) {
+        public UInt32 SingleProducerEnqueue(ref T[] objects, UInt32 n) {
             // We don't care about no overflows
             unchecked {
                 UInt32 phead = prod.head;
                 UInt32 ctail = cons.tail;
                 UInt32 mask = common.mask;
-                UInt32 n = (UInt32)objects.Length;
                 UInt32 free = 0;
             
                 // The idea here is that phead and ctail cannot be separated by more than slot (since
@@ -253,7 +252,8 @@ namespace E2D2.Collections.Concurrent
             }
         }
 
-        private UInt32 SingleConsumerDequeue(ref T[] array) {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public UInt32 SingleConsumerDequeue(ref T[] array) {
             unchecked {
                 UInt32 chead = cons.head;
                 UInt32 ptail = prod.tail;

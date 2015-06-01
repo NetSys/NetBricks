@@ -149,13 +149,13 @@ namespace E2D2.SNApi
                 if ((idx + n) < slots) {
                     //Array.Copy(objects, 0, ring, idx, n);
                     int i = 0;
-                    for (i = 0; i < (n & 0x3); i+=4, idx+=4) {
+                    for (i = 0; i < (n & (~(uint)0x3)); i+=4, idx+=4) {
                     	ring[idx] = pktPointerArray[i];
                     	ring[idx + 1] = pktPointerArray[i + 1];
                     	ring[idx + 2] = pktPointerArray[i + 2];
                     	ring[idx + 3] = pktPointerArray[i + 3];
 					}
-					switch (idx % 4) {
+					switch (n & 0x3) {
 						case 3: ring[idx++] = pktPointerArray[i++]; goto case 2;
 						case 2: ring[idx++] = pktPointerArray[i++]; goto case 1;
 						case 1: ring[idx++] = pktPointerArray[i++]; break;
@@ -196,7 +196,7 @@ namespace E2D2.SNApi
                 UInt32 chead = cons.head;
                 UInt32 ptail = prod.tail;
                 UInt32 mask = common.mask;
-                UInt32 n = (UInt32)buffer.Length;
+                UInt32 n = (UInt32)buffer.m_length;
                 UInt32 entries = ptail - chead; 
                 if (n > entries) {
                    #if (DEQUEUE_FIXED)
@@ -214,14 +214,14 @@ namespace E2D2.SNApi
                 UInt32 slots = common.slots;
                 if ((idx + n) < slots) {
                     //Array.Copy(objects, 0, ring, idx, n);
-                    int i;
-                    for (i = 0; i < (n & 0x3); i+=4, idx+=4) {
+                    uint i;
+                    for (i = 0; i < (n & (~(uint)0x3)); i+=4, idx+=4) {
                     	pktPointerArray[i] = ring[idx];
                     	pktPointerArray[i + 1] = ring[idx + 1];
                     	pktPointerArray[i + 2] = ring[idx + 2];
                     	pktPointerArray[i + 3] = ring[idx + 3];
 					}
-					switch (idx % 4) {
+					switch (n & 0x3) {
 						case 3: pktPointerArray[i++] = ring[idx++]; goto case 2;
 						case 2: pktPointerArray[i++] = ring[idx++]; goto case 1;
 						case 1: pktPointerArray[i++] = ring[idx++]; break;
@@ -236,6 +236,8 @@ namespace E2D2.SNApi
 						pktPointerArray[i] = ring[idx];
 					}
                 }
+
+                buffer.m_available = (int)n;
                 
                 cons.tail = cnext;
                 return n;

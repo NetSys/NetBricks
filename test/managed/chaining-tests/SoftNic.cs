@@ -163,6 +163,12 @@ namespace E2D2.SNApi {
 			get { return m_available; }
 		}
 
+		internal void PrintArray() {
+			for (int i = 0; i < m_available; i++) {
+				Console.WriteLine("Addr = {0}", m_pktPointerArray[i]);
+			}
+		}
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal unsafe PacketBuffer(int size) {
 			m_pktPointers = Marshal.AllocHGlobal(size * sizeof(UInt64));
@@ -209,6 +215,17 @@ namespace E2D2.SNApi {
 			Contract.Requires(length < array.Length, "Cannot have a smaller array than length");
 			for (int i = 0; i < length; i++) {
 				m_pktPointerArray[i] = array[i];
+			}
+			m_available = (int)length;
+			return length;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal UInt32 ToArray(IntPtr[] array, UInt32 length) {
+			// Use this to try and elide bounds check
+			Contract.Requires(length < array.Length, "Cannot have a smaller array than length");
+			for (int i = 0; i < length; i++) {
+				array[i] = m_pktPointerArray[i];
 			}
 			return length;
 		}
