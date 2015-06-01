@@ -3,15 +3,6 @@ using E2D2.SNApi;
 using E2D2;
 using System.Runtime.CompilerServices; 
 namespace E2D2 {
-	public sealed class NoOpVF : IE2D2Component {
-		public NoOpVF() {
-		}
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void PushBatch(ref PacketBuffer packets) {
-			// Do nothing
-		}
-	}
 	public sealed class NoOpChainingTest {
 		public static void Main(string[] args) {
 			SoftNic.init_softnic (2, "test");

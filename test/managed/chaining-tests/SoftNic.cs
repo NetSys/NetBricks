@@ -156,7 +156,7 @@ namespace E2D2.SNApi {
 		internal Packet m_packet;
 		internal int m_available;
 		internal int m_length;
-		private IntPtr* m_pktPointerArray;
+		internal IntPtr* m_pktPointerArray;
 
 		public int Length {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -201,6 +201,16 @@ namespace E2D2.SNApi {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		IEnumerator IEnumerable.GetEnumerator() {
 			return GetEnumerator1();
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal UInt32 FromArray(IntPtr[] array, UInt32 length) {
+			// Use this to try and elide bounds check
+			Contract.Requires(length < array.Length, "Cannot have a smaller array than length");
+			for (int i = 0; i < length; i++) {
+				m_pktPointerArray[i] = array[i];
+			}
+			return length;
 		}
 
 		public Packet this[int i] {
