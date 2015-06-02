@@ -261,19 +261,19 @@ namespace E2D2.SNApi {
 		public static unsafe extern IntPtr init_port (string ifname);
 
 		[DllImport("sn")]
-		static unsafe extern int receive_pkts (IntPtr port, int rxq, IntPtr pkts, int cnt );
+		static unsafe extern int sn_receive_pkts (IntPtr port, int rxq, IntPtr pkts, int cnt );
 
 		[DllImport("sn")]
-		static unsafe extern int send_pkts (IntPtr port, int txq, IntPtr pkts, int cnt );
+		static unsafe extern int sn_send_pkts (IntPtr port, int txq, IntPtr pkts, int cnt );
 
 		[DllImport("sn")]
-		static unsafe extern void snbuf_free (IntPtr pkt);
+		static unsafe extern void sn_snb_free (IntPtr pkt);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal static unsafe void ReleasePackets (ref PacketBuffer pkts, int start, int end) {
 			void** p = (void**)pkts.m_pktPointers;
 			while (start < end) {
-				snbuf_free ((IntPtr)p[start]);
+				sn_snb_free ((IntPtr)p[start]);
 				start++;
 			}
 		}
@@ -285,14 +285,14 @@ namespace E2D2.SNApi {
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int ReceiveBatch (IntPtr port, int rxq, ref PacketBuffer pkts) {
-			int rcvd = receive_pkts(port, rxq, pkts.m_pktPointers, pkts.m_length);
+			int rcvd = sn_receive_pkts(port, rxq, pkts.m_pktPointers, pkts.m_length);
 			pkts.m_available = rcvd;
 			return rcvd;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int SendBatch (IntPtr port, int txq, ref PacketBuffer pkts) {
-			int sent = send_pkts(port, txq, pkts.m_pktPointers, pkts.m_available);
+			int sent = sn_send_pkts(port, txq, pkts.m_pktPointers, pkts.m_available);
 			// For now free everything else, but this is the wrong thing to do here
 			if (sent < pkts.m_available) {
 				ReleasePackets(ref pkts, sent, pkts.m_available);
