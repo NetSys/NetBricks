@@ -3,6 +3,7 @@ using E2D2.SNApi;
 using E2D2;
 using E2D2.Collections;
 using System.Runtime.CompilerServices; 
+using System.Diagnostics; 
 using System.IO;
 using System.Net;
 using System.Threading;
@@ -10,6 +11,8 @@ using System.Collections;
 //using E2D2.Collections.Concurrent;
 namespace E2D2.SNApi {
 	public sealed class IpLookupChainingTest {
+		private static UInt64 totalDrops = 0;
+		private static Stopwatch stopWatch;
 		static LLRingPacket ring;
 		//static LLRing<IntPtr> ring;
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -26,6 +29,7 @@ namespace E2D2.SNApi {
 					//pkts.ToArray(batch, (uint)rcvd);
 					uint sent = ring.SingleProducerEnqueuePackets(ref pkts);
 					if (sent < pkts.m_available) {					
+						totalDrops += (ulong)(pkts.m_available - sent);
 						SoftNic.ReleasePackets(ref pkts, (int)sent, pkts.m_available);
 					}
 					pkts.ZeroAll();
@@ -46,9 +50,7 @@ namespace E2D2.SNApi {
 						vf.PushBatch(ref pkts);
 					} catch (Exception) {
 					}
-					if (rcvd > 0) {
-						SoftNic.SendBatch(port2, 0, ref pkts);
-					}
+					SoftNic.SendBatch(port2, 0, ref pkts);
 				}
 				yield return 1;
 			}
@@ -64,7 +66,13 @@ namespace E2D2.SNApi {
 			}
 		}
 
+		static void OnExit (object sender, EventArgs e) {
+			Console.WriteLine("Lifetime packet drops from ring {0} in {1} ticks (freq {2})", 
+					totalDrops, stopWatch.ElapsedTicks, Stopwatch.Frequency);
+		}
+
 		public static void Main(string[] args) {
+			Console.CancelKeyPress += new ConsoleCancelEventHandler(OnExit);
 			ring = new LLRingPacket(64, true, true);
 	  		
 			IE2D2Component vf1 = new NoOpVF();
@@ -73,6 +81,7 @@ namespace E2D2.SNApi {
 			IntPtr port1 = SoftNic.init_port ("vport0");
 			IntPtr port2 = SoftNic.init_port ("vport1");
 			Console.WriteLine("VPORT Src {0} Dest {1}", port1, port2);
+			stopWatch = Stopwatch.StartNew();
 			sched(vf1, vf2, port1, port2);
 		}
 	}

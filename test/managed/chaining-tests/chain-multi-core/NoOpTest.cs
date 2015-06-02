@@ -6,8 +6,10 @@ using System.Runtime.CompilerServices;
 using System.IO;
 using System.Net;
 using System.Threading;
+using System.Diagnostics; 
 namespace E2D2.SNApi {
 	public sealed class NoOpTest {
+		private static Stopwatch stopWatch;
 		private static UInt64 totalDrops = 0;
 		internal static void ThreadSource(IE2D2Component vf, int core, string vport, ref LLRingPacket ring) {
 			SoftNic.sn_init_thread(core);
@@ -51,10 +53,11 @@ namespace E2D2.SNApi {
 		}
 
 		static void OnExit (object sender, EventArgs e) {
-			Console.WriteLine("Lifetime packet drops from ring {0}", totalDrops);
+			Console.WriteLine("Lifetime packet drops from ring {0} in {1} ticks (freq {2})", 
+					totalDrops, stopWatch.ElapsedTicks, Stopwatch.Frequency);
 		}
 		public static void Main(string[] args) {
-			AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnExit);
+			Console.CancelKeyPress += new ConsoleCancelEventHandler(OnExit);
 			var ring = new LLRingPacket(64, true, true);
 			SoftNic.init_softnic (1, "test");
 			IE2D2Component vf1 = new NoOpVF();
@@ -63,6 +66,7 @@ namespace E2D2.SNApi {
     		Thread consum = new Thread(new ThreadStart(() => ThreadDestination(vf2, 3, "vport1", ref ring)));
     		source.Start();
     		consum.Start();
+			stopWatch = Stopwatch.StartNew();
     		source.Join();
     		consum.Join();
 		}

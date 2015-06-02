@@ -33,8 +33,28 @@ namespace E2D2.SNApi {
 			}
 		}
 
+		internal static void ThreadIntermediate(IE2D2Component vf, int core, ref LLRingPacket ringRecv, ref LLRingPacket ringSend) {
+			SoftNic.sn_init_thread(core);
+			Console.WriteLine("DPDK LCORE setting {0}", SoftNic.sn_get_lcore_id());
+			PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
+			while (true) {
+				uint rcvd = ringRecv.SingleConsumerDequeuePackets(ref pkts);
+				if (rcvd > 0) {
+					try {
+						vf.PushBatch(ref pkts);
+					} catch (Exception) {
+					}
+					int sent = (int)(ringSend.SingleProducerEnqueuePackets(ref pkts) & (~LLRingPacket.RING_QUOT_EXCEED)) ;
+					if (sent < pkts.m_available) {
+						totalDrops += (ulong)(pkts.m_available - sent);
+						SoftNic.ReleasePackets(ref pkts, sent, pkts.m_available);
+					}
+					pkts.ZeroAll();
+				}
+			}
+		}
+
 		internal static void ThreadDestination(IE2D2Component vf, int core, string vport, ref LLRingPacket ring) {
-			//SoftNic.init_softnic (core, "test");
 			SoftNic.sn_init_thread(core);
 			IntPtr port2 = SoftNic.init_port (vport);
 			Console.WriteLine("DPDK LCORE setting {0}", SoftNic.sn_get_lcore_id());
@@ -46,7 +66,7 @@ namespace E2D2.SNApi {
 						vf.PushBatch(ref pkts);
 					} catch (Exception) {
 					}
-					SoftNic.SendBatch(port2, 0, ref pkts);
+				    SoftNic.SendBatch(port2, 0, ref pkts);
 				}
 			}
 		}
@@ -65,7 +85,9 @@ namespace E2D2.SNApi {
 			}
 			IPLookup lookup1 = new IPLookup();
 			IPLookup lookup2 = new IPLookup();
-			LLRingPacket ring = new LLRingPacket(32, true, true);
+			IPLookup lookup3 = new IPLookup();
+			LLRingPacket ringS2I = new LLRingPacket(32, true, true);
+			LLRingPacket ringI2D = new LLRingPacket(32, true, true);
 	  		
 			using (StreamReader ribReader = new StreamReader(args[0])) {
 				while (ribReader.Peek() >= 0) {
@@ -81,16 +103,21 @@ namespace E2D2.SNApi {
 									addr.GetAddressBytes(), 0));
 					lookup1.AddRoute(addrAsInt, len, dest);
 					lookup2.AddRoute(addrAsInt, len, dest);
+					lookup3.AddRoute(addrAsInt, len, dest);
 				}
 			}
 			IE2D2Component vf1 = new IPLookupVF(lookup1);
 			IE2D2Component vf2 = new IPLookupVF(lookup2);
-    		Thread source = new Thread(new ThreadStart(() => ThreadSource(vf1, 2, "vport0", ref ring)));
-    		Thread consum = new Thread(new ThreadStart(() => ThreadDestination(vf2, 3, "vport1", ref ring)));
+			IE2D2Component vf3 = new IPLookupVF(lookup2);
+    		Thread source = new Thread(new ThreadStart(() => ThreadSource(vf1, 2, "vport0", ref ringS2I)));
+    		Thread interm = new Thread(new ThreadStart(() => ThreadIntermediate(vf2, 3, ref ringS2I, ref ringI2D)));
+    		Thread consum = new Thread(new ThreadStart(() => ThreadDestination(vf3, 4, "vport1", ref ringI2D)));
     		source.Start();
+    		interm.Start();
     		consum.Start();
 			stopWatch = Stopwatch.StartNew();
     		source.Join();
+    		interm.Join();
     		consum.Join();
 		}
 	}
