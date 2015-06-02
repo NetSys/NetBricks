@@ -7,7 +7,8 @@ using System.IO;
 using System.Net;
 using System.Threading;
 namespace E2D2.SNApi {
-	public sealed class IpLookupChainingTest {
+	public sealed class NoOpTest {
+		private static UInt64 totalDrops = 0;
 		internal static void ThreadSource(IE2D2Component vf, int core, string vport, ref LLRingPacket ring) {
 			SoftNic.sn_init_thread(core);
 			IntPtr port1 = SoftNic.init_port (vport);
@@ -22,6 +23,7 @@ namespace E2D2.SNApi {
 					}
 					int sent = (int)(ring.SingleProducerEnqueuePackets(ref pkts) & (~LLRingPacket.RING_QUOT_EXCEED)) ;
 					if (sent < pkts.m_available) {					
+						totalDrops += (ulong)(pkts.m_available - sent);
 						SoftNic.ReleasePackets(ref pkts, sent, pkts.m_available);
 					}
 					pkts.ZeroAll();
@@ -30,7 +32,6 @@ namespace E2D2.SNApi {
 		}
 
 		internal static void ThreadDestination(IE2D2Component vf, int core, string vport, ref LLRingPacket ring) {
-			//SoftNic.init_softnic (core, "test");
 			SoftNic.sn_init_thread(core);
 			IntPtr port2 = SoftNic.init_port (vport);
 			Console.WriteLine("DPDK LCORE setting {0}", SoftNic.sn_get_lcore_id());
@@ -48,34 +49,16 @@ namespace E2D2.SNApi {
 				}
 			}
 		}
+
+		static void OnExit (object sender, EventArgs e) {
+			Console.WriteLine("Lifetime packet drops from ring {0}", totalDrops);
+		}
 		public static void Main(string[] args) {
+			AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnExit);
+			var ring = new LLRingPacket(64, true, true);
 			SoftNic.init_softnic (1, "test");
-			if(args.Length < 1) {
-				Console.WriteLine("Usage: IPLookupChainingTest <rib>");
-				return;
-			}
-			IPLookup lookup1 = new IPLookup();
-			IPLookup lookup2 = new IPLookup();
-			LLRingPacket ring = new LLRingPacket(32, true, true);
-	  		
-			using (StreamReader ribReader = new StreamReader(args[0])) {
-				while (ribReader.Peek() >= 0) {
-					String line = ribReader.ReadLine();
-					String[] parts = line.Split(' ');
-					String[] addrParts = parts[0].Split('/');
-					UInt16 dest = Convert.ToUInt16(parts[1]);
-					UInt16 len = Convert.ToUInt16(addrParts[1]);
-					IPAddress addr = IPAddress.Parse(addrParts[0]);
-					UInt32 addrAsInt = 
-						(UInt32)IPAddress.NetworkToHostOrder(
-								BitConverter.ToInt32(
-									addr.GetAddressBytes(), 0));
-					lookup1.AddRoute(addrAsInt, len, dest);
-					lookup2.AddRoute(addrAsInt, len, dest);
-				}
-			}
-			IE2D2Component vf1 = new IPLookupVF(lookup1);
-			IE2D2Component vf2 = new IPLookupVF(lookup2);
+			IE2D2Component vf1 = new NoOpVF();
+			IE2D2Component vf2 = new NoOpVF();
     		Thread source = new Thread(new ThreadStart(() => ThreadSource(vf1, 2, "vport0", ref ring)));
     		Thread consum = new Thread(new ThreadStart(() => ThreadDestination(vf2, 3, "vport1", ref ring)));
     		source.Start();

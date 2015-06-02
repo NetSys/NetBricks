@@ -272,6 +272,12 @@ namespace E2D2.SNApi {
 		[DllImport("sn")]
 		static unsafe extern void sn_snb_free_bulk_range(IntPtr pkts, int start, int cnt);
 
+		[DllImport("sn")]
+		public static unsafe extern void sn_init_thread(int core);
+
+		[DllImport("sn")]
+		public static unsafe extern uint sn_get_lcore_id();
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal static unsafe void ReleasePackets (ref PacketBuffer pkts, int start, int end) {
 			sn_snb_free_bulk_range((IntPtr)pkts.m_pktPointerArray, start, end - start);
