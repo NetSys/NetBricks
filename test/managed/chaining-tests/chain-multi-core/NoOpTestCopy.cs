@@ -11,11 +11,25 @@ namespace E2D2.SNApi {
 	public sealed class NoOpTest {
 		private static Stopwatch stopWatch;
 		private static UInt64 totalDrops = 0;
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal static void CopyAndSendPacket(ref PacketBuffer pkts, ref PacketBuffer pktOut, ref LLRingPacket ring) {
+			SoftNic.CopyBatch(ref pkts, ref pktOut);
+			SoftNic.ReleasePackets(ref pkts, 0, pkts.Length);
+			uint sent = ring.SingleProducerEnqueuePackets(ref pktOut);
+			if (sent < pkts.m_available) {					
+				totalDrops += (ulong)(pkts.m_available - sent);
+				SoftNic.ReleasePackets(ref pktOut, (int)sent, pktOut.m_available);
+			}
+			pkts.ZeroAll();
+		}
+
 		internal static void ThreadSource(IE2D2Component vf, int core, string vport, ref LLRingPacket ring) {
 			SoftNic.sn_init_thread(core);
 			IntPtr port1 = SoftNic.init_port (vport);
 			Console.WriteLine("DPDK LCORE setting {0}", SoftNic.sn_get_lcore_id());
 			PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
+			PacketBuffer pktOut = SoftNic.CreatePacketBuffer(32);
 			while (true) {
 				int rcvd = SoftNic.ReceiveBatch(port1, 0, ref pkts);
 				if (rcvd > 0) {
@@ -23,12 +37,7 @@ namespace E2D2.SNApi {
 						vf.PushBatch(ref pkts);
 					} catch (Exception) {
 					}
-					int sent = (int)(ring.SingleProducerEnqueuePackets(ref pkts) & (~LLRingPacket.RING_QUOT_EXCEED)) ;
-					if (sent < pkts.m_available) {					
-						totalDrops += (ulong)(pkts.m_available - sent);
-						SoftNic.ReleasePackets(ref pkts, sent, pkts.m_available);
-					}
-					pkts.ZeroAll();
+					CopyAndSendPacket(ref pkts, ref pktOut, ref ring);
 				}
 			}
 		}
@@ -52,10 +61,14 @@ namespace E2D2.SNApi {
 			}
 		}
 
-		internal static void ThreadIntermediate(IE2D2Component vf, int core, ref LLRingPacket ringRecv, ref LLRingPacket ringSend) {
+		internal static void ThreadIntermediate(IE2D2Component vf, 
+												int core, 
+												ref LLRingPacket ringRecv, 
+												ref LLRingPacket ringSend) {
 			SoftNic.sn_init_thread(core);
 			Console.WriteLine("DPDK LCORE setting {0}", SoftNic.sn_get_lcore_id());
 			PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
+			PacketBuffer pktOut = SoftNic.CreatePacketBuffer(32);
 			while (true) {
 				uint rcvd = ringRecv.SingleConsumerDequeuePackets(ref pkts);
 				if (rcvd > 0) {
@@ -63,12 +76,7 @@ namespace E2D2.SNApi {
 						vf.PushBatch(ref pkts);
 					} catch (Exception) {
 					}
-					int sent = (int)(ringSend.SingleProducerEnqueuePackets(ref pkts) & (~LLRingPacket.RING_QUOT_EXCEED)) ;
-					if (sent < pkts.m_available) {
-						totalDrops += (ulong)(pkts.m_available - sent);
-						SoftNic.ReleasePackets(ref pkts, sent, pkts.m_available);
-					}
-					pkts.ZeroAll();
+					CopyAndSendPacket(ref pkts, ref pktOut, ref ringSend);
 				}
 			}
 		}
@@ -105,11 +113,9 @@ namespace E2D2.SNApi {
     		for (int i = 1; i < length - 1; i++) {
     			int j = i;
     			threads[i] = new Thread(new ThreadStart(() => 
-    						     ThreadIntermediate(vfs[j], 2 + j, ref rings[j - 1], ref rings[j])));
+    						     ThreadIntermediate(vfs[j], 2 + i, ref rings[j - 1], ref rings[i])));
 			}
-
 			stopWatch = Stopwatch.StartNew();
-
 			for (int i = 0; i < threads.Length; i++) {
 				threads[i].Start();
 			}

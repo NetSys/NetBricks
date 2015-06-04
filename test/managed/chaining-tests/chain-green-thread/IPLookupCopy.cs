@@ -15,8 +15,12 @@ namespace E2D2.SNApi {
 		private static Stopwatch stopWatch;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void SendPacketLLRing(ref PacketBuffer pkts, ref LLRingPacket ring) {
-			uint sent = ring.SingleProducerEnqueuePackets(ref pkts);
+		internal static void CopyAndSendPacket(ref PacketBuffer pkts, ref PacketBuffer pktOut, ref LLRingPacket ring) {
+			SoftNic.CopyBatch(ref pkts, ref pktOut);
+			SoftNic.ReleasePackets(ref pkts, 0, pkts.Length);
+			pkts.m_available = 0;
+
+			uint sent = ring.SingleProducerEnqueuePackets(ref pktOut);
 			if (sent < pkts.m_available) {					
 				totalDrops += (ulong)(pkts.m_available - sent);
 				SoftNic.ReleasePackets(ref pkts, (int)sent, pkts.m_available);
@@ -37,6 +41,7 @@ namespace E2D2.SNApi {
 			internal IEnumerator Run() {
 				Console.WriteLine("Source VPORT is {0}", port1);
 				PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
+				PacketBuffer pktOut = SoftNic.CreatePacketBuffer(32);
 				while (true) {
 					int rcvd = SoftNic.ReceiveBatch(port1, 0, ref pkts);
 					if (rcvd > 0) {
@@ -44,7 +49,7 @@ namespace E2D2.SNApi {
 							vf.PushBatch(ref pkts);
 						} catch (Exception) {
 						}
-						SendPacketLLRing(ref pkts, ref ring);
+						CopyAndSendPacket(ref pkts, ref pktOut, ref ring);
 					}
 					yield return 1;
 				}
@@ -89,6 +94,7 @@ namespace E2D2.SNApi {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal IEnumerator Run() {
 				PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
+				PacketBuffer pktOut = SoftNic.CreatePacketBuffer(32);
 				while (true) {
 					uint rcvd = ringSrc.SingleConsumerDequeuePackets(ref pkts);
 					if (rcvd > 0) {
@@ -96,16 +102,11 @@ namespace E2D2.SNApi {
 							vf.PushBatch(ref pkts);
 						} catch (Exception) {
 						}
-						SendPacketLLRing(ref pkts, ref ringDst);
+						CopyAndSendPacket(ref pkts, ref pktOut, ref ringDst);
 					}
 					yield return 1;
 				}
 			}
-		}
-
-		static void OnExit (object sender, EventArgs e) {
-			Console.WriteLine("Lifetime packet drops from ring {0} in {1} ticks (freq {2})", 
-					totalDrops, stopWatch.ElapsedTicks, Stopwatch.Frequency);
 		}
 
 		static void sched(SourceElement srcVF, DestElement destVF, IntermediateElement[] mids) {
@@ -123,35 +124,70 @@ namespace E2D2.SNApi {
 			}
 		}
 
+		static void OnExit (object sender, EventArgs e) {
+			Console.WriteLine("Lifetime packet drops from ring {0} in {1} ticks (freq {2})", 
+					totalDrops, stopWatch.ElapsedTicks, Stopwatch.Frequency);
+		}
+
 		public static void Main(string[] args) {
 			Console.CancelKeyPress += new ConsoleCancelEventHandler(OnExit);
 			SoftNic.init_softnic (2, "test");
 			int length = 2;
 			// Optionally take number of intermediate nodes to chain, note chain is thus n+2
-			if (args.Length == 1) {
-				length += Convert.ToInt32(args[0]);
+			if(args.Length < 1) {
+				Console.WriteLine("Usage: IPLookupChainingTest <rib> [intermediates]");
+				return;
+			}
+			if (args.Length == 2) {
+				length += Convert.ToInt32(args[1]);
 			}
 			
+			Console.WriteLine("Chain length is {0}", length);
+			IPLookup[] lookups = new IPLookup[length];
+			for (int i = 0; i < lookups.Length; i++) {
+				lookups[i] = new IPLookup();
+
+			}
+			using (StreamReader ribReader = new StreamReader(args[0])) {
+				while (ribReader.Peek() >= 0) {
+					String line = ribReader.ReadLine();
+					String[] parts = line.Split(' ');
+					String[] addrParts = parts[0].Split('/');
+					UInt16 dest = Convert.ToUInt16(parts[1]);
+					UInt16 len = Convert.ToUInt16(addrParts[1]);
+					IPAddress addr = IPAddress.Parse(addrParts[0]);
+					UInt32 addrAsInt = 
+						(UInt32)IPAddress.NetworkToHostOrder(
+								BitConverter.ToInt32(
+									addr.GetAddressBytes(), 0));
+					foreach (IPLookup lookup in lookups) {
+						lookup.AddRoute(addrAsInt, len, dest);
+					}
+				}
+			}
+	  		
 			IE2D2Component[] vfs = new IE2D2Component[length];
 			for (int i = 0; i < vfs.Length; i++) {
-				vfs[i] = new NoOpVF();
-			}
-
-			LLRingPacket[] rings = new LLRingPacket[length - 1];
-			for (int i = 0; i < rings.Length; i++) {
-				rings[i] = new LLRingPacket(64, true, true);
+				vfs[i] = new IPLookupVF(lookups[i]);
 			}
 			IntPtr port1 = SoftNic.init_port ("vport0");
 			IntPtr port2 = SoftNic.init_port ("vport1");
 			Console.WriteLine("VPORT Src {0} Dest {1}", port1, port2);
+
+			//LLRingPacket rings = new LLRingPacket(64, true, true);
+			LLRingPacket[] rings = new LLRingPacket[length - 1];
+			for (int i = 0; i < rings.Length; i++) {
+				rings[i] = new LLRingPacket(64, true, true);
+			}
+
 			SourceElement src = new SourceElement(rings[0], vfs[0], port1);
-			DestElement dest = new DestElement(rings[rings.Length - 1], vfs[vfs.Length - 1], port2);
+			DestElement dst = new DestElement(rings[rings.Length - 1], vfs[length - 1], port2);
 			IntermediateElement[] mids = new IntermediateElement[length - 2];
 			for (int i=0; i<mids.Length; i++) {
 				mids[i] = new IntermediateElement(rings[i], vfs[i + 1], rings[i + 1]);
 			}
 			stopWatch = Stopwatch.StartNew();
-			sched(src, dest, mids);
+			sched(src, dst, mids);
 		}
 	}
 }

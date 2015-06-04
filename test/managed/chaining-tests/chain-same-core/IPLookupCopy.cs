@@ -5,14 +5,18 @@ using E2D2.Collections;
 using System.Runtime.CompilerServices; 
 using System.IO;
 using System.Net;
+using System.Threading;
+using System.Diagnostics; 
 namespace E2D2 {
-	public sealed class IpLookupChainingTest {
+	public sealed class NoOpChainingTest {
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal static void CopyAndSendPacket(ref PacketBuffer pktIn, ref PacketBuffer pktOut) {
+			SoftNic.CopyBatch(ref pktIn, ref pktOut);
+			SoftNic.ReleasePackets(ref pktIn, 0, pktIn.Length);
+			pktIn.m_available = 0;
+		}
 		public static void Main(string[] args) {
 			SoftNic.init_softnic (2, "test");
-			if(args.Length < 1) {
-				Console.WriteLine("Usage: IPLookupChainingTest <rib>");
-				return;
-			}
 
 			int length = 2;
 			if(args.Length < 1) {
@@ -53,17 +57,20 @@ namespace E2D2 {
 			}
 			IntPtr port1 = SoftNic.init_port ("vport0");
 			IntPtr port2 = SoftNic.init_port ("vport1");
-			PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
+			PacketBuffer[] pktBufs = new PacketBuffer[2];
+			pktBufs[0] = SoftNic.CreatePacketBuffer(32);
+			pktBufs[1] = SoftNic.CreatePacketBuffer(32);
 			while (true) {
-				int rcvd = SoftNic.ReceiveBatch(port1, 0, ref pkts);
+				int rcvd = SoftNic.ReceiveBatch(port1, 0, ref pktBufs[0]);
 				if (rcvd > 0) {
 					for (int i = 0; i < vfs.Length; i++) {
 						try {
-							vfs[i].PushBatch(ref pkts);
+							vfs[i].PushBatch(ref pktBufs[i & 0x1]);
 						} catch (Exception) {
 						}
+						CopyAndSendPacket(ref pktBufs[i & 0x1], ref pktBufs[((i & 0x1) + 1) & 0x1]);
 					}
-					SoftNic.SendBatch(port2, 0, ref pkts);
+					SoftNic.SendBatch(port2, 0, ref pktBufs[vfs.Length & 0x1]);
 				}
 			}
 		}

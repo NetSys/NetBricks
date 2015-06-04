@@ -15,8 +15,12 @@ namespace E2D2.SNApi {
 		private static Stopwatch stopWatch;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void SendPacketLLRing(ref PacketBuffer pkts, ref LLRingPacket ring) {
-			uint sent = ring.SingleProducerEnqueuePackets(ref pkts);
+		internal static void CopyAndSendPacket(ref PacketBuffer pkts, ref PacketBuffer pktOut, ref LLRingPacket ring) {
+			SoftNic.CopyBatch(ref pkts, ref pktOut);
+			SoftNic.ReleasePackets(ref pkts, 0, pkts.Length);
+			pkts.m_available = 0;
+			uint sent = ring.SingleProducerEnqueuePackets(ref pktOut);
+
 			if (sent < pkts.m_available) {					
 				totalDrops += (ulong)(pkts.m_available - sent);
 				SoftNic.ReleasePackets(ref pkts, (int)sent, pkts.m_available);
@@ -37,6 +41,7 @@ namespace E2D2.SNApi {
 			internal IEnumerator Run() {
 				Console.WriteLine("Source VPORT is {0}", port1);
 				PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
+				PacketBuffer pktOut = SoftNic.CreatePacketBuffer(32);
 				while (true) {
 					int rcvd = SoftNic.ReceiveBatch(port1, 0, ref pkts);
 					if (rcvd > 0) {
@@ -44,7 +49,7 @@ namespace E2D2.SNApi {
 							vf.PushBatch(ref pkts);
 						} catch (Exception) {
 						}
-						SendPacketLLRing(ref pkts, ref ring);
+						CopyAndSendPacket(ref pkts, ref pktOut, ref ring);
 					}
 					yield return 1;
 				}
@@ -89,6 +94,7 @@ namespace E2D2.SNApi {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			internal IEnumerator Run() {
 				PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
+				PacketBuffer pktOut = SoftNic.CreatePacketBuffer(32);
 				while (true) {
 					uint rcvd = ringSrc.SingleConsumerDequeuePackets(ref pkts);
 					if (rcvd > 0) {
@@ -96,16 +102,11 @@ namespace E2D2.SNApi {
 							vf.PushBatch(ref pkts);
 						} catch (Exception) {
 						}
-						SendPacketLLRing(ref pkts, ref ringDst);
+						CopyAndSendPacket(ref pkts, ref pktOut, ref ringDst);
 					}
 					yield return 1;
 				}
 			}
-		}
-
-		static void OnExit (object sender, EventArgs e) {
-			Console.WriteLine("Lifetime packet drops from ring {0} in {1} ticks (freq {2})", 
-					totalDrops, stopWatch.ElapsedTicks, Stopwatch.Frequency);
 		}
 
 		static void sched(SourceElement srcVF, DestElement destVF, IntermediateElement[] mids) {
@@ -121,6 +122,11 @@ namespace E2D2.SNApi {
 					tasks[i].MoveNext();
 				}
 			}
+		}
+
+		static void OnExit (object sender, EventArgs e) {
+			Console.WriteLine("Lifetime packet drops from ring {0} in {1} ticks (freq {2})", 
+					totalDrops, stopWatch.ElapsedTicks, Stopwatch.Frequency);
 		}
 
 		public static void Main(string[] args) {
@@ -145,7 +151,7 @@ namespace E2D2.SNApi {
 			IntPtr port2 = SoftNic.init_port ("vport1");
 			Console.WriteLine("VPORT Src {0} Dest {1}", port1, port2);
 			SourceElement src = new SourceElement(rings[0], vfs[0], port1);
-			DestElement dest = new DestElement(rings[rings.Length - 1], vfs[vfs.Length - 1], port2);
+			DestElement dest = new DestElement(rings[rings.Length - 1], vfs[vfs.Length-1], port2);
 			IntermediateElement[] mids = new IntermediateElement[length - 2];
 			for (int i=0; i<mids.Length; i++) {
 				mids[i] = new IntermediateElement(rings[i], vfs[i + 1], rings[i + 1]);

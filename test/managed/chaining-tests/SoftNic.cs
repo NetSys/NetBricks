@@ -278,14 +278,18 @@ namespace E2D2.SNApi {
 		[DllImport("sn")]
 		public static unsafe extern uint sn_get_lcore_id();
 
+		[DllImport("sn")]
+		internal static unsafe extern void sn_snb_copy_batch(IntPtr src, IntPtr dest, int cnt);
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal static unsafe void CopyBatch(ref PacketBuffer src, ref PacketBuffer dst) {
+			sn_snb_copy_batch(src.m_pktPointers, dst.m_pktPointers, src.m_available);
+			dst.m_available = src.m_available;
+		}
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal static unsafe void ReleasePackets (ref PacketBuffer pkts, int start, int end) {
-			sn_snb_free_bulk_range((IntPtr)pkts.m_pktPointerArray, start, end - start);
-			//void** p = (void**)pkts.m_pktPointers;
-			//while (start < end) {
-				//sn_snb_free ((IntPtr)p[start]);
-				//start++;
-			//}
+			sn_snb_free_bulk_range(pkts.m_pktPointers, start, end - start);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
