@@ -113,7 +113,7 @@ namespace E2D2.SNApi {
     		for (int i = 1; i < length - 1; i++) {
     			int j = i;
     			threads[i] = new Thread(new ThreadStart(() => 
-    						     ThreadIntermediate(vfs[j], 2 + i, ref rings[j - 1], ref rings[i])));
+    						     ThreadIntermediate(vfs[j], 2 + j, ref rings[j - 1], ref rings[j])));
 			}
 			stopWatch = Stopwatch.StartNew();
 			for (int i = 0; i < threads.Length; i++) {

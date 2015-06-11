@@ -28,6 +28,7 @@ namespace E2D2 {
 						try {
 							vfs[i].PushBatch(ref pkts);
 						} catch (Exception) {
+							Console.WriteLine("Exception");
 						}
 					}
 					SoftNic.SendBatch(port2, 0, ref pkts);

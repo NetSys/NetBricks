@@ -23,12 +23,16 @@ namespace E2D2.SNApi {
 		public unsafe UInt16 data_len { 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get { return *(ushort*)(pkt + 34); } 
+			set { ushort* ptr = (ushort*)(pkt + 34);
+				  *ptr = (ushort)value;}
 		}
 
 		public unsafe UInt32 pkt_len { 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *(uint*)(pkt + 36); } 
-		}
+			get { return *(uint*)(pkt + 36); }
+			set { uint* ptr = (uint*)(pkt + 36);
+				  *ptr = value;}
+		} 
 		public EthHdr ethHdr;
 		public Ipv4Hdr ipHdr;
 
@@ -281,14 +285,27 @@ namespace E2D2.SNApi {
 		[DllImport("sn")]
 		internal static unsafe extern void sn_snb_copy_batch(IntPtr src, IntPtr dest, int cnt);
 
+		[DllImport("sn")]
+		internal static unsafe extern void sn_snb_alloc_bulk(IntPtr snbs, int cnt);
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal static unsafe void CopyBatch(ref PacketBuffer src, ref PacketBuffer dst) {
+		public static unsafe void CopyBatch(ref PacketBuffer src, ref PacketBuffer dst) {
 			sn_snb_copy_batch(src.m_pktPointers, dst.m_pktPointers, src.m_available);
 			dst.m_available = src.m_available;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal static unsafe void ReleasePackets (ref PacketBuffer pkts, int start, int end) {
+		public static unsafe void AllocBatch(ref PacketBuffer snbs, int count, ushort size) {
+			sn_snb_alloc_bulk(snbs.m_pktPointers, count);
+			snbs.m_available = count;
+			for (int i = 0; i < count; i++) {
+				Packet p = snbs[i];
+				p.pkt_len = p.data_len = size;
+			}
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static unsafe void ReleasePackets (ref PacketBuffer pkts, int start, int end) {
 			sn_snb_free_bulk_range(pkts.m_pktPointers, start, end - start);
 		}
 
