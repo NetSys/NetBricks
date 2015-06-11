@@ -8,28 +8,6 @@ using System.Net;
 namespace E2D2 {
 	public sealed class FixedGCTest {
 		public static void Main(string[] args) {
-			if(args.Length < 1) {
-				Console.WriteLine("Usage: IPLookupChainingTest <rib>");
-				return;
-			}
-			IPLookup lookup1 = new IPLookup();
-	  		
-			using (StreamReader ribReader = new StreamReader(args[0])) {
-				while (ribReader.Peek() >= 0) {
-					String line = ribReader.ReadLine();
-					String[] parts = line.Split(' ');
-					String[] addrParts = parts[0].Split('/');
-					UInt16 dest = Convert.ToUInt16(parts[1]);
-					UInt16 len = Convert.ToUInt16(addrParts[1]);
-					IPAddress addr = IPAddress.Parse(addrParts[0]);
-					UInt32 addrAsInt = 
-						(UInt32)IPAddress.NetworkToHostOrder(
-								BitConverter.ToInt32(
-									addr.GetAddressBytes(), 0));
-					lookup1.AddRoute(addrAsInt, len, dest);
-					//lookup2.AddRoute(addrAsInt, len, dest);
-				}
-			}
 			IE2D2Component vf1 = new FixedGCAlloc(256);
 			SoftNic.init_softnic (2, "test");
 			IntPtr port1 = SoftNic.init_port ("vport0");
