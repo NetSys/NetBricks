@@ -30,4 +30,37 @@ namespace E2D2 {
 			}
 		}
 	}
+
+	public sealed class FixedGCAlloc : IE2D2Component {
+		int m_bytes;
+		public FixedGCAlloc(int bytes) {
+			m_bytes = bytes;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void PushBatch(ref PacketBuffer packets) {
+			int len = packets.Length;
+			byte[][] fillers = new byte[len][];
+			for (int i = 0; i < len; i++) {
+				fillers[i] = new byte[m_bytes];
+			}
+		}
+	}
+
+	public sealed class VarGCAlloc : IE2D2Component {
+		int m_maxBytes;
+		public VarGCAlloc(int maxBytes) {
+			m_maxBytes = maxBytes;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void PushBatch(ref PacketBuffer packets) {
+			int len = packets.Length;
+			byte[][] fillers = new byte[len][];
+			for (int i = 0; i < len; i++) {
+				int size = (int)packets[i].ipHdr.SrcIP % m_maxBytes;
+				fillers[i] = new byte[size];
+			}
+		}
+	}
 }
