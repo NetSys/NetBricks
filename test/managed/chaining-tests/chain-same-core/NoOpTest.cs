@@ -21,8 +21,9 @@ namespace E2D2 {
 			IntPtr port1 = SoftNic.init_port ("vport0");
 			IntPtr port2 = SoftNic.init_port ("vport1");
 			PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
+			int poll = 0;
 			while (true) {
-			    int rcvd = SoftNic.ReceiveBatch(port1, 0, ref pkts);
+			    int rcvd = SoftNic.ReceiveBatch(port1, poll, ref pkts);
 				if (rcvd > 0) {
 					for (int i = 0; i < vfs.Length; i++) {
 						try {
@@ -31,7 +32,8 @@ namespace E2D2 {
 							Console.WriteLine("Exception");
 						}
 					}
-					SoftNic.SendBatch(port2, 0, ref pkts);
+					SoftNic.SendBatch(port2, poll, ref pkts);
+					poll = (poll + 1) & 0x3;
 				}
             }
 		}
