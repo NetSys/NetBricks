@@ -1,14 +1,32 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<ItemGroup>
-		<Compile Include="chain-same-core/BaselineGC1.cs" />
-		<Compile Include="framework/*.cs" />
+		<BaselineGC Include="chain-same-core/BaselineGC1.cs" />
+		<FixedGC Include="chain-same-core/FixedGC1.cs" />
+		<DynamicGC Include="chain-same-core/DynamicGC1.cs" />
+		<Framework Include="framework/*.cs" />
 	</ItemGroup>
 	<PropertyGroup>
-		<BaselineGCOutput>chain-same-core/BaselineGC1.exe</BaselineGCOutput>
+		<OutputPath>bin/</OutputPath>
+		<BaselineGCOutput>BaselineGC.exe</BaselineGCOutput>
+		<FixedGCOutput>FixedGC.exe</FixedGCOutput>
+		<DynamicGCOutput>DynamicGC.exe</DynamicGCOutput>
 	</PropertyGroup>
-	<Target Name="Build">
-		<Csc Sources="@(Compile)" 
-		 	 OutputAssembly="$(BaselineGCOutput)" 
+	<Target Name="BuildGCTests">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(BaselineGC);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(BaselineGCOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" />
+		<Csc Sources="@(FixedGC);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(FixedGCOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" />
+		<Csc Sources="@(DynamicGC);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(DynamicGCOutput)" 
 		 	 EmitDebugInformation="false" 
 		 	 AllowUnsafeBlocks="true"
 		 	 CheckForOverflowUnderflow="false"
