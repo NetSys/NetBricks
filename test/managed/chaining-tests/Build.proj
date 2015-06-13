@@ -1,0 +1,17 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<ItemGroup>
+		<Compile Include="chain-same-core/BaselineGC1.cs" />
+		<Compile Include="framework/*.cs" />
+	</ItemGroup>
+	<PropertyGroup>
+		<BaselineGCOutput>chain-same-core/BaselineGC1.exe</BaselineGCOutput>
+	</PropertyGroup>
+	<Target Name="Build">
+		<Csc Sources="@(Compile)" 
+		 	 OutputAssembly="$(BaselineGCOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" />
+	</Target>
+</Project>
