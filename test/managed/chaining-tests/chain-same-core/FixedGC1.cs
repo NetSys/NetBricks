@@ -12,9 +12,10 @@ namespace E2D2 {
 			int nrxq = options.numRxq;
 			int ntxq = options.numTxq;
 			int len = 512;
-			if (args.Length > 1) {
-				len = Convert.ToInt32(args[0]); 
+			if (options.endIdx < args.Length) {
+				len = Convert.ToInt32(args[options.endIdx]); 
 			}
+			Console.WriteLine("Found rxq {0} txq {1} len {2}", nrxq, ntxq, len);
 			IE2D2Component vf1 = new FixedGCAlloc(len);
 			SoftNic.init_softnic (2, "test");
 			IntPtr port1 = SoftNic.init_port ("vport0");

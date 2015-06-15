@@ -12,44 +12,48 @@ echo "Done building"
 #echo "Prefix $PFX"
 
 
-base=500000000
+base=5000000000
 end=20000000000
-inc=500000000
+inc=1000000000
+duration=10
+mems=(1M 2M 4M 8M 16M 32M 64M 128M 256M 512M 1024M 2048M)
 
-for bw in `seq $base $inc $end`
+for mem in $mems
 do
-	for iter in {0..2}
+	for bw in `seq $base $inc $end`
 	do
-		out="logs/base-$bw-$iter.txt"
-		echo "Testing baseline ${bw} Iter $iter"
-		sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d 15 -r 4 -t 4 -b $bw | tee "$out" &
-		SOFTNIC_PID=$!
-		sudo LD_PRELOAD=libintel_dpdk.so /home/apanda/mono-bin/bin/mono --gc=sgen --llvm bin/BaselineGC.exe &
-		echo "Waiting for $SOFTNIC_PID"
-		wait $SOFTNIC_PID
-		sudo pkill mono
-	done
-	for iter in {0..2}
-	do
-		out="logs/fgc-$bw-$iter.txt"
-		echo "Testing fixed ${bw} Iter $iter"
-		sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d 15 -r 4 -t 4 -b $bw | tee "$out" &
-		SOFTNIC_PID=$!
-		sudo LD_PRELOAD=libintel_dpdk.so /home/apanda/mono-bin/bin/mono --gc=sgen --llvm bin/FixedGC.exe &
-		echo "Waiting for $SOFTNIC_PID"
-		wait $SOFTNIC_PID
-		sudo pkill mono
-	done
-	for iter in {0..2}
-	do
-		out="logs/dgc-$bw-$iter.txt"
-		echo "Testing dynamic ${bw} Iter $iter"
-		sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d 15 -r 4 -t 4 -b $bw | tee "$out" &
-		SOFTNIC_PID=$!
-		sudo LD_PRELOAD=libintel_dpdk.so /home/apanda/mono-bin/bin/mono --gc=sgen --llvm bin/DynamicGC.exe &
-		echo "Waiting for $SOFTNIC_PID"
-		wait $SOFTNIC_PID
-		sudo pkill mono
+		for iter in {0..0}
+		do
+			out="logs/base-$bw-$iter-$mem.txt"
+			echo "Testing baseline ${bw} Iter $iter mem $mem"
+			sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d $duration -r 4 -t 4 -b $bw | tee "$out" &
+			SOFTNIC_PID=$!
+			sudo LD_PRELOAD=libintel_dpdk.so MONO_GC_PARAMS="nursery-size=$mem" /home/apanda/mono-bin/bin/mono --gc=sgen --llvm bin/BaselineGC.exe -r 4 -t 4&
+			echo "Waiting for $SOFTNIC_PID"
+			wait $SOFTNIC_PID
+			sudo pkill mono
+		done
+		for iter in {0..0}
+		do
+			out="logs/fgc-$bw-$iter-$mem.txt"
+			echo "Testing fixed ${bw} Iter $iter"
+			sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d $duration -r 4 -t 4 -b $bw | tee "$out" &
+			SOFTNIC_PID=$!
+			sudo LD_PRELOAD=libintel_dpdk.so MONO_GC_PARAMS="nursery-size=$mem" /home/apanda/mono-bin/bin/mono --gc=sgen --llvm bin/FixedGC.exe -r 4 -t 4 -- 512&
+			echo "Waiting for $SOFTNIC_PID"
+			wait $SOFTNIC_PID
+			sudo pkill mono
+		done
+		for iter in {0..0}
+		do
+			out="logs/dgc-$bw-$iter-$mem.txt"
+			echo "Testing dynamic ${bw} Iter $iter mem $mem"
+			sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d $duration -r 4 -t 4 -b $bw | tee "$out" &
+			SOFTNIC_PID=$!
+			sudo LD_PRELOAD=libintel_dpdk.so MONO_GC_PARAMS="nursery-size=$mem" /home/apanda/mono-bin/bin/mono --gc=sgen --llvm bin/DynamicGC.exe -r 4 -t 4 -- 1024&
+			echo "Waiting for $SOFTNIC_PID"
+			wait $SOFTNIC_PID
+			sudo pkill mono
+		done
 	done
 done
-

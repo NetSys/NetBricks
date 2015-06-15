@@ -22,7 +22,6 @@ namespace E2D2 {
 			int numTxq = 1;
 			int endIdx = args.Length;
 
-			Console.WriteLine("Creating option set");
 			try {
 				for (int i=0; i < args.Length; i++) {
 					if (args[i] == "-r" || args[i] == "--rxq") {
@@ -32,11 +31,10 @@ namespace E2D2 {
 						numTxq = Convert.ToInt32(args[i+1]);
 						i++;
 					} else if (args[i] == "--") {
-						endIdx = i;
+						endIdx = i + 1;
 						break;
 					}				
 				}
-				Console.WriteLine("Done Parsing");
 			} catch (Exception e) {
 				Console.WriteLine("Error parsing commandline " + e.Message);
 			}

@@ -8,11 +8,9 @@ using System.Net;
 namespace E2D2 {
 	public sealed class FixedGCTest {
 		public static void Main(string[] args) {
-			Console.WriteLine("Begin parsing arguments");
 			var options = E2D2OptionParser.ParseOptions(args);
 			int nrxq = options.numRxq;
 			int ntxq = options.numTxq;
-			Console.WriteLine("Done parsing arguments");
 			Console.WriteLine("Found rxq {0} txq {1}", nrxq, ntxq);
 			IE2D2Component vf1 = new BaseLineVF();
 			SoftNic.init_softnic (2, "test");
