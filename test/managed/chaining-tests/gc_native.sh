@@ -37,7 +37,7 @@ do
 		sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d 15 -r 4 -t 4 -b $bw | tee "$out" &
 		SOFTNIC_PID=$!
 		sleep 1
-		sudo $SOFTNIC_DIR/../libsn/alloc_test -i vport0 -o vport1 -c 2 -f &
+		sudo $SOFTNIC_DIR/../libsn/alloc_test -i vport0 -o vport1 -c 2 -f -a 512&
 		echo "Waiting for $SOFTNIC_PID"
 		wait $SOFTNIC_PID
 		sudo pkill alloc_test
@@ -49,7 +49,7 @@ do
 		sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d 15 -r 4 -t 4 -b $bw | tee "$out" &
 		SOFTNIC_PID=$!
 		sleep 1
-		sudo $SOFTNIC_DIR/../libsn/alloc_test -i vport0 -o vport1 -c 2 -d &
+		sudo $SOFTNIC_DIR/../libsn/alloc_test -i vport0 -o vport1 -c 2 -d -a 1024&
 		echo "Waiting for $SOFTNIC_PID"
 		wait $SOFTNIC_PID
 		sudo pkill alloc_test

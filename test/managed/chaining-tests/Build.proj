@@ -1,8 +1,10 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003"
+ 		DefaultTargets="GCTests;IPLookupSafe;IPLookup">
 	<ItemGroup>
 		<BaselineGC Include="chain-same-core/BaselineGC1.cs" />
 		<FixedGC Include="chain-same-core/FixedGC1.cs" />
 		<DynamicGC Include="chain-same-core/DynamicGC1.cs" />
+		<IPLookup Include="chain-same-core/IPLookup.cs" />
 		<Framework Include="framework/*.cs" />
 	</ItemGroup>
 	<PropertyGroup>
@@ -10,8 +12,10 @@
 		<BaselineGCOutput>BaselineGC.exe</BaselineGCOutput>
 		<FixedGCOutput>FixedGC.exe</FixedGCOutput>
 		<DynamicGCOutput>DynamicGC.exe</DynamicGCOutput>
+		<IPLookupOutput>IPLookup.exe</IPLookupOutput>
+		<IPLookupSafeOutput>IPLookupSafe.exe</IPLookupSafeOutput>
 	</PropertyGroup>
-	<Target Name="BuildGCTests">
+	<Target Name="GCTests">
 		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
 		<Csc Sources="@(BaselineGC);@(Framework)" 
 		 	 OutputAssembly="$(OutputPath)$(BaselineGCOutput)" 
@@ -27,6 +31,25 @@
 		 	 Optimize="true" />
 		<Csc Sources="@(DynamicGC);@(Framework)" 
 		 	 OutputAssembly="$(OutputPath)$(DynamicGCOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" />
+	</Target>
+	<Target Name="IPLookupSafe">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(IPLookup);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(IPLookupSafeOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" 
+		 	 DefineConstants="UNIQUE_CHECK"/>
+	</Target>
+	<Target Name="IPLookup">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(IPLookup);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(IPLookupOutput)" 
 		 	 EmitDebugInformation="false" 
 		 	 AllowUnsafeBlocks="true"
 		 	 CheckForOverflowUnderflow="false"

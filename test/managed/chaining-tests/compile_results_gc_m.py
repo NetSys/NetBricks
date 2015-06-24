@@ -17,7 +17,7 @@ for arg in sys.argv[1:]:
     row.append(parts[0])
     row.append(parts[1])
     row.append(parts[2])
-    row.append(parts[3][:-1])
+    row.append(parts[3])
     f = open(arg)
     for l in f:
       if l.startswith("##"):

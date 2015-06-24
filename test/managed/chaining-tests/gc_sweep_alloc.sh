@@ -22,21 +22,7 @@ bw=10000000000
 allocs=(32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536)
 
 for alloc in $allocs
-#for mem in $mems
-#do
-	#for bw in `seq $base $inc $end`
-	#do
-		#for iter in {0..0}
-		#do
-			#out="logs/base-$bw-$iter-$mem.txt"
-			#echo "Testing baseline ${bw} Iter $iter mem $mem"
-			#sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d $duration -r 4 -t 4 -b $bw | tee "$out" &
-			#SOFTNIC_PID=$!
-			#sudo LD_PRELOAD=libintel_dpdk.so MONO_GC_PARAMS="nursery-size=$mem" /home/apanda/mono-bin/bin/mono --gc=sgen --llvm bin/BaselineGC.exe -r 4 -t 4&
-			#echo "Waiting for $SOFTNIC_PID"
-			#wait $SOFTNIC_PID
-			#sudo pkill mono
-		#done
+do
 		for iter in {0..0}
 		do
 			out="logs/fgc-$bw-$iter-$alloc.txt"
@@ -59,6 +45,4 @@ for alloc in $allocs
 			wait $SOFTNIC_PID
 			sudo pkill mono
 		done
-	#done
-#done
 done

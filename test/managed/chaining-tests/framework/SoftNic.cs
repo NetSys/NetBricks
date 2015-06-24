@@ -1,4 +1,5 @@
 using System;
+using System.Security;
 using System.Runtime.InteropServices;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices; 
@@ -9,6 +10,93 @@ namespace E2D2.SNApi {
 		internal IntPtr buf_addr;
 		internal IntPtr pkt;
 		private IntPtr zero;
+		private EthHdr _ethHdr;
+		private Ipv4Hdr _ipHdr;
+#if UNIQUE_CHECK
+		int owner;
+		bool owner_checked;
+#endif
+
+#if UNIQUE_CHECK
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static bool checkOwner(Packet packet) {
+			packet.owner_checked = (packet.owner == SoftNic.CurrentVF());
+			return packet.owner_checked;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal void setOwner(int nextOwner) {
+			owner = nextOwner;
+			owner_checked = false;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static internal void setOwnerStatic (Packet pkt, int nextOwner) {
+			pkt.owner = nextOwner;
+			pkt.owner_checked = false;
+		}
+
+		public EthHdr ethHdr { 
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { if (owner_checked  || checkOwner(this)) { return _ethHdr;}
+				  else { throw new SecurityException("Bad access"); }
+			}
+		}
+
+		public Ipv4Hdr ipHdr {
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { if (owner_checked || checkOwner(this)) { return _ipHdr;}
+				  else {throw new SecurityException("Bad access");}
+			}
+		}
+
+		public unsafe UInt16 buf_len {
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { if (owner_checked || checkOwner(this)) { return *(ushort*)((pkt + 16)); }
+				  else {throw new SecurityException("Bad access");}
+			}
+		}
+
+		public unsafe UInt16 data_off { 
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { if (owner_checked || checkOwner(this)) { return *(ushort*)(pkt + 18); } 
+				  else {throw new SecurityException("Bad access");}
+			}
+		}
+
+		public unsafe UInt16 data_len { 
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { if (owner_checked || checkOwner(this)) { return *(ushort*)(pkt + 34); } 
+				  else {throw new SecurityException("Bad access");}
+			}
+			set { if (owner_checked || checkOwner(this)) { 
+				  	ushort* ptr = (ushort*)(pkt + 34);
+				  	*ptr = (ushort)value;}
+				  else {throw new SecurityException("Bad access");}
+			}
+		}
+
+		public unsafe UInt16 pkt_len { 
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { if (owner_checked || checkOwner(this)) { return *(ushort*)(pkt + 36); } 
+				  else {throw new SecurityException("Bad access");}
+			}
+			set { if (owner_checked || checkOwner(this)) { 
+				  	ushort* ptr = (ushort*)(pkt + 36);
+				  	*ptr = (ushort)value; }
+				  else {throw new SecurityException("Bad access");}
+			}
+		}
+#else
+		public EthHdr ethHdr { 
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return _ethHdr; }
+		}
+
+		public Ipv4Hdr ipHdr {
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return _ipHdr;}
+		}
 
 		public unsafe UInt16 buf_len {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -33,32 +121,33 @@ namespace E2D2.SNApi {
 			set { uint* ptr = (uint*)(pkt + 36);
 				  *ptr = value;}
 		} 
-		public EthHdr ethHdr;
-		public Ipv4Hdr ipHdr;
+
+
+#endif
 
 		internal Packet() {
 			zero = IntPtr.Zero;
-			buf_addr = IntPtr.Zero;
-			pkt = IntPtr.Zero;
-			ethHdr = new EthHdr(IntPtr.Zero);
-			ipHdr = new Ipv4Hdr(IntPtr.Zero);
-
+			ZeroPacket();
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal unsafe void ZeroPacket() {
 			buf_addr = zero;
 			pkt = zero;
-			ethHdr.m_baseAddr = zero;
-			ipHdr.m_baseAddr = zero;
+			_ethHdr.m_baseAddr = zero;
+			_ipHdr.m_baseAddr = zero;
+#if UNIQUE_CHECK
+			owner = 0;
+			owner_checked = false;
+#endif
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal unsafe void SetPacket(IntPtr pkt) {
 			buf_addr = (IntPtr)(*((void**)pkt));
 			this.pkt = pkt;
-			this.ethHdr.SetBase(buf_addr + (int)this.data_off);
-			this.ipHdr.SetBase(buf_addr + (int)this.data_off + 14);
+			this._ethHdr.SetBase(buf_addr + (int)this.data_off);
+			this._ipHdr.SetBase(buf_addr + (int)this.data_off + 14);
 		}
 
 		public unsafe void Print() {
@@ -255,11 +344,19 @@ namespace E2D2.SNApi {
 				proc(m_packet);
 			}
 		}
+
+#if UNIQUE_CHECK
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal void setOwner(int owner) {
+			Packet.setOwnerStatic(m_packet, owner);
+		}
+#endif
 	}
 
 	public sealed class SoftNic {
+
 		[DllImport("sn")] 
-			public static extern void init_softnic(UInt64 cpumask, string name);
+		public static extern void init_softnic(UInt64 cpumask, string name);
 
 		[DllImport("sn")]
 		public static unsafe extern IntPtr init_port (string ifname);
@@ -287,6 +384,20 @@ namespace E2D2.SNApi {
 
 		[DllImport("sn")]
 		internal static unsafe extern void sn_snb_alloc_bulk(IntPtr snbs, int cnt);
+		
+#if UNIQUE_CHECK
+		// Should not be int
+		[ThreadStatic] private static int currentVF = 0;
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static int CurrentVF() {
+			return currentVF;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal static void SetVF(int vf) {
+			currentVF = vf;
+		}
+#endif
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static unsafe void CopyBatch(ref PacketBuffer src, ref PacketBuffer dst) {

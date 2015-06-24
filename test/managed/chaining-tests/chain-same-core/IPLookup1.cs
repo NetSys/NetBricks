@@ -32,7 +32,6 @@ namespace E2D2 {
 				}
 			}
 			IE2D2Component vf1 = new IPLookupVF(lookup1);
-			//IE2D2Component vf2 = new IPLookupVF(lookup2);
 			SoftNic.init_softnic (2, "test");
 			IntPtr port1 = SoftNic.init_port ("vport0");
 			IntPtr port2 = SoftNic.init_port ("vport1");
@@ -44,10 +43,6 @@ namespace E2D2 {
 					vf1.PushBatch(ref pkts);
 				} catch (Exception) {
 				}
-				//try {
-					//vf2.PushBatch(ref pkts);
-				//} catch (Exception) {
-				//}
 				if (rcvd > 0) {
 					SoftNic.SendBatch(port2, 0, ref pkts);
 				}
