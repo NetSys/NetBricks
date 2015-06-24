@@ -30,6 +30,7 @@ namespace E2D2 {
 			}
 
 #if UNIQUE_CHECK
+			Console.WriteLine("UNIQUENESS ENABLED");
 			var vfIds = new int[length];
 			for (int i = 0; i < vfIds.Length; i++) {
 				// Should use some sort of randomness instead of doing it this way.
@@ -70,6 +71,7 @@ namespace E2D2 {
 					for (int i = 0; i < vfs.Length; i++) {
 						try {
 #if UNIQUE_CHECK
+						    SoftNic.SetVF(vfIds[i]);	
 							pkts.setOwner(vfIds[i]);
 #endif
 							vfs[i].PushBatch(ref pkts);

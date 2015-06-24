@@ -387,7 +387,7 @@ namespace E2D2.SNApi {
 		
 #if UNIQUE_CHECK
 		// Should not be int
-		[ThreadStatic] private static int currentVF = 0;
+		[ThreadStatic] private static int currentVF = 0xfffffff;
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int CurrentVF() {
 			return currentVF;
