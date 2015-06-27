@@ -350,6 +350,10 @@ namespace E2D2.SNApi {
 		internal void setOwner(int owner) {
 			Packet.setOwnerStatic(m_packet, owner);
 		}
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal static void setOwnerStatic(PacketBuffer pkt, int owner) {
+			Packet.setOwnerStatic(pkt.m_packet, owner);
+		}
 #endif
 	}
 

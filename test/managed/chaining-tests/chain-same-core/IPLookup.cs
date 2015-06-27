@@ -71,8 +71,8 @@ namespace E2D2 {
 					for (int i = 0; i < vfs.Length; i++) {
 						try {
 #if UNIQUE_CHECK
-						    SoftNic.SetVF(vfIds[i]);	
-							pkts.setOwner(vfIds[i]);
+							SoftNic.SetVF(i);
+							PacketBuffer.setOwnerStatic(pkts, i);
 #endif
 							vfs[i].PushBatch(ref pkts);
 						} catch (Exception) {
