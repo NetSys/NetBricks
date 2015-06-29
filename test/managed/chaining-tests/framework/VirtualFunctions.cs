@@ -33,17 +33,19 @@ namespace E2D2 {
 	}
 
 	public sealed class BaseLineVF : IE2D2Component {
+		int ip;
 		public BaseLineVF() {
+			ip = 0;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void PushBatch(ref PacketBuffer packets) {
 			int len = packets.Length;
-			byte ip;
+			byte locIP = 0;
 			for (int i = 0; i < len; i++) {
-				ip = (byte)(packets[i].ipHdr.SrcIP & 0xff);
-				ip += 1;
+				locIP += (byte)(packets[i].ipHdr.SrcIP & 0xff);
 			}
+			ip += (locIP & 0xff);
 		}
 	}
 

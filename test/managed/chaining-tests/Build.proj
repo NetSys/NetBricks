@@ -1,10 +1,11 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003"
- 		DefaultTargets="GCTests;IPLookupSafe;IPLookup">
+ 		DefaultTargets="GCTests;IPLookupSafe;IPLookup;Baseline;BaselineSafe">
 	<ItemGroup>
 		<BaselineGC Include="chain-same-core/BaselineGC1.cs" />
 		<FixedGC Include="chain-same-core/FixedGC1.cs" />
 		<DynamicGC Include="chain-same-core/DynamicGC1.cs" />
 		<IPLookup Include="chain-same-core/IPLookup.cs" />
+		<Baseline Include="chain-same-core/Baseline.cs" />
 		<Framework Include="framework/*.cs" />
 	</ItemGroup>
 	<PropertyGroup>
@@ -14,6 +15,8 @@
 		<DynamicGCOutput>DynamicGC.exe</DynamicGCOutput>
 		<IPLookupOutput>IPLookup.exe</IPLookupOutput>
 		<IPLookupSafeOutput>IPLookupSafe.exe</IPLookupSafeOutput>
+		<BaselineOutput>Baseline.exe</BaselineOutput>
+		<BaselineSafeOutput>BaselineSafe.exe</BaselineSafeOutput>
 	</PropertyGroup>
 	<Target Name="GCTests">
 		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
@@ -50,6 +53,25 @@
 		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
 		<Csc Sources="@(IPLookup);@(Framework)" 
 		 	 OutputAssembly="$(OutputPath)$(IPLookupOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" />
+	</Target>
+	<Target Name="BaselineSafe">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(Baseline);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(BaselineSafeOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" 
+		 	 DefineConstants="UNIQUE_CHECK"/>
+	</Target>
+	<Target Name="Baseline">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(Baseline);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(BaselineOutput)" 
 		 	 EmitDebugInformation="false" 
 		 	 AllowUnsafeBlocks="true"
 		 	 CheckForOverflowUnderflow="false"
