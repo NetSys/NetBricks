@@ -1,11 +1,14 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003"
- 		DefaultTargets="GCTests;IPLookupSafe;IPLookup;Baseline;BaselineSafe">
+ 		DefaultTargets="GCTests;IPLookupSafe;IPLookup;Baseline;BaselineSafe;BaselineT;BaselineTSafe;IPLookupT;IPLookupTSafe;IdleThr;IdleThrSafe">
 	<ItemGroup>
 		<BaselineGC Include="chain-same-core/BaselineGC1.cs" />
 		<FixedGC Include="chain-same-core/FixedGC1.cs" />
 		<DynamicGC Include="chain-same-core/DynamicGC1.cs" />
 		<IPLookup Include="chain-same-core/IPLookup.cs" />
+		<IPLookupThr Include="chain-same-core/IPLookupThr.cs" />
 		<Baseline Include="chain-same-core/Baseline.cs" />
+		<BaselineThr Include="chain-same-core/BaselineThr.cs" />
+		<IdleThr Include="chain-same-core/IdleThr.cs" />
 		<Framework Include="framework/*.cs" />
 	</ItemGroup>
 	<PropertyGroup>
@@ -17,6 +20,12 @@
 		<IPLookupSafeOutput>IPLookupSafe.exe</IPLookupSafeOutput>
 		<BaselineOutput>Baseline.exe</BaselineOutput>
 		<BaselineSafeOutput>BaselineSafe.exe</BaselineSafeOutput>
+		<BaselineThrOutput>BaselineT.exe</BaselineThrOutput>
+		<BaselineSafeThrOutput>BaselineSafeT.exe</BaselineSafeThrOutput>
+		<IPThrOutput>IPLookupT.exe</IPThrOutput>
+		<IPSafeThrOutput>IPSafeT.exe</IPSafeThrOutput>
+		<IdleThrOutput>IdleThr.exe</IdleThrOutput>
+		<IdleSafeThrOutput>IdleSafeThr.exe</IdleSafeThrOutput>
 	</PropertyGroup>
 	<Target Name="GCTests">
 		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
@@ -72,6 +81,63 @@
 		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
 		<Csc Sources="@(Baseline);@(Framework)" 
 		 	 OutputAssembly="$(OutputPath)$(BaselineOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" />
+	</Target>
+	<Target Name="BaselineTSafe">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(BaselineThr);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(BaselineSafeThrOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" 
+		 	 DefineConstants="UNIQUE_CHECK"/>
+	</Target>
+	<Target Name="BaselineT">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(BaselineThr);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(BaselineThrOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" />
+	</Target>
+	<Target Name="IPLookupTSafe">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(IPLookupThr);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(IPSafeThrOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" 
+		 	 DefineConstants="UNIQUE_CHECK"/>
+	</Target>
+	<Target Name="IPLookupT">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(IPLookupThr);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(IPThrOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" />
+	</Target>
+	<Target Name="IdleThrSafe">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(IdleThr);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(IdleSafeThrOutput)" 
+		 	 EmitDebugInformation="false" 
+		 	 AllowUnsafeBlocks="true"
+		 	 CheckForOverflowUnderflow="false"
+		 	 Optimize="true" 
+		 	 DefineConstants="UNIQUE_CHECK"/>
+	</Target>
+	<Target Name="IdleThr">
+		<MakeDir Directories="$(OutputPath)" Condition="!Exists('$(OutputPath)')" />
+		<Csc Sources="@(IdleThr);@(Framework)" 
+		 	 OutputAssembly="$(OutputPath)$(IdleThrOutput)" 
 		 	 EmitDebugInformation="false" 
 		 	 AllowUnsafeBlocks="true"
 		 	 CheckForOverflowUnderflow="false"

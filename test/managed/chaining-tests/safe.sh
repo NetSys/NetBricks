@@ -18,7 +18,8 @@ inc=1000000000
 duration=10
 rib=$HOME/data/mf10krib
 
-for chain in {1..3}
+#for chain in {1..3}
+chain=4
 do
 for bw in `seq $base $inc $end`
 do
@@ -26,7 +27,7 @@ do
 	do
 		out="logs/isolate-$bw-$chain-$iter.txt"
 		echo "Testing with isolation ${bw} iter ${iter}"
-		sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d $duration -r 4 -t 4 -b $bw | tee "$out" &
+		sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 5,6,7 -- -l 1 -d $duration -r 4 -t 4 -b $bw | tee "$out" &
 		SOFTNIC_PID=$!
 		sudo LD_PRELOAD=libintel_dpdk.so /home/apanda/mono-bin/bin/mono --gc=sgen --llvm bin/IPLookupSafe.exe -r 4 -t 4 -- $rib $chain&
 		echo "Waiting for $SOFTNIC_PID"
@@ -37,7 +38,7 @@ do
 	do
 		out="logs/noisolate-$bw-$chain-$iter.txt"
 		echo "Testing without isolation ${bw} iter ${iter}"
-		sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 4,5,6,7 -- -l 1 -d $duration -r 4 -t 4 -b $bw | tee "$out" &
+		sudo SCENARIO=v2s2v $SOFTNIC_DIR/softnic -c 5,6,7 -- -l 1 -d $duration -r 4 -t 4 -b $bw | tee "$out" &
 		SOFTNIC_PID=$!
 		sudo LD_PRELOAD=libintel_dpdk.so /home/apanda/mono-bin/bin/mono --gc=sgen --llvm bin/IPLookup.exe -r 4 -t 4 -- $rib $chain&
 		echo "Waiting for $SOFTNIC_PID"
@@ -45,4 +46,4 @@ do
 		sudo pkill mono
 	done
 done
-done
+#done

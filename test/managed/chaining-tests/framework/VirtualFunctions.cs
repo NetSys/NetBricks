@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.IO;
 using System.Net;
 using System.Diagnostics.Contracts;
+using System.Diagnostics;
 namespace E2D2 {
 	public sealed class NoOpVF : IE2D2Component {
 		public NoOpVF() {
@@ -32,6 +33,24 @@ namespace E2D2 {
 		}
 	}
 
+	public sealed class IdleVF : IE2D2Component {
+		ulong idle;
+		public IdleVF(UInt64 idle_) {
+			idle = idle_;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void PushBatch(ref PacketBuffer packets) {
+			int len = packets.Length;
+			for (int i = 0; i < len; i++) {
+				ulong start = SoftNic.sn_rdtsc();
+				ulong stop = SoftNic.sn_rdtsc();
+				while (stop - start < idle) {
+					stop = SoftNic.sn_rdtsc();;
+				}
+			}
+		}
+	}
 	public sealed class BaseLineVF : IE2D2Component {
 		int ip;
 		public BaseLineVF() {

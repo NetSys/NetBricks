@@ -16,7 +16,7 @@ inc=1000000000
 duration=10
 rib=$HOME/data/mf10krib2-dedup
 
-for ((chain=3;chain>=1;chain-=1)) 
+for ((chain=4;chain>=4;chain-=1)) 
 do
 for ((bw=$base;bw<=$end;bw+=inc))
 do

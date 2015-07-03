@@ -389,6 +389,19 @@ namespace E2D2.SNApi {
 		[DllImport("sn")]
 		internal static unsafe extern void sn_snb_alloc_bulk(IntPtr snbs, int cnt);
 		
+		[DllImport("sn")]
+		public static extern UInt64 sn_rdtsc();
+
+		[DllImport("sn")]
+		public static extern void sn_wait(UInt64 cycles);
+
+  		[DllImport("libc.so.6")]
+  		private static extern long sysconf(int conf);
+
+  		public static long GetCpuFreq() {
+  			return sysconf(2);
+		}
+		
 #if UNIQUE_CHECK
 		// Should not be int
 		[ThreadStatic] private static int currentVF = 0xfffffff;
