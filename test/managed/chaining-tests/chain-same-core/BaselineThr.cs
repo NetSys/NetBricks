@@ -86,11 +86,6 @@ namespace E2D2 {
 				int currCore = baseCore;
 				int currVf = i * length;
 				String vport = String.Format("vport{0}", i * 100);
-				//executors[i] = new Thread(new ThreadStart(() => 
-							//RunCoreChain(currCore, 
-								//length, vport, vport, 
-								//currVf, currRx, rxQueuesPerCore, 
-								//currTx, txQueuesPerCore)));
 				executors[i] = new Thread(new ThreadStart(() => 
 							RunCoreChain(currCore, 
 								length, vport, vport, 

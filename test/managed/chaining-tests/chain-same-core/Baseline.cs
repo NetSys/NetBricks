@@ -33,8 +33,8 @@ namespace E2D2 {
 			for (int i = 0; i < vfs.Length; i++) {
 				vfs[i] = new BaseLineVF();
 			}
-			IntPtr port1 = SoftNic.init_port ("vport0");
-			IntPtr port2 = SoftNic.init_port ("vport0");
+			IntPtr port1 = SoftNic.init_port(options.vportIn);
+			IntPtr port2 = SoftNic.init_port(options.vportOut);
 			PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
 			int pollRx= 0;
 			int pollTx = 0;

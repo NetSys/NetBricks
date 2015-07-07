@@ -37,7 +37,7 @@ bw=40000000000
 				vport="vport$component"
 				(( core=0 + $component ))
 				echo "Starting component $component on core $core vport $vport"
-				sudo unbuffer $HOME/softnic/libsn/iso_test -i $vport -o $vport -c $core -l -r "/mnt/tmp/mf10krib2-dedup$comonent" &
+				sudo unbuffer $HOME/softnic/libsn/iso_test -i $vport -o $vport -c $core -l -r "/mnt/tmp/mf10krib2-dedup$component" &
 				sleep 2
 			done
 			echo "Waiting for $SOFTNIC_PID"
@@ -59,7 +59,7 @@ bw=40000000000
 				vport="vport$component"
 				(( core=0 + $component ))
 				echo "Starting component $component on core $core vport $vport"
-				sudo unbuffer $HOME/softnic/libsn/iso_test -i $vport -o $vport -c $core -l -r "/mnt/tmp/mf10krib2-dedup$comonent" &
+				sudo unbuffer $HOME/softnic/libsn/iso_test -i $vport -o $vport -c $core -l -r "/mnt/tmp/mf10krib2-dedup$component" &
 				sleep 2
 			done
 			echo "Waiting for $SOFTNIC_PID"

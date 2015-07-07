@@ -14,8 +14,8 @@ namespace E2D2 {
 			Console.WriteLine("Found rxq {0} txq {1}", nrxq, ntxq);
 			IE2D2Component vf1 = new BaseLineVF();
 			SoftNic.init_softnic (2, "test");
-			IntPtr port1 = SoftNic.init_port ("vport0");
-			IntPtr port2 = SoftNic.init_port ("vport1");
+			IntPtr port1 = SoftNic.init_port(options.vportIn);
+			IntPtr port2 = SoftNic.init_port(options.vportOut);
 			PacketBuffer pkts = SoftNic.CreatePacketBuffer(32);
 			Console.WriteLine("DPDK LCORE setting {0}", SoftNic.sn_get_lcore_id());
 			int pollRx= 0;
