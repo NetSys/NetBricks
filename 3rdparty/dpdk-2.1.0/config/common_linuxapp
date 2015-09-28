@@ -86,7 +86,7 @@ CONFIG_RTE_BUILD_SHARED_LIB=y
 #
 # Combine to one single library
 #
-CONFIG_RTE_BUILD_COMBINE_LIBS=n
+CONFIG_RTE_BUILD_COMBINE_LIBS=y
 
 #
 # Use newest code breaking previous ABI

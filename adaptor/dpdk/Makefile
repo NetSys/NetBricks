@@ -17,18 +17,18 @@ else
 endif
 
 LDFLAGS += -L$(DPDK_LIB_DIR)
-LIBS += -lrte_eal -lrte_mbuf -lrte_timer
+LIBS += -ldpdk
 LIBS += -lm -lpthread -ldl -lpcap
 
 # change fpic to fPIC if something fails
 CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=native -Wno-unused-function -Wno-unused-but-set-variable \
 	 -I$(DPDK_INC_DIR) \
-	 -D_GNU_PRODURCE \
+	 -D_GNU_SOURCE \
 	 -fpic
 
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
-HEADERS = $(wildcard)
+HEADERS = $(wildcard include/*.h)
 PROD = libzcsi.so
 
 DEPS = .make.dep

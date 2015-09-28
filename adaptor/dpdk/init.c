@@ -8,16 +8,12 @@
 #include <rte_timer.h>
 #include <rte_ethdev.h>
 #include <rte_eal.h>
-
-/* Need to set this to be able to read time from DPDK */
-extern uint64_t tsc_hz;
-
 /* Taken from SoftNIC (dpdk.c) */
 /* Generate an lcore bitmap. For now only launch one worker */
 static int set_lcore_bitmap(char *buf, int tid, int core)
 {
 	int off = 0;
-	sprintf(buf, "%d@%d,", tid, core);
+	off = sprintf(buf, "%d@%d", tid, core);
 	return off;
 }
 
@@ -47,7 +43,7 @@ fail:
 	return 1;
 }
 
-static void init_eal(int tid, int core)
+static int init_eal(int tid, int core)
 {
 	int rte_argc = 0;
 	char *rte_argv[16];
@@ -67,10 +63,12 @@ static void init_eal(int tid, int core)
 
 	/* The actual lcore */
 	i = set_lcore_bitmap(opt_lcore_bitmap, tid, core);
+	opt_lcore_bitmap[i] = ',';
 	/* The master lcore */
-	i = set_lcore_bitmap(opt_lcore_bitmap + i,
+	i = set_lcore_bitmap(opt_lcore_bitmap + i + 1,
 			RTE_MAX_LCORE - 1,
 			core);
+	printf("Using core map %s\n", opt_lcore_bitmap);
 
 	sprintf(opt_socket_mem, "%s", socket_mem);
 	for(i = 1; i < numa_count; i++)
@@ -79,7 +77,7 @@ static void init_eal(int tid, int core)
 	rte_argv[rte_argc++] = "lzcsi";
 	rte_argv[rte_argc++] = "--master-lcore";
 	rte_argv[rte_argc++] = opt_master_lcore;
-	rte_argv[rte_argc++] = "--lcore";
+	rte_argv[rte_argc++] = "--lcores";
 	rte_argv[rte_argc++] = opt_lcore_bitmap;
 	rte_argv[rte_argc++] = "-n";
 	rte_argv[rte_argc++] = "4";	/* number of memory channels (Sandy Bridge) */
@@ -95,7 +93,7 @@ static void init_eal(int tid, int core)
 	optind = 0;
 
 	ret = rte_eal_init(rte_argc, rte_argv);
-	assert(ret >= 0);
+	return ret;
 }
 
 static void init_timer()
@@ -109,11 +107,9 @@ static void init_timer()
 /*#endif*/
 
 /* Call this from the main thread on ZCSI to initialize things */
-void init_system(int tid, int core)
+int init_system(int tid, int core)
 {
-	init_eal(tid, core);
-
-	tsc_hz = rte_get_tsc_hz();
+	return init_eal(tid, core);
 }
 
 /* Declared within eal_thread.c, but not exposed */
