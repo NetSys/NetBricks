@@ -64,10 +64,12 @@ static int init_eal(int tid, int core)
 	int ret;
 	int i;
 
-	sprintf(opt_master_lcore, "%d", tid);
+	sprintf(opt_master_lcore, "%d", core);
 
 	/* The actual lcore */
-	i = set_lcore_bitmap(opt_lcore_bitmap, tid, core);
+	/*i = set_lcore_bitmap(opt_lcore_bitmap, tid, core);*/
+	sprintf(opt_lcore_bitmap, "0x%x", (RTE_MAX_LCORE - 1));
+	printf("Core mask : %s\n", opt_lcore_bitmap);
 
 	sprintf(opt_socket_mem, "%s", socket_mem);
 	for(i = 1; i < numa_count; i++)
@@ -75,26 +77,25 @@ static int init_eal(int tid, int core)
 				",%s", socket_mem);
 
 	rte_argv[rte_argc++] = "lzcsi";
+	rte_argv[rte_argc++] = "-c";
+	rte_argv[rte_argc++] = opt_lcore_bitmap;
 	rte_argv[rte_argc++] = "--master-lcore";
 	rte_argv[rte_argc++] = opt_master_lcore;
-	rte_argv[rte_argc++] = "--lcores";
-	rte_argv[rte_argc++] = opt_lcore_bitmap;
 	rte_argv[rte_argc++] = "-n";
 	/* number of memory channels (Sandy Bridge) */
 	rte_argv[rte_argc++] = "4";	// Number of memory channels on 
 					// Sandy Bridge.
-#if 1
 	rte_argv[rte_argc++] = "--socket-mem";
 	rte_argv[rte_argc++] = opt_socket_mem;
-#else
-	rte_argv[rte_argc++] = "--no-huge";
-#endif
 	rte_argv[rte_argc] = NULL;
 
 	/* reset getopt() */
 	optind = 0;
 
 	ret = rte_eal_init(rte_argc, rte_argv);
+
+	/* Change lcore ID */
+	RTE_PER_LCORE(_lcore_id) = tid;
 	return ret;
 }
 
