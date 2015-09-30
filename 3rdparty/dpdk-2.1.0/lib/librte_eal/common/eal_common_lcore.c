@@ -75,6 +75,7 @@ rte_eal_cpu_init(void)
 
 		/* By default, lcore 1:1 map to cpu id */
 		CPU_SET(lcore_id, &lcore_config[lcore_id].cpuset);
+		RTE_LOG(DEBUG, EAL, "CPU Set %u %u\n", lcore_id, lcore_id);
 
 		/* By default, each detected core is enabled */
 		config->lcore_role[lcore_id] = ROLE_RTE;

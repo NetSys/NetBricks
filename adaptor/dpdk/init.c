@@ -8,6 +8,8 @@
 #include <rte_timer.h>
 #include <rte_ethdev.h>
 #include <rte_eal.h>
+
+#include "mempool.h"
 /* Taken from SoftNIC (dpdk.c) */
 /* Generate an lcore bitmap. For now only launch one worker */
 static int set_lcore_bitmap(char *buf, int tid, int core)
@@ -45,6 +47,9 @@ fail:
 
 static int init_eal(int tid, int core)
 {
+	/* As opposed to SoftNIC, this call only initializes the master thread.
+	 * We cannot rely on threads launched by DPDK within ZCSI, the threads
+	 * must be launched by the runtime */
 	int rte_argc = 0;
 	char *rte_argv[16];
 
@@ -59,20 +64,15 @@ static int init_eal(int tid, int core)
 	int ret;
 	int i;
 
-	sprintf(opt_master_lcore, "%d", RTE_MAX_LCORE - 1);
+	sprintf(opt_master_lcore, "%d", tid);
 
 	/* The actual lcore */
 	i = set_lcore_bitmap(opt_lcore_bitmap, tid, core);
-	opt_lcore_bitmap[i] = ',';
-	/* The master lcore */
-	i = set_lcore_bitmap(opt_lcore_bitmap + i + 1,
-			RTE_MAX_LCORE - 1,
-			core);
-	printf("Using core map %s\n", opt_lcore_bitmap);
 
 	sprintf(opt_socket_mem, "%s", socket_mem);
 	for(i = 1; i < numa_count; i++)
-		sprintf(opt_socket_mem + strlen(opt_socket_mem), ",%s", socket_mem);
+		sprintf(opt_socket_mem + strlen(opt_socket_mem), 
+				",%s", socket_mem);
 
 	rte_argv[rte_argc++] = "lzcsi";
 	rte_argv[rte_argc++] = "--master-lcore";
@@ -80,7 +80,9 @@ static int init_eal(int tid, int core)
 	rte_argv[rte_argc++] = "--lcores";
 	rte_argv[rte_argc++] = opt_lcore_bitmap;
 	rte_argv[rte_argc++] = "-n";
-	rte_argv[rte_argc++] = "4";	/* number of memory channels (Sandy Bridge) */
+	/* number of memory channels (Sandy Bridge) */
+	rte_argv[rte_argc++] = "4";	// Number of memory channels on 
+					// Sandy Bridge.
 #if 1
 	rte_argv[rte_argc++] = "--socket-mem";
 	rte_argv[rte_argc++] = opt_socket_mem;
@@ -101,21 +103,22 @@ static void init_timer()
 	rte_timer_subsystem_init();
 }
 
-/* Reenable this after copying stuff from SoftNIC */
-/*#if DPDK < DPDK_VER(2, 0, 0)*/
-  /*#error DPDK 2.0.0 or higher is required*/
-/*#endif*/
-
-/* Call this from the main thread on ZCSI to initialize things */
+/* Call this from the main thread on ZCSI to initialize things. This initializes 
+ * the master thread. */
 int init_system(int tid, int core)
 {
-	return init_eal(tid, core);
+	init_timer();
+	if (init_eal(tid, core) < 0) {
+		return 0;
+	}
+	return init_mempool();
 }
 
 /* Declared within eal_thread.c, but not exposed */
 void eal_thread_init_master(int);
 
-/* Called from all secondary threads on ZCSI */
+/* Called by each secondary threads on ZCSI, responsible for affinitization,
+ * etc.*/
 void init_thread(int tid, int core)
 {
 	/* Among other things this affinitizes the thread */

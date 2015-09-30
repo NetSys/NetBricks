@@ -1,1 +1,6 @@
-test.o: test.c ../dpdk/include/dpdk.h
+test.o: test.c ../dpdk/include/dpdk.h \
+ /home/apanda/e2d2/3rdparty/dpdk-2.1.0/build/include/rte_config.h \
+ /home/apanda/e2d2/3rdparty/dpdk-2.1.0/build/include/rte_lcore.h \
+ /home/apanda/e2d2/3rdparty/dpdk-2.1.0/build/include/rte_per_lcore.h \
+ /home/apanda/e2d2/3rdparty/dpdk-2.1.0/build/include/rte_eal.h \
+ /home/apanda/e2d2/3rdparty/dpdk-2.1.0/build/include/rte_launch.h

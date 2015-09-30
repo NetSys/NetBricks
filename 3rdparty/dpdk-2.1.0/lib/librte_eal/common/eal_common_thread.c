@@ -91,7 +91,7 @@ rte_thread_set_affinity(rte_cpuset_t *cpusetp)
 
 	s = pthread_setaffinity_np(tid, sizeof(rte_cpuset_t), cpusetp);
 	if (s != 0) {
-		RTE_LOG(ERR, EAL, "pthread_setaffinity_np failed\n");
+		RTE_LOG(ERR, EAL, "pthread_setaffinity_np failed %d\n", s);
 		return -1;
 	}
 
