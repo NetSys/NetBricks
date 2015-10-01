@@ -34,10 +34,9 @@ int main (int argc, char* argv[]) {
 
 	pthread_t thread[20];
 	struct node n[20];
-	int ret = init_system(0, 5);
+	int ret = init_system(0);
 
 	assert(ret >= 0);
-	/*printf("%lu\n", f);*/
 	for (int i = 0; i < 20; i++) {
 		n[i].tid = 64 - i;
 		n[i].core = i;

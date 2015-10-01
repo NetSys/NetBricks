@@ -17,6 +17,12 @@
 /* Currently creating only one pool per NUMA node. */
 static struct rte_mempool *pframe_pool[RTE_MAX_NUMA_NODES];
 
+/* Get mempool for calling thread's socket */
+static inline struct rte_mempool *current_pframe_pool()
+{
+	return pframe_pool[rte_socket_id()];
+}
+
 static int init_mempool_socket(int sid)
 {
 	char name[256];
@@ -52,4 +58,9 @@ fail:
 	/* FIXME: Should ideally free up the pools here, but have no way of
 	 * doing so currently */
 	return 0;
+}
+
+struct rte_mbuf* mbuf_alloc()
+{
+	return rte_pktmbuf_alloc(current_pframe_pool());
 }

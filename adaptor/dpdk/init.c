@@ -45,7 +45,7 @@ fail:
 	return 1;
 }
 
-static int init_eal(int tid, int core)
+static int init_eal(int core)
 {
 	/* As opposed to SoftNIC, this call only initializes the master thread.
 	 * We cannot rely on threads launched by DPDK within ZCSI, the threads
@@ -63,12 +63,19 @@ static int init_eal(int tid, int core)
 
 	int ret;
 	int i;
+	int tid = core;
 
-	sprintf(opt_master_lcore, "%d", core);
+	if (core > RTE_MAX_LCORE || tid > RTE_MAX_LCORE) {
+		return -1;
+	}
 
-	/* The actual lcore */
-	/*i = set_lcore_bitmap(opt_lcore_bitmap, tid, core);*/
-	sprintf(opt_lcore_bitmap, "0x%x", (RTE_MAX_LCORE - 1));
+	sprintf(opt_master_lcore, "%d", tid);
+
+	/* We need to tell rte_eal_init that it should use all possible lcores.
+	 * If not, it does an insane thing and 0s out the cpusets for any unused
+	 * physical cores and will not work when new threads are allocated. We
+	 * could hack around this another way, but this seems more reasonable.*/
+	sprintf(opt_lcore_bitmap, "0x%x", (1u << core));
 	printf("Core mask : %s\n", opt_lcore_bitmap);
 
 	sprintf(opt_socket_mem, "%s", socket_mem);
@@ -92,6 +99,7 @@ static int init_eal(int tid, int core)
 	/* reset getopt() */
 	optind = 0;
 
+	/* rte_eal_init: Initializes EAL */
 	ret = rte_eal_init(rte_argc, rte_argv);
 
 	/* Change lcore ID */
@@ -106,10 +114,10 @@ static void init_timer()
 
 /* Call this from the main thread on ZCSI to initialize things. This initializes 
  * the master thread. */
-int init_system(int tid, int core)
+int init_system(int core)
 {
 	init_timer();
-	if (init_eal(tid, core) < 0) {
+	if (init_eal(core) < 0) {
 		return 0;
 	}
 	return init_mempool();
