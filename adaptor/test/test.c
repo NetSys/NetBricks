@@ -25,8 +25,23 @@ uint64_t fib (uint64_t l)
 void *thr(void* arg)
 {
 	struct node* n = arg;
+	struct rte_mbuf* restrict pkts[32];
+	int i;
 	init_thread(n->tid, n->core);
-	printf("Socket ID (%d) is %d\n", n->core, rte_socket_id());
+	for (int j = 0; j < 100000; j++) {
+		i = mbuf_alloc_bulk(pkts, 512, 32);
+		if (i != 0) {
+			printf("Error allocating packets %d\n", i);
+			break;
+		} else {
+			i = mbuf_free_bulk(pkts, 32);
+			if (i != 0) {
+				printf("Error freeing packets %d\n", i);
+				break;
+			}
+		}
+	}
+	printf("Socket ID (%d) is %d. DONE\n", n->core, rte_socket_id());
 	return NULL;
 }
 
@@ -36,7 +51,7 @@ int main (int argc, char* argv[]) {
 	struct node n[20];
 	int ret = init_system(0);
 
-	assert(ret >= 0);
+	assert(ret == 0);
 	for (int i = 0; i < 20; i++) {
 		n[i].tid = 64 - i;
 		n[i].core = i;
@@ -49,5 +64,5 @@ int main (int argc, char* argv[]) {
 	for (int i = 0; i < 20; i++) {
 		pthread_join(thread[i], NULL);
 	}
-	return 1;
+	return 0;
 }

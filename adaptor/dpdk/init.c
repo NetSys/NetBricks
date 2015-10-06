@@ -116,9 +116,11 @@ static void init_timer()
  * the master thread. */
 int init_system(int core)
 {
+	int ret = 0;
 	init_timer();
-	if (init_eal(core) < 0) {
-		return 0;
+	if ((ret = init_eal(core)) < 0) {
+		return ret;
+
 	}
 	return init_mempool();
 }

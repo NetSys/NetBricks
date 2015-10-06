@@ -5,4 +5,5 @@ int init_system(int core);
 
 /* Called from all secondary threads on ZCSI */
 void init_thread(int tid, int core);
+#include "mempool.h"
 #endif
