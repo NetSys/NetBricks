@@ -11,8 +11,9 @@
 typedef struct rte_mbuf* restrict * restrict mbuf_array_t;
 /* Called by system initialization */
 int init_mempool();
-struct rte_mbuf* mbuf_alloc();
+struct rte_mbuf *mbuf_alloc();
 void mbuf_free(struct rte_mbuf* buf);
 int mbuf_alloc_bulk(mbuf_array_t array, uint16_t len, int cnt);
 int mbuf_free_bulk(mbuf_array_t array, int cnt);
+struct rte_mempool *get_pframe_pool(int sid);
 #endif

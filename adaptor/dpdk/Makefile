@@ -1,8 +1,9 @@
 CC = gcc
 
-ifndef RTE_SDK
-$(error RTE_SDK is undefined)
-endif
+RTE_SDK = $(abspath ../../3rdparty/dpdk-2.1.0/)
+#ifndef RTE_SDK
+#$(error RTE_SDK is undefined)
+#endif
 
 ifndef RTE_TARGET
 $(error RTE_TARGET is undefined)
@@ -17,8 +18,8 @@ else
 endif
 
 LDFLAGS += -L$(DPDK_LIB_DIR)
-LIBS += -ldpdk
-LIBS += -lm -lpthread -ldl -lpcap
+LIBS += -ldpdk -Wl,-rpath=$(DPDK_LIB_DIR)
+LIBS += -lm -lpthread -ldl #-lpcap
 
 # change fpic to fPIC if something fails
 CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=native -Wno-unused-function -Wno-unused-but-set-variable \
@@ -51,6 +52,7 @@ MAKEFLAGS += -j $(CORES)
 all: $(DEPS) $(PROD)
 	
 $(DEPS): $(SRCS) $(HEADERS)
+	@echo $(RTE_SDK) $(DPDK_INC_DIR)
 	@$(CC) $(CFLAGS) -MM $(SRCS) | sed 's|\(.*\)\.o: \(.*\)\.c|\2.o: \2.c|' > $(DEPS);
 
 $(PROD): $(OBJS)

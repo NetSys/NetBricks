@@ -29,6 +29,10 @@ static inline struct rte_mempool *current_pframe_pool()
 	return pframe_pool[rte_socket_id()];
 }
 
+struct rte_mempool *get_pframe_pool(int sid) {
+	return pframe_pool[rte_socket_id()];
+}
+
 static int init_mempool_socket(int sid)
 {
 	char name[256];

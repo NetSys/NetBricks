@@ -1,8 +1,6 @@
 CC = gcc
 
-ifndef RTE_SDK
-$(error RTE_SDK is undefined)
-endif
+RTE_SDK = $(abspath ../../3rdparty/dpdk-2.1.0/)
 
 ifndef RTE_TARGET
 $(error RTE_TARGET is undefined)
@@ -15,9 +13,12 @@ else
 	DPDK_INC_DIR = $(RTE_SDK)/build/include
 	DPDK_LIB_DIR = $(RTE_SDK)/build/lib
 endif
-DPDK_INCLUDE=../dpdk/include
+ADAPTOR_DIR=$(abspath ../dpdk)
+DPDK_INCLUDE=$(ADAPTOR_DIR)/include
+DPDK_LIB=$(ADAPTOR_DIR)
 
-LDFLAGS += -L$(DPDK_LIB_DIR) -L../dpdk  
+LDFLAGS += -L$(DPDK_LIB_DIR) -L$(DPDK_LIB) -Wl,-rpath=$(DPDK_LIB)\
+	   -Wl,-rpath=$(DPDK_LIB_DIR) 
 LIBS += -lm -lpthread -ldl -lpcap -ldpdk -lzcsi
 
 
