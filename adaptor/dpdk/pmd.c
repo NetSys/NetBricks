@@ -164,5 +164,6 @@ int recv_pkts(int port, int qid, mbuf_array_t pkts, int len)
 
 int send_pkts(int port, int qid, mbuf_array_t pkts, int len)
 {
-	return rte_eth_tx_burst(port, qid, (struct rte_mbuf **)pkts, len);
+	return rte_eth_tx_burst(port, (uint16_t) qid, (struct rte_mbuf **)pkts, 
+			(uint16_t)len);
 }

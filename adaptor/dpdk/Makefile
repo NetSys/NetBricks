@@ -1,6 +1,6 @@
 CC = gcc
 
-RTE_SDK = $(abspath ../../3rdparty/dpdk-2.1.0/)
+RTE_SDK = $(abspath ../../3rdparty/dpdk/)
 #ifndef RTE_SDK
 #$(error RTE_SDK is undefined)
 #endif

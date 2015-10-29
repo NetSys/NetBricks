@@ -20,31 +20,25 @@ int cursec()
 	return t.tv_sec;
 }
 
-uint64_t fib (uint64_t l)
-{
-	uint64_t a = 0, b = 1;
-	while (b < l) {
-		int temp = a;
-		a = b;
-		b = a + temp;
-	}
-	return b;
-}
-#define PORT_OUT 0
-#define PORT_IN 1
+#define PORT_OUT 1
+#define PORT_IN 0
 void *thr(void* arg)
 {
 	struct node* n = arg;
 	struct rte_mbuf* restrict pkts[32];
 	int i;
-	init_thread(n->tid, n->core);
+	int q = n->core;
 	int start_sec = cursec();
 	int rcvd = 0;
 	int sent = 0;
 	int print = 1;
+	init_thread(n->tid, n->core);
+	if (q >= 20) {
+		printf("Somehow, queue beyond 20\n");
+	}
 	for (int j = 0; j < 1000000;) {
 		/*int recv;*/
-		i = mbuf_alloc_bulk(pkts, 60, 32);
+		i = mbuf_alloc_bulk(pkts, 64, 32);
 		if (i != 0) {
 			printf("Error allocating packets %d\n", i);
 			break;
@@ -52,43 +46,47 @@ void *thr(void* arg)
 			int send, recv;
 			if (print) {
 				print = 0;
-				rte_pktmbuf_dump(stdout, pkts[0], 16384);
+				/*printf("send_pkt\n");*/
+				/*rte_pktmbuf_dump(stdout, pkts[0], 16384);*/
 			}
 			for (i = 0; i < 32; i++) {
 				/* Start setting MAC address */
-				struct ether_hdr* hdr = 
+				struct ether_hdr* hdr =
 					rte_pktmbuf_mtod(pkts[i],
 						struct ether_hdr*);
-				hdr->d_addr.addr_bytes[5] = 1;
-				hdr->s_addr.addr_bytes[5] = 2;
-				hdr->ether_type = 0x0800;
+				hdr->d_addr.addr_bytes[5] = (10 * q) + 1;
+				hdr->s_addr.addr_bytes[5] = (10 * q) + 2;
+				hdr->ether_type = rte_cpu_to_be_16(0x1105);
 				rte_mbuf_sanity_check(pkts[i], 1);
 			}
-			send = send_pkts(PORT_OUT, n->core, pkts, 32);
+			send = send_pkts(PORT_OUT, q, pkts, 32);
 			for (i = send; i < 32; i++) {
 				mbuf_free(pkts[i]);
 			}
-			recv = recv_pkts(PORT_IN, n->core, pkts, 32);
-			for (int i = 0; i < recv; i++) {
-				mbuf_free(pkts[i]);
-			}
+			recv = recv_pkts(PORT_IN, q, pkts, 32);
 			rcvd += recv;
 			sent += send;
 			if (cursec() != start_sec) {
-				printf("%d %d %d\n", (cursec() - start_sec),
+				printf("%d %d rx=%d tx=%d\n", n->core,
+						(cursec() - start_sec),
 						rcvd,
 						sent);
+				/*printf("recv_pkt\n");*/
+				/*rte_pktmbuf_dump(stdout, pkts[0], 16384);*/
 				start_sec = cursec();
 				rcvd = 0;
 				sent = 0;
 				print = 1;
+			}
+			for (int i = 0; i < recv; i++) {
+				mbuf_free(pkts[i]);
 			}
 		}
 	}
 	printf("Socket ID (%d) is %d. DONE\n", n->core, rte_socket_id());
 	return NULL;
 }
-
+#define THREADS 20 
 int main (int argc, char* argv[]) {
 
 	pthread_t thread[20];
@@ -104,11 +102,11 @@ int main (int argc, char* argv[]) {
 		txq_cores[i] = i;
 	}
 	enumerate_pmd_ports();
-	ret = init_pmd_port(PORT_OUT, 1, 1, rxq_cores, txq_cores, 128, 512, 0, 0, 0);
+	ret = init_pmd_port(PORT_OUT, THREADS, THREADS, rxq_cores, txq_cores, 128, 512, 0, 0, 0);
 	assert(ret == 0);
-	ret = init_pmd_port(PORT_IN, 1, 1, rxq_cores, txq_cores, 128, 512, 0, 0, 0);
+	ret = init_pmd_port(PORT_IN, THREADS, THREADS, rxq_cores, txq_cores, 128, 512, 0, 0, 0);
 	assert(ret == 0);
-	for (int i = 0; i < 1; i++) {
+	for (int i = 0; i < THREADS; i++) {
 		n[i].tid = 64 - i;
 		n[i].core = i;
 		pthread_create(&thread[i],
@@ -117,7 +115,7 @@ int main (int argc, char* argv[]) {
 				&n[i]);
 	}
 
-	for (int i = 0; i < 1; i++) {
+	for (int i = 0; i < THREADS; i++) {
 		pthread_join(thread[i], NULL);
 	}
 	free_pmd_port(PORT_OUT);
