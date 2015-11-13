@@ -66,8 +66,6 @@ int init_mempool()
 			mbuf = rte_pktmbuf_alloc(pframe_pool[sid]);
 			mbuf_template = *mbuf;
 			rte_pktmbuf_free(mbuf);
-			printf("Refcnt %u\n",
-					rte_mbuf_refcnt_read(&mbuf_template));
 		}
 	}
 	return 0;
@@ -226,4 +224,8 @@ slow_path:
 	for (i = 0; i < cnt; i++)
 		mbuf_free(array[i]);
 	return 0;
+}
+
+void dump_pkt(struct rte_mbuf* buf) {
+	rte_pktmbuf_dump(stdout, buf, 16384);
 }

@@ -21,7 +21,7 @@ int cursec()
 }
 
 #define PORT_OUT 1
-#define PORT_IN 0
+#define PORT_IN 1
 void *thr(void* arg)
 {
 	struct node* n = arg;
@@ -56,7 +56,7 @@ void *thr(void* arg)
 						struct ether_hdr*);
 				hdr->d_addr.addr_bytes[5] = (10 * q) + 1;
 				hdr->s_addr.addr_bytes[5] = (10 * q) + 2;
-				hdr->ether_type = rte_cpu_to_be_16(0x1105);
+				hdr->ether_type = rte_cpu_to_be_16(0x0800);
 				rte_mbuf_sanity_check(pkts[i], 1);
 			}
 			send = send_pkts(PORT_OUT, q, pkts, 32);
@@ -86,39 +86,45 @@ void *thr(void* arg)
 	printf("Socket ID (%d) is %d. DONE\n", n->core, rte_socket_id());
 	return NULL;
 }
-#define THREADS 20 
+
+void dump() {
+	printf("pkt_len %lu\n", offsetof(struct rte_mbuf, pkt_len));
+}
+
+#define THREADS 1
 int main (int argc, char* argv[]) {
 
-	pthread_t thread[20];
-	struct node n[20];
-	int ret = init_system(0);
-	int rxq_cores[20];
-	int txq_cores[20];
+	dump();
+	/*pthread_t thread[20];*/
+	/*struct node n[20];*/
+	/*int ret = init_system(0);*/
+	/*int rxq_cores[20];*/
+	/*int txq_cores[20];*/
 
-	assert(ret == 0);
+	/*assert(ret == 0);*/
 
-	for (int i = 0; i < 20; i++) {
-		rxq_cores[i] = i;
-		txq_cores[i] = i;
-	}
-	enumerate_pmd_ports();
-	ret = init_pmd_port(PORT_OUT, THREADS, THREADS, rxq_cores, txq_cores, 128, 512, 0, 0, 0);
-	assert(ret == 0);
-	ret = init_pmd_port(PORT_IN, THREADS, THREADS, rxq_cores, txq_cores, 128, 512, 0, 0, 0);
-	assert(ret == 0);
-	for (int i = 0; i < THREADS; i++) {
-		n[i].tid = 64 - i;
-		n[i].core = i;
-		pthread_create(&thread[i],
-				NULL,
-				&thr,
-				&n[i]);
-	}
+	/*for (int i = 0; i < 20; i++) {*/
+		/*rxq_cores[i] = i;*/
+		/*txq_cores[i] = i;*/
+	/*}*/
+	/*enumerate_pmd_ports();*/
+	/*ret = init_pmd_port(PORT_OUT, THREADS, THREADS, rxq_cores, txq_cores, 128, 512, 1, 0, 0);*/
+	/*[>assert(ret == 0);<]*/
+	/*[>ret = init_pmd_port(PORT_IN, THREADS, THREADS, rxq_cores, txq_cores, 128, 512, 1, 0, 0);<]*/
+	/*assert(ret == 0);*/
+	/*for (int i = 0; i < THREADS; i++) {*/
+		/*n[i].tid = 64 - i;*/
+		/*n[i].core = i;*/
+		/*pthread_create(&thread[i],*/
+				/*NULL,*/
+				/*&thr,*/
+				/*&n[i]);*/
+	/*}*/
 
-	for (int i = 0; i < THREADS; i++) {
-		pthread_join(thread[i], NULL);
-	}
-	free_pmd_port(PORT_OUT);
-	/*free_pmd_port(PORT_IN);*/
+	/*for (int i = 0; i < THREADS; i++) {*/
+		/*pthread_join(thread[i], NULL);*/
+	/*}*/
+	/*free_pmd_port(PORT_OUT);*/
+	/*[>free_pmd_port(PORT_IN);<]*/
 	return 0;
 }

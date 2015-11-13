@@ -1,6 +1,6 @@
 CC = gcc
 
-RTE_SDK = $(abspath ../../3rdparty/dpdk/)
+RTE_SDK = $(abspath ../../../3rdparty/dpdk/)
 
 ifndef RTE_TARGET
 $(error RTE_TARGET is undefined)
@@ -13,7 +13,7 @@ else
 	DPDK_INC_DIR = $(RTE_SDK)/build/include
 	DPDK_LIB_DIR = $(RTE_SDK)/build/lib
 endif
-ADAPTOR_DIR=$(abspath ../dpdk)
+ADAPTOR_DIR=$(abspath ../)
 DPDK_INCLUDE=$(ADAPTOR_DIR)/include
 DPDK_LIB=$(ADAPTOR_DIR)
 
