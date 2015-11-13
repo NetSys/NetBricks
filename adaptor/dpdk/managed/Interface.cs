@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Collections;
 namespace ZCSI.DPDK {
+	// FIXME: Spread this around
 	public static class DPDK {
 		// Called once when the system is called. The calling thread is
 		// affinitized to core. Subsequent calls to init_thread can be
