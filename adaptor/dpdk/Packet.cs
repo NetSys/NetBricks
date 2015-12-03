@@ -5,83 +5,117 @@ using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Collections;
+using System.Runtime.ConstrainedExecution;
 namespace ZCSI.DPDK {
 	// FIXME:
 	// [Unique]
 	public sealed class Packet : IDisposable {
-		internal IntPtr mbufAddress;
+		internal IntPtr _mbufAddress;
 		static internal IntPtr zero;
 
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+		[DllImport("zcsi")]
+		private static extern IntPtr mbuf_alloc();
+		
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+		[DllImport("zcsi")]
+		private static extern void  mbuf_free(IntPtr buf);
+
+		[DllImport("zcsi")]
+		private static extern void dump_pkt(IntPtr array);
+
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Packet AllocatePacket() {
+			IntPtr address = mbuf_alloc();
+			return new Packet(address);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Dump() {
+			dump_pkt(_mbufAddress);
+		}
+
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
 		public void Dispose() {
 			Dispose(true);
 			GC.SuppressFinalize(this);
 		}
 
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
 		void Dispose(bool disposing) {
-			if (mbufAddress != zero) {
-				DPDK.mbuf_free(mbufAddress);
-				mbufAddress = zero;
+			if (_mbufAddress != zero) {
+				mbuf_free(_mbufAddress);
+				_mbufAddress = zero;
 			}
 		}
 
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
 		~Packet() {
 			Dispose(false);
 		}
 
-		public void Dump() {
-			if (mbufAddress != zero) {
-				Console.WriteLine("Dumping packet at {0}", mbufAddress.ToString("X"));
-				DPDK.dump_pkt(mbufAddress);
-			}
-		}
-
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal Packet() {
 			zero = IntPtr.Zero;
 		}
 
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal Packet(IntPtr address) : this() {
-			mbufAddress = address;
+			_mbufAddress = address;
 		}
 
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal void wrapMbuf(IntPtr address) {
-			mbufAddress = address;
+		internal void WrapMbuf(IntPtr address) {
+			_mbufAddress = address;
+		}
+
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal void Clear() {
+			_mbufAddress = zero;
+		}
+
+		public unsafe IntPtr DataAddress {
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get { return BufAddr + DataOff; } 
 		}
 		
 		// Cache line 0
 		internal unsafe IntPtr BufAddr {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((IntPtr*)(mbufAddress + 0)); }
+			get { return *((IntPtr*)(_mbufAddress + 0)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((IntPtr*)(mbufAddress + 0)) = value; }
+			private set { *((IntPtr*)(_mbufAddress + 0)) = value; }
 		}
 
 		// No one needs physical address in our case
 		private unsafe IntPtr PhysAddr {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((IntPtr*)(mbufAddress + 8)); }
+			get { return *((IntPtr*)(_mbufAddress + 8)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			set { *((IntPtr*)(mbufAddress + 8)) = value; }
+			set { *((IntPtr*)(_mbufAddress + 8)) = value; }
 		}
 
 		public unsafe ushort BufLen {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ushort*)(mbufAddress + 16)); }
+			get { return *((ushort*)(_mbufAddress + 16)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ushort*)(mbufAddress + 16)) = value; }
+			private set { *((ushort*)(_mbufAddress + 16)) = value; }
 		}
 
 		internal unsafe ushort DataOff {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ushort*)(mbufAddress + 18)); }
+			get { return *((ushort*)(_mbufAddress + 18)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ushort*)(mbufAddress + 18)) = value; }
+			private set { *((ushort*)(_mbufAddress + 18)) = value; }
 		}
 
 		// Skipping refcnt (16-bits) since access without using
@@ -89,126 +123,126 @@ namespace ZCSI.DPDK {
 
 		internal unsafe byte NbSegs {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((byte*)(mbufAddress + 22)); }
+			get { return *((byte*)(_mbufAddress + 22)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((byte*)(mbufAddress + 22)) = value; }
+			private set { *((byte*)(_mbufAddress + 22)) = value; }
 		}
 
 		internal unsafe byte Port {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((byte*)(mbufAddress + 23)); }
+			get { return *((byte*)(_mbufAddress + 23)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((byte*)(mbufAddress + 23)) = value; }
+			private set { *((byte*)(_mbufAddress + 23)) = value; }
 		}
 
 		internal unsafe ulong OffloadFlags {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ulong*)(mbufAddress + 24)); }
+			get { return *((ulong*)(_mbufAddress + 24)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ulong*)(mbufAddress + 24)) = value; }
+			private set { *((ulong*)(_mbufAddress + 24)) = value; }
 		}
 
 		// Assuming RTE_NEXT_ABI is true.
 		internal unsafe uint PacketType {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((uint*)(mbufAddress + 32)); }
+			get { return *((uint*)(_mbufAddress + 32)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((uint*)(mbufAddress + 32)) = value; }
+			private set { *((uint*)(_mbufAddress + 32)) = value; }
 		}
 
 		public unsafe uint PacketLen {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get{ return *((uint*)(mbufAddress + 36)); }
+			get{ return *((uint*)(_mbufAddress + 36)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((uint*)(mbufAddress + 36)) = value; }
+			private set { *((uint*)(_mbufAddress + 36)) = value; }
 		}
 
 		internal unsafe ushort DataLen {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ushort*)(mbufAddress + 40)); }
+			get { return *((ushort*)(_mbufAddress + 40)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ushort*)(mbufAddress + 40)) = value; }
+			private set { *((ushort*)(_mbufAddress + 40)) = value; }
 		}
 
 		internal unsafe ushort VlanTci {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ushort*)(mbufAddress + 42)); }
+			get { return *((ushort*)(_mbufAddress + 42)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ushort*)(mbufAddress + 42)) = value; }
+			private set { *((ushort*)(_mbufAddress + 42)) = value; }
 		}
 
 		internal unsafe ulong Hash {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ulong*)(mbufAddress + 44)); }
+			get { return *((ulong*)(_mbufAddress + 44)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ulong*)(mbufAddress + 44)) = value; }
+			private set { *((ulong*)(_mbufAddress + 44)) = value; }
 		}
 
 		internal unsafe uint Seqn {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((uint*)(mbufAddress + 52)); }
+			get { return *((uint*)(_mbufAddress + 52)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((uint*)(mbufAddress + 52)) = value; }
+			private set { *((uint*)(_mbufAddress + 52)) = value; }
 		}
 
 		internal unsafe ushort VlanTciOuter  {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ushort*)(mbufAddress + 56)); }
+			get { return *((ushort*)(_mbufAddress + 56)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ushort*)(mbufAddress + 56)) = value; }
+			private set { *((ushort*)(_mbufAddress + 56)) = value; }
 		}
 
 		// Cache line 1
 		// FIXME: Do we need to also add stuff for userdata
 		internal unsafe ulong UserData {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ulong*)(mbufAddress + 64)); }
+			get { return *((ulong*)(_mbufAddress + 64)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ulong*)(mbufAddress + 64)) = value; }
+			private set { *((ulong*)(_mbufAddress + 64)) = value; }
 		}
 
 		// rte_mempool: not putting this in since no one needs to know
 		private unsafe IntPtr NextMbuf {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((IntPtr*)(mbufAddress + 80)); }
+			get { return *((IntPtr*)(_mbufAddress + 80)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			set { *((IntPtr*)(mbufAddress + 80)) = value; }
+			set { *((IntPtr*)(_mbufAddress + 80)) = value; }
 		}
 
 		internal unsafe ulong TxOffload {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ulong*)(mbufAddress + 88)); }
+			get { return *((ulong*)(_mbufAddress + 88)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ulong*)(mbufAddress + 88)) = value; }
+			private set { *((ulong*)(_mbufAddress + 88)) = value; }
 		}
 
 		internal unsafe ushort PrivSize  {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ushort*)(mbufAddress + 96)); }
+			get { return *((ushort*)(_mbufAddress + 96)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ushort*)(mbufAddress + 96)) = value; }
+			private set { *((ushort*)(_mbufAddress + 96)) = value; }
 		}
 
 		internal unsafe ushort TimeSync  {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			get { return *((ushort*)(mbufAddress + 98)); }
+			get { return *((ushort*)(_mbufAddress + 98)); }
 
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-			private set { *((ushort*)(mbufAddress + 98)) = value; }
+			private set { *((ushort*)(_mbufAddress + 98)) = value; }
 		}
 	}
 }

@@ -11,6 +11,7 @@
 struct node {
 	int tid;
 	int core;
+	int queue;
 };
 
 int cursec()
@@ -21,44 +22,39 @@ int cursec()
 }
 
 #define PORT_OUT 1
-#define PORT_IN 1
+#define PORT_IN 0
 void *thr(void* arg)
 {
 	struct node* n = arg;
 	struct rte_mbuf* restrict pkts[32];
 	int i;
-	int q = n->core;
+	int q = n->queue;
 	int start_sec = cursec();
 	int rcvd = 0;
 	int sent = 0;
-	int print = 1;
 	init_thread(n->tid, n->core);
 	if (q >= 20) {
 		printf("Somehow, queue beyond 20\n");
 	}
-	for (int j = 0; j < 1000000;) {
+	while(1) {
 		/*int recv;*/
-		i = mbuf_alloc_bulk(pkts, 64, 32);
+		i = mbuf_alloc_bulk(pkts, 60, 32);
 		if (i != 0) {
 			printf("Error allocating packets %d\n", i);
 			break;
 		} else {
 			int send, recv;
-			if (print) {
-				print = 0;
-				/*printf("send_pkt\n");*/
-				/*rte_pktmbuf_dump(stdout, pkts[0], 16384);*/
-			}
-			for (i = 0; i < 32; i++) {
-				/* Start setting MAC address */
-				struct ether_hdr* hdr =
-					rte_pktmbuf_mtod(pkts[i],
-						struct ether_hdr*);
-				hdr->d_addr.addr_bytes[5] = (10 * q) + 1;
-				hdr->s_addr.addr_bytes[5] = (10 * q) + 2;
-				hdr->ether_type = rte_cpu_to_be_16(0x0800);
-				rte_mbuf_sanity_check(pkts[i], 1);
-			}
+
+			/* Start setting MAC address */
+			/*for (i = 0; i < 32; i++) {*/
+				/*struct ether_hdr* hdr =*/
+					/*rte_pktmbuf_mtod(pkts[i],*/
+						/*struct ether_hdr*);*/
+				/*hdr->d_addr.addr_bytes[5] = (10 * q) + 1;*/
+				/*hdr->s_addr.addr_bytes[5] = (10 * q) + 2;*/
+				/*hdr->ether_type = rte_cpu_to_be_16(0x0800);*/
+				/*rte_mbuf_sanity_check(pkts[i], 1);*/
+			/*}*/
 			send = send_pkts(PORT_OUT, q, pkts, 32);
 			for (i = send; i < 32; i++) {
 				mbuf_free(pkts[i]);
@@ -76,7 +72,6 @@ void *thr(void* arg)
 				start_sec = cursec();
 				rcvd = 0;
 				sent = 0;
-				print = 1;
 			}
 			for (int i = 0; i < recv; i++) {
 				mbuf_free(pkts[i]);
@@ -89,29 +84,38 @@ void *thr(void* arg)
 
 void dump() {
 	printf("pkt_len %lu\n", offsetof(struct rte_mbuf, pkt_len));
+	printf("sizeof(rte_eth_dev_info) %lu\n", sizeof(struct rte_eth_dev_info));
 }
 
 #define THREADS 1
 int main (int argc, char* argv[]) {
 
-	dump();
-	/*pthread_t thread[20];*/
-	/*struct node n[20];*/
-	/*int ret = init_system(0);*/
-	/*int rxq_cores[20];*/
-	/*int txq_cores[20];*/
+	/*dump();*/
+	pthread_t thread[20];
+	struct node n[20];
+	int rxq_cores[20];
+	int txq_cores[20];
+	int ret = init_system(1);
 
-	/*assert(ret == 0);*/
+	assert(ret == 0);
 
-	/*for (int i = 0; i < 20; i++) {*/
-		/*rxq_cores[i] = i;*/
-		/*txq_cores[i] = i;*/
-	/*}*/
-	/*enumerate_pmd_ports();*/
-	/*ret = init_pmd_port(PORT_OUT, THREADS, THREADS, rxq_cores, txq_cores, 128, 512, 1, 0, 0);*/
-	/*[>assert(ret == 0);<]*/
-	/*[>ret = init_pmd_port(PORT_IN, THREADS, THREADS, rxq_cores, txq_cores, 128, 512, 1, 0, 0);<]*/
-	/*assert(ret == 0);*/
+	for (int i = 0; i < 20; i++) {
+		rxq_cores[i] = i;
+		txq_cores[i] = i;
+	}
+	enumerate_pmd_ports();
+	ret = init_pmd_port(PORT_OUT, THREADS, THREADS, 
+			rxq_cores, txq_cores, 128, 512, 
+			PORT_OUT == PORT_IN, 0, 0);
+	assert(ret == 0);
+	if (PORT_IN != PORT_OUT) {
+		ret = init_pmd_port(PORT_IN, THREADS, THREADS, rxq_cores, txq_cores, 128, 512, 0, 0, 0);
+		assert(ret == 0);
+	}
+	n[0].tid = 1;
+	n[0].core = 1;
+	n[0].queue = 0;
+	pthread_create(&thread[0], NULL, &thr, &n[0]);
 	/*for (int i = 0; i < THREADS; i++) {*/
 		/*n[i].tid = 64 - i;*/
 		/*n[i].core = i;*/
@@ -121,10 +125,9 @@ int main (int argc, char* argv[]) {
 				/*&n[i]);*/
 	/*}*/
 
-	/*for (int i = 0; i < THREADS; i++) {*/
-		/*pthread_join(thread[i], NULL);*/
-	/*}*/
-	/*free_pmd_port(PORT_OUT);*/
-	/*[>free_pmd_port(PORT_IN);<]*/
+	for (int i = 0; i < THREADS; i++) {
+		pthread_join(thread[i], NULL);
+	}
+	free_pmd_port(PORT_OUT);
 	return 0;
 }

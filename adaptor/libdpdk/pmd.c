@@ -5,6 +5,7 @@
 
 #define HW_RXCSUM		0
 #define HW_TXCSUM		0
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 static const struct rte_eth_conf default_eth_conf = {
 	.link_speed = ETH_LINK_SPEED_AUTONEG,   /* auto negotiate speed */
 	.link_duplex = ETH_LINK_AUTONEG_DUPLEX,	/* auto negotiation duplex */
@@ -43,6 +44,21 @@ static const struct rte_eth_conf default_eth_conf = {
 		.lsc = 0,
 	},
 };
+
+int num_pmd_ports() 
+{
+	return rte_eth_dev_count();
+}
+
+int get_pmd_ports(struct rte_eth_dev_info* info, int len) {
+	int num_ports = rte_eth_dev_count();
+	int num_entries = MIN(num_ports, len);
+	for (int i = 0; i < num_entries; i++) {
+		memset(&info[i], 0, sizeof(struct rte_eth_dev_info));
+		rte_eth_dev_info_get(i, &info[i]);
+	}
+	return num_entries; 
+}
 
 void enumerate_pmd_ports()
 {
