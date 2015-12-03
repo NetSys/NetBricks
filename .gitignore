@@ -200,4 +200,4 @@ ModelManifest.xml
 .make.dep
 *.tar.gz
 3rdparty/dpdk
-/adaptor/libdpdk/test/test
+/native/test/test
