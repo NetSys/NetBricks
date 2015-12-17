@@ -46,15 +46,15 @@ void *thr(void* arg)
 			int send, recv;
 
 			/* Start setting MAC address */
-			/*for (i = 0; i < 32; i++) {*/
-				/*struct ether_hdr* hdr =*/
-					/*rte_pktmbuf_mtod(pkts[i],*/
-						/*struct ether_hdr*);*/
+			for (i = 0; i < 32; i++) {
+				struct ether_hdr* hdr =
+					rte_pktmbuf_mtod(pkts[i],
+						struct ether_hdr*);
 				/*hdr->d_addr.addr_bytes[5] = (10 * q) + 1;*/
 				/*hdr->s_addr.addr_bytes[5] = (10 * q) + 2;*/
-				/*hdr->ether_type = rte_cpu_to_be_16(0x0800);*/
+				hdr->ether_type = rte_cpu_to_be_16(0x0800);
 				/*rte_mbuf_sanity_check(pkts[i], 1);*/
-			/*}*/
+			}
 			send = send_pkts(PORT_OUT, q, pkts, 32);
 			for (i = send; i < 32; i++) {
 				mbuf_free(pkts[i]);

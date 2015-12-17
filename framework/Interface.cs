@@ -19,5 +19,20 @@ namespace ZCSI.DPDK {
 		[DllImport("zcsi")]
 		public static extern void init_thread(int tid, int core);
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static ushort ChangeEndianness(ushort val) {
+			return (ushort)(((val & 0xff) << 8) |
+					((val & 0xff00) >> 8));
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static uint ChangeEndianness(uint val) {
+			return ((val & 0x000000ff) << 24) |
+			       ((val & 0x0000ff00) << 8) |
+			       ((val & 0x00ff0000) >> 8) |
+			       ((val & 0xff000000) >> 24);
+
+		}
+
 	}
 }

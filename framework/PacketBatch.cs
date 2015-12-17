@@ -23,33 +23,49 @@ namespace ZCSI.DPDK {
 
 		public delegate void TransformDelegate(Packet packet);
 		public delegate bool FilterDelegate(Packet packet);
+		public delegate void TransformBatchDelegate(PacketBatch batch);
+
+		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+		[DllImport("zcsi")]
+		private static extern void set_ether_type(IntPtr array, int cnt, ushort type);
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void SetEtherType(ushort type) {
+			int start = _start;
+			int end = _available;
+			int cnt = end - start;
+			set_ether_type(_packetPointers + (cnt * start), cnt, type);
+		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void Transform(TransformDelegate transform) {
-			// FIXME: _start
-			for (int i = 0; i < (_available & UNROLL_BY); 
-					i += UNROLL_BY) {
-				_pkts[0]._mbufAddress = _packetPointerArray[i];
+			int start = _start;
+			for (; (start & UNROLL_BY) != 0; start++) {
+				_pkts[0]._mbufAddress = _packetPointerArray[start];
 				transform(_pkts[0]);
-				_pkts[1]._mbufAddress = _packetPointerArray[i + 1];
+			}
+			for (; start < (_available & UNROLL_BY); 
+					start += UNROLL_BY) {
+				_pkts[0]._mbufAddress = _packetPointerArray[start];
+				transform(_pkts[0]);
+				_pkts[1]._mbufAddress = _packetPointerArray[start + 1];
 				transform(_pkts[1]);
-				_pkts[2]._mbufAddress = _packetPointerArray[i + 2];
+				_pkts[2]._mbufAddress = _packetPointerArray[start + 2];
 				transform(_pkts[2]);
-				_pkts[3]._mbufAddress = _packetPointerArray[i + 3];
+				_pkts[3]._mbufAddress = _packetPointerArray[start + 3];
 				transform(_pkts[3]);
-				_pkts[4]._mbufAddress = _packetPointerArray[i + 4];
+				_pkts[4]._mbufAddress = _packetPointerArray[start + 4];
 				transform(_pkts[4]);
-				_pkts[5]._mbufAddress = _packetPointerArray[i + 5];
+				_pkts[5]._mbufAddress = _packetPointerArray[start + 5];
 				transform(_pkts[5]);
-				_pkts[6]._mbufAddress = _packetPointerArray[i + 6];
+				_pkts[6]._mbufAddress = _packetPointerArray[start + 6];
 				transform(_pkts[6]);
-				_pkts[7]._mbufAddress = _packetPointerArray[i + 7];
+				_pkts[7]._mbufAddress = _packetPointerArray[start + 7];
 				transform(_pkts[7]);
 			}
 
-			for (int i = (_available & UNROLL_BY); 
-					i < (_available & (~UNROLL_BY)); i++) {
-				_pkts[0]._mbufAddress = _packetPointerArray[i];
+			for (; start < _available; start++) {
+				_pkts[0]._mbufAddress = _packetPointerArray[start];
 				transform(_pkts[0]);
 			}
 		}
@@ -153,10 +169,13 @@ namespace ZCSI.DPDK {
 			get {return _available - _start;}
 		}
 
-		// This is not the same as dispose for many reasons.
+		// This is not the same as dispose, the packet batch retains its
+		// relatively small packet pointer array at the end of this.
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void ClearBatch() {
-			Dispose(true);
+			if ((_available - _start) > 0) {
+				FreePacketBatch(this);
+			}
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -170,6 +189,8 @@ namespace ZCSI.DPDK {
 			if ((_available - _start) > 0) {
 				FreePacketBatch(this);
 			}
+			Marshal.FreeHGlobal(_packetPointers);
+			Marshal.FreeHGlobal(_scratchPointers);
 		}
 
 		~PacketBatch() {

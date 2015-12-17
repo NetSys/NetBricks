@@ -10,7 +10,7 @@ using System.Text;
 using System.Security;
 
 namespace ZCSI.DPDK {
-	public class PMDPort : IDisposable {
+	public sealed class PMDPort : IDisposable {
 		[DllImport("zcsi")]
 		private static extern int init_pmd_port(int port,
 				int rxqs, int txqs, [In]int[] rxcores,
