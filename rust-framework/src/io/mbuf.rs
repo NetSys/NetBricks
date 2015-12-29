@@ -1,4 +1,3 @@
-use std::result;
 #[repr(C)]
 pub struct MBuf {
     buf_addr: *mut u8,
@@ -25,25 +24,9 @@ pub struct MBuf {
 }
 
 impl MBuf {
-    pub fn data_address(&self) -> *mut u8 {
+    pub fn data_address(&self, offset: usize) -> *mut u8 {
         unsafe {
-            self.buf_addr.offset(self.data_off as isize)
+            self.buf_addr.offset(self.data_off as isize).offset(offset as isize)
         }
     }
 }
-
-pub trait FromMBuf {
-    fn mut_transform(pkt: &mut MBuf) -> &mut Self;
-    fn const_transform(pkt: &MBuf) -> &Self;
-}
-
-#[derive(Debug)]
-pub enum ZCSIError {
-    FailedAllocation,
-    FailedDeallocation,
-    FailedToInitializePort,
-    BadQueue,
-}
-
-pub type Result<T> = result::Result<T, ZCSIError>;
-

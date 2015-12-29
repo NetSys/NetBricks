@@ -1,7 +1,7 @@
 extern crate libc;
 use super::mbuf::MBuf;
-use super::mbuf::Result;
-use super::mbuf::ZCSIError;
+use super::interface::Result;
+use super::interface::ZCSIError;
 use super::packet_batch::PacketBatch;
 use super::packet_batch::packet_ptr;
 use super::packet_batch::consumed_batch;
@@ -69,30 +69,20 @@ impl PmdPort {
 
     pub fn new_simple_port(port: i32, core: i32) -> Result<PmdPort> {
         PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, false, false, false)
-    } 
+    }
+
+    pub fn null_port() -> Result<PmdPort> {
+        Ok(PmdPort {connected: false, port: 0, rxqs: 0, txqs: 0})
+    }
 
     #[inline]
-    pub fn send(&self, pkts: &mut PacketBatch) -> u32 {
-        unsafe {
-            let to_send = pkts.available() as i32;
-            let sent = send_pkts(self.port, 0, packet_ptr(pkts), to_send);
-            consumed_batch(pkts, sent as usize);
-            sent as u32
-        }
+    pub fn send(&self, pkts: &mut PacketBatch) -> Result<u32> {
+        self.send_queue(1, pkts)
     }
 
     #[inline]
     pub fn recv(&self, pkts: &mut PacketBatch) -> Result<u32> {
-        unsafe {
-            match pkts.deallocate_batch() {
-                Err(err) => Err(err),
-                Ok(_) => { let to_recv = pkts.max_size();
-                         let recv = recv_pkts(self.port, 0, packet_ptr(pkts), to_recv);
-                         add_to_batch(pkts, recv as usize);
-                         Ok(recv as u32) 
-                }
-            }
-        }
+        self.recv_queue(1, pkts)
     }
 
     #[inline]
@@ -120,7 +110,7 @@ impl PmdPort {
                     Ok(_) => { let to_recv = pkts.max_size();
                              let recv = recv_pkts(self.port, 0, packet_ptr(pkts), to_recv);
                              add_to_batch(pkts, recv as usize);
-                             Ok(recv as u32) 
+                             Ok(recv as u32)
                     }
                 }
             }

@@ -1,5 +1,4 @@
-use super::mbuf;
-use super::interface::htons;
+use super::interface;
 use std::fmt;
 
 /// A packet's MAC header.
@@ -16,23 +15,37 @@ impl fmt::Display for MacHeader {
         write!(f, "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x} {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x} {:#x}",
                self.dst[0], self.dst[1], self.dst[2], self.dst[3], self.dst[4], self.dst[5],
                self.src[0], self.src[1], self.src[2], self.src[3], self.src[4], self.src[5],
-               htons(self.etype))
+               u16::from_be(self.etype))
     }
 }
 
-impl mbuf::FromMBuf for MacHeader {
+impl interface::ConstFromU8 for MacHeader {
     #[inline]
-    fn mut_transform(pkt: &mut mbuf::MBuf) -> &mut MacHeader {
-        let pdata = pkt.data_address();
-        let typecast = pdata as *mut MacHeader;
-        unsafe {&mut *typecast}
-    }
-
-    #[inline]
-    fn const_transform(pkt: &mbuf::MBuf) -> &MacHeader {
-        let pdata = pkt.data_address();
-        let typecast = pdata as *const MacHeader;
+    fn from_u8<'a>(data: *const u8) -> &'a Self {
+        let typecast = data as *const MacHeader;
         unsafe {&*typecast}
     }
 }
 
+impl interface::MutFromU8 for MacHeader {
+    #[inline]
+    fn from_u8<'a>(data: *mut u8) -> &'a mut Self {
+        let typecast = data as *mut MacHeader;
+        unsafe {&mut *typecast}
+    }
+}
+
+const HDR_SIZE: usize = 14;
+const HDR_SIZE_802_1Q: usize = HDR_SIZE + 4;
+const HDR_SIZE_802_1AD: usize = HDR_SIZE_802_1Q + 4;
+
+impl interface::EndOffset for MacHeader {
+    #[inline]
+    fn offset(&self) -> usize {
+        match self.etype {
+            0x8100 => HDR_SIZE_802_1Q,
+            0x9100 => HDR_SIZE_802_1AD,
+            _ => HDR_SIZE,
+        }
+    }
+}

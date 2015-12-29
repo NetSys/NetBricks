@@ -2,6 +2,11 @@ extern crate libc;
 use std::result;
 use std::fmt;
 use super::mbuf::*;
+use super::interface::Result;
+use super::interface::ZCSIError;
+use super::interface::ConstFromU8;
+use super::interface::MutFromU8;
+use super::interface::EndOffset;
 #[link(name = "zcsi")]
 extern {
     fn mbuf_alloc_bulk(array: *mut *mut MBuf, len: u16, cnt: i32) -> i32;
@@ -118,25 +123,60 @@ impl PacketBatch {
         let mut idx = self.start;
         while idx < self.end {
             let val = unsafe { &*self.array[idx] };
-            println!("Buf address is {:p} {:p}", val.data_address(), self.array[idx]);
+            println!("Buf address is {:p} {:p}", val.data_address(0), self.array[idx]);
             idx = idx + 1;
         }
     }
 
-    pub fn dump<T: FromMBuf + fmt::Display>(&self) {
+    pub fn dump<T: ConstFromU8 + fmt::Display>(&self) {
         let mut idx = self.start;
         while idx < self.end {
             let val = unsafe { &*self.array[idx] };
-            println!("{}", T::const_transform(val));
+            println!("{}", T::from_u8(val.data_address(0)));
             idx += 1;
         }
     }
 
     #[inline]
-    pub fn transform<T: FromMBuf>(&mut self, transformer:&Fn(&mut T)) {
-        for i in self.start .. self.end {
-            let mut val = unsafe { &mut *self.array[i] };
-            transformer(T::mut_transform(val));
+    pub fn transform<T: MutFromU8>(&mut self, transformer:&Fn(&mut T)) {
+        let mut idx = self.start;
+        while idx < self.end {
+            let val = unsafe { &mut *self.array[idx] };
+            transformer(T::from_u8(val.data_address(0)));
+            idx += 1;
+        }
+    }
+
+    #[inline]
+    pub fn transform_at_offset<T: MutFromU8>(&mut self, offsets: &Vec<usize>, transformer:&Fn(&mut T)) {
+        let mut oidx = 0;
+        let mut idx = self.start;
+        while idx < self.end {
+            let val = unsafe { &mut *self.array[idx] };
+            transformer(T::from_u8(val.data_address(offsets[oidx])));
+            idx += 1; oidx += 1;
+        }
+    }
+
+    #[inline]
+    pub fn find_offsets<T: EndOffset + ConstFromU8>(&self) -> Vec<usize> {
+        let mut offsets = Vec::<usize>::with_capacity((self.end - self.start) as usize);
+        let mut idx = self.start;
+        while idx < self.end {
+            let val = unsafe { &*self.array[idx] };
+            offsets.push(T::offset(T::from_u8(val.data_address(0))));
+            idx += 1;
+        }
+        offsets
+    }
+
+    #[inline]
+    pub fn offsets_efficient<T: EndOffset + ConstFromU8>(&self, offsets: &mut Vec<usize>) {
+        let mut idx = self.start;
+        while idx < self.end {
+            let val = unsafe { &*self.array[idx] };
+            offsets.push(T::offset(T::from_u8(val.data_address(0))));
+            idx += 1;
         }
     }
 }

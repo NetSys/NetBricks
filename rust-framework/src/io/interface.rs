@@ -1,3 +1,4 @@
+use std::result;
 extern crate libc;
 
 mod dpdk {
@@ -22,4 +23,26 @@ pub fn init_thread(tid: i32, core: i32) {
     unsafe {
         dpdk::init_thread(tid, core);
     }
+}
+
+#[derive(Debug)]
+pub enum ZCSIError {
+    FailedAllocation,
+    FailedDeallocation,
+    FailedToInitializePort,
+    BadQueue,
+}
+
+pub type Result<T> = result::Result<T, ZCSIError>;
+
+pub trait ConstFromU8 {
+    fn from_u8<'a>(data: *const u8) -> &'a Self;
+}
+
+pub trait MutFromU8 {
+    fn from_u8<'a>(data: *mut u8) -> &'a mut Self;
+}
+
+pub trait EndOffset {
+    fn offset(&self) -> usize; 
 }

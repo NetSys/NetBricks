@@ -8,12 +8,6 @@ build = "build.rs"
 libc = ">= 0.2.4"
 time = ">=0.1.0"
 
-[features]
-default = []
-send = []
-recv = []
-print = []
-
 [profile.release]
 opt-level = 3
 lto = true
