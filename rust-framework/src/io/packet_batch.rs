@@ -137,6 +137,16 @@ impl PacketBatch {
         }
     }
 
+    pub fn dump_at_offset<T: ConstFromU8 + fmt::Display>(&self, offsets: &Vec<usize>) {
+        let mut idx = self.start;
+        let mut oidx = 0;
+        while idx < self.end {
+            let val = unsafe { &*self.array[idx] };
+            println!("{}", T::from_u8(val.data_address(offsets[oidx])));
+            idx += 1; oidx += 1;
+        }
+    }
+
     #[inline]
     pub fn transform<T: MutFromU8>(&mut self, transformer:&Fn(&mut T)) {
         let mut idx = self.start;
