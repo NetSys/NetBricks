@@ -23,18 +23,30 @@ namespace ZCSI.DPDK {
 
 		public delegate void TransformDelegate(Packet packet);
 		public delegate bool FilterDelegate(Packet packet);
+		public delegate bool AssertDelegate(Packet packet);
 		public delegate void TransformBatchDelegate(PacketBatch batch);
 
-		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
-		[DllImport("zcsi")]
-		private static extern void set_ether_type(IntPtr array, int cnt, ushort type);
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void AssertOne(AssertDelegate assertion) {
+			_pkts[0]._mbufAddress = _packetPointerArray[_start];
+			if (!assertion(_pkts[0])) {
+				throw new Exception("PacketBatch assertion failed");
+			}
+		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void SetEtherType(ushort type) {
+		public void Assert(AssertDelegate assertion) {
 			int start = _start;
-			int end = _available;
-			int cnt = end - start;
-			set_ether_type(_packetPointers + (cnt * start), cnt, type);
+			for (; start < _available; start++) {
+				_pkts[0]._mbufAddress = _packetPointerArray[start];
+				if (!assertion(_pkts[0])) {
+					throw new Exception("PacketBatch assertion failed");
+				}
+			}
+		}
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void Transform(TransformBatchDelegate func) {
+			func(this);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -167,6 +179,16 @@ namespace ZCSI.DPDK {
 		public int Length {
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get {return _available - _start;}
+		}
+
+		public int Start {
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get {return _start;}
+		}
+
+		public int End {
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get {return _available;}
 		}
 
 		// This is not the same as dispose, the packet batch retains its

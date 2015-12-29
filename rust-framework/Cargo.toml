@@ -1,0 +1,22 @@
+[package]
+name = "e2d2"
+version = "0.1.0"
+authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
+build = "build.rs"
+
+[dependencies]
+libc = ">= 0.2.4"
+time = ">=0.1.0"
+
+[features]
+default = []
+send = []
+recv = []
+print = []
+
+[profile.release]
+opt-level = 3
+lto = true
+rpath = true
+debug = true
+debug-assertions = false

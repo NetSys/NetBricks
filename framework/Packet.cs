@@ -23,7 +23,91 @@ namespace ZCSI.DPDK {
 
 		[DllImport("zcsi")]
 		private static extern void dump_pkt(IntPtr array);
+		
+		[DllImport("zcsi")]
+		internal static extern void set_packet_data(IntPtr array, int cnt, int offset, IntPtr data, int size);
 
+		[DllImport("zcsi")]
+		internal static unsafe extern void set_packet_data_at_offset(IntPtr array, int* offsets, int cnt, 
+				IntPtr data, int size);  
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal unsafe static void SetPacketData(PacketBatch batch, int start, int end, int offset, 
+				ushort data) {
+			int cnt = end - start;
+			start = batch.Start + start;
+			if (start > batch.End || end > batch.Length) {
+				throw new IndexOutOfRangeException("Accessing beyond the end of a batch");
+			}
+			set_packet_data(batch._packetPointers + (8 * start), cnt, offset, new IntPtr((void*)&data), 2);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal unsafe static void SetPacketData(PacketBatch batch, int start, int end, int offset, 
+				byte[] chunk) {
+			int cnt = end - start;
+			start = batch.Start + start;
+			if (start > batch.End || end > batch.Length) {
+				throw new IndexOutOfRangeException("Accessing beyond the end of a batch");
+			}
+			int length = chunk.Length;
+			fixed (byte* data = chunk) {
+				set_packet_data(batch._packetPointers + (8 * start), cnt, offset, 
+						new IntPtr((void*)data), length);
+			}
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal unsafe static void SetPacketData(PacketBatch batch, int[] offsets, int start, 
+				int end, byte[] chunk) {
+			int cnt = end - start;
+			start = batch.Start + start;
+			if (start > batch.End || end > batch.Length) {
+				throw new IndexOutOfRangeException("Accessing beyond the end of a batch");
+			}
+			int length = chunk.Length;
+			fixed (byte* data = chunk) {
+				fixed(int* offsetsP = offsets) {
+					set_packet_data_at_offset(batch._packetPointers + (8 * start), 
+							offsetsP + (4 * start), cnt, 
+							new IntPtr((void*)data), length);
+				}
+			}
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public unsafe static PacketBatch.TransformBatchDelegate PacketDataOperator(int start, int end,
+				int offset, ushort data) {
+			return (batch => SetPacketData(batch, start, end, offset, data));
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public unsafe static PacketBatch.TransformBatchDelegate PacketDataOperator(int offset, ushort data) {
+			return (batch => SetPacketData(batch, 0, batch.Length, offset, data));
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public unsafe static PacketBatch.TransformBatchDelegate PacketDataOperator(int start, int end,
+				int offset, byte[] data) {
+			return (batch => SetPacketData(batch, start, end, offset, data));
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public unsafe static PacketBatch.TransformBatchDelegate PacketDataOperator(int offset, byte[] data) {
+			return (batch => SetPacketData(batch, 0, batch.Length, offset, data)); 
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public unsafe static PacketBatch.TransformBatchDelegate PacketDataOperator(int start, int end, 
+				int[] offsets, byte[] data) {
+			return (batch => SetPacketData(batch, offsets, start, end, data)); 
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public unsafe static PacketBatch.TransformBatchDelegate PacketDataOperator(int[] offsets, byte[] data) {
+			return (batch => SetPacketData(batch, offsets, 0, batch.Length, data)); 
+		}
+		
 		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Packet AllocatePacket() {
