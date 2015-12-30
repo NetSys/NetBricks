@@ -1,6 +1,7 @@
 extern crate libc;
 use std::result;
 use std::fmt;
+use std::marker::PhantomData;
 use super::mbuf::*;
 use super::interface::Result;
 use super::interface::ZCSIError;
@@ -52,14 +53,6 @@ fn free_packet_batch(batch: &mut PacketBatch) -> result::Result<(), ()> {
     }
 }
 
-// PacketBatch
-pub struct PacketBatch {
-    array: Vec<*mut MBuf>,
-    cnt: i32,
-    start: usize,
-    end: usize
-}
-
 // FIXME: Ensure we are not exporting this
 #[inline]
 pub unsafe fn packet_ptr(batch: &mut PacketBatch) -> *mut *mut MBuf {
@@ -84,7 +77,108 @@ pub unsafe fn add_to_batch(batch: &mut PacketBatch, added: usize) {
     batch.array.set_len(batch.end);
 }
 
+// PacketBatch
+pub struct PacketBatch {
+    array: Vec<*mut MBuf>,
+    cnt: i32,
+    start: usize,
+    end: usize
+}
+
+pub struct ParsedBatch<'a, T:'a + EndOffset + ConstFromU8 + MutFromU8, V> where
+    V:'a + ProcessPacketBatch {
+    parent: &'a mut V,
+    phantom: PhantomData<&'a T>,
+}
+
+pub trait ProcessPacketBatch : Sized {
+    fn start(&self) -> usize;
+    fn end(&self) -> usize;
+    unsafe fn mut_address(&mut self, idx: usize) -> *mut u8;
+    unsafe fn address(&self, idx: usize) -> *const u8;
+}
+
+
+impl ProcessPacketBatch for PacketBatch {
+    #[inline]
+    fn start(&self) -> usize {
+        self.start
+    }
+
+    #[inline]
+    fn end(&self) -> usize {
+        self.end
+    }
+
+    #[inline]
+    unsafe fn mut_address(&mut self, idx: usize) -> *mut u8 {
+        let val = &mut *self.array[idx];
+        val.data_address(0)
+    }
+
+    #[inline]
+    unsafe fn address(&self, idx: usize) -> *const u8 {
+        let val = &*self.array[idx];
+        val.data_address(0)
+    }
+}
+
+impl<'a, T, V> ParsedBatch<'a, T, V>
+    where T:'a + EndOffset + ConstFromU8 + MutFromU8,
+    V: 'a +  ProcessPacketBatch {
+    // FIXME: Rename this to something reasonable
+    #[inline]
+    pub fn parse<T2: MutFromU8 + ConstFromU8 + EndOffset>(&mut self) -> ParsedBatch<T2, Self> {
+        ParsedBatch::<T2, Self>{ parent: self, phantom: PhantomData }
+    }
+
+    #[inline]
+    pub fn transform(&mut self, transformer:&Fn(&mut T)) -> &mut Self {
+        let mut idx = self.start();
+        let end = self.end();
+        while idx < end {
+            let address = unsafe {self.parent.mut_address(idx)};
+            transformer(<T as MutFromU8>::from_u8(address));
+            idx += 1;
+        }
+        self
+    }
+}
+
+impl<'a, T, V> ProcessPacketBatch for ParsedBatch<'a, T, V>
+    where T:'a + EndOffset + ConstFromU8 + MutFromU8,
+    V: 'a +  ProcessPacketBatch {
+    #[inline]
+    fn start(&self) -> usize {
+        self.parent.start()
+    }
+
+    #[inline]
+    fn end(&self) -> usize {
+        self.parent.end()
+    }
+
+    #[inline]
+    unsafe fn mut_address(&mut self, idx: usize) -> *mut u8 {
+        let address = self.parent.mut_address(idx);
+        let offset = T::offset(<T as ConstFromU8>::from_u8(address));
+        address.offset(offset as isize)
+    }
+
+    #[inline]
+    unsafe fn address(&self, idx: usize) -> *const u8 {
+        let address = self.parent.address(idx);
+        let offset = T::offset(<T as ConstFromU8>::from_u8(address));
+        address.offset(offset as isize)
+    }
+}
+
 impl PacketBatch {
+    #[inline]
+    pub fn parse<T: MutFromU8 + ConstFromU8 + EndOffset>(&mut self) -> ParsedBatch<T, Self> {
+        ParsedBatch::<T, Self>{ parent: self, phantom: PhantomData }
+    }
+
     pub fn new(cnt: i32) -> PacketBatch {
         PacketBatch { array: Vec::<*mut MBuf>::with_capacity(cnt as usize), cnt: cnt, start: 0, end: 0}
     }
@@ -133,59 +227,6 @@ impl PacketBatch {
         while idx < self.end {
             let val = unsafe { &*self.array[idx] };
             println!("{}", T::from_u8(val.data_address(0)));
-            idx += 1;
-        }
-    }
-
-    pub fn dump_at_offset<T: ConstFromU8 + fmt::Display>(&self, offsets: &Vec<usize>) {
-        let mut idx = self.start;
-        let mut oidx = 0;
-        while idx < self.end {
-            let val = unsafe { &*self.array[idx] };
-            println!("{}", T::from_u8(val.data_address(offsets[oidx])));
-            idx += 1; oidx += 1;
-        }
-    }
-
-    #[inline]
-    pub fn transform<T: MutFromU8>(&mut self, transformer:&Fn(&mut T)) {
-        let mut idx = self.start;
-        while idx < self.end {
-            let val = unsafe { &mut *self.array[idx] };
-            transformer(T::from_u8(val.data_address(0)));
-            idx += 1;
-        }
-    }
-
-    #[inline]
-    pub fn transform_at_offset<T: MutFromU8>(&mut self, offsets: &Vec<usize>, transformer:&Fn(&mut T)) {
-        let mut oidx = 0;
-        let mut idx = self.start;
-        while idx < self.end {
-            let val = unsafe { &mut *self.array[idx] };
-            transformer(T::from_u8(val.data_address(offsets[oidx])));
-            idx += 1; oidx += 1;
-        }
-    }
-
-    #[inline]
-    pub fn find_offsets<T: EndOffset + ConstFromU8>(&self) -> Vec<usize> {
-        let mut offsets = Vec::<usize>::with_capacity((self.end - self.start) as usize);
-        let mut idx = self.start;
-        while idx < self.end {
-            let val = unsafe { &*self.array[idx] };
-            offsets.push(T::offset(T::from_u8(val.data_address(0))));
-            idx += 1;
-        }
-        offsets
-    }
-
-    #[inline]
-    pub fn offsets_efficient<T: EndOffset + ConstFromU8>(&self, offsets: &mut Vec<usize>) {
-        let mut idx = self.start;
-        while idx < self.end {
-            let val = unsafe { &*self.array[idx] };
-            offsets.push(T::offset(T::from_u8(val.data_address(0))));
             idx += 1;
         }
     }

@@ -24,7 +24,6 @@ fn set_ip_header(hdr: &mut headers::IpHeader) {
 fn main() {
     io::init_system(1);
     let mut batch = io::PacketBatch::new(32);
-    let mut offsets = Vec::<usize>::with_capacity(32);
     let send_port = io::PmdPort::new_simple_port(0, 1).unwrap();
 
     let recv_port = 
@@ -40,10 +39,12 @@ fn main() {
     loop {
         if cfg!(feature = "send") {
             let _ = batch.allocate_batch_with_size(60).unwrap();
-            batch.transform(&set_ether_type);
-            batch.offsets_efficient::<headers::MacHeader>(&mut offsets);
-            batch.transform_at_offset(&offsets, &set_ip_header);
-            offsets.clear();
+
+            batch.parse::<headers::MacHeader>().
+                transform(&set_ether_type).
+                parse::<headers::IpHeader>().
+                transform(&set_ip_header);
+
             let sent = send_port.send(&mut batch).unwrap();
             tx += sent as u64;
             let _ = batch.deallocate_batch().unwrap();
@@ -51,10 +52,8 @@ fn main() {
         if cfg!(feature = "recv") {
             let recv = recv_port.recv(&mut batch).unwrap();
             rx += recv as u64;
-            batch.offsets_efficient::<headers::MacHeader>(&mut offsets);
             if cfg!(feature = "print") {
                 batch.dump::<headers::MacHeader>();
-                batch.dump_at_offset::<headers::IpHeader>(&offsets);
             }
             let _ = batch.deallocate_batch().unwrap();
         }
