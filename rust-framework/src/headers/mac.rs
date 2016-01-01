@@ -19,22 +19,6 @@ impl fmt::Display for MacHeader {
     }
 }
 
-impl io::ConstFromU8 for MacHeader {
-    #[inline]
-    fn from_u8<'a>(data: *const u8) -> &'a Self {
-        let typecast = data as *const MacHeader;
-        unsafe {&*typecast}
-    }
-}
-
-impl io::MutFromU8 for MacHeader {
-    #[inline]
-    fn from_u8<'a>(data: *mut u8) -> &'a mut Self {
-        let typecast = data as *mut MacHeader;
-        unsafe {&mut *typecast}
-    }
-}
-
 const HDR_SIZE: usize = 14;
 const HDR_SIZE_802_1Q: usize = HDR_SIZE + 4;
 const HDR_SIZE_802_1AD: usize = HDR_SIZE_802_1Q + 4;

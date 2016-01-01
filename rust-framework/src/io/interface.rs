@@ -35,14 +35,6 @@ pub enum ZCSIError {
 
 pub type Result<T> = result::Result<T, ZCSIError>;
 
-pub trait ConstFromU8 {
-    fn from_u8<'a>(data: *const u8) -> &'a Self;
-}
-
-pub trait MutFromU8 {
-    fn from_u8<'a>(data: *mut u8) -> &'a mut Self;
-}
-
 pub trait EndOffset {
     fn offset(&self) -> usize; 
 }

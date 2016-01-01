@@ -3,18 +3,21 @@ use std::fmt;
 
 /// IP header.
 #[derive(Debug)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct IpHeader {
     version_ihl: u8,
     dscp_ecn: u8,
     pub len: u16,
+
     pub id: u16,
     pub flags_fragment: u16,
+
     pub ttl: u8,
     pub protocol: u8,
     pub csum: u16,
+
     pub src: [u8; 4],
-    pub dst: [u8; 4]
+    pub dst: [u8; 4],
 }
 
 impl fmt::Display for IpHeader {
@@ -65,22 +68,6 @@ impl IpHeader {
     #[inline]
     pub fn set_ecn(&mut self, ecn: u8) {
         self.dscp_ecn = (self.dscp_ecn & !0x3) | (ecn & 0x3);
-    }
-}
-
-impl io::ConstFromU8 for IpHeader {
-    #[inline]
-    fn from_u8<'a>(data: *const u8) -> &'a Self {
-        let typecast = data as *const IpHeader;
-        unsafe {&*typecast}
-    }
-}
-
-impl io::MutFromU8 for IpHeader {
-    #[inline]
-    fn from_u8<'a>(data: *mut u8) -> &'a mut Self {
-        let typecast = data as *mut IpHeader;
-        unsafe {&mut *typecast}
     }
 }
 

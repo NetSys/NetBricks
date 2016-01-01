@@ -1,6 +1,7 @@
 extern crate e2d2;
 extern crate time;
 use e2d2::io;
+use e2d2::io::Act;
 use e2d2::headers;
 const SRC_MAC : [u8; 6] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
 const DST_MAC : [u8; 6] = [0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c];
@@ -14,15 +15,18 @@ fn set_ether_type(hdr: &mut headers::MacHeader) {
 
 #[inline]
 fn set_ip_header(hdr: &mut headers::IpHeader) {
-    hdr.set_version(4);
-    hdr.set_header_len(5);
-    hdr.len = u16::to_be(20);
     hdr.ttl = 64;
-    hdr.protocol = 0x11;
+    //hdr.set_version(4);
+    //hdr.set_header_len(5);
+    //hdr.len = u16::to_be(20);
+    //hdr.protocol = 0x11;
+    //hdr.src = [10, 0, 0, 2];
+    //hdr.dst = [10, 1, 0, 2];
 }
 
 fn main() {
     io::init_system(1);
+    //headers::IpHeader::show_offsets();
     let mut batch = io::PacketBatch::new(32);
     let send_port = io::PmdPort::new_simple_port(0, 1).unwrap();
 
@@ -43,7 +47,7 @@ fn main() {
             batch.parse::<headers::MacHeader>().
                 transform(&set_ether_type).
                 parse::<headers::IpHeader>().
-                transform(&set_ip_header);
+                transform(&set_ip_header).act();
 
             let sent = send_port.send(&mut batch).unwrap();
             tx += sent as u64;
