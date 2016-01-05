@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 use super::Act;
 use super::internal_iface::ProcessPacketBatch;
 use super::packet_batch::cast_from_u8;
-//use super::packet_batch::PubPacketBatch;
 use super::TransformBatch;
 use super::super::interface::EndOffset;
 
@@ -38,6 +37,11 @@ impl<'a, T, V> ParsedBatch<'a, T, V>
     #[inline]
     pub fn transform(&'a mut self, transformer: &'a Fn(&mut T)) -> TransformBatch<T, Self> {
         TransformBatch::<T, Self>::new(self, transformer)
+    }
+
+    #[inline]
+    pub fn deparse(&'a mut self) -> &'a mut V {
+        self.parent
     }
 }
 

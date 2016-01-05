@@ -16,12 +16,12 @@ fn set_ether_type(hdr: &mut headers::MacHeader) {
 #[inline]
 fn set_ip_header(hdr: &mut headers::IpHeader) {
     hdr.ttl = 64;
-    //hdr.set_version(4);
-    //hdr.set_header_len(5);
-    //hdr.len = u16::to_be(20);
-    //hdr.protocol = 0x11;
-    //hdr.src = [10, 0, 0, 2];
-    //hdr.dst = [10, 1, 0, 2];
+    hdr.set_version(4);
+    hdr.set_header_len(5);
+    hdr.len = u16::to_be(20);
+    hdr.protocol = 0x11;
+    hdr.src = [10, 0, 0, 2];
+    hdr.dst = [10, 1, 0, 2];
 }
 
 fn main() {

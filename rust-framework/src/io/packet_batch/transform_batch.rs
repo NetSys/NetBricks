@@ -29,13 +29,19 @@ impl<'a, T, V> TransformBatch<'a, T, V>
         TransformBatch::<T, Self>::new(self, transformer)
     }
 
+    #[inline]
+    pub fn deparse(&'a mut self) -> &'a mut V {
+        if !self.applied {
+            self.act();
+        }
+        self.parent
+    }
 }
 
 impl<'a, T, V> Act for TransformBatch<'a, T, V>
     where T:'a + EndOffset,
     V: 'a +  ProcessPacketBatch + Act {
     fn act(&mut self) -> &mut Self {
-        //let mut idx = self.start();
         let start = self.start();
         let end = self.end();
         let f = self.transformer;

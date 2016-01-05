@@ -35,8 +35,8 @@ impl Drop for PmdPort {
     }
 }
 
-const NUM_RXD: i32 = 128;
-const NUM_TXD: i32 = 512;
+const NUM_RXD: i32 = 256;
+const NUM_TXD: i32 = 256;
 
 impl PmdPort {
     pub fn new(port: i32, rxqs: i32, txqs: i32, rxcores: &Vec<i32>,
@@ -102,6 +102,38 @@ impl PmdPort {
 
     #[inline]
     pub fn recv_queue(&self, queue: i32, pkts: &mut PacketBatch) -> Result<u32> {
+        if self.rxqs < queue {
+            Err(ZCSIError::BadQueue)
+        } else {
+            unsafe {
+                match pkts.deallocate_batch() {
+                    Err(err) => Err(err),
+                    Ok(_) => { let to_recv = pkts.max_size();
+                             let recv = recv_pkts(self.port, 0, packet_ptr(pkts), to_recv);
+                             add_to_batch(pkts, recv as usize);
+                             Ok(recv as u32)
+                    }
+                }
+            }
+        }
+    }
+
+    #[inline]
+    pub fn internal_send_queue(&self, queue: i32, pkts: &mut PacketBatch) -> Result<u32> {
+        if self.txqs < queue {
+            Err(ZCSIError::BadQueue)
+        } else {
+            unsafe {
+                let to_send = pkts.available() as i32;
+                let sent = send_pkts(self.port, 0, packet_ptr(pkts), to_send);
+                consumed_batch(pkts, sent as usize);
+                Ok(sent as u32)
+            }
+        }
+    }
+
+    #[inline]
+    pub fn internal_recv_queue(&self, queue: i32, pkts: &mut PacketBatch) -> Result<u32> {
         if self.rxqs < queue {
             Err(ZCSIError::BadQueue)
         } else {
