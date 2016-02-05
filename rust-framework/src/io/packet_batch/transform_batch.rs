@@ -6,7 +6,7 @@ use super::super::interface::EndOffset;
 
 pub struct TransformBatch<'a, T, V>
     where T: 'a + EndOffset,
-    V:'a + ProcessPacketBatch {
+    V:'a + ProcessPacketBatch + Act {
     parent: &'a mut V,
     transformer: &'a Fn(&'a mut T),
     applied: bool,

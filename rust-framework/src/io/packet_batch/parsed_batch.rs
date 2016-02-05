@@ -6,7 +6,7 @@ use super::TransformBatch;
 use super::super::interface::EndOffset;
 
 pub struct ParsedBatch<'a, T:'a + EndOffset, V> where
-    V:'a + ProcessPacketBatch {
+    V:'a + ProcessPacketBatch + Act {
     parent: &'a mut V,
     phantom: PhantomData<&'a T>,
 }

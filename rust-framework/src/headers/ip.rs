@@ -1,35 +1,51 @@
 use super::super::io;
 use std::fmt;
+use std::net::Ipv4Addr;
+use std::convert::From;
 
 /// IP header.
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct IpHeader {
-    version_ihl: u8,
-    dscp_ecn: u8,
-    pub len: u16,
+    version_ihl: u8, // 1
+    dscp_ecn: u8,    // 1
+    pub len: u16,    // 2
 
-    pub id: u16,
-    pub flags_fragment: u16,
+    // 128 bits below
+    pub id: u16,     // 2
+    pub flags_fragment: u16, // 2
 
-    pub ttl: u8,
-    pub protocol: u8,
-    pub csum: u16,
+    pub ttl: u8,  // 1
+    pub protocol: u8, // 1
+    pub csum: u16, // 2
 
-    pub src: [u8; 4],
-    pub dst: [u8; 4],
+    pub src: u32, // 4
+    pub dst: u32, // 4
 }
 
 impl fmt::Display for IpHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}.{}.{}.{} > {}.{}.{}.{} len: {} ttl: {} proto: {} csum: {}",
-               self.src[0], self.src[1], self.src[2], self.src[3],
-               self.dst[0], self.dst[1], self.dst[2], self.dst[3],
+        let src = Ipv4Addr::from(self.src);
+        let dst = Ipv4Addr::from(self.dst);
+        write!(f, "{} > {} len: {} ttl: {} proto: {} csum: {}",
+               src, dst,
                u16::from_be(self.len), self.ttl, self.protocol, self.csum)
     }
 }
 
+
+impl io::EndOffset for IpHeader {
+    #[inline]
+    fn offset(&self) -> usize {
+        self.header_len() as usize * 4
+    }
+}
 impl IpHeader {
+    pub fn new() -> IpHeader {
+        IpHeader{version_ihl: 0, dscp_ecn: 0, len: 0, id: 0, flags_fragment: 0, 
+            ttl: 0, protocol: 0, csum: 0, src: 0, dst: 0}
+    }
+
     #[inline]
     pub fn version(&self) -> u8 {
         (self.version_ihl & 0xf0) >> 4
@@ -68,12 +84,5 @@ impl IpHeader {
     #[inline]
     pub fn set_ecn(&mut self, ecn: u8) {
         self.dscp_ecn = (self.dscp_ecn & !0x3) | (ecn & 0x3);
-    }
-}
-
-impl io::EndOffset for IpHeader {
-    #[inline]
-    fn offset(&self) -> usize {
-        self.header_len() as usize
     }
 }

@@ -1,32 +1,25 @@
 extern crate e2d2;
 extern crate time;
+extern crate simd;
 use e2d2::io;
 use e2d2::io::Act;
-use e2d2::headers;
+use e2d2::headers::*;
+//use std::net::Ipv4Addr;
+use std::convert::*;
+
 const SRC_MAC : [u8; 6] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
 const DST_MAC : [u8; 6] = [0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c];
 #[inline]
-fn set_ether_type(hdr: &mut headers::MacHeader) {
+fn set_ether_type(hdr: &mut MacHeader) {
     let t:u16 = 0x0800;
     hdr.etype = t.to_be();
     hdr.src = SRC_MAC;
     hdr.dst = DST_MAC;
 }
 
-#[inline]
-fn set_ip_header(hdr: &mut headers::IpHeader) {
-    hdr.ttl = 64;
-    hdr.set_version(4);
-    hdr.set_header_len(5);
-    hdr.len = u16::to_be(20);
-    hdr.protocol = 0x11;
-    hdr.src = [10, 0, 0, 2];
-    hdr.dst = [10, 1, 0, 2];
-}
-
 fn main() {
     io::init_system(1);
-    //headers::IpHeader::show_offsets();
+    //IpHeader::show_offsets();
     let mut batch = io::PacketBatch::new(32);
     let send_port = io::PmdPort::new_simple_port(0, 1).unwrap();
 
@@ -40,14 +33,23 @@ fn main() {
     let mut start = time::precise_time_ns() / conversion_factor;
     let mut rx:u64 = 0;
     let mut tx:u64 = 0;
+
+    //let mut iphdr = IpHeaderSse::new();
+    //iphdr.set_ttl(64);
+    //iphdr.set_version(4);
+    //iphdr.set_ihl(5);
+    //iphdr.set_length(20);
+    //iphdr.set_protocol(0x11);
+    //iphdr.set_src(u32::From::<Ipv4Addr>(Ipv4Addr::new(10, 0, 0, 2)));
+    //iphdr.set_dst(u32::From(Ipv4Addr::new(10, 1, 0, 1)));
+    //println!("Header {}", iphdr);
     loop {
         if cfg!(feature = "send") {
             let _ = batch.allocate_batch_with_size(60).unwrap();
 
-            batch.parse::<headers::MacHeader>().
-                transform(&set_ether_type).
-                parse::<headers::IpHeader>().
-                transform(&set_ip_header).act();
+            batch.parse::<MacHeader>().
+                transform(&set_ether_type).act().parse::<IpHeaderSse>();
+                //.transform(&|hdr: &mut IpHeaderSse| hdr.set_ttl(64)).act();
 
             let sent = send_port.send(&mut batch).unwrap();
             tx += sent as u64;
@@ -57,7 +59,7 @@ fn main() {
             let recv = recv_port.recv(&mut batch).unwrap();
             rx += recv as u64;
             if cfg!(feature = "print") {
-                batch.dump::<headers::MacHeader>();
+                batch.dump::<MacHeader>();
             }
             let _ = batch.deallocate_batch().unwrap();
         }
