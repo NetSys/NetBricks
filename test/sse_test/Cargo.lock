@@ -1,0 +1,47 @@
+[root]
+name = "sse_test"
+version = "0.1.0"
+dependencies = [
+ "rand 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "simd 0.1.0 (git+https://github.com/huonw/simd)",
+]
+
+[[package]]
+name = "advapi32-sys"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "winapi 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "libc"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "rand"
+version = "0.3.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "advapi32-sys 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "simd"
+version = "0.1.0"
+source = "git+https://github.com/huonw/simd#03de1cd0a278ab902b4beb402d57505f3797ea56"
+
+[[package]]
+name = "winapi"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "winapi-build"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+

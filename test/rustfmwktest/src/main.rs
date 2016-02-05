@@ -40,21 +40,24 @@ fn main() {
     iphdr.set_ihl(5);
     iphdr.set_length(20);
     iphdr.set_protocol(0x11);
-    iphdr.set_src(From::<Ipv4Addr>::from(Ipv4Addr::new(10, 0, 0, 2)));
-    iphdr.set_dst(From::<Ipv4Addr>::from(Ipv4Addr::new(10, 1, 0, 1)));
+    iphdr.set_src(u32::from(Ipv4Addr::new(10, 0, 0, 2)));
+    iphdr.set_dst(u32::from(Ipv4Addr::new(10, 1, 0, 1)));
     println!("Header {}", iphdr);
     loop {
+        let _ = batch.allocate_batch_with_size(60).unwrap();
+
+        batch.parse::<MacHeader>().
+            transform(&set_ether_type).parse::<IpHeader>()
+            .transform(&|hdr| hdr.apply(&iphdr)).act();
+
         if cfg!(feature = "send") {
-            let _ = batch.allocate_batch_with_size(60).unwrap();
-
-            batch.parse::<MacHeader>().
-                transform(&set_ether_type).parse::<IpHeader>()
-                .transform(&|hdr| hdr.apply(&iphdr)).act();
-
             let sent = send_port.send(&mut batch).unwrap();
             tx += sent as u64;
-            let _ = batch.deallocate_batch().unwrap();
+        } else {
+            tx += batch.available() as u64;
         }
+        let _ = batch.deallocate_batch().unwrap();
+
         if cfg!(feature = "recv") {
             let recv = recv_port.recv(&mut batch).unwrap();
             rx += recv as u64;
@@ -63,15 +66,12 @@ fn main() {
             }
             let _ = batch.deallocate_batch().unwrap();
         }
+
         let now = time::precise_time_ns() / conversion_factor;
         if now != start {
             print!("{} ", (now - start));
-            if cfg!(feature = "send") {
-                print!("tx {} ", tx);
-            }
-            if cfg!(feature = "recv") {
-                print!("rx {} ", rx);
-            }
+            print!("tx {} ", tx);
+            print!("rx {} ", rx);
             println!("");
             start = time::precise_time_ns() / conversion_factor;
             tx = 0;
