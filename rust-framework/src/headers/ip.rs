@@ -2,8 +2,6 @@ use super::super::io;
 use std::fmt;
 use std::net::Ipv4Addr;
 use std::convert::From;
-//use self::simd::x86::*;
-//use self::simd::x86::avx::*;
 
 /// IP header using SSE
 //#[repr(C, packed)]
@@ -118,17 +116,14 @@ impl IpHeader {
     #[inline]
     pub fn flags(&self) -> u8 {
         let id_flag_fragment = self.id_to_foffset;
-        let flag_fragment = (id_flag_fragment >> 16) as u16;
+        let flag_fragment = (id_flag_fragment >> 21) as u16;
         (flag_fragment & 0x7) as u8
     }
 
     #[inline]
     pub fn set_flags(&mut self, flags: u8) {
-        let flags_correct = (flags & 0x7) as u32; // Remove any extra bits because that would suck.
-        let flags_mask = !0x70000;
-        let id_flag_fragment = self.id_to_foffset;
-        let blanked = id_flag_fragment & flags_mask;
-        self.id_to_foffset = blanked | (flags_correct << 16);
+        self.id_to_foffset = (self.id_to_foffset & !0x00e00000) | 
+            (((flags & 0x7) as u32) << 16 + 5);
     }
 
     #[inline]
@@ -140,59 +135,60 @@ impl IpHeader {
 
     #[inline]
     pub fn set_fragment_offset(&mut self, offset: u16) {
-        let offset_correct = u16::to_be(offset & 0x1fff) as u32;
-        let offset_shifted = offset_correct << 19;
-        let blanked = self.id_to_foffset & 0xfff80000;
-        self.id_to_foffset = blanked | offset_shifted;
+        let offset_correct = offset as u32;
+        self.id_to_foffset = (self.id_to_foffset & !0x001f0000) | 
+                                ((offset_correct & 0x1f00) << 11);
+        self.id_to_foffset = (self.id_to_foffset & !0xff000000) |
+                                ((offset_correct & 0xff) << 24);
     }
 
     #[inline]
     pub fn version(&self) -> u8 {
-        let vihl = (self.version_to_len & 0xf) as u8;
+        let vihl = ((self.version_to_len & 0xf0)  as u8) >> 4;
         vihl
     }
 
     #[inline]
     pub fn set_version(&mut self, version: u8) {
-        self.version_to_len = (self.version_to_len & !0xf) | ((version & 0xf) as u32);
+        self.version_to_len = (self.version_to_len & !0xf0) | (((version & 0xf0) as u32) << 4);
     }
 
     #[inline]
     pub fn ihl(&self) -> u8 {
-        let ihl = (self.version_to_len & 0xf0) as u8;
-        ihl >> 4
+        let ihl = (self.version_to_len & 0xf) as u8;
+        ihl
     }
 
     #[inline]
     pub fn set_ihl(&mut self, ihl: u8) {
-        self.version_to_len = (self.version_to_len & !0xf0) | (((ihl & 0xf) as u32) << 4);
+        self.version_to_len = (self.version_to_len & !0xf) | ((ihl & 0xf) as u32);
     }
 
     #[inline]
     pub fn dscp(&self) -> u8 {
-        let dscp_ecn = ((self.version_to_len & 0x3f00) >> 8) as u8;
+        let dscp_ecn = ((self.version_to_len & 0xfc00) >> 10) as u8;
         dscp_ecn
     }
 
     #[inline]
     pub fn set_dscp(&mut self, dscp: u8) {
-        self.version_to_len = (self.version_to_len & !0x3f00) | (((dscp & 0x3f) as u32) << 8);
+        self.version_to_len = (self.version_to_len & !0xfc00) | (((dscp & 0x3f) as u32) << 10);
     }
 
     #[inline]
     pub fn ecn(&self) -> u8 {
-        let dscp_ecn = ((self.version_to_len & 0xf0) >> 8) as u8;
-        (dscp_ecn & !0x3f) >> 6
+        let ecn = ((self.version_to_len & 0x0300) >> 8) as u8;
+        ecn
     }
 
     #[inline]
     pub fn set_ecn(&mut self, ecn: u8) {
-        self.version_to_len = (self.version_to_len & !0xc000) | (((ecn & 0x03) as u32) << 14); 
+        self.version_to_len = (self.version_to_len & !0x0300) | (((ecn & 0x03) as u32) << 8); 
     }
 
     #[inline]
     pub fn length(&self) -> u16 {
-        u16::from_be(((self.version_to_len & 0xff00) >> 16) as u16)
+        ((self.version_to_len & 0xffff0000) >> 16) as u16
     }
 
     #[inline]

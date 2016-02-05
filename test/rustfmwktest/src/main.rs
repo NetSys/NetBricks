@@ -22,10 +22,13 @@ fn prepare_header() -> IpHeader {
     iphdr.set_ttl(64);
     iphdr.set_version(4);
     iphdr.set_ihl(5);
-    iphdr.set_length(20);
+    iphdr.set_length(40);
     iphdr.set_protocol(0x11);
     iphdr.set_src(u32::from(Ipv4Addr::new(10, 0, 0, 2)));
     iphdr.set_dst(u32::from(Ipv4Addr::new(10, 1, 0, 1)));
+    iphdr.set_flags(0x2);
+    iphdr.set_id(32);
+    iphdr.set_fragment_offset(2);
     iphdr
 }
 
