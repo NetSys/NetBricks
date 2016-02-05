@@ -188,11 +188,3 @@ pub fn cast_from_u8<'a, T:'a>(data: *mut u8) -> &'a mut T {
     let typecast = data as *mut T;
     unsafe {&mut *typecast}
 }
-
-#[inline]
-pub fn cast<'a, T:'a, U:'a>(data: &'a mut U) -> &'a mut U {
-    unsafe {
-        let typecast = data as *mut U;
-        &mut *typecast
-    }
-}

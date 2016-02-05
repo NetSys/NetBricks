@@ -4,8 +4,8 @@ extern crate simd;
 use e2d2::io;
 use e2d2::io::Act;
 use e2d2::headers::*;
-//use std::net::Ipv4Addr;
-use std::convert::*;
+use std::net::*;
+use std::convert::From;
 
 const SRC_MAC : [u8; 6] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
 const DST_MAC : [u8; 6] = [0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c];
@@ -34,22 +34,22 @@ fn main() {
     let mut rx:u64 = 0;
     let mut tx:u64 = 0;
 
-    //let mut iphdr = IpHeaderSse::new();
-    //iphdr.set_ttl(64);
-    //iphdr.set_version(4);
-    //iphdr.set_ihl(5);
-    //iphdr.set_length(20);
-    //iphdr.set_protocol(0x11);
-    //iphdr.set_src(u32::From::<Ipv4Addr>(Ipv4Addr::new(10, 0, 0, 2)));
-    //iphdr.set_dst(u32::From(Ipv4Addr::new(10, 1, 0, 1)));
-    //println!("Header {}", iphdr);
+    let mut iphdr = IpHeader::new();
+    iphdr.set_ttl(64);
+    iphdr.set_version(4);
+    iphdr.set_ihl(5);
+    iphdr.set_length(20);
+    iphdr.set_protocol(0x11);
+    iphdr.set_src(From::<Ipv4Addr>::from(Ipv4Addr::new(10, 0, 0, 2)));
+    iphdr.set_dst(From::<Ipv4Addr>::from(Ipv4Addr::new(10, 1, 0, 1)));
+    println!("Header {}", iphdr);
     loop {
         if cfg!(feature = "send") {
             let _ = batch.allocate_batch_with_size(60).unwrap();
 
             batch.parse::<MacHeader>().
-                transform(&set_ether_type).act().parse::<IpHeaderSse>();
-                //.transform(&|hdr: &mut IpHeaderSse| hdr.set_ttl(64)).act();
+                transform(&set_ether_type).parse::<IpHeader>()
+                .transform(&|hdr| hdr.apply(&iphdr)).act();
 
             let sent = send_port.send(&mut batch).unwrap();
             tx += sent as u64;
