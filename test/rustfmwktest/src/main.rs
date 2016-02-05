@@ -17,6 +17,18 @@ fn set_ether_type(hdr: &mut MacHeader) {
     hdr.dst = DST_MAC;
 }
 
+fn prepare_header() -> IpHeader {
+    let mut iphdr = IpHeader::new();
+    iphdr.set_ttl(64);
+    iphdr.set_version(4);
+    iphdr.set_ihl(5);
+    iphdr.set_length(20);
+    iphdr.set_protocol(0x11);
+    iphdr.set_src(u32::from(Ipv4Addr::new(10, 0, 0, 2)));
+    iphdr.set_dst(u32::from(Ipv4Addr::new(10, 1, 0, 1)));
+    iphdr
+}
+
 fn main() {
     io::init_system(1);
     //IpHeader::show_offsets();
@@ -33,15 +45,7 @@ fn main() {
     let mut start = time::precise_time_ns() / conversion_factor;
     let mut rx:u64 = 0;
     let mut tx:u64 = 0;
-
-    let mut iphdr = IpHeader::new();
-    iphdr.set_ttl(64);
-    iphdr.set_version(4);
-    iphdr.set_ihl(5);
-    iphdr.set_length(20);
-    iphdr.set_protocol(0x11);
-    iphdr.set_src(u32::from(Ipv4Addr::new(10, 0, 0, 2)));
-    iphdr.set_dst(u32::from(Ipv4Addr::new(10, 1, 0, 1)));
+    let iphdr = prepare_header();
     println!("Header {}", iphdr);
     loop {
         let _ = batch.allocate_batch_with_size(60).unwrap();
