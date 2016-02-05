@@ -136,10 +136,8 @@ impl IpHeader {
     #[inline]
     pub fn set_fragment_offset(&mut self, offset: u16) {
         let offset_correct = offset as u32;
-        self.id_to_foffset = (self.id_to_foffset & !0x001f0000) | 
-                                ((offset_correct & 0x1f00) << 11);
-        self.id_to_foffset = (self.id_to_foffset & !0xff000000) |
-                                ((offset_correct & 0xff) << 24);
+        let id_to_offset_le = u32::from_be(self.id_to_foffset);
+        self.id_to_foffset = u32::to_be(id_to_offset_le & !0x1fff | offset_correct);
     }
 
     #[inline]
