@@ -7,29 +7,39 @@ use e2d2::headers::*;
 use std::net::*;
 use std::convert::From;
 
-const SRC_MAC : [u8; 6] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
-const DST_MAC : [u8; 6] = [0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c];
-#[inline]
-fn set_ether_type(hdr: &mut MacHeader) {
-    let t:u16 = 0x0800;
-    hdr.etype = t.to_be();
+const DST_MAC : [u8; 6] = [0x00, 0x0c, 0x29, 0x50, 0xa9, 0xfc];
+const SRC_MAC : [u8; 6] = [0x00, 0x26, 0x16, 0x00, 0x00, 0xd2];
+fn prepare_mac_header() -> MacHeader {
+    let mut hdr = MacHeader::new();
+    hdr.etype = u16::to_be(0x800);
     hdr.src = SRC_MAC;
     hdr.dst = DST_MAC;
+    hdr
 }
 
-fn prepare_header() -> IpHeader {
+fn prepare_ip_header() -> IpHeader {
     let mut iphdr = IpHeader::new();
     iphdr.set_ttl(64);
-    iphdr.set_version(4);
     iphdr.set_ihl(5);
-    iphdr.set_length(40);
+    iphdr.set_length(28);
     iphdr.set_protocol(0x11);
-    iphdr.set_src(u32::from(Ipv4Addr::new(10, 0, 0, 2)));
-    iphdr.set_dst(u32::from(Ipv4Addr::new(10, 1, 0, 1)));
-    iphdr.set_flags(0x2);
-    iphdr.set_id(32);
-    iphdr.set_fragment_offset(2);
+    iphdr.set_version(4);
+    iphdr.set_src(u32::from(Ipv4Addr::new(192, 168, 0, 101)));
+    iphdr.set_dst(u32::from(Ipv4Addr::new(192, 168, 0, 10)));
+    iphdr.set_flags(0);
+    iphdr.set_id(0);
+    iphdr.set_fragment_offset(0);
+    iphdr.set_csum(0xf900);
     iphdr
+}
+
+fn prepare_udp_header() -> UdpHeader {
+    let mut udp_hdr = UdpHeader::new();
+    udp_hdr.set_src_port(49905);
+    udp_hdr.set_dst_port(5096);
+    udp_hdr.set_length(8);
+    udp_hdr.set_checksum(0xa722);
+    udp_hdr
 }
 
 fn main() {
@@ -48,14 +58,19 @@ fn main() {
     let mut start = time::precise_time_ns() / conversion_factor;
     let mut rx:u64 = 0;
     let mut tx:u64 = 0;
-    let iphdr = prepare_header();
+    let iphdr = prepare_ip_header();
+    let udphdr = prepare_udp_header();
+    let machdr = prepare_mac_header();
     println!("Header {}", iphdr);
+    println!("Header {}", udphdr);
     loop {
-        let _ = batch.allocate_batch_with_size(60).unwrap();
+        let _ = batch.allocate_batch_with_size(62).unwrap();
 
-        batch.parse::<MacHeader>().
-            transform(&set_ether_type).parse::<IpHeader>()
-            .transform(&|hdr| hdr.apply(&iphdr)).act();
+        batch.parse::<MacHeader>().apply(&machdr)
+            .parse::<IpHeader>()
+            .apply(&iphdr)
+            .parse::<UdpHeader>()
+            .apply(&udphdr).act();
 
         if cfg!(feature = "send") {
             let sent = send_port.send(&mut batch).unwrap();

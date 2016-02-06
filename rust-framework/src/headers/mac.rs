@@ -3,7 +3,7 @@ use std::fmt;
 
 /// A packet's MAC header.
 #[derive(Debug)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct MacHeader {
     pub dst: [u8; 6],
     pub src: [u8; 6],
@@ -31,5 +31,16 @@ impl io::EndOffset for MacHeader {
             0x9100 => HDR_SIZE_802_1AD,
             _ => HDR_SIZE,
         }
+    }
+    #[inline]
+    fn size() -> usize {
+        // The struct itself is always 20 bytes.
+        HDR_SIZE
+    }
+}
+
+impl MacHeader {
+    pub fn new() -> Self {
+        MacHeader{dst: [0,0,0,0,0,0], src:[0,0,0,0,0,0], etype:0}
     }
 }

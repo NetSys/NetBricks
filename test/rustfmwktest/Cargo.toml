@@ -18,5 +18,5 @@ print = []
 opt-level = 3
 lto = true
 rpath = true
-#debug = true
+# debug = true
 debug-assertions = false

@@ -36,5 +36,8 @@ pub enum ZCSIError {
 pub type Result<T> = result::Result<T, ZCSIError>;
 
 pub trait EndOffset {
+    /// Offset returns the number of bytes to skip to get to the next header.
     fn offset(&self) -> usize; 
+    /// Returns the size of this header in bytes.
+    fn size() -> usize;
 }

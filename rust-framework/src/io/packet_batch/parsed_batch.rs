@@ -3,6 +3,7 @@ use super::Act;
 use super::internal_iface::ProcessPacketBatch;
 use super::packet_batch::cast_from_u8;
 use super::TransformBatch;
+use super::ApplyBatch;
 use super::super::interface::EndOffset;
 
 pub struct ParsedBatch<'a, T:'a + EndOffset, V> where
@@ -37,6 +38,11 @@ impl<'a, T, V> ParsedBatch<'a, T, V>
     #[inline]
     pub fn transform(&'a mut self, transformer: &'a Fn(&mut T)) -> TransformBatch<T, Self> {
         TransformBatch::<T, Self>::new(self, transformer)
+    }
+
+    #[inline]
+    pub fn apply(&'a mut self, template: &'a T) -> ApplyBatch<T, Self> {
+        ApplyBatch::<T, Self>::new(self, template)
     }
 
     #[inline]

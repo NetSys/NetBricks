@@ -4,9 +4,8 @@ use std::net::Ipv4Addr;
 use std::convert::From;
 
 /// IP header using SSE
-//#[repr(C, packed)]
 #[derive(Debug)]
-#[repr(simd)]
+#[repr(C,packed)]
 pub struct IpHeader {
     version_to_len: u32,
     id_to_foffset: u32,
@@ -19,9 +18,9 @@ impl fmt::Display for IpHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let src = Ipv4Addr::from(self.src());
         let dst = Ipv4Addr::from(self.dst());
-        write!(f, "{} > {} len: {} ttl: {} proto: {} csum: {}",
-               src, dst,
-               u16::from_be(self.length()), self.ttl(), self.protocol(), self.csum())
+        write!(f, "{} > {} version: {} ihl: {} len: {} ttl: {} proto: {} csum: {}",
+               src, dst, self.version(), self.ihl(),
+               self.length(), self.ttl(), self.protocol(), self.csum())
     }
 }
 
@@ -30,6 +29,12 @@ impl io::EndOffset for IpHeader {
     #[inline]
     fn offset(&self) -> usize {
         self.ihl() as usize * 4
+    }
+
+    #[inline]
+    fn size() -> usize {
+        // The struct itself is always 20 bytes.
+        20
     }
 }
 
@@ -148,18 +153,18 @@ impl IpHeader {
 
     #[inline]
     pub fn set_version(&mut self, version: u8) {
-        self.version_to_len = (self.version_to_len & !0xf0) | (((version & 0xf0) as u32) << 4);
+        self.version_to_len = (self.version_to_len & !0xf0) | (((version & 0xf) as u32) << 4);
     }
 
     #[inline]
     pub fn ihl(&self) -> u8 {
-        let ihl = (self.version_to_len & 0xf) as u8;
+        let ihl = (self.version_to_len & 0x0f) as u8;
         ihl
     }
 
     #[inline]
     pub fn set_ihl(&mut self, ihl: u8) {
-        self.version_to_len = (self.version_to_len & !0xf) | ((ihl & 0xf) as u32);
+        self.version_to_len = (self.version_to_len & !0x0f) | ((ihl & 0x0f) as u32);
     }
 
     #[inline]
@@ -192,15 +197,5 @@ impl IpHeader {
     #[inline]
     pub fn set_length(&mut self, len: u16) {
         self.version_to_len = (self.version_to_len & !0xffff0000) | ((u16::to_be(len) as u32) << 16);
-    }
-
-    // FIXME: Make sure this uses SIMD
-    #[inline]
-    pub fn apply(&mut self, from: &Self) {
-        self.version_to_len = from.version_to_len;
-        self.id_to_foffset = from.id_to_foffset;
-        self.ttl_to_csum = from.ttl_to_csum;
-        self.src_ip = from.src_ip;
-        self.dst_ip = from.dst_ip;
     }
 }
