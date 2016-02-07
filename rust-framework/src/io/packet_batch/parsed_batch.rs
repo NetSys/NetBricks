@@ -9,6 +9,7 @@ use super::super::interface::EndOffset;
 pub struct ParsedBatch<'a, T:'a + EndOffset, V> where
     V:'a + ProcessPacketBatch + Act {
     parent: &'a mut V,
+    applied: bool,
     phantom: PhantomData<&'a T>,
 }
 
@@ -21,35 +22,7 @@ impl<'a, T, V> Act for ParsedBatch<'a, T, V>
     }
 }
 
-impl<'a, T, V> ParsedBatch<'a, T, V>
-    where T:'a + EndOffset,
-    V: 'a +  ProcessPacketBatch + Act {
-
-    pub fn new(parent: &'a mut V) -> ParsedBatch<'a, T, V> {
-        ParsedBatch{parent: parent, phantom: PhantomData}
-    }
-
-    // FIXME: Rename this to something reasonable
-    #[inline]
-    pub fn parse<T2: EndOffset>(&mut self) -> ParsedBatch<T2, Self> {
-        ParsedBatch::<T2, Self>{ parent: self, phantom: PhantomData }
-    }
-
-    #[inline]
-    pub fn transform(&'a mut self, transformer: &'a Fn(&mut T)) -> TransformBatch<T, Self> {
-        TransformBatch::<T, Self>::new(self, transformer)
-    }
-
-    #[inline]
-    pub fn apply(&'a mut self, template: &'a T) -> ApplyBatch<T, Self> {
-        ApplyBatch::<T, Self>::new(self, template)
-    }
-
-    #[inline]
-    pub fn deparse(&'a mut self) -> &'a mut V {
-        self.parent
-    }
-}
+batch!{ParsedBatch, [parent: &'a mut V], [phantom: PhantomData]}
 
 impl<'a, T, V> ProcessPacketBatch for ParsedBatch<'a, T, V>
     where T:'a + EndOffset,

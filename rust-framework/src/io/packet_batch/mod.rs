@@ -6,6 +6,9 @@ pub use self::parsed_batch::ParsedBatch;
 pub use self::transform_batch::TransformBatch;
 pub use self::apply_batch::ApplyBatch;
 
+#[macro_use]
+mod macros;
+
 mod packet_batch;
 mod parsed_batch;
 mod transform_batch;

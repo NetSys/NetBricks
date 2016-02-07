@@ -13,36 +13,7 @@ pub struct TransformBatch<'a, T, V>
     applied: bool,
 }
 
-impl<'a, T, V> TransformBatch<'a, T, V>
-    where T: 'a + EndOffset,
-    V:'a + ProcessPacketBatch + Act {
-    pub fn new(parent: &'a mut V, transformer: &'a Fn(&'a mut T)) -> TransformBatch<'a, T, V> {
-        TransformBatch{ parent: parent, transformer: transformer, applied:false, }
-    }
-    // FIXME: Rename this to something reasonable
-    #[inline]
-    pub fn parse<T2: EndOffset>(&mut self) -> ParsedBatch<T2, Self> {
-        ParsedBatch::<T2, Self>::new(self)
-    }
-
-    #[inline]
-    pub fn transform(&'a mut self, transformer: &'a Fn(&mut T)) -> TransformBatch<T, Self> {
-        TransformBatch::<T, Self>::new(self, transformer)
-    }
-
-    #[inline]
-    pub fn deparse(&'a mut self) -> &'a mut V {
-        if !self.applied {
-            self.act();
-        }
-        self.parent
-    }
-
-    #[inline]
-    pub fn apply(&'a mut self, template: &'a T) -> ApplyBatch<T, Self> {
-        ApplyBatch::<T, Self>::new(self, template)
-    }
-}
+batch! {TransformBatch, [parent : &'a mut V, transformer: &'a Fn(&'a mut T)], []}
 
 impl<'a, T, V> Act for TransformBatch<'a, T, V>
     where T:'a + EndOffset,
