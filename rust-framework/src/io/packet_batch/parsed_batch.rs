@@ -18,6 +18,7 @@ impl<'a, T, V> Act for ParsedBatch<'a, T, V>
     V: 'a +  ProcessPacketBatch + Act {
     fn act(&mut self) -> &mut Self {
         self.parent.act();
+        self.applied = true;
         self
     }
 }
