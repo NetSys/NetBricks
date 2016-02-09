@@ -126,14 +126,18 @@ int init_system(int core)
 }
 
 /* Declared within eal_thread.c, but not exposed */
-void eal_thread_init_master(int);
+/*void eal_thread_init_master(int);*/
 
 /* Called by each secondary threads on ZCSI, responsible for affinitization,
  * etc.*/
 void init_thread(int tid, int core)
 {
 	/* Among other things this affinitizes the thread */
-	eal_thread_init_master(core);
+	rte_cpuset_t cpuset;
+	CPU_ZERO(&cpuset);
+	CPU_SET(core, &cpuset);
+	rte_thread_set_affinity(&cpuset);
+	/*eal_thread_init_master(core);*/
 	/* Set thread ID correct */
 	RTE_PER_LCORE(_lcore_id) = tid;
 	/* TODO: Set NUMA domain for lcore */

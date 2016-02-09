@@ -1,8 +1,9 @@
 #!/bin/bash
-DPDK_VER=2.1.0
+DPDK_VER=2.2.0
 DOWNLOAD_PATH="dpdk.tar.gz"
 DPDK_RESULT=dpdk
 if [ ! -e "$DOWNLOAD_PATH" ]; then
+	echo Fetching "http://dpdk.org/browse/dpdk/snapshot/dpdk-${DPDK_VER}.tar.gz"
 	curl http://dpdk.org/browse/dpdk/snapshot/dpdk-${DPDK_VER}.tar.gz -o dpdk.tar.gz
 fi
 if [ ! -d "$DPDK_RESULT" ]; then

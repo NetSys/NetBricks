@@ -1,4 +1,4 @@
-use super::internal_iface::ProcessPacketBatch;
+use super::internal_iface::{ProcessPacketBatch, PacketBatchAddressIterator};
 use super::ParsedBatch;
 use super::ReplaceBatch;
 use super::Act;
@@ -19,14 +19,13 @@ impl<'a, T, V> Act for TransformBatch<'a, T, V>
     where T:'a + EndOffset,
     V: 'a +  ProcessPacketBatch + Act {
     fn act(&mut self) -> &mut Self {
-        let start = self.start();
-        let end = self.end();
-        let f = self.transformer;
-        let mut idx = start;
-        while idx < end {
-            let address = unsafe {self.parent.address(idx)};
-            f(cast_from_u8::<T>(address));
-            idx += 1;
+        {
+            let f = self.transformer;
+            let iter = PacketBatchAddressIterator::new(self.parent);
+            for addr in iter {
+                let address = cast_from_u8::<T>(addr);
+                f(address);
+            }
         }
         self.applied = true;
         self.parent.act();
@@ -43,11 +42,6 @@ impl<'a, T, V> ProcessPacketBatch for TransformBatch<'a, T, V>
     }
 
     #[inline]
-    fn end(&self) -> usize {
-        self.parent.end()
-    }
-
-    #[inline]
     unsafe fn payload(&mut self, idx: usize) -> *mut u8 {
         if !self.applied {
             self.act();
@@ -61,5 +55,21 @@ impl<'a, T, V> ProcessPacketBatch for TransformBatch<'a, T, V>
             self.act();
         }
         self.parent.address(idx)
+    }
+
+    #[inline]
+    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+        if !self.applied {
+            self.act();
+        }
+        self.parent.next_address(idx)
+    }
+
+    #[inline]
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+        if !self.applied {
+            self.act();
+        }
+        self.parent.next_payload(idx)
     }
 }

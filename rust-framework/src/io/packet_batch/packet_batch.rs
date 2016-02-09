@@ -23,11 +23,6 @@ impl ProcessPacketBatch for PacketBatch {
     }
 
     #[inline]
-    fn end(&self) -> usize {
-        self.end
-    }
-
-    #[inline]
     unsafe fn payload(&mut self, idx: usize) -> *mut u8 {
         let val = &mut *self.array[idx];
         val.data_address(0)
@@ -37,6 +32,24 @@ impl ProcessPacketBatch for PacketBatch {
     unsafe fn address(&mut self, idx: usize) -> *mut u8 {
         let val = &mut *self.array[idx];
         val.data_address(0)
+    }
+
+    #[inline]
+    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+        if idx < self.end {
+            Some((self.address(idx), idx + 1))
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+        if idx < self.end {
+            Some((self.payload(idx), idx + 1))
+        } else {
+            None
+        }
     }
 }
 

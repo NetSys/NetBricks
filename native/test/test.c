@@ -115,6 +115,7 @@ int main (int argc, char* argv[]) {
 	n[0].tid = 1;
 	n[0].core = 1;
 	n[0].queue = 0;
+	/*thr(&n[0]);*/
 	pthread_create(&thread[0], NULL, &thr, &n[0]);
 	/*for (int i = 0; i < THREADS; i++) {*/
 		/*n[i].tid = 64 - i;*/

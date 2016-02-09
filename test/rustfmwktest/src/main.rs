@@ -46,17 +46,17 @@ fn main() {
     io::init_system(1);
     //IpHeader::show_offsets();
     let mut batch = io::PacketBatch::new(32);
-    let (send_port_ret, recv_port_ret) = io::PmdPort::new_loopback_port(0, 1);
-    let send_port = send_port_ret.unwrap();
-    let recv_port = recv_port_ret.unwrap();
-    //let send_port = io::PmdPort::new_simple_port(0, 1).unwrap();
+    //let (send_port_ret, recv_port_ret) = io::PmdPort::new_loopback_port(0, 1);
+    //let send_port = send_port_ret.unwrap();
+    //let recv_port = recv_port_ret.unwrap();
+    let send_port = io::PmdPort::new_simple_port(0, 1).unwrap();
 
-    //let recv_port = 
-        //if cfg!(feature = "recv") {
-             //io::PmdPort::new_simple_port(1, 1).unwrap()
-        //} else {
-            //io::PmdPort::null_port().unwrap()
-        //};
+    let recv_port = 
+        if cfg!(feature = "recv") {
+             io::PmdPort::new_simple_port(1, 1).unwrap()
+        } else {
+            io::PmdPort::null_port().unwrap()
+        };
     let conversion_factor:u64 = 1000000000;
     let mut start = time::precise_time_ns() / conversion_factor;
     let mut rx:u64 = 0;
