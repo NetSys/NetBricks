@@ -6,7 +6,7 @@ use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
 use std::ptr;
 
-pub struct ApplyBatch<'a, T, V>
+pub struct ReplaceBatch<'a, T, V>
     where T: 'a + EndOffset,
     V:'a + ProcessPacketBatch + Act {
     parent: &'a mut V,
@@ -14,9 +14,9 @@ pub struct ApplyBatch<'a, T, V>
     applied: bool,
 }
 
-batch!{ApplyBatch, [parent: &'a mut V, template: &'a T], []}
+batch!{ReplaceBatch, [parent: &'a mut V, template: &'a T]}
 
-impl<'a, T, V> Act for ApplyBatch<'a, T, V>
+impl<'a, T, V> Act for ReplaceBatch<'a, T, V>
     where T:'a + EndOffset,
     V: 'a +  ProcessPacketBatch + Act {
     fn act(&mut self) -> &mut Self {
@@ -36,7 +36,7 @@ impl<'a, T, V> Act for ApplyBatch<'a, T, V>
     }
 }
 
-impl<'a, T, V> ProcessPacketBatch for ApplyBatch<'a, T, V>
+impl<'a, T, V> ProcessPacketBatch for ReplaceBatch<'a, T, V>
     where T:'a + EndOffset,
     V: 'a +  ProcessPacketBatch + Act {
     #[inline]

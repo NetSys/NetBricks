@@ -2,7 +2,7 @@ pub use self::interface::*;
 pub use self::packet_batch::PacketBatch;
 pub use self::packet_batch::ParsedBatch;
 pub use self::packet_batch::TransformBatch;
-pub use self::packet_batch::ApplyBatch;
+pub use self::packet_batch::ReplaceBatch;
 pub use self::packet_batch::Act;
 pub use self::pmd::*;
 mod interface;

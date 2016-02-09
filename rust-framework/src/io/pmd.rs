@@ -64,8 +64,9 @@ impl PmdPort {
         PmdPort::new(port, 1, 1, &rxcores, &txcores, nrxd, ntxd, loopback, tso, csumoffload)
     }
 
-    pub fn new_loopback_port(port: i32, core: i32) -> Result<PmdPort> {
-        PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, true, false, false)
+    pub fn new_loopback_port(port: i32, core: i32) -> (Result<PmdPort>, Result<PmdPort>) {
+        (PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, true, false, false),
+         Ok(PmdPort {connected: true, port: port, rxqs: NUM_RXD, txqs: NUM_TXD}))
     }
 
     pub fn new_simple_port(port: i32, core: i32) -> Result<PmdPort> {

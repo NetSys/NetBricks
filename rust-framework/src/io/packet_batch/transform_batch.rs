@@ -1,6 +1,6 @@
 use super::internal_iface::ProcessPacketBatch;
 use super::ParsedBatch;
-use super::ApplyBatch;
+use super::ReplaceBatch;
 use super::Act;
 use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;

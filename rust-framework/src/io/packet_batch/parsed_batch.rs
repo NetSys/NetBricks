@@ -3,7 +3,7 @@ use super::Act;
 use super::internal_iface::ProcessPacketBatch;
 use super::packet_batch::cast_from_u8;
 use super::TransformBatch;
-use super::ApplyBatch;
+use super::ReplaceBatch;
 use super::super::interface::EndOffset;
 
 pub struct ParsedBatch<'a, T:'a + EndOffset, V> where

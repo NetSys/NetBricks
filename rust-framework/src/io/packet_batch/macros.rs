@@ -34,9 +34,12 @@ macro_rules! batch {
             }
 
             #[inline]
-            pub fn apply(&'a mut self, template: &'a T) -> ApplyBatch<T, Self> {
-                ApplyBatch::<T, Self>::new(self, template)
+            pub fn replace(&'a mut self, template: &'a T) -> ReplaceBatch<T, Self> {
+                ReplaceBatch::<T, Self>::new(self, template)
             }
         }
+    };
+    ($name: ident, [ $($parts: ident : $pty: ty),* ]) => {
+        batch!{$name, [$($parts:$pty),*], []}
     }
 }
