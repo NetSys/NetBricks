@@ -70,7 +70,7 @@ impl PmdPort {
     }
 
     pub fn new_simple_port(port: i32, core: i32) -> Result<PmdPort> {
-        PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, false, false, true)
+        PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, false, false, false)
     }
 
     pub fn null_port() -> Result<PmdPort> {

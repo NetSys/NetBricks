@@ -69,11 +69,11 @@ fn main() {
     loop {
         let _ = batch.allocate_batch_with_size(60).unwrap();
 
-        batch.parse::<MacHeader>().replace(&machdr)
-            .parse::<IpHeader>()
-            .replace(&iphdr)
-            .parse::<UdpHeader>()
-            .replace(&udphdr).act();
+        //batch.parse::<MacHeader>().replace(&machdr).act();
+            //.parse::<IpHeader>()
+            //.replace(&iphdr)
+            //.parse::<UdpHeader>()
+            //.replace(&udphdr).act();
 
         if cfg!(feature = "send") {
             let sent = send_port.send(&mut batch).unwrap();

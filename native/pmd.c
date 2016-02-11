@@ -124,8 +124,8 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[],
 	tso = !(!tso);
 	csumoffload = !(!csumoffload);
 	eth_txconf.txq_flags = ETH_TXQ_FLAGS_NOVLANOFFL |
-			ETH_TXQ_FLAGS_NOMULTSEGS * tso |
-			ETH_TXQ_FLAGS_NOXSUMS * csumoffload;
+			ETH_TXQ_FLAGS_NOMULTSEGS * (1 - tso) |
+			ETH_TXQ_FLAGS_NOXSUMS * (1 - csumoffload);
 
 	ret = rte_eth_dev_configure(port,
 				    rxqs, txqs, &eth_conf);

@@ -26,7 +26,7 @@ macro_rules! batch {
             }
 
             #[inline]
-            pub fn deparse(&'a mut self) -> &'a mut V {
+            pub fn pop(&'a mut self) -> &'a mut V {
                 if !self.applied {
                     self.act();
                 }

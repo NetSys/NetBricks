@@ -43,7 +43,7 @@ impl<'a, T, V> ParsedBatch<'a, T, V>
     }
 
     #[inline]
-    pub fn deparse(&'a mut self) -> &'a mut V {
+    pub fn pop(&'a mut self) -> &'a mut V {
         self.parent
     }
 

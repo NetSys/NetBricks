@@ -105,7 +105,7 @@ int main (int argc, char* argv[]) {
 	}
 	enumerate_pmd_ports();
 	ret = init_pmd_port(PORT_OUT, THREADS, THREADS, 
-			rxq_cores, txq_cores, 128, 512, 
+			rxq_cores, txq_cores, 256, 256, 
 			PORT_OUT == PORT_IN, 0, 0);
 	assert(ret == 0);
 	if (PORT_IN != PORT_OUT) {
@@ -113,7 +113,7 @@ int main (int argc, char* argv[]) {
 		assert(ret == 0);
 	}
 	n[0].tid = 1;
-	n[0].core = 1;
+	n[0].core = 10;
 	n[0].queue = 0;
 	/*thr(&n[0]);*/
 	pthread_create(&thread[0], NULL, &thr, &n[0]);
