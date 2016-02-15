@@ -22,11 +22,12 @@ pub struct PmdPort {
     port: i32,
     rxqs: i32,
     txqs: i32,
+    should_close: bool
 }
 
 impl Drop for PmdPort {
     fn drop(&mut self) {
-        if self.connected {
+        if self.should_close {
             unsafe {
                 free_pmd_port(self.port);
             }
@@ -35,8 +36,8 @@ impl Drop for PmdPort {
     }
 }
 
-const NUM_RXD: i32 = 256;
-const NUM_TXD: i32 = 256;
+const NUM_RXD: i32 = 128;
+const NUM_TXD: i32 = 512;
 
 impl PmdPort {
     pub fn new(port: i32, rxqs: i32, txqs: i32, rxcores: &Vec<i32>,
@@ -51,7 +52,7 @@ impl PmdPort {
                                         ntxd, loopbackv, tsov, csumoffloadv) };
         // TODO: Switch to checking and doing things.
         if ret == 0 {
-            Ok(PmdPort {connected: true, port: port, rxqs: rxqs, txqs: txqs})
+            Ok(PmdPort {connected: true, port: port, rxqs: rxqs, txqs: txqs, should_close: true})
         } else {
             Err(ZCSIError::FailedToInitializePort)
         }
@@ -64,27 +65,35 @@ impl PmdPort {
         PmdPort::new(port, 1, 1, &rxcores, &txcores, nrxd, ntxd, loopback, tso, csumoffload)
     }
 
-    pub fn new_loopback_port(port: i32, core: i32) -> (Result<PmdPort>, Result<PmdPort>) {
-        (PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, true, false, false),
-         Ok(PmdPort {connected: true, port: port, rxqs: NUM_RXD, txqs: NUM_TXD}))
+    pub fn new_loopback_port(port: i32, core: i32) -> Result<PmdPort> {
+        PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, true, false, false)
     }
 
     pub fn new_simple_port(port: i32, core: i32) -> Result<PmdPort> {
         PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, false, false, false)
     }
 
+    pub fn new_mq_port(port: i32, rxqs: i32, txqs: i32, rxcores: &Vec<i32>, txcores: &Vec<i32>) -> Result<PmdPort> {
+        PmdPort::new(port, rxqs, txqs, rxcores, txcores, NUM_RXD, NUM_TXD, false, false, false)
+    }
+
     pub fn null_port() -> Result<PmdPort> {
-        Ok(PmdPort {connected: false, port: 0, rxqs: 0, txqs: 0})
+        Ok(PmdPort {connected: false, port: 0, rxqs: 0, txqs: 0, should_close: false})
+    }
+
+    #[inline]
+    pub fn copy(&self) -> PmdPort {
+        PmdPort {connected: self.connected, port: self.port, rxqs: self.rxqs, txqs: self.txqs, should_close: false}
     }
 
     #[inline]
     pub fn send(&self, pkts: &mut PacketBatch) -> Result<u32> {
-        self.send_queue(1, pkts)
+        self.send_queue(0, pkts)
     }
 
     #[inline]
     pub fn recv(&self, pkts: &mut PacketBatch) -> Result<u32> {
-        self.recv_queue(1, pkts)
+        self.recv_queue(0, pkts)
     }
 
     #[inline]
@@ -94,7 +103,7 @@ impl PmdPort {
         } else {
             unsafe {
                 let to_send = pkts.available() as i32;
-                let sent = send_pkts(self.port, 0, packet_ptr(pkts), to_send);
+                let sent = send_pkts(self.port, queue, packet_ptr(pkts), to_send);
                 consumed_batch(pkts, sent as usize);
                 Ok(sent as u32)
             }
@@ -110,7 +119,7 @@ impl PmdPort {
                 match pkts.deallocate_batch() {
                     Err(err) => Err(err),
                     Ok(_) => { let to_recv = pkts.max_size();
-                             let recv = recv_pkts(self.port, 0, packet_ptr(pkts), to_recv);
+                             let recv = recv_pkts(self.port, queue, packet_ptr(pkts), to_recv);
                              add_to_batch(pkts, recv as usize);
                              Ok(recv as u32)
                     }
@@ -121,12 +130,12 @@ impl PmdPort {
 
     #[inline]
     pub fn internal_send_queue(&self, queue: i32, pkts: &mut PacketBatch) -> Result<u32> {
-        if self.txqs < queue {
+        if  queue >= self.txqs {
             Err(ZCSIError::BadQueue)
         } else {
             unsafe {
                 let to_send = pkts.available() as i32;
-                let sent = send_pkts(self.port, 0, packet_ptr(pkts), to_send);
+                let sent = send_pkts(self.port, queue, packet_ptr(pkts), to_send);
                 consumed_batch(pkts, sent as usize);
                 Ok(sent as u32)
             }
@@ -135,14 +144,14 @@ impl PmdPort {
 
     #[inline]
     pub fn internal_recv_queue(&self, queue: i32, pkts: &mut PacketBatch) -> Result<u32> {
-        if self.rxqs < queue {
+        if queue >= self.rxqs {
             Err(ZCSIError::BadQueue)
         } else {
             unsafe {
                 match pkts.deallocate_batch() {
                     Err(err) => Err(err),
                     Ok(_) => { let to_recv = pkts.max_size();
-                             let recv = recv_pkts(self.port, 0, packet_ptr(pkts), to_recv);
+                             let recv = recv_pkts(self.port, queue, packet_ptr(pkts), to_recv);
                              add_to_batch(pkts, recv as usize);
                              Ok(recv as u32)
                     }

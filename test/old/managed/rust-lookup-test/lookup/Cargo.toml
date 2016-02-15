@@ -1,8 +1,0 @@
-[package]
-
-name = "lookup"
-version = "0.0.1"
-authors = ["Aurojit <apanda@cs.berkeley.edu>"]
-
-[dependencies]
-time = "0.1"

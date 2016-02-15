@@ -50,8 +50,8 @@ void *thr(void* arg)
 				struct ether_hdr* hdr =
 					rte_pktmbuf_mtod(pkts[i],
 						struct ether_hdr*);
-				/*hdr->d_addr.addr_bytes[5] = (10 * q) + 1;*/
-				/*hdr->s_addr.addr_bytes[5] = (10 * q) + 2;*/
+				hdr->d_addr.addr_bytes[5] = (10 * q) + 1;
+				hdr->s_addr.addr_bytes[5] = (10 * q) + 2;
 				hdr->ether_type = rte_cpu_to_be_16(0x0800);
 				/*rte_mbuf_sanity_check(pkts[i], 1);*/
 			}
@@ -87,7 +87,7 @@ void dump() {
 	printf("sizeof(rte_eth_dev_info) %lu\n", sizeof(struct rte_eth_dev_info));
 }
 
-#define THREADS 1
+#define THREADS 2
 int main (int argc, char* argv[]) {
 
 	/*dump();*/
@@ -98,11 +98,15 @@ int main (int argc, char* argv[]) {
 	int ret = init_system(1);
 
 	assert(ret == 0);
+	rxq_cores[0] = 10;
+	rxq_cores[1] = 11;
+	txq_cores[0] = 10;
+	txq_cores[1] = 11;
 
-	for (int i = 0; i < 20; i++) {
-		rxq_cores[i] = i;
-		txq_cores[i] = i;
-	}
+	/*for (int i = 0; i < 20; i++) {*/
+		/*rxq_cores[i] = i;*/
+		/*txq_cores[i] = i;*/
+	/*}*/
 	enumerate_pmd_ports();
 	ret = init_pmd_port(PORT_OUT, THREADS, THREADS, 
 			rxq_cores, txq_cores, 256, 256, 
@@ -112,11 +116,15 @@ int main (int argc, char* argv[]) {
 		ret = init_pmd_port(PORT_IN, THREADS, THREADS, rxq_cores, txq_cores, 128, 512, 0, 0, 0);
 		assert(ret == 0);
 	}
-	n[0].tid = 1;
+	n[0].tid = 10;
 	n[0].core = 10;
 	n[0].queue = 0;
+	n[1].tid = 11;
+	n[1].core = 11;
+	n[1].queue = 1;
 	/*thr(&n[0]);*/
 	pthread_create(&thread[0], NULL, &thr, &n[0]);
+	pthread_create(&thread[1], NULL, &thr, &n[1]);
 	/*for (int i = 0; i < THREADS; i++) {*/
 		/*n[i].tid = 64 - i;*/
 		/*n[i].core = i;*/
