@@ -11,14 +11,6 @@
 
 #include "mempool.h"
 /* Taken from SoftNIC (dpdk.c) */
-/* Generate an lcore bitmap. For now only launch one worker */
-static int set_lcore_bitmap(char *buf, int tid, int core)
-{
-	int off = 0;
-	off = sprintf(buf, "%d@%d", tid, core);
-	return off;
-}
-
 /* Get NUMA count */
 static int get_numa_count()
 {
@@ -57,7 +49,7 @@ static int init_eal(int core)
 	char opt_lcore_bitmap[1024];
 	char opt_socket_mem[1024];
 
-	const char *socket_mem = "2048";
+	const char *socket_mem = "512";
 
 	int numa_count = get_numa_count();
 
@@ -80,7 +72,7 @@ static int init_eal(int core)
 
 	sprintf(opt_socket_mem, "%s", socket_mem);
 	for(i = 1; i < numa_count; i++)
-		sprintf(opt_socket_mem + strlen(opt_socket_mem), 
+		sprintf(opt_socket_mem + strlen(opt_socket_mem),
 				",%s", socket_mem);
 
 	rte_argv[rte_argc++] = "lzcsi";
@@ -90,7 +82,7 @@ static int init_eal(int core)
 	rte_argv[rte_argc++] = opt_master_lcore;
 	rte_argv[rte_argc++] = "-n";
 	/* number of memory channels (Sandy Bridge) */
-	rte_argv[rte_argc++] = "4";	// Number of memory channels on 
+	rte_argv[rte_argc++] = "4";	// Number of memory channels on
 					// Sandy Bridge.
 	rte_argv[rte_argc++] = "--socket-mem";
 	rte_argv[rte_argc++] = opt_socket_mem;
@@ -104,6 +96,7 @@ static int init_eal(int core)
 
 	/* Change lcore ID */
 	RTE_PER_LCORE(_lcore_id) = tid;
+	RTE_PER_LCORE(_mempool_core) = core;
 	return ret;
 }
 
@@ -112,7 +105,7 @@ static void init_timer()
 	rte_timer_subsystem_init();
 }
 
-/* Call this from the main thread on ZCSI to initialize things. This initializes 
+/* Call this from the main thread on ZCSI to initialize things. This initializes
  * the master thread. */
 int init_system(int core)
 {
@@ -126,7 +119,7 @@ int init_system(int core)
 }
 
 /* Declared within eal_thread.c, but not exposed */
-/*void eal_thread_init_master(int);*/
+RTE_DECLARE_PER_LCORE(unsigned , _socket_id);
 
 /* Called by each secondary threads on ZCSI, responsible for affinitization,
  * etc.*/
@@ -137,8 +130,7 @@ void init_thread(int tid, int core)
 	CPU_ZERO(&cpuset);
 	CPU_SET(core, &cpuset);
 	rte_thread_set_affinity(&cpuset);
-	/*eal_thread_init_master(core);*/
-	/* Set thread ID correct */
+	/* Set thread ID correctly */
 	RTE_PER_LCORE(_lcore_id) = tid;
-	/* TODO: Set NUMA domain for lcore */
+	RTE_PER_LCORE(_mempool_core) = core;
 }

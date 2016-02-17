@@ -139,10 +139,12 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[],
 
 	for (i = 0; i < rxqs; i++) {
 		int sid = rte_lcore_to_socket_id(rxq_core[i]);
-		printf("Initializing rxq %d to run on socket %d\n", i, sid);
+		printf("Initializing rxq %d to run on socket %d %"  PRIXPTR  
+				"\n", i, sid, 
+				(uintptr_t)get_pframe_pool(rxq_core[i]));
 		ret = rte_eth_rx_queue_setup(port, i,
 					nrxd, sid, &eth_rxconf,
-					get_pframe_pool(sid));
+					get_pframe_pool(rxq_core[i]));
 		if (ret != 0) {
 			printf("Failed to initialize rxq\n");
 			return ret; /* Clean things up? */

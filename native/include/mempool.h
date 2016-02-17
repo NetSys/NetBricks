@@ -7,6 +7,7 @@
 #include <rte_eal.h>
 #include <rte_ether.h>
 #include <rte_mbuf.h>
+RTE_DECLARE_PER_LCORE(int, _mempool_core);
 
 typedef struct rte_mbuf* restrict * restrict mbuf_array_t;
 /* Called by system initialization */
