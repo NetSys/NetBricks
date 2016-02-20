@@ -1,11 +1,10 @@
 use std::result;
-extern crate libc;
-
 mod dpdk {
     #[link(name = "zcsi")]
     extern {
         pub fn init_system(core: i32);
         pub fn init_thread(tid: i32, core: i32);
+        pub fn init_system_whitelisted(core: i32, whitelist: *mut *const u8, wlcount: i32);
     }
 }
 
@@ -15,6 +14,17 @@ mod dpdk {
 pub fn init_system(core: i32) {
     unsafe {
         dpdk::init_system(core);
+    }
+}
+
+pub fn init_system_wl(core: i32, pci: &Vec<String>) {
+    let mut whitelist = Vec::<*const u8>::with_capacity(pci.len());
+    for l in 0..pci.len() {
+        let dev = &pci[l];
+        whitelist.push(dev.as_ptr());
+    }
+    unsafe {
+        dpdk::init_system_whitelisted(core, whitelist.as_mut_ptr(), pci.len() as i32);
     }
 }
 

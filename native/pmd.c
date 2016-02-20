@@ -27,12 +27,12 @@ static const struct rte_eth_conf default_eth_conf = {
 	},
 	/* Cannot use TCP port for IPv4 due to fragmentation */
 	.rx_adv_conf.rss_conf = {
-		.rss_hf = ETH_RSS_IPV4 |
-			  ETH_RSS_IPV6 |
-			  ETH_RSS_IPV6_EX |
-			  ETH_RSS_IPV6_TCP_EX |
-			  ETH_RSS_IPV6_EX |
-			  ETH_RSS_IPV6_UDP_EX,
+		.rss_hf = ETH_RSS_IPV4, // |
+			  /*ETH_RSS_IPV6 |*/
+			  /*ETH_RSS_IPV6_EX |*/
+			  /*ETH_RSS_IPV6_TCP_EX |*/
+			  /*ETH_RSS_IPV6_EX |*/
+			  /*ETH_RSS_IPV6_UDP_EX,*/
 		.rss_key = NULL,
 	},
 	/* No flow director */
@@ -130,7 +130,7 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[],
 	ret = rte_eth_dev_configure(port,
 				    rxqs, txqs, &eth_conf);
 	if (ret != 0) {
-		printf("Failed to get conf\n");
+		printf("Failed to get conf for %d %d\n");
 		return ret; /* Don't need to clean up here */
 	}
 
@@ -139,12 +139,9 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[],
 
 	for (i = 0; i < rxqs; i++) {
 		int sid = rte_lcore_to_socket_id(rxq_core[i]);
-		printf("Initializing rxq %d to run on socket %d %"  PRIXPTR  
-				"\n", i, sid, 
-				(uintptr_t)get_pframe_pool(rxq_core[i]));
 		ret = rte_eth_rx_queue_setup(port, i,
 					nrxd, sid, &eth_rxconf,
-					get_pframe_pool(rxq_core[i]));
+					get_pframe_pool(rxq_core[i], sid));
 		if (ret != 0) {
 			printf("Failed to initialize rxq\n");
 			return ret; /* Clean things up? */

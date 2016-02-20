@@ -1,4 +1,3 @@
-extern crate libc;
 use super::mbuf::MBuf;
 use super::interface::Result;
 use super::interface::ZCSIError;
@@ -36,8 +35,8 @@ impl Drop for PmdPort {
     }
 }
 
-const NUM_RXD: i32 = 128;
-const NUM_TXD: i32 = 512;
+const NUM_RXD: i32 = 256;
+const NUM_TXD: i32 = 256;
 
 impl PmdPort {
     pub fn new(port: i32, rxqs: i32, txqs: i32, rxcores: &Vec<i32>,

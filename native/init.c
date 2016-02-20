@@ -37,19 +37,20 @@ fail:
 	return 1;
 }
 
-static int init_eal(int core)
+static int init_eal(int core, char* whitelist[], int wl_count)
 {
 	/* As opposed to SoftNIC, this call only initializes the master thread.
 	 * We cannot rely on threads launched by DPDK within ZCSI, the threads
 	 * must be launched by the runtime */
 	int rte_argc = 0;
-	char *rte_argv[16];
+	char *rte_argv[64];
 
 	char opt_master_lcore[1024];
 	char opt_lcore_bitmap[1024];
 	char opt_socket_mem[1024];
 
-	const char *socket_mem = "512";
+	const char *socket_mem = "1024";
+	char prefix[50];
 
 	int numa_count = get_numa_count();
 
@@ -68,6 +69,7 @@ static int init_eal(int core)
 	 * physical cores and will not work when new threads are allocated. We
 	 * could hack around this another way, but this seems more reasonable.*/
 	sprintf(opt_lcore_bitmap, "0x%x", (1u << core));
+	sprintf(prefix, "hp%d", core);
 	printf("Core mask : %s\n", opt_lcore_bitmap);
 
 	sprintf(opt_socket_mem, "%s", socket_mem);
@@ -76,8 +78,18 @@ static int init_eal(int core)
 				",%s", socket_mem);
 
 	rte_argv[rte_argc++] = "lzcsi";
+	rte_argv[rte_argc++] = "--file-prefix";
+	rte_argv[rte_argc++] = prefix;
 	rte_argv[rte_argc++] = "-c";
 	rte_argv[rte_argc++] = opt_lcore_bitmap;
+	/* Otherwise assume everything is white listed */
+	if (wl_count > 0) {
+		for (int i = 0; i < wl_count; i++) {
+			printf("Whitelisting %s\n", whitelist[i]);
+			rte_argv[rte_argc++] = "-w";
+			rte_argv[rte_argc++] = whitelist[i];
+		}
+	}
 	rte_argv[rte_argc++] = "--master-lcore";
 	rte_argv[rte_argc++] = opt_master_lcore;
 	rte_argv[rte_argc++] = "-n";
@@ -111,7 +123,17 @@ int init_system(int core)
 {
 	int ret = 0;
 	init_timer();
-	if ((ret = init_eal(core)) < 0) {
+	if ((ret = init_eal(core, NULL, 0)) < 0) {
+		return ret;
+
+	}
+	return init_mempool();
+}
+
+int init_system_whitelisted(int core, char *whitelist[], int wlcount) {
+	int ret = 0;
+	init_timer();
+	if ((ret = init_eal(core, whitelist, wlcount)) < 0) {
 		return ret;
 
 	}

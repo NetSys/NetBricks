@@ -67,7 +67,7 @@ const CONVERSION_FACTOR:u64 = 1000000000;
 fn send_thread(port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Sending started");
-    let mut batch = io::PacketBatch::new(32);
+    let mut batch = io::PacketBatch::new(4);
     let mut tx = 0;
     let mut drops = 0;
     let mut cycles = 0;
@@ -87,18 +87,14 @@ fn send_thread(port: io::PmdPort, queue: i32, core: i32) {
             //.parse::<UdpHeader>()
             //.replace(&udphdr).act();
 
-        if cfg!(feature = "send") {
-            let sent = match port.send_queue(queue, &mut batch) {
-                Ok(v) => v as usize,
-                Err(e) => {
-                    println!("Error {:?}", e);
-                    0}
-            };
-            tx += sent;
-            drops += batch.available();
-        } else {
-            tx += batch.available();
-        }
+        let sent = match port.send_queue(queue, &mut batch) {
+            Ok(v) => v as usize,
+            Err(e) => {
+                println!("Error {:?}", e);
+                0}
+        };
+        tx += sent;
+        drops += batch.available();
         cycles += 1;
         let _ = batch.deallocate_batch();
 
@@ -110,21 +106,17 @@ fn send_thread(port: io::PmdPort, queue: i32, core: i32) {
             //.parse::<UdpHeader>()
             //.replace(&udphdr2).act();
 
-        if cfg!(feature = "send") {
-            let sent = match port.send_queue(queue, &mut batch) {
-                Ok(v) => v as usize,
-                Err(e) => {
-                    println!("Error {:?}", e);
-                    0}
-            };
-            tx += sent;
-            drops += batch.available();
-        } else {
-            tx += batch.available();
-        }
+        let sent = match port.send_queue(queue, &mut batch) {
+            Ok(v) => v as usize,
+            Err(e) => {
+                println!("Error {:?}", e);
+                0}
+        };
+        tx += sent;
+        drops += batch.available();
         let now = time::precise_time_ns() / CONVERSION_FACTOR;
         if now > start {
-            //println!("{} tx_core {} pps {} drops {} loops {}", (now - start), core, tx, drops, cycles);
+            println!("{} tx_core {} pps {} drops {} loops {}", (now - start), core, tx, drops, cycles);
             tx = 0;
             cycles = 0;
             drops = 0;
@@ -155,7 +147,8 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
         let _ = batch.deallocate_batch();
         let now = time::precise_time_ns() / CONVERSION_FACTOR;
         if now > start {
-            println!("{} rx_core {} pps {} no_rx {} loops {}", (now - start), core, rx, no_rx, cycles);
+            println!("{} rx_core {} pps {} no_rx {} loops {}", 
+                     (now - start), core, rx, no_rx, cycles);
             //RX_COUNT.fetch_add(rx, Ordering::Relaxed);
             rx = 0;
             no_rx = 0;
@@ -167,32 +160,9 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
 }
 
 fn main() {
-    io::init_system(0);
-    let send_port0 = io::PmdPort::new_mq_port(0, 2, 2, &vec![1,5], &vec![1,5]).unwrap();
-    let send_port1 = io::PmdPort::new_mq_port(1, 2, 2, &vec![2,6], &vec![2,6]).unwrap();
-    //let send_port2 = io::PmdPort::new_mq_port(2, 2, 2, &vec![3,7], &vec![3, 7]).unwrap();
-    //let send_port3 = io::PmdPort::new_mq_port(3, 2, 2, &vec![4,8], &vec![4, 8]).unwrap();
-    //let send_port0p = send_port0.copy();
-    //let send_port1p = send_port1.copy();
-    //let send_port2p = send_port2.copy();
-    //let send_port3p = send_port3.copy();
-    let s0 = std::thread::spawn(move || {send_thread(send_port0, 0, 1)});
-    let _ = std::thread::spawn(move || {send_thread(send_port1, 0, 2)});
-    //let _ = std::thread::spawn(move || {send_thread(send_port2, 0, 3)});
-    //let _ = std::thread::spawn(move || {send_thread(send_port3, 0, 4)});
-    //let _ = std::thread::spawn(move || {send_thread(send_port0p, 1, 5)});
-    //let _ = std::thread::spawn(move || {send_thread(send_port1p, 1, 6)});
-    //let _ = std::thread::spawn(move || {send_thread(send_port2p, 1, 7)});
-    //let _ = std::thread::spawn(move || {send_thread(send_port3p, 1, 8)});
-    if cfg!(feature = "recv") {
-        let recv_port0 =  io::PmdPort::new_mq_port(4, 1, 1, &vec![10], &vec![10]).unwrap();
-        let recv_port1 =  io::PmdPort::new_mq_port(5, 1, 1, &vec![11], &vec![11]).unwrap();
-        //let recv_port2 =  io::PmdPort::new_mq_port(6, 1, 1, &vec![14], &vec![14]).unwrap();
-        //let recv_port3 =  io::PmdPort::new_mq_port(7, 1, 1, &vec![15], &vec![15]).unwrap();
-        let _ = std::thread::spawn(move || {recv_thread(recv_port0, 0, 10)});
-        let _ = std::thread::spawn(move || {recv_thread(recv_port1, 0, 11)});
-        //let _ = std::thread::spawn(move || {recv_thread(recv_port2, 0, 14)});
-        //let _ = std::thread::spawn(move || {recv_thread(recv_port3, 0, 15)});
-    }
+    io::init_system_wl(10, &vec![String::from("82:00.0"),
+                                String::from("82:00.1")]);
+    let recv_port =  io::PmdPort::new_mq_port(0, 1, 1, &vec![12], &vec![12]).unwrap();
+    let s0 = std::thread::spawn(move || {recv_thread(recv_port, 0, 12)});
     let _ = s0.join();
 }

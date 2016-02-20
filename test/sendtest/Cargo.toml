@@ -1,0 +1,21 @@
+[package]
+name = "send"
+version = "0.1.0"
+authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
+
+[dependencies]
+e2d2 = { path = "../../framework" }
+time = ">=0.1.0"
+simd = { git = "https://github.com/huonw/simd" }
+
+[features]
+default = []
+send = []
+print = []
+
+[profile.release]
+opt-level = 3
+lto = true
+rpath = true
+# debug = true
+debug-assertions = false
