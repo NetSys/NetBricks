@@ -144,11 +144,11 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
 }
 
 fn main() {
-    io::init_system_wl(1, &vec![String::from("06:00.0"),
-                                String::from("06:00.1")]);
-    let send_port0 =  io::PmdPort::new_mq_port(0, 1, 1, &vec![2], &vec![2]).unwrap();
-    //let send_port1 =  io::PmdPort::new_mq_port(1, 1, 1, &vec![3], &vec![3]).unwrap();
-    let s0 = std::thread::spawn(move || {send_thread(send_port0, 0, 2)});
-    //let _ = std::thread::spawn(move || {send_thread(send_port1, 0, 3)});
+    io::init_system_wl(11, &vec![String::from("82:00.0"),
+                                String::from("82:00.1")]);
+    let send_port0 =  io::PmdPort::new_mq_port(0, 1, 1, &vec![12], &vec![12]).unwrap();
+    let send_port1 =  io::PmdPort::new_mq_port(1, 1, 1, &vec![13], &vec![13]).unwrap();
+    let s0 = std::thread::spawn(move || {send_thread(send_port0, 0, 12)});
+    let _ = std::thread::spawn(move || {send_thread(send_port1, 0, 13)});
     let _ = s0.join();
 }

@@ -27,12 +27,12 @@ static const struct rte_eth_conf default_eth_conf = {
 	},
 	/* Cannot use TCP port for IPv4 due to fragmentation */
 	.rx_adv_conf.rss_conf = {
-		.rss_hf = ETH_RSS_IPV4, // |
-			  /*ETH_RSS_IPV6 |*/
-			  /*ETH_RSS_IPV6_EX |*/
-			  /*ETH_RSS_IPV6_TCP_EX |*/
-			  /*ETH_RSS_IPV6_EX |*/
-			  /*ETH_RSS_IPV6_UDP_EX,*/
+		.rss_hf = ETH_RSS_IPV4 |
+			  ETH_RSS_IPV6 |
+			  ETH_RSS_IPV6_EX |
+			  ETH_RSS_IPV6_TCP_EX |
+			  ETH_RSS_IPV6_EX |
+			  ETH_RSS_IPV6_UDP_EX,
 		.rss_key = NULL,
 	},
 	/* No flow director */
@@ -130,7 +130,6 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[],
 	ret = rte_eth_dev_configure(port,
 				    rxqs, txqs, &eth_conf);
 	if (ret != 0) {
-		printf("Failed to get conf for %d %d\n");
 		return ret; /* Don't need to clean up here */
 	}
 

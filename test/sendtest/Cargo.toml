@@ -7,6 +7,7 @@ authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
 e2d2 = { path = "../../framework" }
 time = ">=0.1.0"
 simd = { git = "https://github.com/huonw/simd" }
+getopts = "0.2.14"
 
 [features]
 default = []
