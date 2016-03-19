@@ -2,29 +2,37 @@ use std::result;
 mod dpdk {
     #[link(name = "zcsi")]
     extern {
-        pub fn init_system(core: i32);
+        pub fn init_system(name: *const u8, nlen: i32, core: i32) -> i32;
+        pub fn init_system_whitelisted(name: *const u8, nlen: i32, core: i32, 
+                                       whitelist: *mut *const u8, wlcount: i32) -> i32;
         pub fn init_thread(tid: i32, core: i32);
-        pub fn init_system_whitelisted(core: i32, whitelist: *mut *const u8, wlcount: i32);
     }
 }
 
 /// Initialize system. This must be run before any of the rest of this library is used.
 /// Calling this function is somewhat slow.
 /// # Failures: If a call to this function fails, DPDK will panic and kill the entire application.
-pub fn init_system(core: i32) {
+pub fn init_system(name: &String, core: i32) {
     unsafe {
-        dpdk::init_system(core);
+        let ret = dpdk::init_system(name.as_ptr(), name.len() as i32, core);
+        if ret != 0 {
+            panic!("Could not initialize the system errno {}", ret)
+        }
     }
 }
 
-pub fn init_system_wl(core: i32, pci: &Vec<String>) {
+pub fn init_system_wl(name: &String, core: i32, pci: &Vec<String>) {
     let mut whitelist = Vec::<*const u8>::with_capacity(pci.len());
     for l in 0..pci.len() {
         let dev = &pci[l];
         whitelist.push(dev.as_ptr());
     }
     unsafe {
-        dpdk::init_system_whitelisted(core, whitelist.as_mut_ptr(), pci.len() as i32);
+        let ret = dpdk::init_system_whitelisted(name.as_ptr(), name.len() as i32, core, 
+                                      whitelist.as_mut_ptr(), pci.len() as i32);
+        if ret != 0 {
+            panic!("Could not initialize the system errno {}", ret)
+        }
     }
 }
 

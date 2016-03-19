@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <rte_config.h>
 #include <rte_cycles.h>
@@ -37,7 +38,7 @@ fail:
 	return 1;
 }
 
-static int init_eal(int core, char* whitelist[], int wl_count)
+static int init_eal(char* name, int core, char* whitelist[], int wl_count)
 {
 	/* As opposed to SoftNIC, this call only initializes the master thread.
 	 * We cannot rely on threads launched by DPDK within ZCSI, the threads
@@ -50,7 +51,6 @@ static int init_eal(int core, char* whitelist[], int wl_count)
 	char opt_socket_mem[1024];
 
 	const char *socket_mem = "1024";
-	char prefix[50];
 
 	int numa_count = get_numa_count();
 
@@ -69,7 +69,7 @@ static int init_eal(int core, char* whitelist[], int wl_count)
 	 * physical cores and will not work when new threads are allocated. We
 	 * could hack around this another way, but this seems more reasonable.*/
 	sprintf(opt_lcore_bitmap, "0x%x", (1u << core));
-	sprintf(prefix, "hp%d", core);
+	printf("Using name %s\n", name);
 	printf("Core mask : %s\n", opt_lcore_bitmap);
 
 	sprintf(opt_socket_mem, "%s", socket_mem);
@@ -79,7 +79,7 @@ static int init_eal(int core, char* whitelist[], int wl_count)
 
 	rte_argv[rte_argc++] = "lzcsi";
 	rte_argv[rte_argc++] = "--file-prefix";
-	rte_argv[rte_argc++] = prefix;
+	rte_argv[rte_argc++] = name;
 	rte_argv[rte_argc++] = "-c";
 	rte_argv[rte_argc++] = opt_lcore_bitmap;
 	/* Otherwise assume everything is white listed */
@@ -117,28 +117,31 @@ static void init_timer()
 	rte_timer_subsystem_init();
 }
 
+int init_system_whitelisted(const char* name, int nlen, int core, 
+		char *whitelist[], int wlcount) {
+	int ret = 0;
+	if (name == NULL || nlen >= 256) {
+		return -EINVAL;
+	}
+	char clean_name[256];
+	strncpy(clean_name, name, nlen);
+	clean_name[nlen] = '\0';
+
+	init_timer();
+	if ((ret = init_eal(clean_name, core, whitelist, wlcount)) < 0) {
+		return ret;
+
+	}
+	return init_mempool();
+}
+
 /* Call this from the main thread on ZCSI to initialize things. This initializes
  * the master thread. */
-int init_system(int core)
+int init_system(char* name, int nlen, int core)
 {
-	int ret = 0;
-	init_timer();
-	if ((ret = init_eal(core, NULL, 0)) < 0) {
-		return ret;
-
-	}
-	return init_mempool();
+	return init_system_whitelisted(name, nlen, core, NULL, 0);
 }
 
-int init_system_whitelisted(int core, char *whitelist[], int wlcount) {
-	int ret = 0;
-	init_timer();
-	if ((ret = init_eal(core, whitelist, wlcount)) < 0) {
-		return ret;
-
-	}
-	return init_mempool();
-}
 
 /* Declared within eal_thread.c, but not exposed */
 RTE_DECLARE_PER_LCORE(unsigned , _socket_id);

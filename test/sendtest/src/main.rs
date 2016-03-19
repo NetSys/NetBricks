@@ -1,11 +1,15 @@
 extern crate e2d2;
 extern crate time;
 extern crate simd;
+extern crate getopts;
 use e2d2::io;
 use e2d2::io::Act;
 use e2d2::headers::*;
 use std::net::*;
 use std::convert::From;
+use getopts::Options;
+use std::env;
+use std::num::ParseIntError;
 //use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
 //use std::time::Duration;
 
@@ -64,19 +68,20 @@ fn prepare_udp_header2() -> UdpHeader {
 }
 
 const CONVERSION_FACTOR:u64 = 1000000000;
-fn send_thread(port: io::PmdPort, queue: i32, core: i32) {
+
+fn send_thread(mut port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Sending started");
-    let mut batch = io::PacketBatch::new(4);
+    let mut batch = io::PacketBatch::new(32);
     let mut tx = 0;
     let mut drops = 0;
     let mut cycles = 0;
-    //let iphdr = prepare_ip_header(22, 233);
-    //let iphdr2 = prepare_ip_header(12, 2);
-    //let udphdr = prepare_udp_header();
-    //let udphdr2 = prepare_udp_header2();
+    let iphdr = prepare_ip_header(22, 233);
+    let iphdr2 = prepare_ip_header(12, 2);
+    let udphdr = prepare_udp_header();
+    let udphdr2 = prepare_udp_header2();
     let machdr = prepare_mac_header();
-    //let machdr2 = prepare_mac_header2();
+    let machdr2 = prepare_mac_header2();
     let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
     loop {
         let _ = batch.allocate_batch_with_size(60);
@@ -87,7 +92,7 @@ fn send_thread(port: io::PmdPort, queue: i32, core: i32) {
             //.parse::<UdpHeader>()
             //.replace(&udphdr).act();
 
-        let sent = match port.send_queue(queue, &mut batch) {
+        let sent = match batch.send_queue(&mut port, queue) {
             Ok(v) => v as usize,
             Err(e) => {
                 println!("Error {:?}", e);
@@ -98,20 +103,11 @@ fn send_thread(port: io::PmdPort, queue: i32, core: i32) {
         cycles += 1;
         let _ = batch.deallocate_batch();
 
-        let now = time::precise_time_ns() / CONVERSION_FACTOR;
-        if now > start {
-            println!("{} tx_core {} pps {} drops {} loops {}", 
-                     (now - start), core, tx, drops, cycles);
-            tx = 0;
-            cycles = 0;
-            drops = 0;
-            start = now;
-        }
-        let _ = batch.deallocate_batch();
+        let _ = batch.allocate_batch_with_size(60);
     }
 }
 
-fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
+fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Receiving started");
     let mut batch = io::PacketBatch::new(32);
@@ -119,21 +115,24 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
     let mut rx = 0;
     let mut no_rx = 0;
     let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
+    let machdr2 = prepare_mac_header2();
     loop {
-        let recv = match port.recv_queue(queue, &mut batch) {
+        let recv = match batch.recv_queue(&mut port, queue) {
             Ok(v) => v as usize,
-            Err(_) => 0
+            _ => 0
         };
         cycles += 1;
         rx += recv;
         if recv == 0 {
             no_rx += 1
         }
+        batch.parse::<MacHeader>().replace(&machdr2).act();
         let _ = batch.deallocate_batch();
         let now = time::precise_time_ns() / CONVERSION_FACTOR;
         if now > start {
-            println!("{} rx_core {} pps {} no_rx {} loops {}", 
+            println!("{} rx_core {} pps {} no_rx {} loops {}",
                      (now - start), core, rx, no_rx, cycles);
+            //RX_COUNT.fetch_add(rx, Ordering::Relaxed);
             rx = 0;
             no_rx = 0;
             cycles = 0;
@@ -144,11 +143,38 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
 }
 
 fn main() {
-    io::init_system_wl(11, &vec![String::from("82:00.0"),
-                                String::from("82:00.1")]);
-    let send_port0 =  io::PmdPort::new_mq_port(0, 1, 1, &vec![12], &vec![12]).unwrap();
-    let send_port1 =  io::PmdPort::new_mq_port(1, 1, 1, &vec![13], &vec![13]).unwrap();
-    let s0 = std::thread::spawn(move || {send_thread(send_port0, 0, 12)});
-    let _ = std::thread::spawn(move || {send_thread(send_port1, 0, 13)});
-    let _ = s0.join();
+    let args: Vec<String> = env::args().collect();
+    let program = args[0].clone();
+    let mut opts = Options::new();
+    opts.optmulti("w", "whitelist", "Whitelist PCI", "PCI");
+    opts.optmulti("c", "core", "Core to use", "core");
+    opts.optflag("h", "help", "print this help menu");
+    let matches = match opts.parse(&args[1..]) {
+        Ok(m) => { m }
+        Err(f) => { panic!(f.to_string()) }
+    };
+    if matches.opt_present("h") {
+        print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
+    }
+    let cores_str = matches.opt_strs("c");
+    let whitelisted = matches.opt_strs("w");
+    if cores_str.len() > whitelisted.len() {
+        println!("More cores than ports");
+        std::process::exit(1);
+    }
+    let cores:Vec<i32> = cores_str.iter().map(|n: &String| n.parse().
+                              expect(&format!("Core cannot be parsed {}", n))).collect();
+
+    for (core, wl) in cores.iter().zip(whitelisted.iter()) {
+        println!("Going to use core {} for wl {}", core, wl);
+    }
+    io::init_system_wl(&format!("send{}", cores_str.join("")), cores[0], &whitelisted);
+    let mut thread: Vec<std::thread::JoinHandle<()>> = 
+        cores.iter().zip(0..whitelisted.len()).map(|(core, port)| {
+        let c = *core;
+        let send_port = io::PmdPort::new_mq_port(port as i32, 1, 1, &vec![c], &vec![c]).unwrap();
+        println!("Started port {} core {}", port, c);
+        std::thread::spawn(move || {send_thread(send_port, 0, c)})
+    }).collect();
+    let _ = thread.pop().expect("No cores started").join();
 }

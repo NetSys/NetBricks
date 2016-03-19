@@ -68,7 +68,7 @@ fn prepare_udp_header2() -> UdpHeader {
 }
 
 const CONVERSION_FACTOR:u64 = 1000000000;
-fn send_thread(port: io::PmdPort, queue: i32, core: i32) {
+fn send_thread(mut port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Sending started");
     let mut batch = io::PacketBatch::new(32);
@@ -91,7 +91,7 @@ fn send_thread(port: io::PmdPort, queue: i32, core: i32) {
             //.parse::<UdpHeader>()
             //.replace(&udphdr).act();
 
-        let sent = match port.send_queue(queue, &mut batch) {
+        let sent = match batch.send_queue(&mut port, queue) {
             Ok(v) => v as usize,
             Err(e) => {
                 println!("Error {:?}", e);
@@ -103,34 +103,10 @@ fn send_thread(port: io::PmdPort, queue: i32, core: i32) {
         let _ = batch.deallocate_batch();
 
         let _ = batch.allocate_batch_with_size(60);
-
-        batch.parse::<MacHeader>().replace(&machdr2).act();
-            //.parse::<IpHeader>()
-            //.replace(&iphdr2)
-            //.parse::<UdpHeader>()
-            //.replace(&udphdr2).act();
-
-        let sent = match port.send_queue(queue, &mut batch) {
-            Ok(v) => v as usize,
-            Err(e) => {
-                println!("Error {:?}", e);
-                0}
-        };
-        tx += sent;
-        drops += batch.available();
-        let now = time::precise_time_ns() / CONVERSION_FACTOR;
-        if now > start {
-            println!("{} tx_core {} pps {} drops {} loops {}", (now - start), core, tx, drops, cycles);
-            tx = 0;
-            cycles = 0;
-            drops = 0;
-            start = now;
-        }
-        let _ = batch.deallocate_batch();
     }
 }
 
-fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
+fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Receiving started");
     let mut batch = io::PacketBatch::new(32);
@@ -140,9 +116,9 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
     let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
     let machdr2 = prepare_mac_header2();
     loop {
-        let recv = match port.recv_queue(queue, &mut batch) {
+        let recv = match batch.recv_queue(&mut port, queue) {
             Ok(v) => v as usize,
-            Err(_) => 0
+            _ => 0
         };
         cycles += 1;
         rx += recv;
@@ -191,10 +167,11 @@ fn main() {
     for (core, wl) in cores.iter().zip(whitelisted.iter()) {
         println!("Going to use core {} for wl {}", core, wl);
     }
-    io::init_system_wl(cores[0], &whitelisted);
-    let mut thread: Vec<std::thread::JoinHandle<()>> = cores.iter().zip(0..whitelisted.len()).map(|(core, port)| {
+    io::init_system_wl(&format!("recv{}", cores_str.join("")), cores[0], &whitelisted);
+    let mut thread: Vec<std::thread::JoinHandle<()>> = 
+        cores.iter().zip(0..whitelisted.len()).map(|(core, port)| {
         let c = *core;
-        let recv_port = io::PmdPort::new_mq_port(port as i32, 1, 1, &vec![c], &vec![c]).unwrap();
+        let mut recv_port = io::PmdPort::new_mq_port(port as i32, 1, 1, &vec![c], &vec![c]).unwrap();
         println!("Started port {} core {}", port, c);
         std::thread::spawn(move || {recv_thread(recv_port, 0, c)})
     }).collect();

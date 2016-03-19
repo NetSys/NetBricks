@@ -1,6 +1,12 @@
 use super::super::io;
 use std::fmt;
 
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct MacAddress {
+    pub addr: [u8;6]
+}
+
 /// A packet's MAC header.
 #[derive(Debug)]
 #[repr(C, packed)]

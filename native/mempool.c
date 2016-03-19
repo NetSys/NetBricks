@@ -24,13 +24,14 @@ RTE_DEFINE_PER_LCORE(int, _mempool_core) = 0;
 #if PER_CORE
 /* Creating one pool per core. */
 static struct rte_mempool *pframe_pool[RTE_MAX_LCORE];
+/*Needed for bulk allocation */
+struct rte_mbuf mbuf_template[RTE_MAX_LCORE];
 #else 
 /* Creating one pool per NUMA node. */
 static struct rte_mempool *pframe_pool[RTE_MAX_NUMA_NODES];
-#endif
-
 /*Needed for bulk allocation */
-struct rte_mbuf mbuf_template;
+struct rte_mbuf mbuf_template[RTE_MAX_LCORE];
+#endif
 
 #if PER_CORE
 #define MEMPOOL_ID RTE_PER_LCORE(_mempool_core)
@@ -42,6 +43,10 @@ struct rte_mbuf mbuf_template;
 static inline struct rte_mempool *current_pframe_pool()
 {
 	return pframe_pool[MEMPOOL_ID];
+}
+
+static inline struct rte_mbuf *current_template() {
+	return &mbuf_template[MEMPOOL_ID];
 }
 
 struct rte_mempool *get_pframe_pool(int coreid, int sid) {
@@ -97,11 +102,13 @@ int init_mempool()
 			/* Initialize mbuf template */
 #if PER_CORE
 			mbuf = rte_pktmbuf_alloc(pframe_pool[i]);
+			mbuf_template[i] = *mbuf;
+			rte_pktmbuf_free(mbuf);
 #else
 			mbuf = rte_pktmbuf_alloc(pframe_pool[sid]);
-#endif
-			mbuf_template = *mbuf;
+			mbuf_template[sid] = *mbuf;
 			rte_pktmbuf_free(mbuf);
+#endif
 #if (!PER_CORE)
 			initialized[sid] = 1;
 		}
@@ -154,7 +161,7 @@ int mbuf_alloc_bulk(mbuf_array_t array, uint16_t len, int cnt)
 		return ret;
 	}
 
-	template = *((__m128i*)&mbuf_template.buf_len);
+	template = *((__m128i*)&current_template()->buf_len);
 
 	if (cnt & 1) {
 		array[cnt] = &tmp;
