@@ -1,6 +1,6 @@
 use std::fmt;
 use std::result;
-use super::Act;
+use super::act::Act;
 use super::Batch;
 use super::iterator::BatchIterator;
 use super::ParsedBatch;
@@ -122,7 +122,7 @@ impl PacketBatch {
         }
     }
 
-    pub fn receive_batch<'a>(&'a mut self, port: &'a mut PmdPort, queue: i32) -> ReceiveBatch {
+    pub fn receive_batch<'a>(&'a mut self, port: PmdPort, queue: i32) -> ReceiveBatch {
         ReceiveBatch::new(self, port, queue)
     }
 

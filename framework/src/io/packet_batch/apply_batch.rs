@@ -1,5 +1,5 @@
 use super::iterator::{BatchIterator, PacketBatchAddressIterator};
-use super::Act;
+use super::act::Act;
 use super::Batch;
 use super::super::pmd::*;
 use super::packet_batch::cast_from_u8;
@@ -13,7 +13,6 @@ pub struct ReplaceBatch<'a, T, V>
 {
     parent: &'a mut V,
     template: &'a T,
-    applied: bool,
 }
 
 batch!{ReplaceBatch, [parent: &'a mut V, template: &'a T]}
@@ -23,6 +22,7 @@ impl<'a, T, V> Act for ReplaceBatch<'a, T, V>
           V: 'a + Batch + BatchIterator + Act
 {
     fn act(&mut self) -> &mut Self {
+        self.parent.act();
         // This inner context is to allow the iter reference to expire before we change self.
         {
             let iter = PacketBatchAddressIterator::new(self.parent);
@@ -33,13 +33,10 @@ impl<'a, T, V> Act for ReplaceBatch<'a, T, V>
                 }
             }
         }
-        self.applied = true;
-        self.parent.act();
         self
     }
 
     fn done(&mut self) -> &mut Self {
-        self.applied = false;
         self.parent.done();
         self
     }
@@ -62,33 +59,21 @@ impl<'a, T, V> BatchIterator for ReplaceBatch<'a, T, V>
 
     #[inline]
     unsafe fn payload(&mut self, idx: usize) -> *mut u8 {
-        if !self.applied {
-            self.act();
-        }
         self.parent.payload(idx)
     }
 
     #[inline]
     unsafe fn address(&mut self, idx: usize) -> *mut u8 {
-        if !self.applied {
-            self.act();
-        }
         self.parent.address(idx)
     }
 
     #[inline]
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
-        if !self.applied {
-            self.act();
-        }
         self.parent.next_address(idx)
     }
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
-        if !self.applied {
-            self.act();
-        }
         self.parent.next_payload(idx)
     }
 }

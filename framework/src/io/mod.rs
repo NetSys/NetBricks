@@ -5,7 +5,7 @@ pub use self::packet_batch::TransformBatch;
 pub use self::packet_batch::ReplaceBatch;
 pub use self::packet_batch::ReceiveBatch;
 pub use self::packet_batch::SendBatch;
-pub use self::packet_batch::Act;
+//pub use self::packet_batch::Act;
 pub use self::packet_batch::Batch;
 pub use self::pmd::*;
 mod interface;

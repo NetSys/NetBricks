@@ -7,7 +7,7 @@ pub use self::send_batch::SendBatch;
 use super::interface::EndOffset;
 use self::iterator::BatchIterator;
 use super::pmd::*;
-use super::interface::Result;
+use self::act::Act;
 
 #[macro_use]
 mod macros;
@@ -19,16 +19,7 @@ mod receive_batch;
 mod apply_batch;
 mod send_batch;
 mod iterator;
-
-// FIXME: This should become private.
-pub trait Act {
-    fn act(&mut self) -> &mut Self;
-
-    /// Notification indicating we are done processing the current batch of packets
-    fn done(&mut self) -> &mut Self;
-
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32>;
-}
+mod act;
 
 /// Public interface implemented by every packet batch type.
 pub trait Batch : Sized + BatchIterator + Act {

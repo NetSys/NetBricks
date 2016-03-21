@@ -1,4 +1,4 @@
-use super::Act;
+use super::act::Act;
 use super::Batch;
 use super::TransformBatch;
 use super::ReplaceBatch;
@@ -28,6 +28,10 @@ impl<'a, V> SendBatch<'a, V>
             sent: 0,
             parent: parent,
         }
+    }
+
+    pub fn process(&mut self) {
+        self.act();
     }
 }
 

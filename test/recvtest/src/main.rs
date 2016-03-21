@@ -3,7 +3,6 @@ extern crate time;
 extern crate simd;
 extern crate getopts;
 use e2d2::io;
-use e2d2::io::Act;
 use e2d2::io::Batch;
 use e2d2::headers::*;
 use getopts::Options;
@@ -12,7 +11,7 @@ use std::cell::Cell;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 
-fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
+fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Receiving started");
     let mut send_port = port.copy();
@@ -27,7 +26,7 @@ fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
         recv_cell.set(recv_cell.get() + 1);
     };
    
-    let mut packets = batch.receive_batch(&mut port, queue);
+    let mut packets = batch.receive_batch(port, queue);
     let mut parse = packets.parse::<MacHeader>();
     let mut transform = parse.transform(f);
     let mut pipeline = transform.send(&mut send_port, queue);
@@ -38,7 +37,7 @@ fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
     let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
     loop {
         recv_cell.set(0);
-        pipeline.act();
+        pipeline.process();
         let recv = recv_cell.get();
         rx += recv;
         cycles += 1;

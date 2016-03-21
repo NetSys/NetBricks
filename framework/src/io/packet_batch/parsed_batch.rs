@@ -1,5 +1,5 @@
 use std::marker::PhantomData;
-use super::Act;
+use super::act::Act;
 use super::Batch;
 use super::iterator::BatchIterator;
 use super::packet_batch::cast_from_u8;
@@ -11,7 +11,6 @@ pub struct ParsedBatch<'a, T: 'a + EndOffset, V>
     where V: 'a + Batch + BatchIterator + Act
 {
     parent: &'a mut V,
-    applied: bool,
     phantom: PhantomData<&'a T>,
 }
 
@@ -21,12 +20,10 @@ impl<'a, T, V> Act for ParsedBatch<'a, T, V>
 {
     fn act(&mut self) -> &mut Self {
         self.parent.act();
-        self.applied = true;
         self
     }
 
     fn done(&mut self) -> &mut Self {
-        self.applied = false;
         self.parent.done();
         self
     }

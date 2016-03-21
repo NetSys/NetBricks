@@ -5,7 +5,7 @@ macro_rules! batch {
             V:'a + Batch + BatchIterator + Act {
             #[inline]
             pub fn new($( $parts : $pty ),*) -> $name<'a, T, V> {
-                $name{ applied: false, $( $parts: $parts ),*, $($defid : $val),* }
+                $name{ $( $parts: $parts ),*, $($defid : $val),* }
             }
         }
 
@@ -16,9 +16,6 @@ macro_rules! batch {
             type Header = T;
 
             fn pop(&mut self) -> &mut V {
-                if !self.applied {
-                    self.act();
-                }
                 self.parent
             }
         }
