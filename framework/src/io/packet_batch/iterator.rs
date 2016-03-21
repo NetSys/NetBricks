@@ -1,7 +1,7 @@
 /// An interface implemented by all batches for iterating through the set of packets in a batch.
 /// This is one of two private interfaces
 pub trait BatchIterator {
-    fn start(&self) -> usize;
+    fn start(&mut self) -> usize;
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)>;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)>;
     unsafe fn payload(&mut self, idx: usize) -> *mut u8;

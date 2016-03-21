@@ -21,6 +21,7 @@ impl<'a, T, V> Act for ReplaceBatch<'a, T, V>
           V: 'a + Batch + BatchIterator + Act
 {
     fn act(&mut self) -> &mut Self {
+        // This inner context is to allow the iter reference to expire before we change self.
         {
             let iter = PacketBatchAddressIterator::new(self.parent);
             for addr in iter {
@@ -34,14 +35,22 @@ impl<'a, T, V> Act for ReplaceBatch<'a, T, V>
         self.parent.act();
         self
     }
+
+    fn done(&mut self) -> &mut Self {
+        self.applied = false;
+        self.parent.done();
+        self
+    }
 }
 
 impl<'a, T, V> BatchIterator for ReplaceBatch<'a, T, V>
     where T: 'a + EndOffset,
           V: 'a + Batch + BatchIterator + Act
 {
+    //FIXME: We should just go from packet batch applying, instead of doing this version where act() is triggered as a
+    //result of some functions being called.
     #[inline]
-    fn start(&self) -> usize {
+    fn start(&mut self) -> usize {
         self.parent.start()
     }
 

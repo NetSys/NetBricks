@@ -6,44 +6,29 @@ use e2d2::io;
 use e2d2::io::Act;
 use e2d2::io::Batch;
 use e2d2::headers::*;
-use std::net::*;
-use std::convert::From;
 use getopts::Options;
+use std::cell::Cell;
 use std::env;
-use std::num::ParseIntError;
-
-const DST_MAC2: [u8; 6] = [0x00, 0x0c, 0x29, 0x50, 0xa9, 0x1];
-const SRC_MAC2: [u8; 6] = [0x00, 0x26, 0x16, 0x00, 0x00, 0x2];
-fn prepare_mac_header2() -> MacHeader {
-    let mut hdr = MacHeader::new();
-    hdr.etype = u16::to_be(0x800);
-    hdr.src = SRC_MAC2;
-    hdr.dst = DST_MAC2;
-    hdr
-}
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Receiving started");
     let mut batch = io::PacketBatch::new(32);
+    let mut recv_batch = io::ReceiveBatch::new(&mut batch, &mut port, queue);
     let mut cycles = 0;
     let mut rx = 0;
     let mut no_rx = 0;
     let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
-    let machdr2 = prepare_mac_header2();
     loop {
-        let recv = match batch.recv_queue(&mut port, queue) {
-            Ok(v) => v as usize,
-            _ => 0,
-        };
-        cycles += 1;
+        let batch_size = Cell::<i32>::new(0);
+        recv_batch.parse::<NullHeader>().transform(&|_| batch_size.set(batch_size.get() + 1)).act().done();
+        let recv = batch_size.get();
         rx += recv;
+        cycles += 1;
         if recv == 0 {
             no_rx += 1
         }
-        batch.parse::<MacHeader>().replace(&machdr2).act();
-        let _ = batch.deallocate_batch();
         let now = time::precise_time_ns() / CONVERSION_FACTOR;
         if now > start {
             println!("{} rx_core {} pps {} no_rx {} loops {}",
@@ -57,7 +42,6 @@ fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
             cycles = 0;
             start = now;
         }
-        let _ = batch.deallocate_batch();
     }
 }
 
@@ -95,7 +79,7 @@ fn main() {
                                                             .zip(0..whitelisted.len())
                                                             .map(|(core, port)| {
                                                                 let c = *core;
-                                                                let mut recv_port =
+                                                                let recv_port =
                                                                     io::PmdPort::new_mq_port(port as i32,
                                                                                              1,
                                                                                              1,

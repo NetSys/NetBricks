@@ -22,6 +22,12 @@ impl<'a, T, V> Act for ParsedBatch<'a, T, V>
         self.applied = true;
         self
     }
+
+    fn done(&mut self) -> &mut Self {
+        self.applied = false;
+        self.parent.done();
+        self
+    }
 }
 
 batch!{ParsedBatch, [parent: &'a mut V], [phantom: PhantomData]}
@@ -31,7 +37,7 @@ impl<'a, T, V> BatchIterator for ParsedBatch<'a, T, V>
           V: 'a + Batch + BatchIterator + Act
 {
     #[inline]
-    fn start(&self) -> usize {
+    fn start(&mut self) -> usize {
         self.parent.start()
     }
 

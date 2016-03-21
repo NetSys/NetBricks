@@ -32,6 +32,12 @@ impl<'a, T, V> Act for TransformBatch<'a, T, V>
         self.parent.act();
         self
     }
+
+    fn done(&mut self) -> &mut Self {
+        self.applied = false;
+        self.parent.done();
+        self
+    }
 }
 
 impl<'a, T, V> BatchIterator for TransformBatch<'a, T, V>
@@ -39,7 +45,7 @@ impl<'a, T, V> BatchIterator for TransformBatch<'a, T, V>
           V: 'a + Batch + BatchIterator + Act
 {
     #[inline]
-    fn start(&self) -> usize {
+    fn start(&mut self) -> usize {
         self.parent.start()
     }
 

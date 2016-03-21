@@ -24,7 +24,7 @@ pub struct PacketBatch {
 impl BatchIterator for PacketBatch {
     /// The starting offset for packets in the current batch.
     #[inline]
-    fn start(&self) -> usize {
+    fn start(&mut self) -> usize {
         self.start
     }
 
@@ -71,15 +71,15 @@ impl Act for PacketBatch {
     fn act(&mut self) -> &mut Self {
         self
     }
+
+    fn done(&mut self) -> &mut Self {
+        self
+    }
 }
 
 impl Batch for PacketBatch {
     type Parent = Self;
     type Header = NullHeader;
-    fn parse<T: EndOffset>(&mut self) -> ParsedBatch<T, Self> {
-        ParsedBatch::<T, Self>::new(self)
-    }
-
     fn transform(&mut self, _: &Fn(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
         panic!("Cannot transform PacketBatch")
     }
