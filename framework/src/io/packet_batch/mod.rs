@@ -10,7 +10,7 @@ mod packet_batch;
 mod parsed_batch;
 mod transform_batch;
 mod apply_batch;
-mod internal_iface;
+mod iterator;
 
 pub trait Act {
     fn act(&mut self) -> &mut Self;

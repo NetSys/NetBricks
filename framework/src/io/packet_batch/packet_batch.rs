@@ -1,7 +1,7 @@
 use std::fmt;
 use std::result;
 use super::Act;
-use super::internal_iface::ProcessPacketBatch;
+use super::iterator::BatchIterator;
 use super::ParsedBatch;
 use super::super::mbuf::*;
 use super::super::interface::Result;
@@ -17,7 +17,7 @@ pub struct PacketBatch {
     end: usize,
 }
 
-impl ProcessPacketBatch for PacketBatch {
+impl BatchIterator for PacketBatch {
     /// The starting offset for packets in the current batch.
     #[inline]
     fn start(&self) -> usize {

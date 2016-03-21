@@ -1,4 +1,6 @@
-pub trait ProcessPacketBatch {
+/// An interface implemented by all batches for iterating through the set of packets in a batch.
+/// This is one of two private interfaces
+pub trait BatchIterator {
     fn start(&self) -> usize;
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)>;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)>;
@@ -7,13 +9,13 @@ pub trait ProcessPacketBatch {
 }
 
 pub struct PacketBatchAddressIterator<'a> {
-    batch: &'a mut ProcessPacketBatch,
+    batch: &'a mut BatchIterator,
     idx: usize,
 }
 
 impl<'a> PacketBatchAddressIterator<'a> {
     #[inline]
-    pub fn new(batch: &mut ProcessPacketBatch) -> PacketBatchAddressIterator {
+    pub fn new(batch: &mut BatchIterator) -> PacketBatchAddressIterator {
         let start = batch.start();
         PacketBatchAddressIterator {
             batch: batch,

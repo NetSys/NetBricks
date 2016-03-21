@@ -41,7 +41,7 @@ macro_rules! batch {
     ($name : ident,  [ $($parts: ident : $pty: ty),* ], [$($defid : ident : $val : expr),*]) => {
         impl<'a, T, V> $name<'a, T, V>
             where T: 'a + EndOffset,
-            V:'a + ProcessPacketBatch + Act {
+            V:'a + BatchIterator + Act {
             #[inline]
             pub fn new($( $parts : $pty ),*) -> $name<'a, T, V> {
                 $name{ applied: false, $( $parts: $parts ),*, $($defid : $val),* }
