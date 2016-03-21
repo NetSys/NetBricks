@@ -82,10 +82,12 @@ impl Act for PacketBatch {
     fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
         unsafe {
             port.send_queue(queue, self.packet_ptr(), self.available() as i32)
-                .and_then(|sent| {self.consumed_batch(sent as usize); Ok(sent)})
+                .and_then(|sent| {
+                    self.consumed_batch(sent as usize);
+                    Ok(sent)
+                })
         }
     }
-
 }
 
 impl Batch for PacketBatch {

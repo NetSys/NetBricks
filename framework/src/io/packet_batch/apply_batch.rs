@@ -53,8 +53,8 @@ impl<'a, T, V> BatchIterator for ReplaceBatch<'a, T, V>
     where T: 'a + EndOffset,
           V: 'a + Batch + BatchIterator + Act
 {
-    //FIXME: We should just go from packet batch applying, instead of doing this version where act() is triggered as a
-    //result of some functions being called.
+    // FIXME: We should just go from packet batch applying, instead of doing this version where act() is triggered as a
+    // result of some functions being called.
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()

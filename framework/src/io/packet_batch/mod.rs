@@ -41,7 +41,9 @@ pub trait Batch : Sized + BatchIterator + Act {
     }
 
     /// Transform a header field.
-    fn transform<'a>(&'a mut self, transformer: &'a mut FnMut(&mut Self::Header)) -> TransformBatch<Self::Header, Self> {
+    fn transform<'a>(&'a mut self,
+                     transformer: &'a mut FnMut(&mut Self::Header))
+                     -> TransformBatch<Self::Header, Self> {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }
 

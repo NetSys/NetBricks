@@ -9,7 +9,7 @@ use super::super::interface::Result;
 
 // FIXME: Should we be handling multiple queues and ports here?
 // FIXME: Should this really even be a batch?
-pub struct SendBatch<'a, V> 
+pub struct SendBatch<'a, V>
     where V: 'a + Batch + BatchIterator + Act
 {
     port: &'a mut PmdPort,
@@ -18,20 +18,25 @@ pub struct SendBatch<'a, V>
     pub sent: u64,
 }
 
-impl<'a, V> SendBatch<'a, V> 
+impl<'a, V> SendBatch<'a, V>
     where V: 'a + Batch + BatchIterator + Act
 {
     pub fn new(parent: &'a mut V, port: &'a mut PmdPort, queue: i32) -> SendBatch<'a, V> {
-        SendBatch{port: port, queue: queue, sent: 0, parent: parent}
+        SendBatch {
+            port: port,
+            queue: queue,
+            sent: 0,
+            parent: parent,
+        }
     }
 }
 
-impl<'a, V> Batch for SendBatch<'a, V> 
+impl<'a, V> Batch for SendBatch<'a, V>
     where V: 'a + Batch + BatchIterator + Act
 {
     type Header = NullHeader;
     type Parent = V;
-    
+
     fn pop(&mut self) -> &mut V {
         panic!("Cannot get parent of sent batch")
     }
@@ -50,7 +55,7 @@ impl<'a, V> Batch for SendBatch<'a, V>
 }
 
 // FIXME: All these should panic instead of doing this.
-impl<'a, V> BatchIterator for SendBatch<'a, V> 
+impl<'a, V> BatchIterator for SendBatch<'a, V>
     where V: 'a + Batch + BatchIterator + Act
 {
     #[inline]
@@ -80,15 +85,20 @@ impl<'a, V> BatchIterator for SendBatch<'a, V>
 }
 
 /// Internal interface for packets.
-impl<'a, V> Act for SendBatch<'a, V> 
+impl<'a, V> Act for SendBatch<'a, V>
     where V: 'a + Batch + BatchIterator + Act
 {
     #[inline]
     fn act(&mut self) -> &mut Self {
         // First everything is applied
         self.parent.act();
-        self.parent.send_queue(self.port, self.queue)
-            .and_then(|x| {self.sent += x as u64; Ok(x)}).expect("Send failed");
+        self.parent
+            .send_queue(self.port, self.queue)
+            .and_then(|x| {
+                self.sent += x as u64;
+                Ok(x)
+            })
+            .expect("Send failed");
         self.parent.done();
         self
     }

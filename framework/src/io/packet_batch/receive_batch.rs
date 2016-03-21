@@ -14,19 +14,25 @@ pub struct ReceiveBatch<'a> {
     applied: bool,
     port: &'a mut PmdPort,
     queue: i32,
-    pub received: u64
+    pub received: u64,
 }
 
 impl<'a> ReceiveBatch<'a> {
     pub fn new(parent: &'a mut PacketBatch, port: &'a mut PmdPort, queue: i32) -> ReceiveBatch<'a> {
-        ReceiveBatch{applied: false, parent: parent, port: port, queue: queue, received: 0}
+        ReceiveBatch {
+            applied: false,
+            parent: parent,
+            port: port,
+            queue: queue,
+            received: 0,
+        }
     }
 }
 
 impl<'a> Batch for ReceiveBatch<'a> {
     type Header = NullHeader;
     type Parent = PacketBatch;
-    
+
     fn pop(&mut self) -> &mut PacketBatch {
         self.parent
     }
@@ -77,8 +83,13 @@ impl<'a> Act for ReceiveBatch<'a> {
     #[inline]
     fn act(&mut self) -> &mut Self {
         if !self.applied {
-            self.parent.recv_queue(self.port, self.queue)
-                .and_then(|x| {self.received += x as u64; Ok(x)}).expect("Receive failed");
+            self.parent
+                .recv_queue(self.port, self.queue)
+                .and_then(|x| {
+                    self.received += x as u64;
+                    Ok(x)
+                })
+                .expect("Receive failed");
             self.applied = true
         }
         self
