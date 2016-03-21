@@ -18,9 +18,16 @@ impl fmt::Display for IpHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let src = Ipv4Addr::from(self.src());
         let dst = Ipv4Addr::from(self.dst());
-        write!(f, "{} > {} version: {} ihl: {} len: {} ttl: {} proto: {} csum: {}",
-               src, dst, self.version(), self.ihl(),
-               self.length(), self.ttl(), self.protocol(), self.csum())
+        write!(f,
+               "{} > {} version: {} ihl: {} len: {} ttl: {} proto: {} csum: {}",
+               src,
+               dst,
+               self.version(),
+               self.ihl(),
+               self.length(),
+               self.ttl(),
+               self.protocol(),
+               self.csum())
     }
 }
 
@@ -41,7 +48,13 @@ impl io::EndOffset for IpHeader {
 impl IpHeader {
     #[inline]
     pub fn new() -> IpHeader {
-        IpHeader{version_to_len: 0, id_to_foffset:0, ttl_to_csum:0, src_ip: 0, dst_ip:0}
+        IpHeader {
+            version_to_len: 0,
+            id_to_foffset: 0,
+            ttl_to_csum: 0,
+            src_ip: 0,
+            dst_ip: 0,
+        }
     }
 
     #[inline]
@@ -127,8 +140,7 @@ impl IpHeader {
 
     #[inline]
     pub fn set_flags(&mut self, flags: u8) {
-        self.id_to_foffset = (self.id_to_foffset & !0x00e00000) | 
-            (((flags & 0x7) as u32) << 16 + 5);
+        self.id_to_foffset = (self.id_to_foffset & !0x00e00000) | (((flags & 0x7) as u32) << 16 + 5);
     }
 
     #[inline]
@@ -147,7 +159,7 @@ impl IpHeader {
 
     #[inline]
     pub fn version(&self) -> u8 {
-        let vihl = ((self.version_to_len & 0xf0)  as u8) >> 4;
+        let vihl = ((self.version_to_len & 0xf0) as u8) >> 4;
         vihl
     }
 
@@ -186,7 +198,7 @@ impl IpHeader {
 
     #[inline]
     pub fn set_ecn(&mut self, ecn: u8) {
-        self.version_to_len = (self.version_to_len & !0x0300) | (((ecn & 0x03) as u32) << 8); 
+        self.version_to_len = (self.version_to_len & !0x0300) | (((ecn & 0x03) as u32) << 8);
     }
 
     #[inline]

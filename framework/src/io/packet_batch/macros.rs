@@ -1,6 +1,39 @@
 macro_rules! parse {
-    ($htyp:ty, $parent:expr) => {
-            ParsedBatch::<$htyp, Self>::new($parent)
+    ($htype:ident) => {
+        #[inline]
+        pub fn parse<$htype: EndOffset>(&mut self) -> ParsedBatch<T2, Self> {
+            ParsedBatch::<T2, Self>::new(self)
+        }
+    }
+}
+
+macro_rules! transform {
+    ($htype:ty) => {
+        #[inline]
+        pub fn transform(&'a mut self, transformer: &'a Fn(&mut $htype)) -> TransformBatch<$htype, Self> {
+            TransformBatch::<$htype, Self>::new(self, transformer)
+        }
+    }
+}
+
+macro_rules! pop {
+    ($htype:ty, $ptype:ty) => {
+        #[inline]
+        pub fn pop(&'a mut self) -> &'a mut $ptype {
+            if !self.applied {
+                self.act();
+            }
+            self.parent
+        }
+    }
+}
+
+macro_rules! replace {
+    ($htype: ty) => {
+        #[inline]
+        pub fn replace(&'a mut self, template: &'a $htype) -> ReplaceBatch<$htype, Self> {
+            ReplaceBatch::<$htype, Self>::new(self, template)
+        }
     }
 }
 
@@ -14,29 +47,13 @@ macro_rules! batch {
                 $name{ applied: false, $( $parts: $parts ),*, $($defid : $val),* }
             }
 
-            // FIXME: Rename this to something reasonable
-            #[inline]
-            pub fn parse<T2: EndOffset>(&mut self) -> ParsedBatch<T2, Self> {
-                parse!(T2, self)
-            }
+            parse!{T2}
 
-            #[inline]
-            pub fn transform(&'a mut self, transformer: &'a Fn(&mut T)) -> TransformBatch<T, Self> {
-                TransformBatch::<T, Self>::new(self, transformer)
-            }
+            transform!{T}
 
-            #[inline]
-            pub fn pop(&'a mut self) -> &'a mut V {
-                if !self.applied {
-                    self.act();
-                }
-                self.parent
-            }
+            pop!{T, V}
 
-            #[inline]
-            pub fn replace(&'a mut self, template: &'a T) -> ReplaceBatch<T, Self> {
-                ReplaceBatch::<T, Self>::new(self, template)
-            }
+            replace!{T}
         }
     };
     ($name: ident, [ $($parts: ident : $pty: ty),* ]) => {

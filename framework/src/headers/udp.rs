@@ -2,20 +2,24 @@ use super::super::io;
 use std::fmt;
 
 /// UDP header using SSE
-//#[repr(C, packed)]
+// #[repr(C, packed)]
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct UdpHeader {
     src_port: u16,
     dst_port: u16,
     len: u16,
-    csum: u16
+    csum: u16,
 }
 
 impl fmt::Display for UdpHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "src_port: {} dst_port: {} len: {} checksum: {}",
-               self.src_port(), self.dst_port(), self.length(), self.checksum())
+        write!(f,
+               "src_port: {} dst_port: {} len: {} checksum: {}",
+               self.src_port(),
+               self.dst_port(),
+               self.length(),
+               self.checksum())
     }
 }
 
@@ -24,7 +28,7 @@ impl io::EndOffset for UdpHeader {
     fn offset(&self) -> usize {
         8 // 8 bytes
     }
-    
+
     #[inline]
     fn size() -> usize {
         8
@@ -34,7 +38,12 @@ impl io::EndOffset for UdpHeader {
 impl UdpHeader {
     #[inline]
     pub fn new() -> UdpHeader {
-        UdpHeader{src_port: 0, dst_port: 0, len: 0, csum: 0}
+        UdpHeader {
+            src_port: 0,
+            dst_port: 0,
+            len: 0,
+            csum: 0,
+        }
     }
 
     #[inline]

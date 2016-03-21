@@ -201,3 +201,6 @@ ModelManifest.xml
 *.tar.gz
 3rdparty/dpdk
 /native/test/test
+
+# Remove rustfmt backups
+*.rs.bk

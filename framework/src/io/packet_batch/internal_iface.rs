@@ -8,14 +8,17 @@ pub trait ProcessPacketBatch {
 
 pub struct PacketBatchAddressIterator<'a> {
     batch: &'a mut ProcessPacketBatch,
-    idx: usize
+    idx: usize,
 }
 
 impl<'a> PacketBatchAddressIterator<'a> {
     #[inline]
     pub fn new(batch: &mut ProcessPacketBatch) -> PacketBatchAddressIterator {
         let start = batch.start();
-        PacketBatchAddressIterator{batch: batch, idx: start}
+        PacketBatchAddressIterator {
+            batch: batch,
+            idx: start,
+        }
     }
 }
 
@@ -29,8 +32,8 @@ impl<'a> Iterator for PacketBatchAddressIterator<'a> {
             Some((packet, idx)) => {
                 self.idx = idx;
                 Some(packet)
-            },
-            None => None
+            }
+            None => None,
         }
     }
 }

@@ -6,16 +6,18 @@ use super::TransformBatch;
 use super::ReplaceBatch;
 use super::super::interface::EndOffset;
 
-pub struct ParsedBatch<'a, T:'a + EndOffset, V> where
-    V:'a + ProcessPacketBatch + Act {
+pub struct ParsedBatch<'a, T: 'a + EndOffset, V>
+    where V: 'a + ProcessPacketBatch + Act
+{
     parent: &'a mut V,
     applied: bool,
     phantom: PhantomData<&'a T>,
 }
 
 impl<'a, T, V> Act for ParsedBatch<'a, T, V>
-    where T:'a + EndOffset,
-    V: 'a +  ProcessPacketBatch + Act {
+    where T: 'a + EndOffset,
+          V: 'a + ProcessPacketBatch + Act
+{
     fn act(&mut self) -> &mut Self {
         self.parent.act();
         self.applied = true;
@@ -26,8 +28,9 @@ impl<'a, T, V> Act for ParsedBatch<'a, T, V>
 batch!{ParsedBatch, [parent: &'a mut V], [phantom: PhantomData]}
 
 impl<'a, T, V> ProcessPacketBatch for ParsedBatch<'a, T, V>
-    where T:'a + EndOffset,
-    V: 'a +  ProcessPacketBatch + Act {
+    where T: 'a + EndOffset,
+          V: 'a + ProcessPacketBatch + Act
+{
     #[inline]
     fn start(&self) -> usize {
         self.parent.start()
@@ -58,7 +61,7 @@ impl<'a, T, V> ProcessPacketBatch for ParsedBatch<'a, T, V>
                 let offset = T::offset(cast_from_u8::<T>(packet));
                 Some((packet.offset(offset as isize), idx))
             }
-            None => None
+            None => None,
         }
     }
 }

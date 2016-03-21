@@ -8,7 +8,8 @@ use std::ptr;
 
 pub struct ReplaceBatch<'a, T, V>
     where T: 'a + EndOffset,
-    V:'a + ProcessPacketBatch + Act {
+          V: 'a + ProcessPacketBatch + Act
+{
     parent: &'a mut V,
     template: &'a T,
     applied: bool,
@@ -17,8 +18,9 @@ pub struct ReplaceBatch<'a, T, V>
 batch!{ReplaceBatch, [parent: &'a mut V, template: &'a T]}
 
 impl<'a, T, V> Act for ReplaceBatch<'a, T, V>
-    where T:'a + EndOffset,
-    V: 'a +  ProcessPacketBatch + Act {
+    where T: 'a + EndOffset,
+          V: 'a + ProcessPacketBatch + Act
+{
     fn act(&mut self) -> &mut Self {
         {
             let iter = PacketBatchAddressIterator::new(self.parent);
@@ -36,8 +38,9 @@ impl<'a, T, V> Act for ReplaceBatch<'a, T, V>
 }
 
 impl<'a, T, V> ProcessPacketBatch for ReplaceBatch<'a, T, V>
-    where T:'a + EndOffset,
-    V: 'a +  ProcessPacketBatch + Act {
+    where T: 'a + EndOffset,
+          V: 'a + ProcessPacketBatch + Act
+{
     #[inline]
     fn start(&self) -> usize {
         self.parent.start()

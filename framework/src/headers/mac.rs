@@ -4,7 +4,7 @@ use std::fmt;
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct MacAddress {
-    pub addr: [u8;6]
+    pub addr: [u8; 6],
 }
 
 /// A packet's MAC header.
@@ -18,9 +18,21 @@ pub struct MacHeader {
 
 impl fmt::Display for MacHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x} > {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x} 0x{:04x}",
-               self.src[0], self.src[1], self.src[2], self.src[3], self.src[4], self.src[5],
-               self.dst[0], self.dst[1], self.dst[2], self.dst[3], self.dst[4], self.dst[5],
+        write!(f,
+               "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x} > \
+                {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x} 0x{:04x}",
+               self.src[0],
+               self.src[1],
+               self.src[2],
+               self.src[3],
+               self.src[4],
+               self.src[5],
+               self.dst[0],
+               self.dst[1],
+               self.dst[2],
+               self.dst[3],
+               self.dst[4],
+               self.dst[5],
                u16::from_be(self.etype))
     }
 }
@@ -47,6 +59,10 @@ impl io::EndOffset for MacHeader {
 
 impl MacHeader {
     pub fn new() -> Self {
-        MacHeader{dst: [0,0,0,0,0,0], src:[0,0,0,0,0,0], etype:0}
+        MacHeader {
+            dst: [0, 0, 0, 0, 0, 0],
+            src: [0, 0, 0, 0, 0, 0],
+            etype: 0,
+        }
     }
 }

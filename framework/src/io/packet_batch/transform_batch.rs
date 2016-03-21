@@ -7,7 +7,8 @@ use super::super::interface::EndOffset;
 
 pub struct TransformBatch<'a, T, V>
     where T: 'a + EndOffset,
-    V:'a + ProcessPacketBatch + Act {
+          V: 'a + ProcessPacketBatch + Act
+{
     parent: &'a mut V,
     transformer: &'a Fn(&'a mut T),
     applied: bool,
@@ -16,8 +17,9 @@ pub struct TransformBatch<'a, T, V>
 batch! {TransformBatch, [parent : &'a mut V, transformer: &'a Fn(&'a mut T)], []}
 
 impl<'a, T, V> Act for TransformBatch<'a, T, V>
-    where T:'a + EndOffset,
-    V: 'a +  ProcessPacketBatch + Act {
+    where T: 'a + EndOffset,
+          V: 'a + ProcessPacketBatch + Act
+{
     fn act(&mut self) -> &mut Self {
         {
             let f = self.transformer;
@@ -34,8 +36,9 @@ impl<'a, T, V> Act for TransformBatch<'a, T, V>
 }
 
 impl<'a, T, V> ProcessPacketBatch for TransformBatch<'a, T, V>
-    where T:'a + EndOffset,
-    V: 'a +  ProcessPacketBatch + Act {
+    where T: 'a + EndOffset,
+          V: 'a + ProcessPacketBatch + Act
+{
     #[inline]
     fn start(&self) -> usize {
         self.parent.start()

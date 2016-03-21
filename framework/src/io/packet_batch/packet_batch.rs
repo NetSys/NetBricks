@@ -14,7 +14,7 @@ pub struct PacketBatch {
     array: Vec<*mut MBuf>,
     cnt: i32,
     start: usize,
-    end: usize
+    end: usize,
 }
 
 impl ProcessPacketBatch for PacketBatch {
@@ -72,12 +72,17 @@ impl Act for PacketBatch {
 impl PacketBatch {
     /// Parse packets.
     #[inline]
-    pub fn parse<T:EndOffset>(&mut self) -> ParsedBatch<T, Self> {
+    pub fn parse<T: EndOffset>(&mut self) -> ParsedBatch<T, Self> {
         ParsedBatch::<T, Self>::new(self)
     }
 
     pub fn new(cnt: i32) -> PacketBatch {
-        PacketBatch { array: Vec::<*mut MBuf>::with_capacity(cnt as usize), cnt: cnt, start: 0, end: 0}
+        PacketBatch {
+            array: Vec::<*mut MBuf>::with_capacity(cnt as usize),
+            cnt: cnt,
+            start: 0,
+            end: 0,
+        }
     }
 
     /// Allocate packet batch with each packet of a given size.
@@ -85,21 +90,21 @@ impl PacketBatch {
         let cnt = self.cnt;
         match self.alloc_packet_batch(len, cnt) {
             Ok(_) => Ok(self),
-            Err(_) => Err(ZCSIError::FailedAllocation)
+            Err(_) => Err(ZCSIError::FailedAllocation),
         }
     }
 
     pub fn allocate_partial_batch_with_size(&mut self, len: u16, cnt: i32) -> Result<&mut Self> {
         match self.alloc_packet_batch(len, cnt) {
             Ok(_) => Ok(self),
-            Err(_) => Err(ZCSIError::FailedAllocation)
+            Err(_) => Err(ZCSIError::FailedAllocation),
         }
     }
 
     pub fn deallocate_batch(&mut self) -> Result<&mut Self> {
         match self.free_packet_batch() {
             Ok(_) => Ok(self),
-            Err(_) => Err(ZCSIError::FailedDeallocation)
+            Err(_) => Err(ZCSIError::FailedDeallocation),
         }
     }
 
@@ -114,9 +119,11 @@ impl PacketBatch {
     pub fn dump_addr(&self) {
         let start = self.start;
         let end = self.end;
-        for idx in start..end  {
+        for idx in start..end {
             let val = unsafe { &*self.array[idx] };
-            println!("Buf address is {:p} {:p}", val.data_address(0), self.array[idx]);
+            println!("Buf address is {:p} {:p}",
+                     val.data_address(0),
+                     self.array[idx]);
         }
     }
 
@@ -157,7 +164,7 @@ impl PacketBatch {
         unsafe {
             match self.deallocate_batch() {
                 Err(err) => Err(err),
-                Ok(_) => self.recv_internal(port, queue)
+                Ok(_) => self.recv_internal(port, queue),
             }
         }
     }
@@ -189,7 +196,7 @@ impl PacketBatch {
     #[inline]
     unsafe fn recv_internal(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
         match port.recv_queue(queue, self.packet_ptr(), self.max_size() as i32) {
-            e @ Err(_)  => e,
+            e @ Err(_) => e,
             Ok(recv) => {
                 self.add_to_batch(recv as usize);
                 Ok(recv)
@@ -204,7 +211,7 @@ impl PacketBatch {
                 Err(())
             } else {
                 let parray = self.array.as_mut_ptr();
-                let ret  = mbuf_alloc_bulk(parray, len, cnt);
+                let ret = mbuf_alloc_bulk(parray, len, cnt);
                 if ret == 0 {
                     self.start = 0;
                     self.end = cnt as usize;
@@ -246,16 +253,14 @@ impl Drop for PacketBatch {
 }
 
 #[inline]
-pub fn cast_from_u8<'a, T:'a>(data: *mut u8) -> &'a mut T {
+pub fn cast_from_u8<'a, T: 'a>(data: *mut u8) -> &'a mut T {
     let typecast = data as *mut T;
-    unsafe {&mut *typecast}
+    unsafe { &mut *typecast }
 }
 
 // Some low level functions that need access to private members.
 #[link(name = "zcsi")]
-extern {
+extern "C" {
     fn mbuf_alloc_bulk(array: *mut *mut MBuf, len: u16, cnt: i32) -> i32;
     fn mbuf_free_bulk(array: *mut *mut MBuf, cnt: i32) -> i32;
 }
-
-

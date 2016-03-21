@@ -1,10 +1,14 @@
 use std::result;
 mod dpdk {
     #[link(name = "zcsi")]
-    extern {
+    extern "C" {
         pub fn init_system(name: *const u8, nlen: i32, core: i32) -> i32;
-        pub fn init_system_whitelisted(name: *const u8, nlen: i32, core: i32, 
-                                       whitelist: *mut *const u8, wlcount: i32) -> i32;
+        pub fn init_system_whitelisted(name: *const u8,
+                                       nlen: i32,
+                                       core: i32,
+                                       whitelist: *mut *const u8,
+                                       wlcount: i32)
+                                       -> i32;
         pub fn init_thread(tid: i32, core: i32);
     }
 }
@@ -28,8 +32,11 @@ pub fn init_system_wl(name: &String, core: i32, pci: &Vec<String>) {
         whitelist.push(dev.as_ptr());
     }
     unsafe {
-        let ret = dpdk::init_system_whitelisted(name.as_ptr(), name.len() as i32, core, 
-                                      whitelist.as_mut_ptr(), pci.len() as i32);
+        let ret = dpdk::init_system_whitelisted(name.as_ptr(),
+                                                name.len() as i32,
+                                                core,
+                                                whitelist.as_mut_ptr(),
+                                                pci.len() as i32);
         if ret != 0 {
             panic!("Could not initialize the system errno {}", ret)
         }
@@ -55,7 +62,7 @@ pub type Result<T> = result::Result<T, ZCSIError>;
 
 pub trait EndOffset {
     /// Offset returns the number of bytes to skip to get to the next header.
-    fn offset(&self) -> usize; 
+    fn offset(&self) -> usize;
     /// Returns the size of this header in bytes.
     fn size() -> usize;
 }
