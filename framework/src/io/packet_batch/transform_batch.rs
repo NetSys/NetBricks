@@ -1,13 +1,12 @@
 use super::iterator::{BatchIterator, PacketBatchAddressIterator};
-use super::ParsedBatch;
-use super::ReplaceBatch;
 use super::Act;
+use super::Batch;
 use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
 
 pub struct TransformBatch<'a, T, V>
     where T: 'a + EndOffset,
-          V: 'a + BatchIterator + Act
+          V: 'a + Batch + BatchIterator + Act
 {
     parent: &'a mut V,
     transformer: &'a Fn(&'a mut T),
@@ -18,7 +17,7 @@ batch! {TransformBatch, [parent : &'a mut V, transformer: &'a Fn(&'a mut T)], []
 
 impl<'a, T, V> Act for TransformBatch<'a, T, V>
     where T: 'a + EndOffset,
-          V: 'a + BatchIterator + Act
+          V: 'a + Batch + BatchIterator + Act
 {
     fn act(&mut self) -> &mut Self {
         {
@@ -37,7 +36,7 @@ impl<'a, T, V> Act for TransformBatch<'a, T, V>
 
 impl<'a, T, V> BatchIterator for TransformBatch<'a, T, V>
     where T: 'a + EndOffset,
-          V: 'a + BatchIterator + Act
+          V: 'a + Batch + BatchIterator + Act
 {
     #[inline]
     fn start(&self) -> usize {

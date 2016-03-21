@@ -1,13 +1,17 @@
 use std::fmt;
 use std::result;
 use super::Act;
+use super::Batch;
 use super::iterator::BatchIterator;
 use super::ParsedBatch;
+use super::ReplaceBatch;
+use super::TransformBatch;
 use super::super::mbuf::*;
 use super::super::interface::Result;
 use super::super::interface::ZCSIError;
 use super::super::interface::EndOffset;
 use super::super::pmd::*;
+use super::super::super::headers::*;
 
 /// Base packet batch structure. This is the abstract structure on which all operations are built.
 pub struct PacketBatch {
@@ -66,6 +70,26 @@ impl Act for PacketBatch {
     #[inline]
     fn act(&mut self) -> &mut Self {
         self
+    }
+}
+
+impl Batch for PacketBatch {
+    type Parent = Self;
+    type Header = NullHeader; 
+    fn parse<T: EndOffset>(&mut self) -> ParsedBatch<T, Self> {
+        ParsedBatch::<T, Self>::new(self)
+    }
+
+    fn transform(&mut self, _: &Fn(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
+        panic!("Cannot transform PacketBatch")
+    }
+
+    fn replace(&mut self, _: &NullHeader) -> ReplaceBatch<NullHeader, Self> {
+        panic!("Cannot replace PacketBatch")
+    }
+
+    fn pop(&mut self) -> &mut Self {
+        panic!("Cannot pop PacketBatch")
     }
 }
 
