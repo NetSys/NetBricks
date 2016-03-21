@@ -75,7 +75,7 @@ impl Act for PacketBatch {
 
 impl Batch for PacketBatch {
     type Parent = Self;
-    type Header = NullHeader; 
+    type Header = NullHeader;
     fn parse<T: EndOffset>(&mut self) -> ParsedBatch<T, Self> {
         ParsedBatch::<T, Self>::new(self)
     }

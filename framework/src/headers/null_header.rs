@@ -21,9 +21,3 @@ impl io::EndOffset for NullHeader {
         0
     }
 }
-
-impl NullHeader {
-    pub fn new() -> Self {
-        NullHeader{}
-    }
-}

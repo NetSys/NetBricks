@@ -12,8 +12,8 @@ use getopts::Options;
 use std::env;
 use std::num::ParseIntError;
 
-const DST_MAC2 : [u8; 6] = [0x00, 0x0c, 0x29, 0x50, 0xa9, 0x1];
-const SRC_MAC2 : [u8; 6] = [0x00, 0x26, 0x16, 0x00, 0x00, 0x2];
+const DST_MAC2: [u8; 6] = [0x00, 0x0c, 0x29, 0x50, 0xa9, 0x1];
+const SRC_MAC2: [u8; 6] = [0x00, 0x26, 0x16, 0x00, 0x00, 0x2];
 fn prepare_mac_header2() -> MacHeader {
     let mut hdr = MacHeader::new();
     hdr.etype = u16::to_be(0x800);
@@ -22,7 +22,7 @@ fn prepare_mac_header2() -> MacHeader {
     hdr
 }
 
-const CONVERSION_FACTOR:u64 = 1000000000;
+const CONVERSION_FACTOR: u64 = 1000000000;
 fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Receiving started");
@@ -35,7 +35,7 @@ fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
     loop {
         let recv = match batch.recv_queue(&mut port, queue) {
             Ok(v) => v as usize,
-            _ => 0
+            _ => 0,
         };
         cycles += 1;
         rx += recv;
@@ -47,7 +47,11 @@ fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
         let now = time::precise_time_ns() / CONVERSION_FACTOR;
         if now > start {
             println!("{} rx_core {} pps {} no_rx {} loops {}",
-                     (now - start), core, rx, no_rx, cycles);
+                     (now - start),
+                     core,
+                     rx,
+                     no_rx,
+                     cycles);
             rx = 0;
             no_rx = 0;
             cycles = 0;
@@ -65,31 +69,42 @@ fn main() {
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optflag("h", "help", "print this help menu");
     let matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
-        Err(f) => { panic!(f.to_string()) }
+        Ok(m) => m,
+        Err(f) => panic!(f.to_string()),
     };
     if matches.opt_present("h") {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
     }
     let cores_str = matches.opt_strs("c");
-    //let core:i32 = matches.opt_str("c").unwrap().parse().ok().expect("Core cannot be parsed");
+    // let core:i32 = matches.opt_str("c").unwrap().parse().ok().expect("Core cannot be parsed");
     let whitelisted = matches.opt_strs("w");
     if cores_str.len() > whitelisted.len() {
         println!("More cores than ports");
         std::process::exit(1);
     }
-    let cores:Vec<i32> = cores_str.iter().map(|n: &String| n.parse().ok().
-                              expect(&format!("Core cannot be parsed {}", n))).collect();
+    let cores: Vec<i32> = cores_str.iter()
+                                   .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
+                                   .collect();
     for (core, wl) in cores.iter().zip(whitelisted.iter()) {
         println!("Going to use core {} for wl {}", core, wl);
     }
-    io::init_system_wl(&format!("recv{}", cores_str.join("")), cores[0], &whitelisted);
-    let mut thread: Vec<std::thread::JoinHandle<()>> = 
-        cores.iter().zip(0..whitelisted.len()).map(|(core, port)| {
-        let c = *core;
-        let mut recv_port = io::PmdPort::new_mq_port(port as i32, 1, 1, &vec![c], &vec![c]).unwrap();
-        println!("Started port {} core {}", port, c);
-        std::thread::spawn(move || {recv_thread(recv_port, 0, c)})
-    }).collect();
+    io::init_system_wl(&format!("recv{}", cores_str.join("")),
+                       cores[0],
+                       &whitelisted);
+    let mut thread: Vec<std::thread::JoinHandle<()>> = cores.iter()
+                                                            .zip(0..whitelisted.len())
+                                                            .map(|(core, port)| {
+                                                                let c = *core;
+                                                                let mut recv_port =
+                                                                    io::PmdPort::new_mq_port(port as i32,
+                                                                                             1,
+                                                                                             1,
+                                                                                             &vec![c],
+                                                                                             &vec![c])
+                                                                        .unwrap();
+                                                                println!("Started port {} core {}", port, c);
+                                                                std::thread::spawn(move || recv_thread(recv_port, 0, c))
+                                                            })
+                                                            .collect();
     let _ = thread.pop().expect("No cores started").join();
 }
