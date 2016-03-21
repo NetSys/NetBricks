@@ -3,17 +3,19 @@ use super::Act;
 use super::Batch;
 use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
+use super::super::interface::Result;
+use super::super::pmd::*;
 
 pub struct TransformBatch<'a, T, V>
     where T: 'a + EndOffset,
           V: 'a + Batch + BatchIterator + Act
 {
     parent: &'a mut V,
-    transformer: &'a Fn(&'a mut T),
+    transformer: &'a mut FnMut(&'a mut T),
     applied: bool,
 }
 
-batch! {TransformBatch, [parent : &'a mut V, transformer: &'a Fn(&'a mut T)], []}
+batch! {TransformBatch, [parent : &'a mut V, transformer: &'a mut FnMut(&'a mut T)], []}
 
 impl<'a, T, V> Act for TransformBatch<'a, T, V>
     where T: 'a + EndOffset,
@@ -21,7 +23,7 @@ impl<'a, T, V> Act for TransformBatch<'a, T, V>
 {
     fn act(&mut self) -> &mut Self {
         {
-            let f = self.transformer;
+            let ref mut f = self.transformer;
             let iter = PacketBatchAddressIterator::new(self.parent);
             for addr in iter {
                 let address = cast_from_u8::<T>(addr);
@@ -37,6 +39,10 @@ impl<'a, T, V> Act for TransformBatch<'a, T, V>
         self.applied = false;
         self.parent.done();
         self
+    }
+
+    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
+        self.parent.send_queue(port, queue)
     }
 }
 

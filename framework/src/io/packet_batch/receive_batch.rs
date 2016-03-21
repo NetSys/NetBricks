@@ -6,6 +6,7 @@ use super::ReplaceBatch;
 use super::iterator::BatchIterator;
 use super::super::pmd::*;
 use super::super::super::headers::NullHeader;
+use super::super::interface::Result;
 
 // FIXME: Should we be handling multiple queues and ports here?
 pub struct ReceiveBatch<'a> {
@@ -30,7 +31,7 @@ impl<'a> Batch for ReceiveBatch<'a> {
         self.parent
     }
 
-    fn transform(&mut self, _: &Fn(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
+    fn transform(&mut self, _: &mut FnMut(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
         panic!("Cannot transform ReceiveBatch")
     }
 
@@ -88,5 +89,9 @@ impl<'a> Act for ReceiveBatch<'a> {
         self.parent.deallocate_batch().expect("Deallocation failed");
         self.applied = false;
         self
+    }
+
+    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
+        self.parent.send_queue(port, queue)
     }
 }

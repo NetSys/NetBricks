@@ -7,23 +7,39 @@ use e2d2::io::Act;
 use e2d2::io::Batch;
 use e2d2::headers::*;
 use getopts::Options;
-use std::cell::Cell;
 use std::env;
+use std::cell::Cell;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
+
 fn recv_thread(mut port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Receiving started");
+    let mut send_port = port.copy();
     let mut batch = io::PacketBatch::new(32);
-    let mut recv_batch = io::ReceiveBatch::new(&mut batch, &mut port, queue);
+
+    let recv_cell = Cell::new(0);
+
+    let mut f = &mut |hdr: &mut MacHeader| {
+        let src = hdr.src.clone();
+        hdr.src = hdr.dst;
+        hdr.dst = src;
+        recv_cell.set(recv_cell.get() + 1);
+    };
+   
+    let mut packets = batch.receive_batch(&mut port, queue);
+    let mut parse = packets.parse::<MacHeader>();
+    let mut transform = parse.transform(f);
+    let mut pipeline = transform.send(&mut send_port, queue);
+
     let mut cycles = 0;
     let mut rx = 0;
     let mut no_rx = 0;
     let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
     loop {
-        let batch_size = Cell::<i32>::new(0);
-        recv_batch.parse::<NullHeader>().transform(&|_| batch_size.set(batch_size.get() + 1)).act().done();
-        let recv = batch_size.get();
+        recv_cell.set(0);
+        pipeline.act();
+        let recv = recv_cell.get();
         rx += recv;
         cycles += 1;
         if recv == 0 {

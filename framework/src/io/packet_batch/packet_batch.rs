@@ -4,6 +4,7 @@ use super::Act;
 use super::Batch;
 use super::iterator::BatchIterator;
 use super::ParsedBatch;
+use super::ReceiveBatch;
 use super::ReplaceBatch;
 use super::TransformBatch;
 use super::super::mbuf::*;
@@ -72,15 +73,25 @@ impl Act for PacketBatch {
         self
     }
 
+    #[inline]
     fn done(&mut self) -> &mut Self {
         self
     }
+
+    #[inline]
+    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
+        unsafe {
+            port.send_queue(queue, self.packet_ptr(), self.available() as i32)
+                .and_then(|sent| {self.consumed_batch(sent as usize); Ok(sent)})
+        }
+    }
+
 }
 
 impl Batch for PacketBatch {
     type Parent = Self;
     type Header = NullHeader;
-    fn transform(&mut self, _: &Fn(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
+    fn transform(&mut self, _: &mut FnMut(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
         panic!("Cannot transform PacketBatch")
     }
 
@@ -107,6 +118,10 @@ impl PacketBatch {
             start: 0,
             end: 0,
         }
+    }
+
+    pub fn receive_batch<'a>(&'a mut self, port: &'a mut PmdPort, queue: i32) -> ReceiveBatch {
+        ReceiveBatch::new(self, port, queue)
     }
 
     /// Allocate packet batch with each packet of a given size.
@@ -158,16 +173,6 @@ impl PacketBatch {
             let val = unsafe { &*self.array[idx] };
             println!("{}", cast_from_u8::<T>(val.data_address(0)));
         }
-    }
-
-    #[inline]
-    pub fn send(&mut self, port: &mut PmdPort) -> Result<u32> {
-        self.send_queue(port, 0)
-    }
-
-    #[inline]
-    pub fn recv(&mut self, port: &mut PmdPort) -> Result<u32> {
-        self.recv_queue(port, 0)
     }
 
     #[inline]

@@ -56,6 +56,7 @@ pub enum ZCSIError {
     FailedDeallocation,
     FailedToInitializePort,
     BadQueue,
+    CannotSend,
 }
 
 pub type Result<T> = result::Result<T, ZCSIError>;

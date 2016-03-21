@@ -1,9 +1,11 @@
 use super::iterator::{BatchIterator, PacketBatchAddressIterator};
 use super::Act;
 use super::Batch;
+use super::super::pmd::*;
 use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
 use std::ptr;
+use super::super::interface::Result;
 
 pub struct ReplaceBatch<'a, T, V>
     where T: 'a + EndOffset,
@@ -40,6 +42,10 @@ impl<'a, T, V> Act for ReplaceBatch<'a, T, V>
         self.applied = false;
         self.parent.done();
         self
+    }
+
+    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
+        self.parent.send_queue(port, queue)
     }
 }
 

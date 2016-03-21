@@ -4,6 +4,8 @@ use super::Batch;
 use super::iterator::BatchIterator;
 use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
+use super::super::pmd::*;
+use super::super::interface::Result;
 
 pub struct ParsedBatch<'a, T: 'a + EndOffset, V>
     where V: 'a + Batch + BatchIterator + Act
@@ -27,6 +29,10 @@ impl<'a, T, V> Act for ParsedBatch<'a, T, V>
         self.applied = false;
         self.parent.done();
         self
+    }
+
+    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
+        self.parent.send_queue(port, queue)
     }
 }
 
