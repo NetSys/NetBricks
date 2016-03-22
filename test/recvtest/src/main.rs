@@ -27,8 +27,7 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
         recv_cell.set(recv_cell.get() + 1);
     };
 
-    let mut pipeline = io::PacketBatch::new(32)
-                           .receive_batch(port, queue)
+    let mut pipeline = io::ReceiveBatch::new(port, queue)
                            .parse::<MacHeader>()
                            .transform(f)
                            .send(&mut send_port, queue);
@@ -69,6 +68,7 @@ fn main() {
     opts.optmulti("w", "whitelist", "Whitelist PCI", "PCI");
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optflag("h", "help", "print this help menu");
+    opts.optopt("m", "master", "Master core", "master");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
@@ -89,8 +89,13 @@ fn main() {
     for (core, wl) in cores.iter().zip(whitelisted.iter()) {
         println!("Going to use core {} for wl {}", core, wl);
     }
+    let master_core = matches.opt_str("m")
+                             .unwrap_or_else(|| String::from("0"))
+                             .parse()
+                             .expect("Could not parse master core spec") ;
+    println!("Using master core {}", master_core);
     io::init_system_wl(&format!("recv{}", cores_str.join("")),
-                       cores[0],
+                       master_core,
                        &whitelisted);
     let mut thread: Vec<std::thread::JoinHandle<()>> = cores.iter()
                                                             .zip(0..whitelisted.len())

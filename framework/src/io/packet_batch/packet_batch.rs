@@ -3,7 +3,6 @@ use std::result;
 use super::act::Act;
 use super::Batch;
 use super::iterator::BatchIterator;
-use super::ReceiveBatch;
 use super::ReplaceBatch;
 use super::TransformBatch;
 use super::super::mbuf::*;
@@ -138,10 +137,6 @@ impl PacketBatch {
             start: 0,
             end: 0,
         }
-    }
-
-    pub fn receive_batch<'a>(self, port: PmdPort, queue: i32) -> ReceiveBatch {
-        ReceiveBatch::new(self, port, queue)
     }
 
     /// Allocate packet batch with each packet of a given size.

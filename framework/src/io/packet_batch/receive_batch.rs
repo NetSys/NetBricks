@@ -17,13 +17,23 @@ pub struct ReceiveBatch {
 }
 
 impl ReceiveBatch {
-    pub fn new(parent: PacketBatch, port: PmdPort, queue: i32) -> ReceiveBatch {
+    pub fn new_with_parent(parent: PacketBatch, port: PmdPort, queue: i32) -> ReceiveBatch {
         ReceiveBatch {
             parent: parent,
             port: port,
             queue: queue,
             received: 0,
         }
+    }
+
+    pub fn new(port: PmdPort, queue: i32) -> ReceiveBatch {
+        ReceiveBatch {
+            parent: PacketBatch::new(32),
+            port: port,
+            queue: queue,
+            received: 0,
+        }
+
     }
 }
 
