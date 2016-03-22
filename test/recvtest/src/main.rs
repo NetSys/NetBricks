@@ -28,6 +28,7 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
     };
 
     let mut pipeline = io::ReceiveBatch::new(port, queue)
+                           .compose()
                            .parse::<MacHeader>()
                            .transform(f)
                            .send(&mut send_port, queue);

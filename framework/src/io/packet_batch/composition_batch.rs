@@ -1,6 +1,5 @@
 use super::act::Act;
 use super::Batch;
-use super::packet_batch::PacketBatch;
 use super::TransformBatch;
 use super::ReplaceBatch;
 use super::iterator::BatchIterator;
@@ -8,56 +7,48 @@ use super::super::pmd::*;
 use super::super::super::headers::NullHeader;
 use super::super::interface::Result;
 
-// FIXME: Should we be handling multiple queues and ports here?
-pub struct ReceiveBatch {
-    parent: PacketBatch,
-    port: PmdPort,
-    queue: i32,
-    pub received: u64,
+/// CompositionBatch allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
+/// can treat packets as originating from the NF itself.
+pub struct CompositionBatch<V>
+    where V: Batch + BatchIterator + Act
+{
+    parent: V,
 }
 
-impl ReceiveBatch {
-    pub fn new_with_parent(parent: PacketBatch, port: PmdPort, queue: i32) -> ReceiveBatch {
-        ReceiveBatch {
-            parent: parent,
-            port: port,
-            queue: queue,
-            received: 0,
-        }
-    }
-
-    pub fn new(port: PmdPort, queue: i32) -> ReceiveBatch {
-        ReceiveBatch {
-            parent: PacketBatch::new(32),
-            port: port,
-            queue: queue,
-            received: 0,
-        }
+impl<V> CompositionBatch<V>
+    where V: Batch + BatchIterator + Act
+{
+    pub fn new(parent: V) -> CompositionBatch<V> {
+        CompositionBatch { parent: parent }
 
     }
 }
 
-impl Batch for ReceiveBatch {
+impl<V> Batch for CompositionBatch<V>
+    where V: Batch + BatchIterator + Act
+{
     type Header = NullHeader;
-    type Parent = PacketBatch;
+    type Parent = V;
 
     #[inline]
-    fn pop(&mut self) -> &mut PacketBatch {
+    fn pop(&mut self) -> &mut V {
         &mut self.parent
     }
 
     #[inline]
     fn transform(self, _: &mut FnMut(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
-        panic!("Cannot transform ReceiveBatch")
+        panic!("Cannot transform CompositionBatch")
     }
 
     #[inline]
     fn replace(self, _: NullHeader) -> ReplaceBatch<NullHeader, Self> {
-        panic!("Cannot replace ReceiveBatch")
+        panic!("Cannot replace CompositionBatch")
     }
 }
 
-impl BatchIterator for ReceiveBatch {
+impl<V> BatchIterator for CompositionBatch<V>
+    where V: Batch + BatchIterator + Act
+{
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
@@ -65,22 +56,22 @@ impl BatchIterator for ReceiveBatch {
 
     #[inline]
     unsafe fn payload(&mut self, idx: usize) -> *mut u8 {
-        self.parent.payload(idx)
+        self.parent.base_payload(idx)
     }
 
     #[inline]
     unsafe fn address(&mut self, idx: usize) -> *mut u8 {
-        self.parent.address(idx)
+        self.parent.base_address(idx)
     }
 
     #[inline]
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
-        self.parent.next_address(idx)
+        self.parent.next_base_address(idx)
     }
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
-        self.parent.next_payload(idx)
+        self.parent.next_base_payload(idx)
     }
 
     #[inline]
@@ -95,7 +86,6 @@ impl BatchIterator for ReceiveBatch {
 
     #[inline]
     unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
-        println!("recvbatch.next_address");
         self.parent.next_base_address(idx)
     }
 
@@ -106,24 +96,18 @@ impl BatchIterator for ReceiveBatch {
 }
 
 /// Internal interface for packets.
-impl Act for ReceiveBatch {
+impl<V> Act for CompositionBatch<V>
+    where V: Batch + BatchIterator + Act
+{
     #[inline]
     fn act(&mut self) -> &mut Self {
         self.parent.act();
-        self.parent
-            .recv_queue(&mut self.port, self.queue)
-            .and_then(|x| {
-                self.received += x as u64;
-                Ok(x)
-            })
-            .expect("Receive failed");
         self
     }
 
     #[inline]
     fn done(&mut self) -> &mut Self {
-        // Free up memory
-        self.parent.deallocate_batch().expect("Deallocation failed");
+        self.parent.done();
         self
     }
 

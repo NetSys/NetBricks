@@ -1,10 +1,10 @@
-pub use self::packet_batch::PacketBatch;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::transform_batch::TransformBatch;
 pub use self::apply_batch::ReplaceBatch;
 pub use self::receive_batch::ReceiveBatch;
 pub use self::send_batch::SendBatch;
 pub use self::map_batch::MapBatch;
+pub use self::composition_batch::CompositionBatch;
 use super::interface::EndOffset;
 use self::iterator::BatchIterator;
 use super::pmd::*;
@@ -22,6 +22,7 @@ mod send_batch;
 mod iterator;
 mod act;
 mod map_batch;
+mod composition_batch;
 
 /// Public interface implemented by every packet batch type.
 pub trait Batch : Sized + BatchIterator + Act {
@@ -55,5 +56,9 @@ pub trait Batch : Sized + BatchIterator + Act {
     /// Send this batch out a particular port and queue.
     fn send<'a>(self, port: &'a mut PmdPort, queue: i32) -> SendBatch<Self> {
         SendBatch::<Self>::new(self, port, queue)
+    }
+
+    fn compose(self) -> CompositionBatch<Self> {
+        CompositionBatch::<Self>::new(self)
     }
 }

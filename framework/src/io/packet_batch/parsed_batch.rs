@@ -18,20 +18,24 @@ impl<T, V> Act for ParsedBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
+    #[inline]
     fn act(&mut self) -> &mut Self {
         self.parent.act();
         self
     }
 
+    #[inline]
     fn done(&mut self) -> &mut Self {
         self.parent.done();
         self
     }
 
+    #[inline]
     fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
         self.parent.send_queue(port, queue)
     }
 
+    #[inline]
     fn capacity(&self) -> i32 {
         self.parent.capacity()
     }
