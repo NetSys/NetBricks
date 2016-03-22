@@ -1,3 +1,5 @@
+#![feature(box_syntax)]
+
 extern crate e2d2;
 extern crate time;
 extern crate simd;
@@ -15,7 +17,6 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Receiving started");
     let mut send_port = port.copy();
-    let mut batch = io::PacketBatch::new(32);
 
     let recv_cell = Cell::new(0);
 
@@ -25,11 +26,12 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
         hdr.dst = src;
         recv_cell.set(recv_cell.get() + 1);
     };
-   
-    let mut packets = batch.receive_batch(port, queue);
-    let mut parse = packets.parse::<MacHeader>();
-    let mut transform = parse.transform(f);
-    let mut pipeline = transform.send(&mut send_port, queue);
+
+    let mut pipeline = io::PacketBatch::new(32)
+                           .receive_batch(port, queue)
+                           .parse::<MacHeader>()
+                           .transform(f)
+                           .send(&mut send_port, queue);
 
     let mut cycles = 0;
     let mut rx = 0;
@@ -94,13 +96,12 @@ fn main() {
                                                             .zip(0..whitelisted.len())
                                                             .map(|(core, port)| {
                                                                 let c = *core;
-                                                                let recv_port =
-                                                                    io::PmdPort::new_mq_port(port as i32,
-                                                                                             1,
-                                                                                             1,
-                                                                                             &vec![c],
-                                                                                             &vec![c])
-                                                                        .unwrap();
+                                                                let recv_port = io::PmdPort::new_mq_port(port as i32,
+                                                                                                         1,
+                                                                                                         1,
+                                                                                                         &vec![c],
+                                                                                                         &vec![c])
+                                                                                    .unwrap();
                                                                 println!("Started port {} core {}", port, c);
                                                                 std::thread::spawn(move || recv_thread(recv_port, 0, c))
                                                             })

@@ -7,5 +7,6 @@ pub trait Act {
     fn done(&mut self) -> &mut Self;
 
     fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32>;
-}
 
+    fn capacity(&self) -> i32;
+}

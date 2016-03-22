@@ -14,14 +14,14 @@ pub struct SendBatch<'a, V>
 {
     port: &'a mut PmdPort,
     queue: i32,
-    parent: &'a mut V,
+    parent: V,
     pub sent: u64,
 }
 
 impl<'a, V> SendBatch<'a, V>
     where V: 'a + Batch + BatchIterator + Act
 {
-    pub fn new(parent: &'a mut V, port: &'a mut PmdPort, queue: i32) -> SendBatch<'a, V> {
+    pub fn new(parent: V, port: &'a mut PmdPort, queue: i32) -> SendBatch<'a, V> {
         SendBatch {
             port: port,
             queue: queue,
@@ -45,15 +45,15 @@ impl<'a, V> Batch for SendBatch<'a, V>
         panic!("Cannot get parent of sent batch")
     }
 
-    fn transform(&mut self, _: &mut FnMut(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
+    fn transform(self, _: &mut FnMut(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
         panic!("Cannot transform SendBatch")
     }
 
-    fn replace(&mut self, _: &NullHeader) -> ReplaceBatch<NullHeader, Self> {
+    fn replace(self, _: NullHeader) -> ReplaceBatch<NullHeader, Self> {
         panic!("Cannot replace SendBatch")
     }
 
-    fn send<'b>(&'b mut self, _: &'b mut PmdPort, _: i32) -> SendBatch<Self> {
+    fn send<'b>(self, _: &'b mut PmdPort, _: i32) -> SendBatch<Self> {
         panic!("Cannot send SendBatch")
     }
 }
@@ -86,6 +86,26 @@ impl<'a, V> BatchIterator for SendBatch<'a, V>
     unsafe fn next_payload(&mut self, _: usize) -> Option<(*mut u8, usize)> {
         panic!("Cannot iterate SendBatch")
     }
+
+    #[inline]
+    unsafe fn base_address(&mut self, _: usize) -> *mut u8 {
+        panic!("Cannot iterate SendBatch")
+    }
+
+    #[inline]
+    unsafe fn base_payload(&mut self, _: usize) -> *mut u8 {
+        panic!("Cannot iterate SendBatch")
+    }
+
+    #[inline]
+    unsafe fn next_base_address(&mut self, _: usize) -> Option<(*mut u8, usize)> {
+        panic!("Cannot iterate SendBatch")
+    }
+
+    #[inline]
+    unsafe fn next_base_payload(&mut self, _: usize) -> Option<(*mut u8, usize)> {
+        panic!("Cannot iterate SendBatch")
+    }
 }
 
 /// Internal interface for packets.
@@ -113,5 +133,9 @@ impl<'a, V> Act for SendBatch<'a, V>
 
     fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
         self.parent.send_queue(port, queue)
+    }
+
+    fn capacity(&self) -> i32 {
+        self.parent.capacity()
     }
 }

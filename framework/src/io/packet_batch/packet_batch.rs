@@ -3,7 +3,6 @@ use std::result;
 use super::act::Act;
 use super::Batch;
 use super::iterator::BatchIterator;
-use super::ParsedBatch;
 use super::ReceiveBatch;
 use super::ReplaceBatch;
 use super::TransformBatch;
@@ -64,6 +63,26 @@ impl BatchIterator for PacketBatch {
             None
         }
     }
+
+    #[inline]
+    unsafe fn base_address(&mut self, idx: usize) -> *mut u8 {
+        self.address(idx)
+    }
+
+    #[inline]
+    unsafe fn base_payload(&mut self, idx: usize) -> *mut u8 {
+        self.payload(idx)
+    }
+
+    #[inline]
+    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+        self.next_address(idx)
+    }
+
+    #[inline]
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+        self.next_payload(idx)
+    }
 }
 
 /// Internal interface for packets.
@@ -88,16 +107,21 @@ impl Act for PacketBatch {
                 })
         }
     }
+
+    #[inline]
+    fn capacity(&self) -> i32 {
+        self.max_size()
+    }
 }
 
 impl Batch for PacketBatch {
     type Parent = Self;
     type Header = NullHeader;
-    fn transform(&mut self, _: &mut FnMut(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
+    fn transform(self, _: &mut FnMut(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
         panic!("Cannot transform PacketBatch")
     }
 
-    fn replace(&mut self, _: &NullHeader) -> ReplaceBatch<NullHeader, Self> {
+    fn replace(self, _: NullHeader) -> ReplaceBatch<NullHeader, Self> {
         panic!("Cannot replace PacketBatch")
     }
 
@@ -107,12 +131,6 @@ impl Batch for PacketBatch {
 }
 
 impl PacketBatch {
-    /// Parse packets.
-    #[inline]
-    pub fn parse<T: EndOffset>(&mut self) -> ParsedBatch<T, Self> {
-        ParsedBatch::<T, Self>::new(self)
-    }
-
     pub fn new(cnt: i32) -> PacketBatch {
         PacketBatch {
             array: Vec::<*mut MBuf>::with_capacity(cnt as usize),
@@ -122,7 +140,7 @@ impl PacketBatch {
         }
     }
 
-    pub fn receive_batch<'a>(&'a mut self, port: PmdPort, queue: i32) -> ReceiveBatch {
+    pub fn receive_batch<'a>(self, port: PmdPort, queue: i32) -> ReceiveBatch {
         ReceiveBatch::new(self, port, queue)
     }
 
@@ -153,6 +171,7 @@ impl PacketBatch {
         (self.end - self.start)
     }
 
+    #[inline]
     pub fn max_size(&self) -> i32 {
         self.cnt
     }

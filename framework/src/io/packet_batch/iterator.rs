@@ -6,6 +6,10 @@ pub trait BatchIterator {
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)>;
     unsafe fn payload(&mut self, idx: usize) -> *mut u8;
     unsafe fn address(&mut self, idx: usize) -> *mut u8;
+    unsafe fn base_address(&mut self, idx: usize) -> *mut u8;
+    unsafe fn base_payload(&mut self, idx: usize) -> *mut u8;
+    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize)>;
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)>;
 }
 
 pub struct PacketBatchAddressIterator<'a> {

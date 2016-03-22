@@ -7,29 +7,29 @@ use super::super::interface::EndOffset;
 use std::ptr;
 use super::super::interface::Result;
 
-pub struct ReplaceBatch<'a, T, V>
-    where T: 'a + EndOffset,
-          V: 'a + Batch + BatchIterator + Act
+pub struct ReplaceBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
 {
-    parent: &'a mut V,
-    template: &'a T,
+    parent: V,
+    template: T,
 }
 
-batch!{ReplaceBatch, [parent: &'a mut V, template: &'a T]}
+batch!{ReplaceBatch, [parent: V, template: T]}
 
-impl<'a, T, V> Act for ReplaceBatch<'a, T, V>
-    where T: 'a + EndOffset,
-          V: 'a + Batch + BatchIterator + Act
+impl<T, V> Act for ReplaceBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
 {
     fn act(&mut self) -> &mut Self {
         self.parent.act();
         // This inner context is to allow the iter reference to expire before we change self.
         {
-            let iter = PacketBatchAddressIterator::new(self.parent);
+            let iter = PacketBatchAddressIterator::new(&mut self.parent);
             for addr in iter {
                 unsafe {
                     let address = cast_from_u8::<T>(addr);
-                    ptr::copy_nonoverlapping(self.template, address, 1);
+                    ptr::copy_nonoverlapping(&self.template, address, 1);
                 }
             }
         }
@@ -44,11 +44,15 @@ impl<'a, T, V> Act for ReplaceBatch<'a, T, V>
     fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
         self.parent.send_queue(port, queue)
     }
+
+    fn capacity(&self) -> i32 {
+        self.parent.capacity()
+    }
 }
 
-impl<'a, T, V> BatchIterator for ReplaceBatch<'a, T, V>
-    where T: 'a + EndOffset,
-          V: 'a + Batch + BatchIterator + Act
+impl<T, V> BatchIterator for ReplaceBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
 {
     // FIXME: We should just go from packet batch applying, instead of doing this version where act() is triggered as a
     // result of some functions being called.
@@ -75,5 +79,25 @@ impl<'a, T, V> BatchIterator for ReplaceBatch<'a, T, V>
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
         self.parent.next_payload(idx)
+    }
+
+    #[inline]
+    unsafe fn base_address(&mut self, idx: usize) -> *mut u8 {
+        self.parent.base_address(idx)
+    }
+
+    #[inline]
+    unsafe fn base_payload(&mut self, idx: usize) -> *mut u8 {
+        self.parent.base_payload(idx)
+    }
+
+    #[inline]
+    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+        self.parent.next_base_address(idx)
+    }
+
+    #[inline]
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+        self.parent.next_base_payload(idx)
     }
 }
