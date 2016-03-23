@@ -149,18 +149,8 @@ impl PacketBatch {
             }
         }
     }
-}
-
-// A packet batch is also a batch (just a special kind)
-impl BatchIterator for PacketBatch {
-    /// The starting offset for packets in the current batch.
-    #[inline]
-    fn start(&mut self) -> usize {
-        self.start
-    }
 
     /// Return the payload for a given packet.
-    ///
     /// idx must be a valid index.
     #[inline]
     unsafe fn payload(&mut self, idx: usize) -> *mut u8 {
@@ -174,8 +164,18 @@ impl BatchIterator for PacketBatch {
         let val = &mut *self.array[idx];
         val.data_address(0)
     }
+}
+
+// A packet batch is also a batch (just a special kind)
+impl BatchIterator for PacketBatch {
+    /// The starting offset for packets in the current batch.
+    #[inline]
+    fn start(&mut self) -> usize {
+        self.start
+    }
 
     /// Address for the next packet.
+    /// Returns packet at index `idx` and the index of the next packet after `idx`.
     #[inline]
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
         if idx < self.end {
@@ -193,16 +193,6 @@ impl BatchIterator for PacketBatch {
         } else {
             None
         }
-    }
-
-    #[inline]
-    unsafe fn base_address(&mut self, idx: usize) -> *mut u8 {
-        self.address(idx)
-    }
-
-    #[inline]
-    unsafe fn base_payload(&mut self, idx: usize) -> *mut u8 {
-        self.payload(idx)
     }
 
     #[inline]

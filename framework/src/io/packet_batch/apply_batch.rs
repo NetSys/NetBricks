@@ -1,4 +1,4 @@
-use super::iterator::{BatchIterator, PacketBatchAddressIterator};
+use super::iterator::{BatchIterator, PacketBatchIterator};
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
@@ -25,7 +25,7 @@ impl<T, V> Act for ReplaceBatch<T, V>
         self.parent.act();
         // This inner context is to allow the iter reference to expire before we change self.
         {
-            let iter = PacketBatchAddressIterator::<T>::new(&mut self.parent);
+            let iter = PacketBatchIterator::<T>::new(&mut self.parent);
             for packet in iter {
                 unsafe {
                     ptr::copy_nonoverlapping(&self.template, packet, 1);
@@ -61,16 +61,6 @@ impl<T, V> BatchIterator for ReplaceBatch<T, V>
     }
 
     #[inline]
-    unsafe fn payload(&mut self, idx: usize) -> *mut u8 {
-        self.parent.payload(idx)
-    }
-
-    #[inline]
-    unsafe fn address(&mut self, idx: usize) -> *mut u8 {
-        self.parent.address(idx)
-    }
-
-    #[inline]
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
         self.parent.next_address(idx)
     }
@@ -78,16 +68,6 @@ impl<T, V> BatchIterator for ReplaceBatch<T, V>
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
         self.parent.next_payload(idx)
-    }
-
-    #[inline]
-    unsafe fn base_address(&mut self, idx: usize) -> *mut u8 {
-        self.parent.base_address(idx)
-    }
-
-    #[inline]
-    unsafe fn base_payload(&mut self, idx: usize) -> *mut u8 {
-        self.parent.base_payload(idx)
     }
 
     #[inline]

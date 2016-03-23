@@ -52,32 +52,12 @@ impl<'a, V> BatchIterator for SendBatch<'a, V>
     }
 
     #[inline]
-    unsafe fn payload(&mut self, _: usize) -> *mut u8 {
-        panic!("Cannot iterate SendBatch")
-    }
-
-    #[inline]
-    unsafe fn address(&mut self, _: usize) -> *mut u8 {
-        panic!("Cannot iterate SendBatch")
-    }
-
-    #[inline]
     unsafe fn next_address(&mut self, _: usize) -> Option<(*mut u8, usize)> {
         panic!("Cannot iterate SendBatch")
     }
 
     #[inline]
     unsafe fn next_payload(&mut self, _: usize) -> Option<(*mut u8, usize)> {
-        panic!("Cannot iterate SendBatch")
-    }
-
-    #[inline]
-    unsafe fn base_address(&mut self, _: usize) -> *mut u8 {
-        panic!("Cannot iterate SendBatch")
-    }
-
-    #[inline]
-    unsafe fn base_payload(&mut self, _: usize) -> *mut u8 {
         panic!("Cannot iterate SendBatch")
     }
 

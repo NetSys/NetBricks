@@ -54,18 +54,6 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     }
 
     #[inline]
-    unsafe fn payload(&mut self, idx: usize) -> *mut u8 {
-        let address = self.parent.payload(idx);
-        let offset = T::offset(cast_from_u8::<T>(address));
-        address.offset(offset as isize)
-    }
-
-    #[inline]
-    unsafe fn address(&mut self, idx: usize) -> *mut u8 {
-        self.parent.payload(idx)
-    }
-
-    #[inline]
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
         self.parent.next_payload(idx)
     }
@@ -80,16 +68,6 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
             }
             None => None,
         }
-    }
-
-    #[inline]
-    unsafe fn base_address(&mut self, idx: usize) -> *mut u8 {
-        self.parent.base_address(idx)
-    }
-
-    #[inline]
-    unsafe fn base_payload(&mut self, idx: usize) -> *mut u8 {
-        self.parent.base_payload(idx)
     }
 
     #[inline]

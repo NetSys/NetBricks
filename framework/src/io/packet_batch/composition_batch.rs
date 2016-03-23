@@ -41,16 +41,6 @@ impl<V> BatchIterator for CompositionBatch<V>
     }
 
     #[inline]
-    unsafe fn payload(&mut self, idx: usize) -> *mut u8 {
-        self.parent.base_payload(idx)
-    }
-
-    #[inline]
-    unsafe fn address(&mut self, idx: usize) -> *mut u8 {
-        self.parent.base_address(idx)
-    }
-
-    #[inline]
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
         self.parent.next_base_address(idx)
     }
@@ -58,16 +48,6 @@ impl<V> BatchIterator for CompositionBatch<V>
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
         self.parent.next_base_payload(idx)
-    }
-
-    #[inline]
-    unsafe fn base_address(&mut self, idx: usize) -> *mut u8 {
-        self.parent.base_address(idx)
-    }
-
-    #[inline]
-    unsafe fn base_payload(&mut self, idx: usize) -> *mut u8 {
-        self.parent.base_payload(idx)
     }
 
     #[inline]

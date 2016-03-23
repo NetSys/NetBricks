@@ -50,16 +50,6 @@ impl BatchIterator for ReceiveBatch {
     }
 
     #[inline]
-    unsafe fn payload(&mut self, idx: usize) -> *mut u8 {
-        self.parent.payload(idx)
-    }
-
-    #[inline]
-    unsafe fn address(&mut self, idx: usize) -> *mut u8 {
-        self.parent.address(idx)
-    }
-
-    #[inline]
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
         self.parent.next_address(idx)
     }
@@ -67,16 +57,6 @@ impl BatchIterator for ReceiveBatch {
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
         self.parent.next_payload(idx)
-    }
-
-    #[inline]
-    unsafe fn base_address(&mut self, idx: usize) -> *mut u8 {
-        self.parent.base_address(idx)
-    }
-
-    #[inline]
-    unsafe fn base_payload(&mut self, idx: usize) -> *mut u8 {
-        self.parent.base_payload(idx)
     }
 
     #[inline]
