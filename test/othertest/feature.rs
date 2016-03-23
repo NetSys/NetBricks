@@ -1,4 +1,5 @@
 #![feature(cfg_target_feature)]
+#![feature(box_syntax)]
 
 #[cfg(any(target_feature="avx"))]
 fn test_comp() {
@@ -12,4 +13,6 @@ fn test_comp() {
 
 fn main() {
     test_comp();
+    let f = box |x| { x + 5 };
+    println!("Value {}", f(22));
 }

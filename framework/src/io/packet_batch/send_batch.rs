@@ -1,10 +1,7 @@
 use super::act::Act;
 use super::Batch;
-use super::TransformBatch;
-use super::ReplaceBatch;
 use super::iterator::BatchIterator;
 use super::super::pmd::*;
-use super::super::super::headers::NullHeader;
 use super::super::interface::Result;
 
 // FIXME: Should we be handling multiple queues and ports here?
@@ -38,23 +35,10 @@ impl<'a, V> SendBatch<'a, V>
 impl<'a, V> Batch for SendBatch<'a, V>
     where V: 'a + Batch + BatchIterator + Act
 {
-    type Header = NullHeader;
     type Parent = V;
 
     fn pop(&mut self) -> &mut V {
         panic!("Cannot get parent of sent batch")
-    }
-
-    fn transform(self, _: &mut FnMut(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
-        panic!("Cannot transform SendBatch")
-    }
-
-    fn replace(self, _: NullHeader) -> ReplaceBatch<NullHeader, Self> {
-        panic!("Cannot replace SendBatch")
-    }
-
-    fn send<'b>(self, _: &'b mut PmdPort, _: i32) -> SendBatch<Self> {
-        panic!("Cannot send SendBatch")
     }
 }
 

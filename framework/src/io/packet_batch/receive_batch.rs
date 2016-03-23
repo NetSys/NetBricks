@@ -1,11 +1,8 @@
 use super::act::Act;
 use super::Batch;
 use super::packet_batch::PacketBatch;
-use super::TransformBatch;
-use super::ReplaceBatch;
 use super::iterator::BatchIterator;
 use super::super::pmd::*;
-use super::super::super::headers::NullHeader;
 use super::super::interface::Result;
 
 // FIXME: Should we be handling multiple queues and ports here?
@@ -38,22 +35,11 @@ impl ReceiveBatch {
 }
 
 impl Batch for ReceiveBatch {
-    type Header = NullHeader;
     type Parent = PacketBatch;
 
     #[inline]
     fn pop(&mut self) -> &mut PacketBatch {
         &mut self.parent
-    }
-
-    #[inline]
-    fn transform(self, _: &mut FnMut(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
-        panic!("Cannot transform ReceiveBatch")
-    }
-
-    #[inline]
-    fn replace(self, _: NullHeader) -> ReplaceBatch<NullHeader, Self> {
-        panic!("Cannot replace ReceiveBatch")
     }
 }
 

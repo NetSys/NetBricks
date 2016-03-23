@@ -13,11 +13,16 @@ macro_rules! batch {
             where T: EndOffset,
             V:Batch + BatchIterator + Act {
             type Parent = V;
-            type Header = T;
 
             fn pop(&mut self) -> &mut V {
                 &mut self.parent
             }
+        }
+
+        impl<T, V> HeaderOperations for $name<T, V>
+            where T: EndOffset,
+            V:Batch + BatchIterator + Act {
+            type Header = T;
         }
     };
     ($name: ident, [ $($parts: ident : $pty: ty),* ]) => {

@@ -1,6 +1,7 @@
 use super::iterator::{BatchIterator, PacketBatchAddressIterator};
 use super::act::Act;
 use super::Batch;
+use super::HeaderOperations;
 use super::super::pmd::*;
 use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;

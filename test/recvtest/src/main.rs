@@ -5,33 +5,49 @@ extern crate time;
 extern crate simd;
 extern crate getopts;
 use e2d2::io;
-use e2d2::io::Batch;
+use e2d2::io::*;
 use e2d2::headers::*;
 use getopts::Options;
 use std::env;
 use std::cell::Cell;
+use std::rc::Rc;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
+fn monitor<T: Act + Batch + BatchIterator>(parent: T, recv_cell: Rc<Cell<u32>>) 
+    -> MapBatch<MacHeader, TransformBatch<MacHeader, ParsedBatch<MacHeader, T>>> {
+    let f = box move |hdr: &mut MacHeader| {
+        let src = hdr.src.clone();
+        hdr.src = hdr.dst;
+        hdr.dst = src;
+    };
+    let g = box move |_: &MacHeader| {
+        recv_cell.set(recv_cell.get() + 1);
+    };
+
+    parent
+    .parse::<MacHeader>()
+    .transform(f)
+    .map(g)
+}
 
 fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Receiving started");
     let mut send_port = port.copy();
 
-    let recv_cell = Cell::new(0);
-
-    let mut f = &mut |hdr: &mut MacHeader| {
-        let src = hdr.src.clone();
-        hdr.src = hdr.dst;
-        hdr.dst = src;
-        recv_cell.set(recv_cell.get() + 1);
-    };
-
-    let mut pipeline = io::ReceiveBatch::new(port, queue)
+    let recv_cell = Rc::new(Cell::new(0));
+    let parent = io::ReceiveBatch::new(port, queue)
+                           .compose();
+    let mut pipeline = monitor(parent, recv_cell.clone())
                            .compose()
-                           .parse::<MacHeader>()
-                           .transform(f)
                            .send(&mut send_port, queue);
+
+
+    //let mut pipeline = io::ReceiveBatch::new(port, queue)
+                           //.compose()
+                           //.parse::<MacHeader>()
+                           //.transform(f)
+                           //.send(&mut send_port, queue);
 
     let mut cycles = 0;
     let mut rx = 0;

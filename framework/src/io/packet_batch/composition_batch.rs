@@ -1,10 +1,7 @@
 use super::act::Act;
 use super::Batch;
-use super::TransformBatch;
-use super::ReplaceBatch;
 use super::iterator::BatchIterator;
 use super::super::pmd::*;
-use super::super::super::headers::NullHeader;
 use super::super::interface::Result;
 
 /// CompositionBatch allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
@@ -27,22 +24,11 @@ impl<V> CompositionBatch<V>
 impl<V> Batch for CompositionBatch<V>
     where V: Batch + BatchIterator + Act
 {
-    type Header = NullHeader;
     type Parent = V;
 
     #[inline]
     fn pop(&mut self) -> &mut V {
         &mut self.parent
-    }
-
-    #[inline]
-    fn transform(self, _: &mut FnMut(&mut NullHeader)) -> TransformBatch<NullHeader, Self> {
-        panic!("Cannot transform CompositionBatch")
-    }
-
-    #[inline]
-    fn replace(self, _: NullHeader) -> ReplaceBatch<NullHeader, Self> {
-        panic!("Cannot replace CompositionBatch")
     }
 }
 

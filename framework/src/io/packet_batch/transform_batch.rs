@@ -1,47 +1,25 @@
 use super::iterator::{BatchIterator, PacketBatchAddressIterator};
 use super::act::Act;
 use super::Batch;
+use super::HeaderOperations;
 use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
 use super::super::interface::Result;
 use super::super::pmd::*;
 
-pub struct TransformBatch<'a, T, V>
-    where T: 'a + EndOffset,
-          V: 'a + Batch + BatchIterator + Act
+pub struct TransformBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
 {
     parent: V,
-    transformer: &'a mut FnMut(&'a mut T),
+    transformer: Box<FnMut(&mut T)>,
 }
 
-impl<'a, T, V> TransformBatch<'a, T, V>
-    where T: 'a + EndOffset,
-          V: 'a + Batch + BatchIterator + Act
-{
-    #[inline]
-    pub fn new(parent: V, transformer: &'a mut FnMut(&'a mut T)) -> TransformBatch<'a, T, V> {
-        TransformBatch {
-            parent: parent,
-            transformer: transformer,
-        }
-    }
-}
+batch!{TransformBatch, [parent: V, transformer: Box<FnMut(&mut T)>], []}
 
-impl<'a, T, V> Batch for TransformBatch<'a, T, V>
-    where T: 'a + EndOffset,
-          V: 'a + Batch + BatchIterator + Act
-{
-    type Parent = V;
-    type Header = T;
-
-    fn pop(&mut self) -> &mut V {
-        &mut self.parent
-    }
-}
-
-impl<'a, T, V> Act for TransformBatch<'a, T, V>
-    where T: 'a + EndOffset,
-          V: 'a + Batch + BatchIterator + Act
+impl<T, V> Act for TransformBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
 {
     fn act(&mut self) -> &mut Self {
         self.parent.act();
@@ -70,9 +48,9 @@ impl<'a, T, V> Act for TransformBatch<'a, T, V>
     }
 }
 
-impl<'a, T, V> BatchIterator for TransformBatch<'a, T, V>
-    where T: 'a + EndOffset,
-          V: 'a + Batch + BatchIterator + Act
+impl<T, V> BatchIterator for TransformBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
 {
     #[inline]
     fn start(&mut self) -> usize {
