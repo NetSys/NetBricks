@@ -1,3 +1,6 @@
+use super::packet_batch::cast_from_u8;
+use std::marker::PhantomData;
+use super::super::interface::EndOffset;
 /// An interface implemented by all batches for iterating through the set of packets in a batch.
 /// This is one of two private interfaces
 pub trait BatchIterator {
@@ -12,30 +15,36 @@ pub trait BatchIterator {
     unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)>;
 }
 
-pub struct PacketBatchAddressIterator<'a> {
+pub struct PacketBatchAddressIterator<'a, T> 
+           where T: 'a + EndOffset {
     batch: &'a mut BatchIterator,
     idx: usize,
+    phantom: PhantomData<T>,
 }
 
-impl<'a> PacketBatchAddressIterator<'a> {
+impl<'a, T> PacketBatchAddressIterator<'a, T>
+           where T: 'a + EndOffset {
     #[inline]
-    pub fn new(batch: &mut BatchIterator) -> PacketBatchAddressIterator {
+    pub fn new(batch: &mut BatchIterator) -> PacketBatchAddressIterator<T> {
         let start = batch.start();
         PacketBatchAddressIterator {
             batch: batch,
             idx: start,
+            phantom: PhantomData,
         }
     }
 }
 
-impl<'a> Iterator for PacketBatchAddressIterator<'a> {
-    type Item = *mut u8;
+impl<'a, T> Iterator for PacketBatchAddressIterator<'a, T>
+           where T: 'a + EndOffset {
+    type Item = &'a mut T;
 
     #[inline]
-    fn next(&mut self) -> Option<*mut u8> {
+    fn next(&mut self) -> Option<&'a mut T> {
         let item = unsafe { self.batch.next_address(self.idx) };
         match item {
-            Some((packet, idx)) => {
+            Some((addr, idx)) => {
+                let packet = cast_from_u8::<T>(addr);
                 self.idx = idx;
                 Some(packet)
             }

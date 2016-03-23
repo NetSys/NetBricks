@@ -3,7 +3,6 @@ use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
 use super::super::pmd::*;
-use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
 use std::ptr;
 use super::super::interface::Result;
@@ -26,11 +25,10 @@ impl<T, V> Act for ReplaceBatch<T, V>
         self.parent.act();
         // This inner context is to allow the iter reference to expire before we change self.
         {
-            let iter = PacketBatchAddressIterator::new(&mut self.parent);
-            for addr in iter {
+            let iter = PacketBatchAddressIterator::<T>::new(&mut self.parent);
+            for packet in iter {
                 unsafe {
-                    let address = cast_from_u8::<T>(addr);
-                    ptr::copy_nonoverlapping(&self.template, address, 1);
+                    ptr::copy_nonoverlapping(&self.template, packet, 1);
                 }
             }
         }

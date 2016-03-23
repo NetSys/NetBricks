@@ -2,7 +2,6 @@ use super::iterator::{BatchIterator, PacketBatchAddressIterator};
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
-use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
 use super::super::interface::Result;
 use super::super::pmd::*;
@@ -25,10 +24,9 @@ impl<T, V> Act for TransformBatch<T, V>
         self.parent.act();
         {
             let ref mut f = self.transformer;
-            let iter = PacketBatchAddressIterator::new(&mut self.parent);
-            for addr in iter {
-                let address = cast_from_u8::<T>(addr);
-                f(address);
+            let iter = PacketBatchAddressIterator::<T>::new(&mut self.parent);
+            for packet in iter {
+                f(packet);
             }
         }
         self

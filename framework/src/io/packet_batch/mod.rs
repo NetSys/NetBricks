@@ -64,5 +64,4 @@ pub trait HeaderOperations : Batch {
     fn replace(self, template: Self::Header) -> ReplaceBatch<Self::Header, Self> {
         ReplaceBatch::<Self::Header, Self>::new(self, template)
     }
-
 }
