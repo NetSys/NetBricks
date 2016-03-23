@@ -7,6 +7,7 @@ pub use self::receive_batch::ReceiveBatch;
 pub use self::send_batch::SendBatch;
 pub use self::map_batch::MapBatch;
 pub use self::composition_batch::CompositionBatch;
+pub use self::filter_batch::FilterBatch;
 use super::interface::EndOffset;
 use super::pmd::*;
 
@@ -23,6 +24,7 @@ mod iterator;
 mod act;
 mod map_batch;
 mod composition_batch;
+mod filter_batch;
 
 /// Public interface implemented by every packet batch type.
 pub trait Batch : Sized + BatchIterator + Act {
@@ -63,5 +65,10 @@ pub trait HeaderOperations : Batch {
     /// Rewrite the entire header.
     fn replace(self, template: Self::Header) -> ReplaceBatch<Self::Header, Self> {
         ReplaceBatch::<Self::Header, Self>::new(self, template)
+    }
+
+    /// Filter out packets, any packets for which `filter_f` returns false are dropped from the batch.
+    fn filter(self, filter_f: Box<FnMut(&Self::Header) -> bool>) -> FilterBatch<Self::Header, Self> {
+        FilterBatch::<Self::Header, Self>::new(self, filter_f)
     }
 }

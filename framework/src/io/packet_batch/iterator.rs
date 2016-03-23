@@ -80,8 +80,9 @@ impl<'a, T> Iterator for PacketBatchIterator<'a, T>
 
 /// Enumerate packets in a batch, i.e., return both index and packet. Note, the index is meaningless outside of this
 /// particular batch, in particular the index does not reveal how many packets are in a batch (batch might not start
-/// from the beginning), is not guaranteed to arrive in order (one possible way of implementing grouping), might not be
-/// sequential (lazy filtering), etc. Please do not use the index for anything other than as a handle to packets.
+/// from the beginning), might not be sequential (lazy filtering), etc. We however do guarantee that the iterator will
+/// present monotonically increasing indices. Please do not use the index for anything other than as a handle for
+/// packets.
 pub struct PacketBatchEnumerator<'a, T>
     where T: 'a + EndOffset
 {

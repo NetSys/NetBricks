@@ -8,7 +8,15 @@ macro_rules! batch {
                 $name{ $( $parts: $parts ),*, $($defid : $val),* }
             }
         }
+        batch_no_new!{$name}
+    };
+    ($name: ident, [ $($parts: ident : $pty: ty),* ]) => {
+        batch!{$name, [$($parts:$pty),*], []}
+    }
+}
 
+macro_rules! batch_no_new {
+    ($name : ident) => {
         impl<T, V> Batch for $name<T, V>
             where T: EndOffset,
             V:Batch + BatchIterator + Act {

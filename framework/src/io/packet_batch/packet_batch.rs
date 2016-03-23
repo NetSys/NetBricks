@@ -8,25 +8,27 @@ use super::super::interface::ZCSIError;
 use super::super::interface::EndOffset;
 use super::super::pmd::*;
 
-/// Base packet batch structure. This is the abstract structure on which all operations are built.
+/// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
+/// receiving packets from DPDK, allocations, etc. As a result many of the actions implemented in other types of batches
+/// ultimately call into this structure.
 pub struct PacketBatch {
     array: Vec<*mut MBuf>,
     cnt: i32,
     start: usize,
-    end: usize,
 }
 
 impl PacketBatch {
-    // Public functions in PacketBatch are used internally within the framework.
+    /// Create a new PacketBatch capable of holding up to `cnt` packets.
     pub fn new(cnt: i32) -> PacketBatch {
         PacketBatch {
             array: Vec::<*mut MBuf>::with_capacity(cnt as usize),
             cnt: cnt,
             start: 0,
-            end: 0,
         }
     }
 
+    /// Allocate `self.cnt` mbufs. `len` here merely sets the extent of the mbuf considered when sending a packet. We
+    /// always allocate mbuf's of the same size.
     #[inline]
     pub fn allocate_batch_with_size(&mut self, len: u16) -> Result<&mut Self> {
         let cnt = self.cnt;
@@ -36,6 +38,8 @@ impl PacketBatch {
         }
     }
 
+    /// Allocate `cnt` mbufs. `len` sets the metadata field indicating how much of the mbuf should be considred when
+    /// sending the packet, all `mbufs` are of the same size.
     #[inline]
     pub fn allocate_partial_batch_with_size(&mut self, len: u16, cnt: i32) -> Result<&mut Self> {
         match self.alloc_packet_batch(len, cnt) {
@@ -44,6 +48,7 @@ impl PacketBatch {
         }
     }
 
+    /// Free all mbuf's held in this batch.
     #[inline]
     pub fn deallocate_batch(&mut self) -> Result<&mut Self> {
         match self.free_packet_batch() {
@@ -52,16 +57,19 @@ impl PacketBatch {
         }
     }
 
+    /// Number of available mbufs.
     #[inline]
     pub fn available(&self) -> usize {
-        (self.end - self.start)
+        (self.array.len() - self.start)
     }
 
+    /// The maximum number of packets that can be allocated in this batch, just returns `self.cnt`.
     #[inline]
     pub fn max_size(&self) -> i32 {
         self.cnt
     }
 
+    /// Receive packets from a PMD port queue.
     #[inline]
     pub fn recv_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
         unsafe {
@@ -72,8 +80,106 @@ impl PacketBatch {
         }
     }
 
-    // Some utility functions.
+    /// This drops a given vector of packets. This method is O(n) in number of packets, however it does not preserve
+    /// ordering. Currently hidden behind a cfg flag.
+    #[cfg(unordered_drop)]
+    #[inline]
+    fn drop_packets_unordered(&mut self, idxes_ordered: Vec<usize>) -> Option<usize> {
+        let mut idxes = idxes_ordered.clone();
+        idxes.reverse();
+        let mut to_free = Vec::<*mut MBuf>::with_capacity(idxes.len());
+        // First remove them from this packetbatch, compacting the batch as appropriate. Note this will not change start
+        // so is safe.
+        for idx in idxes {
+            to_free.push(self.array.swap_remove(idx));
+        }
 
+        // Great we removed everything
+        if self.start == self.array.len() {
+            unsafe {
+                self.start = 0;
+                self.array.set_len(0);
+            }
+        }
+
+        if to_free.len() == 0 {
+            Some(0)
+        } else {
+            // Now free the dropped packets
+            unsafe {
+                let len = to_free.len();
+                // No need to offset here since to_free is tight.
+                let array_ptr = to_free.as_mut_ptr();
+                let ret = mbuf_free_bulk(array_ptr, (len as i32));
+                if ret == 0 {
+                    Some(len)
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// This drops packet buffers and keeps things ordered. We expect that idxes is an ordered vector of indices, no
+    /// guarantees are made when this is not the case.
+    #[inline]
+    fn drop_packets_stable(&mut self, idxes: Vec<usize>) -> Option<usize> {
+        let mut to_free = Vec::<*mut MBuf>::with_capacity(idxes.len());
+        // Short circuit when we don't have to do this work.
+        if idxes.is_empty() {
+            return Some(0)
+        }
+        unsafe {
+            let mut idx_orig = self.start;
+            let mut idx_new = 0;
+            let mut remove_idx = 0;
+            let end = self.array.len();
+
+            // First go through the list of indexes to be filtered and get rid of them.
+            while idx_orig < end && (remove_idx < idxes.len()) {
+                let test_idx = idxes.get_unchecked(remove_idx).clone();
+                assert!(idx_orig <= test_idx);
+                if idx_orig == test_idx {
+                    to_free.push(self.array[idx_orig]);
+                    remove_idx+=1;
+                } else {
+                    self.array.swap(idx_orig, idx_new);
+                    idx_new+=1;
+                }
+                idx_orig += 1;
+            }
+            // The copy over any left over packets.
+            while idx_orig < end {
+                self.array[idx_new] = self.array[idx_orig];
+                idx_orig += 1;
+                idx_new += 1;
+            }
+
+            // We did not find an index that was passed in, warn/error out.
+            if remove_idx < idxes.len() {
+                None
+            } else {
+                self.start = 0;
+                self.array.set_len(idx_new);
+                if to_free.len() == 0 {
+                    Some(0)
+                } else {
+                    // Now free the dropped packets
+                    let len = to_free.len();
+                    // No need to offset here since to_free is tight.
+                    let array_ptr = to_free.as_mut_ptr();
+                    let ret = mbuf_free_bulk(array_ptr, (len as i32));
+                    if ret == 0 {
+                        Some(len)
+                    } else {
+                        None
+                    }
+                }
+            }
+        }
+    }
+
+    // Some private utility functions.
     #[inline]
     unsafe fn packet_ptr(&mut self) -> *mut *mut MBuf {
         self.array.as_mut_ptr().offset(self.start as isize)
@@ -82,10 +188,9 @@ impl PacketBatch {
     #[inline]
     unsafe fn consumed_batch(&mut self, consumed: usize) {
         self.start += consumed;
-        if self.start == self.end {
+        if self.start == self.array.len() {
             self.start = 0;
-            self.end = 0;
-            self.array.set_len(self.end);
+            self.array.set_len(0);
         }
     }
 
@@ -93,8 +198,7 @@ impl PacketBatch {
     unsafe fn add_to_batch(&mut self, added: usize) {
         assert_eq!(self.start, 0);
         self.start = 0;
-        self.end = added;
-        self.array.set_len(self.end);
+        self.array.set_len(added);
     }
 
     // Assumes we have already deallocated batch.
@@ -119,8 +223,7 @@ impl PacketBatch {
                 let ret = mbuf_alloc_bulk(parray, len, cnt);
                 if ret == 0 {
                     self.start = 0;
-                    self.end = cnt as usize;
-                    self.array.set_len(self.end);
+                    self.array.set_len(cnt as usize);
                     Ok(())
                 } else {
                     Err(())
@@ -132,13 +235,12 @@ impl PacketBatch {
     #[inline]
     fn free_packet_batch(&mut self) -> result::Result<(), ()> {
         unsafe {
-            if self.end > self.start {
+            if self.array.len() > self.start {
                 let parray = self.packet_ptr();
-                let ret = mbuf_free_bulk(parray, ((self.end - self.start) as i32));
-                // If free fails, I am not sure we can do much to recover this self.
-                self.end = 0;
+                let ret = mbuf_free_bulk(parray, ((self.array.len() - self.start) as i32));
+                // If free fails, I am not sure we can do much to recover this batch.
                 self.start = 0;
-                self.array.set_len(self.end);
+                self.array.set_len(0);
                 if ret == 0 {
                     Ok(())
                 } else {
@@ -178,7 +280,7 @@ impl BatchIterator for PacketBatch {
     /// Returns packet at index `idx` and the index of the next packet after `idx`.
     #[inline]
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
-        if idx < self.end {
+        if self.start <= idx && idx < self.array.len() {
             Some((self.address(idx), idx + 1))
         } else {
             None
@@ -188,7 +290,7 @@ impl BatchIterator for PacketBatch {
     /// Payload for the next packet.
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
-        if idx < self.end {
+        if self.start <= idx && idx < self.array.len() {
             Some((self.payload(idx), idx + 1))
         } else {
             None
@@ -232,6 +334,11 @@ impl Act for PacketBatch {
     #[inline]
     fn capacity(&self) -> i32 {
         self.max_size()
+    }
+
+    #[inline]
+    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
+        self.drop_packets_stable(idxes)
     }
 }
 

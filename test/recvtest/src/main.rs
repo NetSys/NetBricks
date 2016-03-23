@@ -3,6 +3,7 @@ extern crate e2d2;
 extern crate time;
 extern crate simd;
 extern crate getopts;
+extern crate rand;
 use e2d2::io;
 use e2d2::io::*;
 use e2d2::headers::*;
@@ -14,7 +15,7 @@ use std::rc::Rc;
 const CONVERSION_FACTOR: u64 = 1000000000;
 
 fn monitor<T: Batch>(parent: T, recv_cell: Rc<Cell<u32>>)
-    -> MapBatch<MacHeader, TransformBatch<MacHeader, ParsedBatch<MacHeader, T>>> {
+    -> MapBatch<MacHeader, TransformBatch<MacHeader, FilterBatch<MacHeader, ParsedBatch<MacHeader, T>>>> {
     let f = box |hdr: &mut MacHeader| {
         let src = hdr.src.clone();
         hdr.src = hdr.dst;
@@ -25,9 +26,13 @@ fn monitor<T: Batch>(parent: T, recv_cell: Rc<Cell<u32>>)
     let g = box move |_: &MacHeader| {
         recv_cell.set(recv_cell.get() + 1);
     };
-
+    let mut x:usize = 0;
     parent
     .parse::<MacHeader>()
+    .filter(box move |_| { 
+        x += 1;
+        (x % 2) == 0
+    } )
     .transform(f)
     .map(g)
 }
