@@ -13,7 +13,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
-fn monitor<T: Act + Batch + BatchIterator>(parent: T, recv_cell: Rc<Cell<u32>>) 
+fn monitor<T: Batch>(parent: T, recv_cell: Rc<Cell<u32>>) 
     -> MapBatch<MacHeader, TransformBatch<MacHeader, ParsedBatch<MacHeader, T>>> {
     let f = box move |hdr: &mut MacHeader| {
         let src = hdr.src.clone();

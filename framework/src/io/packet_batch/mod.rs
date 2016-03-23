@@ -1,5 +1,5 @@
-pub use self::act::Act;
-pub use self::iterator::BatchIterator;
+use self::act::Act;
+use self::iterator::BatchIterator;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::transform_batch::TransformBatch;
 pub use self::apply_batch::ReplaceBatch;
