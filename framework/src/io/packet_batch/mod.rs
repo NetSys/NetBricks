@@ -46,7 +46,8 @@ pub trait Batch : Sized + BatchIterator + Act {
     fn pop(&mut self) -> &mut Self::Parent;
 }
 
-pub trait HeaderOperations : Sized + Batch {
+/// Public interface implemented by packet batches which manipulate headers.
+pub trait HeaderOperations : Batch {
     type Header : EndOffset;
     /// Transform a header field.
     fn transform(self, transformer: Box<FnMut(&mut Self::Header)>) -> TransformBatch<Self::Header, Self> {

@@ -1,5 +1,4 @@
 #![feature(box_syntax)]
-
 extern crate e2d2;
 extern crate time;
 extern crate simd;
@@ -13,13 +12,16 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
-fn monitor<T: Batch>(parent: T, recv_cell: Rc<Cell<u32>>) 
+
+fn monitor<T: Batch>(parent: T, recv_cell: Rc<Cell<u32>>)
     -> MapBatch<MacHeader, TransformBatch<MacHeader, ParsedBatch<MacHeader, T>>> {
-    let f = box move |hdr: &mut MacHeader| {
+    let f = box |hdr: &mut MacHeader| {
         let src = hdr.src.clone();
         hdr.src = hdr.dst;
         hdr.dst = src;
     };
+
+    // We need to move the recv_cell Rc cell into g, instead of borrowing.
     let g = box move |_: &MacHeader| {
         recv_cell.set(recv_cell.get() + 1);
     };
@@ -41,13 +43,6 @@ fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
     let mut pipeline = monitor(parent, recv_cell.clone())
                            .compose()
                            .send(&mut send_port, queue);
-
-
-    //let mut pipeline = io::ReceiveBatch::new(port, queue)
-                           //.compose()
-                           //.parse::<MacHeader>()
-                           //.transform(f)
-                           //.send(&mut send_port, queue);
 
     let mut cycles = 0;
     let mut rx = 0;
