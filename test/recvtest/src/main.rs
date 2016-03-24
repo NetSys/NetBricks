@@ -24,6 +24,7 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
 
     parent.parse::<MacHeader>()
           .transform(f)
+          .filter(box |_| true)
           .compose()
 }
 

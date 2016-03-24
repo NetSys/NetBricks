@@ -173,7 +173,11 @@ void free_pmd_port(int port)
 
 int recv_pkts(int port, int qid, mbuf_array_t pkts, int len)
 {
-	return rte_eth_rx_burst(port, qid, (struct rte_mbuf**)pkts, len);
+	int ret = rte_eth_rx_burst(port, qid, (struct rte_mbuf**)pkts, len);
+	for (int i = 0; i < ret; i++) {
+		rte_prefetch0(rte_pktmbuf_mtod(pkts[i], void*));
+	}
+	return ret;
 }
 
 int send_pkts(int port, int qid, mbuf_array_t pkts, int len)
