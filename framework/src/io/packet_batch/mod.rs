@@ -28,34 +28,37 @@ mod composition_batch;
 mod filter_batch;
 mod merge_batch;
 
-pub fn merge<V1: Batch, V2: Batch>(b1: CompositionBatch<V1>, b2: CompositionBatch<V2>) -> MergeBatch<V1, V2> {
-    MergeBatch::<V1, V2>::new(b1, b2)
+pub fn merge(b1: CompositionBatch, b2: CompositionBatch) -> MergeBatch {
+    MergeBatch::new(b1, b2)
 }
 
 /// Public interface implemented by every packet batch type.
-pub trait Batch : Sized + BatchIterator + Act {
-    type Parent : BatchIterator + Batch + Act;
+pub trait Batch : BatchIterator + Act {
+    //type Parent : BatchIterator + Batch + Act;
 
     /// Parse the payload as header of type.
-    fn parse<T: EndOffset>(self) -> ParsedBatch<T, Self> {
+    fn parse<T: EndOffset>(self) -> ParsedBatch<T, Self> 
+        where Self:Sized
+    {
         ParsedBatch::<T, Self>::new(self)
     }
 
     /// Send this batch out a particular port and queue.
-    fn send<'a>(self, port: &'a mut PmdPort, queue: i32) -> SendBatch<Self> {
+    fn send<'a>(self, port: &'a mut PmdPort, queue: i32) -> SendBatch<Self>
+        where Self:Sized
+    {
         SendBatch::<Self>::new(self, port, queue)
     }
 
-    fn compose(self) -> CompositionBatch<Self> {
-        CompositionBatch::<Self>::new(self)
+    fn compose(self) -> CompositionBatch
+        where Self:Sized + 'static
+    {
+        CompositionBatch::new(box self)
     }
-
-    /// Get parent batch.
-    fn pop(&mut self) -> &mut Self::Parent;
 }
 
 /// Public interface implemented by packet batches which manipulate headers.
-pub trait HeaderOperations : Batch {
+pub trait HeaderOperations : Batch + Sized {
     type Header : EndOffset;
     /// Transform a header field.
     fn transform(self, transformer: Box<FnMut(&mut Self::Header)>) -> TransformBatch<Self::Header, Self> {

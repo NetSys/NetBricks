@@ -6,35 +6,20 @@ use super::super::interface::Result;
 
 /// CompositionBatch allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
 /// can treat packets as originating from the NF itself.
-pub struct CompositionBatch<V>
-    where V: Batch + BatchIterator + Act
-{
-    parent: V,
+pub struct CompositionBatch {
+    parent: Box<Batch>,
 }
 
-impl<V> CompositionBatch<V>
-    where V: Batch + BatchIterator + Act
-{
-    pub fn new(parent: V) -> CompositionBatch<V> {
+impl CompositionBatch {
+    pub fn new(parent: Box<Batch>) -> CompositionBatch {
         CompositionBatch { parent: parent }
 
     }
 }
 
-impl<V> Batch for CompositionBatch<V>
-    where V: Batch + BatchIterator + Act
-{
-    type Parent = V;
+impl Batch for CompositionBatch {}
 
-    #[inline]
-    fn pop(&mut self) -> &mut V {
-        &mut self.parent
-    }
-}
-
-impl<V> BatchIterator for CompositionBatch<V>
-    where V: Batch + BatchIterator + Act
-{
+impl BatchIterator for CompositionBatch {
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
@@ -62,19 +47,15 @@ impl<V> BatchIterator for CompositionBatch<V>
 }
 
 /// Internal interface for packets.
-impl<V> Act for CompositionBatch<V>
-    where V: Batch + BatchIterator + Act
-{
+impl Act for CompositionBatch {
     #[inline]
-    fn act(&mut self) -> &mut Self {
+    fn act(&mut self) {
         self.parent.act();
-        self
     }
 
     #[inline]
-    fn done(&mut self) -> &mut Self {
+    fn done(&mut self) {
         self.parent.done();
-        self
     }
 
     #[inline]

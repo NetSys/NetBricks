@@ -15,8 +15,8 @@ use std::collections::HashMap;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 
-fn monitor<T: Batch>(parent: T, recv_cell: Rc<Cell<u32>>)
-    -> MapBatch<MacHeader, TransformBatch<MacHeader, FilterBatch<MacHeader, ParsedBatch<MacHeader, T>>>> {
+fn monitor<T: 'static + Batch>(parent: T, recv_cell: Rc<Cell<u32>>)
+    -> CompositionBatch {
     let f = box |hdr: &mut MacHeader| {
         let src = hdr.src.clone();
         hdr.src = hdr.dst;
@@ -36,7 +36,7 @@ fn monitor<T: Batch>(parent: T, recv_cell: Rc<Cell<u32>>)
         (x % 2) == 0
     } )
     .transform(f)
-    .map(g)
+    .map(g).compose()
 }
 
 fn recv_thread(ports: Vec<io::PmdPort>, queue: i32, core: i32) {
@@ -44,9 +44,8 @@ fn recv_thread(ports: Vec<io::PmdPort>, queue: i32, core: i32) {
     println!("Receiving started");
 
     let recv_cell = Rc::new(Cell::new(0));
-    let mut pipelines: Vec<_> = ports.iter().map(|port| { monitor(io::ReceiveBatch::new(port.copy(), 
-                                                                                queue).compose(), recv_cell.clone())
-                                                                                      .compose() })
+    let mut pipelines: Vec<CompositionBatch> = ports.iter().map(|port| { monitor(io::ReceiveBatch::new(port.copy(), 
+                                                                                queue), recv_cell.clone())} )
                                                            .collect();
     let combined = merge(pipelines.pop().expect("No pipeline"), pipelines.pop().expect("No pipeline")); 
     let mut send_port = ports[1].copy();

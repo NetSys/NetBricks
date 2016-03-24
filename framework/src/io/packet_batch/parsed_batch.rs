@@ -20,15 +20,13 @@ impl<T, V> Act for ParsedBatch<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn act(&mut self) -> &mut Self {
+    fn act(&mut self) {
         self.parent.act();
-        self
     }
 
     #[inline]
-    fn done(&mut self) -> &mut Self {
+    fn done(&mut self) {
         self.parent.done();
-        self
     }
 
     #[inline]

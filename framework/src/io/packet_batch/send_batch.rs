@@ -35,11 +35,6 @@ impl<'a, V> SendBatch<'a, V>
 impl<'a, V> Batch for SendBatch<'a, V>
     where V: 'a + Batch + BatchIterator + Act
 {
-    type Parent = V;
-
-    fn pop(&mut self) -> &mut V {
-        panic!("Cannot get parent of sent batch")
-    }
 }
 
 // FIXME: All these should panic instead of doing this.
@@ -77,7 +72,7 @@ impl<'a, V> Act for SendBatch<'a, V>
     where V: 'a + Batch + BatchIterator + Act
 {
     #[inline]
-    fn act(&mut self) -> &mut Self {
+    fn act(&mut self) {
         // First everything is applied
         self.parent.act();
         self.parent
@@ -88,11 +83,9 @@ impl<'a, V> Act for SendBatch<'a, V>
             })
             .expect("Send failed");
         self.parent.done();
-        self
     }
 
-    fn done(&mut self) -> &mut Self {
-        self
+    fn done(&mut self) {
     }
 
     fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {

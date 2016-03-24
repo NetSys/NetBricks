@@ -21,7 +21,7 @@ impl<T, V> Act for TransformBatch<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn act(&mut self) -> &mut Self {
+    fn act(&mut self) {
         self.parent.act();
         {
             let ref mut f = self.transformer;
@@ -30,13 +30,11 @@ impl<T, V> Act for TransformBatch<T, V>
                 f(packet);
             }
         }
-        self
     }
 
     #[inline]
-    fn done(&mut self) -> &mut Self {
+    fn done(&mut self) {
         self.parent.done();
-        self
     }
 
     #[inline]

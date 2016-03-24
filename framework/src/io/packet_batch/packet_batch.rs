@@ -311,13 +311,11 @@ impl BatchIterator for PacketBatch {
 /// Internal interface for packets.
 impl Act for PacketBatch {
     #[inline]
-    fn act(&mut self) -> &mut Self {
-        self
+    fn act(&mut self) {
     }
 
     #[inline]
-    fn done(&mut self) -> &mut Self {
-        self
+    fn done(&mut self) {
     }
 
     #[inline]
@@ -343,11 +341,6 @@ impl Act for PacketBatch {
 }
 
 impl Batch for PacketBatch {
-    type Parent = Self;
-    #[inline]
-    fn pop(&mut self) -> &mut Self {
-        panic!("Cannot pop PacketBatch")
-    }
 }
 
 impl Drop for PacketBatch {

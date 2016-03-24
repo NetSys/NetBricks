@@ -6,20 +6,16 @@ use super::super::pmd::*;
 use super::super::interface::Result;
 use std::cmp;
 
-pub struct MergeBatch<V1, V2>
-    where V1 : Batch,
-          V2 : Batch
+pub struct MergeBatch
 {
-    parent1: CompositionBatch<V1>,
-    parent2: CompositionBatch<V2>,
+    parent1: CompositionBatch,
+    parent2: CompositionBatch,
     which: i32,
 }
 
-impl<V1, V2> MergeBatch<V1, V2> 
-    where V1 : Batch,
-          V2 : Batch
+impl MergeBatch 
 {
-    pub fn new(parent1: CompositionBatch<V1>, parent2: CompositionBatch<V2>) -> MergeBatch<V1, V2> {
+    pub fn new(parent1: CompositionBatch, parent2: CompositionBatch) -> MergeBatch {
         MergeBatch {
             parent1: parent1,
             parent2: parent2,
@@ -28,21 +24,9 @@ impl<V1, V2> MergeBatch<V1, V2>
     }
 }
 
-impl<V1, V2> Batch for MergeBatch<V1, V2>
-    where V1 : Batch,
-          V2 : Batch
-{
-    type Parent = CompositionBatch<V1>;
+impl Batch for MergeBatch {}
 
-    #[inline]
-    fn pop(&mut self) -> &mut CompositionBatch<V1> {
-        &mut self.parent1
-    }
-}
-
-impl<V1, V2> BatchIterator for MergeBatch<V1, V2>
-    where V1 : Batch,
-          V2 : Batch
+impl BatchIterator for MergeBatch
 {
     #[inline]
     fn start(&mut self) -> usize {
@@ -91,29 +75,25 @@ impl<V1, V2> BatchIterator for MergeBatch<V1, V2>
 }
 
 /// Internal interface for packets.
-impl<V1, V2> Act for MergeBatch<V1, V2>
-    where V1 : Batch,
-          V2 : Batch
+impl Act for MergeBatch
 {
     #[inline]
-    fn act(&mut self) -> &mut Self {
+    fn act(&mut self) {
         match self.which {
             0 => { self.parent1.act(); () },
             1 => { self.parent2.act(); () },
             _ => panic!("Should not happen"),
         };
-        self
     }
 
     #[inline]
-    fn done(&mut self) -> &mut Self {
+    fn done(&mut self) {
         match self.which {
             0 => { self.parent1.done(); () },
             1 => { self.parent2.done(); () },
             _ => panic!("Should not happen"),
         };
         self.which = (self.which + 1) % 2;
-        self
     }
 
     #[inline]

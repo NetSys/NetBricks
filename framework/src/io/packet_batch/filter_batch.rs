@@ -37,7 +37,7 @@ impl<T, V> Act for FilterBatch<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn act(&mut self) -> &mut Self {
+    fn act(&mut self) {
         self.parent.act();
         let mut remove = Vec::<usize>::with_capacity(self.capacity);
         {
@@ -52,13 +52,11 @@ impl<T, V> Act for FilterBatch<T, V>
         if remove.len() > 0 {
             self.parent.drop_packets(remove).expect("Filtering was performed incorrectly");
         }
-        self
     }
 
     #[inline]
-    fn done(&mut self) -> &mut Self {
+    fn done(&mut self) {
         self.parent.done();
-        self
     }
 
     #[inline]

@@ -35,12 +35,6 @@ impl ReceiveBatch {
 }
 
 impl Batch for ReceiveBatch {
-    type Parent = PacketBatch;
-
-    #[inline]
-    fn pop(&mut self) -> &mut PacketBatch {
-        &mut self.parent
-    }
 }
 
 impl BatchIterator for ReceiveBatch {
@@ -73,7 +67,7 @@ impl BatchIterator for ReceiveBatch {
 /// Internal interface for packets.
 impl Act for ReceiveBatch {
     #[inline]
-    fn act(&mut self) -> &mut Self {
+    fn act(&mut self) {
         self.parent.act();
         self.parent
             .recv_queue(&mut self.port, self.queue)
@@ -82,14 +76,12 @@ impl Act for ReceiveBatch {
                 Ok(x)
             })
             .expect("Receive failed");
-        self
     }
 
     #[inline]
-    fn done(&mut self) -> &mut Self {
+    fn done(&mut self) {
         // Free up memory
         self.parent.deallocate_batch().expect("Deallocation failed");
-        self
     }
 
     #[inline]
