@@ -8,6 +8,7 @@ pub use self::send_batch::SendBatch;
 pub use self::map_batch::MapBatch;
 pub use self::composition_batch::CompositionBatch;
 pub use self::filter_batch::FilterBatch;
+pub use self::merge_batch::MergeBatch;
 use super::interface::EndOffset;
 use super::pmd::*;
 
@@ -25,6 +26,11 @@ mod act;
 mod map_batch;
 mod composition_batch;
 mod filter_batch;
+mod merge_batch;
+
+pub fn merge<V1: Batch, V2: Batch>(b1: CompositionBatch<V1>, b2: CompositionBatch<V2>) -> MergeBatch<V1, V2> {
+    MergeBatch::<V1, V2>::new(b1, b2)
+}
 
 /// Public interface implemented by every packet batch type.
 pub trait Batch : Sized + BatchIterator + Act {

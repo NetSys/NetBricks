@@ -11,6 +11,7 @@ use getopts::Options;
 use std::env;
 use std::cell::Cell;
 use std::rc::Rc;
+use std::collections::HashMap;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 
@@ -27,6 +28,7 @@ fn monitor<T: Batch>(parent: T, recv_cell: Rc<Cell<u32>>)
         recv_cell.set(recv_cell.get() + 1);
     };
     let mut x:usize = 0;
+
     parent
     .parse::<MacHeader>()
     .filter(box move |_| { 
@@ -37,17 +39,18 @@ fn monitor<T: Batch>(parent: T, recv_cell: Rc<Cell<u32>>)
     .map(g)
 }
 
-fn recv_thread(port: io::PmdPort, queue: i32, core: i32) {
+fn recv_thread(ports: Vec<io::PmdPort>, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Receiving started");
-    let mut send_port = port.copy();
 
     let recv_cell = Rc::new(Cell::new(0));
-    let parent = io::ReceiveBatch::new(port, queue)
-                           .compose();
-    let mut pipeline = monitor(parent, recv_cell.clone())
-                           .compose()
-                           .send(&mut send_port, queue);
+    let mut pipelines: Vec<_> = ports.iter().map(|port| { monitor(io::ReceiveBatch::new(port.copy(), 
+                                                                                queue).compose(), recv_cell.clone())
+                                                                                      .compose() })
+                                                           .collect();
+    let combined = merge(pipelines.pop().expect("No pipeline"), pipelines.pop().expect("No pipeline")); 
+    let mut send_port = ports[1].copy();
+    let mut pipeline = combined.send(&mut send_port, queue);
 
     let mut cycles = 0;
     let mut rx = 0;
@@ -94,7 +97,12 @@ fn main() {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
     }
     let cores_str = matches.opt_strs("c");
-    // let core:i32 = matches.opt_str("c").unwrap().parse().ok().expect("Core cannot be parsed");
+    let master_core = matches.opt_str("m")
+                             .unwrap_or_else(|| String::from("0"))
+                             .parse()
+                             .expect("Could not parse master core spec") ;
+    println!("Using master core {}", master_core);
+
     let whitelisted = matches.opt_strs("w");
     if cores_str.len() > whitelisted.len() {
         println!("More cores than ports");
@@ -102,30 +110,36 @@ fn main() {
     }
     let cores: Vec<i32> = cores_str.iter()
                                    .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
-                                   .collect();
+                                   .collect(); 
     for (core, wl) in cores.iter().zip(whitelisted.iter()) {
         println!("Going to use core {} for wl {}", core, wl);
     }
-    let master_core = matches.opt_str("m")
-                             .unwrap_or_else(|| String::from("0"))
-                             .parse()
-                             .expect("Could not parse master core spec") ;
-    println!("Using master core {}", master_core);
+    let mut core_map = HashMap::<i32, Vec<i32>>::with_capacity(cores.len());
+    for (core, port) in cores.iter().zip(0..whitelisted.len()) {
+        {
+            match core_map.get(&core) {
+                Some(_) => {core_map.get_mut(&core).expect("Incorrect logic").push(port as i32)},
+                None => {core_map.insert(core.clone(), vec![port as i32]); ()}
+            }
+        }
+    }
+
     io::init_system_wl(&format!("recv{}", cores_str.join("")),
                        master_core,
                        &whitelisted);
-    let mut thread: Vec<std::thread::JoinHandle<()>> = cores.iter()
-                                                            .zip(0..whitelisted.len())
-                                                            .map(|(core, port)| {
-                                                                let c = *core;
-                                                                let recv_port = io::PmdPort::new_mq_port(port as i32,
-                                                                                                         1,
-                                                                                                         1,
-                                                                                                         &vec![c],
-                                                                                                         &vec![c])
-                                                                                    .unwrap();
-                                                                println!("Started port {} core {}", port, c);
-                                                                std::thread::spawn(move || recv_thread(recv_port, 0, c))
+    let mut thread: Vec<std::thread::JoinHandle<()>> = core_map.iter()
+                                                            .map(|(core, ports)| {
+                                                                let c = core.clone();
+                                                                let recv_ports:Vec<PmdPort> = 
+                                                                    ports.iter()
+                                                                         .map(|p| io::PmdPort::new_mq_port(p.clone() as i32,
+                                                                                                           1,
+                                                                                                           1,
+                                                                                                           &vec![c],
+                                                                                                           &vec![c])
+                                                                                                .unwrap()).collect();
+                                                                std::thread::spawn(move || recv_thread(recv_ports, 
+                                                                                                       0, c))
                                                             })
                                                             .collect();
     let _ = thread.pop().expect("No cores started").join();

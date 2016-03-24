@@ -61,7 +61,6 @@ impl BatchIterator for ReceiveBatch {
 
     #[inline]
     unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
-        println!("recvbatch.next_address");
         self.parent.next_base_address(idx)
     }
 
