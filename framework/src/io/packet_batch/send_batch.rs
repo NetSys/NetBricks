@@ -6,19 +6,19 @@ use super::super::interface::Result;
 
 // FIXME: Should we be handling multiple queues and ports here?
 // FIXME: Should this really even be a batch?
-pub struct SendBatch<'a, V>
-    where V: 'a + Batch + BatchIterator + Act
+pub struct SendBatch<V>
+    where V: Batch + BatchIterator + Act
 {
-    port: &'a mut PmdPort,
+    port: PmdPort,
     queue: i32,
     parent: V,
     pub sent: u64,
 }
 
-impl<'a, V> SendBatch<'a, V>
-    where V: 'a + Batch + BatchIterator + Act
+impl<V> SendBatch<V>
+    where V: Batch + BatchIterator + Act
 {
-    pub fn new(parent: V, port: &'a mut PmdPort, queue: i32) -> SendBatch<'a, V> {
+    pub fn new(parent: V, port: PmdPort, queue: i32) -> SendBatch<V> {
         SendBatch {
             port: port,
             queue: queue,
@@ -32,14 +32,13 @@ impl<'a, V> SendBatch<'a, V>
     }
 }
 
-impl<'a, V> Batch for SendBatch<'a, V>
-    where V: 'a + Batch + BatchIterator + Act
+impl<V> Batch for SendBatch<V>
+    where V: Batch + BatchIterator + Act
 {
 }
 
-// FIXME: All these should panic instead of doing this.
-impl<'a, V> BatchIterator for SendBatch<'a, V>
-    where V: 'a + Batch + BatchIterator + Act
+impl<V> BatchIterator for SendBatch<V>
+    where V: Batch + BatchIterator + Act
 {
     #[inline]
     fn start(&mut self) -> usize {
@@ -68,15 +67,15 @@ impl<'a, V> BatchIterator for SendBatch<'a, V>
 }
 
 /// Internal interface for packets.
-impl<'a, V> Act for SendBatch<'a, V>
-    where V: 'a + Batch + BatchIterator + Act
+impl<V> Act for SendBatch<V>
+    where V: Batch + BatchIterator + Act
 {
     #[inline]
     fn act(&mut self) {
         // First everything is applied
         self.parent.act();
         self.parent
-            .send_queue(self.port, self.queue)
+            .send_queue(&mut self.port, self.queue)
             .and_then(|x| {
                 self.sent += x as u64;
                 Ok(x)

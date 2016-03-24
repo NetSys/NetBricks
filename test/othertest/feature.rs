@@ -12,7 +12,12 @@ fn test_comp() {
 }
 
 fn main() {
-    test_comp();
-    let f = box |x| { x + 5 };
-    println!("Value {}", f(22));
+    //test_comp();
+    //let f = box |x| { x + 5 };
+    //println!("Value {}", f(22));
+    let x = vec![0, 1, 2, 3, 4];
+    let mut y = x.iter_mut().cycle();
+    for c in 1..20 {
+        println!("c {} iter {}", c, y.next().expect("Inf"));
+    }
 }

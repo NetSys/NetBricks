@@ -28,14 +28,16 @@ mod composition_batch;
 mod filter_batch;
 mod merge_batch;
 
-pub fn merge(b1: CompositionBatch, b2: CompositionBatch) -> MergeBatch {
-    MergeBatch::new(b1, b2)
+/// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
+/// the precise batch being processed will be determined by the scheduling policy used.
+#[inline]
+pub fn merge(batches: Vec<CompositionBatch>) -> MergeBatch {
+    MergeBatch::new(batches)
 }
 
-/// Public interface implemented by every packet batch type.
+/// Public trait implemented by every packet batch type. This trait should be used as a constraint for any functions or
+/// places where a Batch type is required.
 pub trait Batch : BatchIterator + Act {
-    //type Parent : BatchIterator + Batch + Act;
-
     /// Parse the payload as header of type.
     fn parse<T: EndOffset>(self) -> ParsedBatch<T, Self> 
         where Self:Sized
@@ -44,12 +46,18 @@ pub trait Batch : BatchIterator + Act {
     }
 
     /// Send this batch out a particular port and queue.
-    fn send<'a>(self, port: &'a mut PmdPort, queue: i32) -> SendBatch<Self>
+    fn send(self, port: PmdPort, queue: i32) -> SendBatch<Self>
         where Self:Sized
     {
         SendBatch::<Self>::new(self, port, queue)
     }
 
+    /// Erase type information. This is essential to allow different kinds of types to be collected together, as done
+    /// for example when merging batches or composing different NFs together.
+    ///
+    /// # Warning
+    /// This causes some performance degradation: operations called through composition batches rely on indirect calls
+    /// which affect throughput.
     fn compose(self) -> CompositionBatch
         where Self:Sized + 'static
     {
