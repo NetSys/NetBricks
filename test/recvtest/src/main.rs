@@ -9,8 +9,6 @@ use e2d2::io::*;
 use e2d2::headers::*;
 use getopts::Options;
 use std::env;
-use std::cell::Cell;
-use std::rc::Rc;
 use std::collections::HashMap;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
@@ -32,7 +30,7 @@ fn recv_thread(ports: Vec<io::PmdPort>, queue: i32, core: i32) {
     io::init_thread(core, core);
     println!("Receiving started");
 
-    let mut pipelines: Vec<_> = ports.iter()
+    let pipelines: Vec<_> = ports.iter()
                                      .map(|port| {
                                          monitor(io::ReceiveBatch::new(port.copy(), queue))
                                              .send(port.copy(), queue)

@@ -2,10 +2,8 @@ use super::mbuf::MBuf;
 use super::interface::Result;
 use super::interface::ZCSIError;
 use super::super::headers::MacAddress;
-// use super::packet_batch::PacketBatch;
-// use super::packet_batch::packet_ptr;
-// use super::packet_batch::consumed_batch;
-// use super::packet_batch::add_to_batch;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 // External DPDK calls
 #[link(name = "zcsi")]
@@ -34,6 +32,8 @@ pub struct PmdPort {
     rxqs: i32,
     txqs: i32,
     should_close: bool,
+    stats_rx: Vec<Arc<AtomicUsize>>,
+    stats_tx: Vec<Arc<AtomicUsize>>,
 }
 
 impl Drop for PmdPort {
@@ -102,6 +102,8 @@ impl PmdPort {
                 rxqs: rxqs,
                 txqs: txqs,
                 should_close: true,
+                stats_rx: vec![Arc::new(AtomicUsize::new(0)); rxqs as usize],
+                stats_tx: vec![Arc::new(AtomicUsize::new(0)); txqs as usize],
             })
         } else {
             Err(ZCSIError::FailedToInitializePort)
@@ -159,6 +161,8 @@ impl PmdPort {
             rxqs: 0,
             txqs: 0,
             should_close: false,
+            stats_rx: vec![Arc::new(AtomicUsize::new(0)); 0],
+            stats_tx: vec![Arc::new(AtomicUsize::new(0)); 0],
         })
     }
 
@@ -170,11 +174,13 @@ impl PmdPort {
             rxqs: self.rxqs,
             txqs: self.txqs,
             should_close: false,
+            stats_rx: self.stats_rx.clone(),
+            stats_tx: self.stats_tx.clone(),
         }
     }
 
     #[inline]
-    pub fn send(&self, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
+    pub fn send(&mut self, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
         self.send_queue(0, pkts, to_send)
     }
 
@@ -184,12 +190,14 @@ impl PmdPort {
     }
 
     #[inline]
-    pub fn send_queue(&self, queue: i32, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
+    pub fn send_queue(&mut self, queue: i32, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
         if self.txqs < queue {
             Err(ZCSIError::BadQueue)
         } else {
             unsafe {
                 let sent = send_pkts(self.port, queue, pkts, to_send);
+                let update = self.stats_tx[queue as usize].load(Ordering::Relaxed) + sent as usize;
+                self.stats_tx[queue as usize].store(update, Ordering::Relaxed);
                 Ok(sent as u32)
             }
         }
@@ -202,6 +210,8 @@ impl PmdPort {
         } else {
             unsafe {
                 let recv = recv_pkts(self.port, queue, pkts, to_recv);
+                let update = self.stats_rx[queue as usize].load(Ordering::Relaxed) + recv as usize;
+                self.stats_rx[queue as usize].store(update, Ordering::Relaxed);
                 Ok(recv as u32)
             }
         }
