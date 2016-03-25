@@ -8,8 +8,10 @@ use e2d2::io;
 use e2d2::io::*;
 use e2d2::headers::*;
 use getopts::Options;
-use std::env;
 use std::collections::HashMap;
+use std::env;
+use std::time::Duration;
+use std::thread;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 
@@ -39,27 +41,8 @@ fn recv_thread(ports: Vec<io::PmdPort>, queue: i32, core: i32) {
                                  .collect();
     println!("Running {} pipelines", pipelines.len());
     let mut combined = merge(pipelines);
-    let mut cycles = 0;
-    let mut rx_sofar = (0, 0);
-    let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
     loop {
         combined.process();
-        cycles += 1;
-        let now = time::precise_time_ns() / CONVERSION_FACTOR;
-        if now > start {
-            let rx_now = ports.iter()
-                              .map(|port| port.stats(queue))
-                              .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp));
-            println!("{} rx_core {} rx {} tx {} loops {}",
-                     (now - start),
-                     core,
-                     rx_now.0 - rx_sofar.0,
-                     rx_now.1 - rx_sofar.1,
-                     cycles);
-            rx_sofar = rx_now;
-            cycles = 0;
-            start = now;
-        }
     }
 }
 
@@ -129,12 +112,26 @@ fn main() {
                                                    (c, recv_ports)
                                                })
                                                .collect();
-    let mut thread: Vec<_> = ports_by_core.iter()
-                                          .map(|(core, ports)| {
-                                              let c = core.clone();
-                                              let p: Vec<_> = ports.iter().map(|p| p.copy()).collect();
-                                              std::thread::spawn(move || recv_thread(p, 0, c))
-                                          })
-                                          .collect();
-    let _ = thread.pop().expect("No cores started").join();
+    let _thread: Vec<_> = ports_by_core.iter()
+                                       .map(|(core, ports)| {
+                                           let c = core.clone();
+                                           let p: Vec<_> = ports.iter().map(|p| p.copy()).collect();
+                                           std::thread::spawn(move || recv_thread(p, 0, c))
+                                       })
+                                       .collect();
+    let mut pkts_so_far = (0, 0);
+    let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
+    let sleep_time = Duration::from_secs(1);
+    loop {
+        thread::sleep(sleep_time); // Sleep for a bit
+        let now = time::precise_time_ns() / CONVERSION_FACTOR;
+        let pkts = ports_by_core.values()
+                                .map(|pvec| pvec.iter()
+                                                .map(|p| p.stats(0))
+                                                .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp)))
+                                .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp));
+        println!("{} OVERALL RX {} TX {}", now - start, pkts.0 - pkts_so_far.0, pkts.1 -pkts_so_far.1);
+        start = now;
+        pkts_so_far = pkts;
+    }
 }
