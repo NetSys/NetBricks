@@ -31,31 +31,32 @@ fn recv_thread(ports: Vec<io::PmdPort>, queue: i32, core: i32) {
     println!("Receiving started");
 
     let pipelines: Vec<_> = ports.iter()
-                                     .map(|port| {
-                                         monitor(io::ReceiveBatch::new(port.copy(), queue))
-                                             .send(port.copy(), queue)
-                                             .compose()
-                                     })
-                                     .collect();
+                                 .map(|port| {
+                                     monitor(io::ReceiveBatch::new(port.copy(), queue))
+                                         .send(port.copy(), queue)
+                                         .compose()
+                                 })
+                                 .collect();
     println!("Running {} pipelines", pipelines.len());
     let mut combined = merge(pipelines);
     let mut cycles = 0;
-    let mut rx = 0;
-    let mut no_rx = 0;
+    let mut rx_sofar = (0, 0);
     let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
     loop {
         combined.process();
         cycles += 1;
         let now = time::precise_time_ns() / CONVERSION_FACTOR;
         if now > start {
-            println!("{} rx_core {} pps {} no_rx {} loops {}",
+            let rx_now = ports.iter()
+                              .map(|port| port.stats(queue))
+                              .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp));
+            println!("{} rx_core {} rx {} tx {} loops {}",
                      (now - start),
                      core,
-                     rx,
-                     no_rx,
+                     rx_now.0 - rx_sofar.0,
+                     rx_now.1 - rx_sofar.1,
                      cycles);
-            rx = 0;
-            no_rx = 0;
+            rx_sofar = rx_now;
             cycles = 0;
             start = now;
         }
@@ -111,22 +112,29 @@ fn main() {
     io::init_system_wl(&format!("recv{}", cores_str.join("")),
                        master_core,
                        &whitelisted);
-    let mut thread: Vec<std::thread::JoinHandle<()>> =
-        core_map.iter()
-                .map(|(core, ports)| {
-                    let c = core.clone();
-                    let recv_ports: Vec<PmdPort> = ports.iter()
-                                                        .map(|p| {
-                                                            io::PmdPort::new_mq_port(p.clone() as i32,
-                                                                                     1,
-                                                                                     1,
-                                                                                     &vec![c],
-                                                                                     &vec![c])
-                                                                .unwrap()
-                                                        })
-                                                        .collect();
-                    std::thread::spawn(move || recv_thread(recv_ports, 0, c))
-                })
-                .collect();
+    let ports_by_core: HashMap<_, _> = core_map.iter()
+                                               .map(|(core, ports)| {
+                                                   let c = core.clone();
+                                                   let recv_ports: Vec<_> =
+                                                       ports.iter()
+                                                            .map(|p| {
+                                                                io::PmdPort::new_mq_port(p.clone() as i32,
+                                                                                         1,
+                                                                                         1,
+                                                                                         &vec![c],
+                                                                                         &vec![c])
+                                                                    .expect("Could not initialize port")
+                                                            })
+                                                            .collect();
+                                                   (c, recv_ports)
+                                               })
+                                               .collect();
+    let mut thread: Vec<_> = ports_by_core.iter()
+                                          .map(|(core, ports)| {
+                                              let c = core.clone();
+                                              let p: Vec<_> = ports.iter().map(|p| p.copy()).collect();
+                                              std::thread::spawn(move || recv_thread(p, 0, c))
+                                          })
+                                          .collect();
     let _ = thread.pop().expect("No cores started").join();
 }

@@ -54,6 +54,15 @@ impl PmdPort {
     pub fn num_pmd_ports() -> i32 {
         unsafe { num_pmd_ports() }
     }
+    #[inline]
+    pub fn name(&self) -> i32 {
+        self.port
+    }
+    
+    pub fn stats(&self, queue: i32) -> (usize, usize) {
+        let idx = queue as usize;
+        (self.stats_rx[idx].load(Ordering::Relaxed), self.stats_tx[idx].load(Ordering::Relaxed))
+    }
 
     pub fn new(port: i32,
                rxqs: i32,
