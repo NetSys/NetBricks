@@ -21,12 +21,18 @@ impl<T, V> ContextBatch<T, V>
 {
     pub fn new(parent: V) -> ContextBatch<T, V> {
         let capacity = parent.capacity() as usize;
-        ContextBatch{
+        ContextBatch {
             parent: parent,
             context: vec![Default::default(); capacity],
             context_size: capacity,
         }
     }
+}
+
+impl<T, V> Batch for ContextBatch<T, V>
+    where T: Any + Default + Clone,
+          V: Batch + BatchIterator + Act
+{
 }
 
 impl<T, V> Act for ContextBatch<T, V>
@@ -40,8 +46,7 @@ impl<T, V> Act for ContextBatch<T, V>
 
     #[inline]
     fn done(&mut self) {
-        self.context.clear();
-        self.context.resize(self.context_size, Default::default());
+        self.context = vec![Default::default(); self.context_size];
         self.parent.done();
     }
 
@@ -57,6 +62,30 @@ impl<T, V> Act for ContextBatch<T, V>
 
     #[inline]
     fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
+        // Need to adjust data
+        let mut idx_orig = self.parent.start();
+        let mut idx_new = 0;
+        let mut remove_idx = 0;
+        let end = self.context.len();
+
+        // First go through the list of indexes to be filtered and get rid of them.
+        while idx_orig < end && (remove_idx < idxes.len()) {
+            let test_idx = idxes[remove_idx];
+            assert!(idx_orig <= test_idx);
+            if idx_orig == test_idx {
+                remove_idx += 1;
+            } else {
+                self.context.swap(idx_orig, idx_new);
+                idx_new += 1;
+            }
+            idx_orig += 1;
+        }
+        // Then copy over any left over packets.
+        while idx_orig < end {
+            self.context.swap(idx_orig, idx_new);
+            idx_orig += 1;
+            idx_new += 1;
+        }
         self.parent.drop_packets(idxes)
     }
 }
@@ -74,32 +103,48 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     #[inline]
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         match self.parent.next_address(idx) {
-            Some((addr, _, idx)) => Some((addr, self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)), idx)),
-            None => None
+            Some((addr, _, iret)) => {
+                Some((addr,
+                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
+                      iret))
+            }
+            None => None,
         }
     }
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         match self.parent.next_payload(idx) {
-            Some((addr, _, idx)) => Some((addr, self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)), idx)),
-            None => None
+            Some((addr, _, iret)) => {
+                Some((addr,
+                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
+                      iret))
+            }
+            None => None,
         }
     }
 
     #[inline]
     unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         match self.parent.next_base_address(idx) {
-            Some((addr, _, idx)) => Some((addr, self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)), idx)),
-            None => None
+            Some((addr, _, iret)) => {
+                Some((addr,
+                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
+                      iret))
+            }
+            None => None,
         }
     }
 
     #[inline]
     unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         match self.parent.next_base_payload(idx) {
-            Some((addr, _, idx)) => Some((addr, self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)), idx)),
-            None => None
+            Some((addr, _, iret)) => {
+                Some((addr,
+                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
+                      iret))
+            }
+            None => None,
         }
     }
 }

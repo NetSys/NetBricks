@@ -16,6 +16,15 @@ use std::any::Any;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 
+#[derive(Copy, Clone, Default)]
+struct Flow {
+    pub src_ip: u32,
+    pub dst_ip: u32,
+    pub src_port: u16,
+    pub dst_port: u16,
+    pub proto: u8,
+}
+
 fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
     let f = box |hdr: &mut MacHeader, _: Option<&mut Any>| {
         let src = hdr.src.clone();
@@ -23,9 +32,32 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
         hdr.dst = src;
     };
 
-    parent.parse::<MacHeader>()
+    parent.context::<Flow>()
+          .parse::<MacHeader>()
           .transform(f)
-          .filter(box |_, _| true)
+          .parse::<IpHeader>()
+          .map(box |hdr, ctx| {
+              match ctx {
+                  Some(x) => {
+                      let s = x.downcast_mut::<Flow>().expect("Wrong type");
+                      s.src_ip = hdr.src();
+                      s.dst_ip = hdr.dst();
+                      s.proto = hdr.protocol();
+                  }
+                  None => panic!("no context"),
+              }
+          })
+          .parse::<UdpHeader>()
+          .map(box |hdr, ctx| {
+              match ctx {
+                  Some(x) => {
+                      let s = x.downcast_mut::<Flow>().expect("Wrong type");
+                      s.src_port = hdr.src_port();
+                      s.dst_port = hdr.dst_port();
+                  }
+                  None => panic!("no context"),
+              }
+          })
           .compose()
 }
 
@@ -127,11 +159,16 @@ fn main() {
         thread::sleep(sleep_time); // Sleep for a bit
         let now = time::precise_time_ns() / CONVERSION_FACTOR;
         let pkts = ports_by_core.values()
-                                .map(|pvec| pvec.iter()
-                                                .map(|p| p.stats(0))
-                                                .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp)))
+                                .map(|pvec| {
+                                    pvec.iter()
+                                        .map(|p| p.stats(0))
+                                        .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp))
+                                })
                                 .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp));
-        println!("{} OVERALL RX {} TX {}", now - start, pkts.0 - pkts_so_far.0, pkts.1 -pkts_so_far.1);
+        println!("{} OVERALL RX {} TX {}",
+                 now - start,
+                 pkts.0 - pkts_so_far.0,
+                 pkts.1 - pkts_so_far.1);
         start = now;
         pkts_so_far = pkts;
     }

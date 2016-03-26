@@ -44,15 +44,15 @@ pub fn merge(batches: Vec<CompositionBatch>) -> MergeBatch {
 /// places where a Batch type is required.
 pub trait Batch : BatchIterator + Act {
     /// Parse the payload as header of type.
-    fn parse<T: EndOffset>(self) -> ParsedBatch<T, Self> 
-        where Self:Sized
+    fn parse<T: EndOffset>(self) -> ParsedBatch<T, Self>
+        where Self: Sized
     {
         ParsedBatch::<T, Self>::new(self)
     }
 
     /// Send this batch out a particular port and queue.
     fn send(self, port: PmdPort, queue: i32) -> SendBatch<Self>
-        where Self:Sized
+        where Self: Sized
     {
         SendBatch::<Self>::new(self, port, queue)
     }
@@ -64,9 +64,17 @@ pub trait Batch : BatchIterator + Act {
     /// This causes some performance degradation: operations called through composition batches rely on indirect calls
     /// which affect throughput.
     fn compose(self) -> CompositionBatch
-        where Self:Sized + 'static
+        where Self: Sized + 'static
     {
         CompositionBatch::new(box self)
+    }
+
+    /// Add context (i.e., a per packet structure) that can be used during computation.
+    fn context<T>(self) -> ContextBatch<T, Self>
+        where Self: Sized,
+              T: Any + Default + Clone
+    {
+        ContextBatch::<T, Self>::new(self)
     }
 }
 
@@ -74,7 +82,9 @@ pub trait Batch : BatchIterator + Act {
 pub trait HeaderOperations : Batch + Sized {
     type Header : EndOffset;
     /// Transform a header field.
-    fn transform(self, transformer: Box<FnMut(&mut Self::Header, Option<&mut Any>)>) -> TransformBatch<Self::Header, Self> {
+    fn transform(self,
+                 transformer: Box<FnMut(&mut Self::Header, Option<&mut Any>)>)
+                 -> TransformBatch<Self::Header, Self> {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }
 
@@ -97,7 +107,8 @@ pub trait HeaderOperations : Batch + Sized {
     // FIXME: Should this be in the general interface?
     /// Reset the packet pointer to 0. This is identical to composition except for using static dispatch.
     fn reset(self) -> ResetParsingBatch<Self>
-        where Self:Sized {
+        where Self: Sized
+    {
         ResetParsingBatch::<Self>::new(self)
     }
 }

@@ -33,10 +33,7 @@ impl<V> SendBatch<V>
     }
 }
 
-impl<V> Batch for SendBatch<V>
-    where V: Batch + BatchIterator + Act
-{
-}
+impl<V> Batch for SendBatch<V> where V: Batch + BatchIterator + Act {}
 
 impl<V> BatchIterator for SendBatch<V>
     where V: Batch + BatchIterator + Act
@@ -85,8 +82,7 @@ impl<V> Act for SendBatch<V>
         self.parent.done();
     }
 
-    fn done(&mut self) {
-    }
+    fn done(&mut self) {}
 
     fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
         self.parent.send_queue(port, queue)

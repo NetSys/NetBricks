@@ -17,10 +17,9 @@ macro_rules! batch {
 
 macro_rules! batch_no_new {
     ($name : ident) => {
-        impl<T, V> Batch for $name<T, V> 
+        impl<T, V> Batch for $name<T, V>
             where T: EndOffset,
             V:Batch + BatchIterator + Act {}
-        
 
         impl<T, V> HeaderOperations for $name<T, V>
             where T: EndOffset,

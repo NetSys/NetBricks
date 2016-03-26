@@ -128,7 +128,7 @@ impl PacketBatch {
         let mut to_free = Vec::<*mut MBuf>::with_capacity(idxes.len());
         // Short circuit when we don't have to do this work.
         if idxes.is_empty() {
-            return Some(0)
+            return Some(0);
         }
         unsafe {
             let mut idx_orig = self.start;
@@ -142,14 +142,14 @@ impl PacketBatch {
                 assert!(idx_orig <= test_idx);
                 if idx_orig == test_idx {
                     to_free.push(self.array[idx_orig]);
-                    remove_idx+=1;
+                    remove_idx += 1;
                 } else {
                     self.array.swap(idx_orig, idx_new);
-                    idx_new+=1;
+                    idx_new += 1;
                 }
                 idx_orig += 1;
             }
-            // The copy over any left over packets.
+            // Then copy over any left over packets.
             while idx_orig < end {
                 self.array[idx_new] = self.array[idx_orig];
                 idx_orig += 1;
@@ -312,12 +312,10 @@ impl BatchIterator for PacketBatch {
 /// Internal interface for packets.
 impl Act for PacketBatch {
     #[inline]
-    fn act(&mut self) {
-    }
+    fn act(&mut self) {}
 
     #[inline]
-    fn done(&mut self) {
-    }
+    fn done(&mut self) {}
 
     #[inline]
     fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
@@ -341,8 +339,7 @@ impl Act for PacketBatch {
     }
 }
 
-impl Batch for PacketBatch {
-}
+impl Batch for PacketBatch {}
 
 impl Drop for PacketBatch {
     fn drop(&mut self) {

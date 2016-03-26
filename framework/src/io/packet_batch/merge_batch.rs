@@ -7,14 +7,12 @@ use super::super::interface::Result;
 use std::cmp;
 use std::any::Any;
 
-pub struct MergeBatch
-{
+pub struct MergeBatch {
     parents: Vec<CompositionBatch>,
     which: usize,
 }
 
-impl MergeBatch 
-{
+impl MergeBatch {
     pub fn new(parents: Vec<CompositionBatch>) -> MergeBatch {
         MergeBatch {
             parents: parents,
@@ -31,8 +29,7 @@ impl MergeBatch
 
 impl Batch for MergeBatch {}
 
-impl BatchIterator for MergeBatch
-{
+impl BatchIterator for MergeBatch {
     #[inline]
     fn start(&mut self) -> usize {
         self.parents[self.which].start()
@@ -60,8 +57,7 @@ impl BatchIterator for MergeBatch
 }
 
 /// Internal interface for packets.
-impl Act for MergeBatch
-{
+impl Act for MergeBatch {
     #[inline]
     fn act(&mut self) {
         self.parents[self.which].act()

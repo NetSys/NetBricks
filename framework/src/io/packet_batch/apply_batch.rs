@@ -27,7 +27,9 @@ impl<T, V> Act for ReplaceBatch<T, V>
         self.parent.act();
         let iter = PacketBatchIterator::<T>::new(&mut self.parent);
         while let Some((packet, _)) = iter.next(&mut self.parent) {
-            unsafe { ptr::copy_nonoverlapping(&self.template, packet, 1); }
+            unsafe {
+                ptr::copy_nonoverlapping(&self.template, packet, 1);
+            }
         }
     }
 

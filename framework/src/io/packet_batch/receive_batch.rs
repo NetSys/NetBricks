@@ -35,8 +35,7 @@ impl ReceiveBatch {
     }
 }
 
-impl Batch for ReceiveBatch {
-}
+impl Batch for ReceiveBatch {}
 
 impl BatchIterator for ReceiveBatch {
     #[inline]
