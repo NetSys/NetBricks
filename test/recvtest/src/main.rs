@@ -12,11 +12,12 @@ use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 use std::thread;
+use std::any::Any;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 
 fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
-    let f = box |hdr: &mut MacHeader| {
+    let f = box |hdr: &mut MacHeader, _: Option<&mut Any>| {
         let src = hdr.src.clone();
         hdr.src = hdr.dst;
         hdr.dst = src;
@@ -24,7 +25,7 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
 
     parent.parse::<MacHeader>()
           .transform(f)
-          .filter(box |_| true)
+          .filter(box |_, _| true)
           .compose()
 }
 

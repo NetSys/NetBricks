@@ -5,13 +5,14 @@ use super::HeaderOperations;
 use super::super::interface::EndOffset;
 use super::super::interface::Result;
 use super::super::pmd::*;
+use std::any::Any;
 
 pub struct FilterBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     parent: V,
-    filter: Box<FnMut(&T) -> bool>,
+    filter: Box<FnMut(&T, Option<&mut Any>) -> bool>,
     capacity: usize,
 }
 
@@ -20,7 +21,7 @@ impl<T, V> FilterBatch<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
-    pub fn new(parent: V, filter: Box<FnMut(&T) -> bool>) -> FilterBatch<T, V> {
+    pub fn new(parent: V, filter: Box<FnMut(&T, Option<&mut Any>) -> bool>) -> FilterBatch<T, V> {
         let capacity = parent.capacity() as usize;
         FilterBatch {
             parent: parent,
@@ -43,8 +44,8 @@ impl<T, V> Act for FilterBatch<T, V>
         {
             let ref mut f = self.filter;
             let iter = PacketBatchEnumerator::<T>::new(&mut self.parent);
-            for (idx, packet) in iter {
-                if !f(packet) {
+            while let Some((idx, packet, ctx)) = iter.next(&mut self.parent) {
+                if !f(packet, ctx) {
                     remove.push(idx)
                 }
             }
@@ -85,22 +86,22 @@ impl<T, V> BatchIterator for FilterBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_address(idx)
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_payload(idx)
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_base_address(idx)
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_base_payload(idx)
     }
 }

@@ -3,6 +3,7 @@ use super::Batch;
 use super::iterator::BatchIterator;
 use super::super::pmd::*;
 use super::super::interface::Result;
+use std::any::Any;
 
 // FIXME: Should we be handling multiple queues and ports here?
 // FIXME: Should this really even be a batch?
@@ -46,22 +47,22 @@ impl<V> BatchIterator for SendBatch<V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, _: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_address(&mut self, _: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         panic!("Cannot iterate SendBatch")
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, _: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_payload(&mut self, _: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         panic!("Cannot iterate SendBatch")
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, _: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_address(&mut self, _: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         panic!("Cannot iterate SendBatch")
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, _: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_payload(&mut self, _: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         panic!("Cannot iterate SendBatch")
     }
 }

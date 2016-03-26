@@ -5,16 +5,17 @@ use super::HeaderOperations;
 use super::super::interface::EndOffset;
 use super::super::interface::Result;
 use super::super::pmd::*;
+use std::any::Any;
 
 pub struct TransformBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     parent: V,
-    transformer: Box<FnMut(&mut T)>,
+    transformer: Box<FnMut(&mut T, Option<&mut Any>)>,
 }
 
-batch!{TransformBatch, [parent: V, transformer: Box<FnMut(&mut T)>], []}
+batch!{TransformBatch, [parent: V, transformer: Box<FnMut(&mut T, Option<&mut Any>)>], []}
 
 impl<T, V> Act for TransformBatch<T, V>
     where T: EndOffset,
@@ -26,8 +27,8 @@ impl<T, V> Act for TransformBatch<T, V>
         {
             let ref mut f = self.transformer;
             let iter = PacketBatchIterator::<T>::new(&mut self.parent);
-            for packet in iter {
-                f(packet);
+            while let Some((packet, ctx)) = iter.next(&mut self.parent) {
+                f(packet, ctx);
             }
         }
     }
@@ -63,22 +64,22 @@ impl<T, V> BatchIterator for TransformBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_address(idx)
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_payload(idx)
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_base_address(idx)
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_base_payload(idx)
     }
 }

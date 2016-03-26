@@ -3,9 +3,12 @@ use super::Batch;
 use super::iterator::BatchIterator;
 use super::super::pmd::*;
 use super::super::interface::Result;
+use std::any::Any;
 
 /// CompositionBatch allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
 /// can treat packets as originating from the NF itself.
+// FIXME: Tag each CompositionBatch with owner, allow soem request (e.g., context) to only flow through if correct
+// context is found.
 pub struct CompositionBatch {
     parent: Box<Batch>,
 }
@@ -26,22 +29,22 @@ impl BatchIterator for CompositionBatch {
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_base_address(idx)
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_base_payload(idx)
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_base_address(idx)
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_base_payload(idx)
     }
 }

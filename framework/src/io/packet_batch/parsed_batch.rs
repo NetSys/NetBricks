@@ -7,6 +7,7 @@ use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
 use super::super::pmd::*;
 use super::super::interface::Result;
+use std::any::Any;
 
 pub struct ParsedBatch<T: EndOffset, V>
     where V: Batch + BatchIterator + Act
@@ -57,29 +58,29 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_payload(idx)
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         let parent_payload = self.parent.next_payload(idx);
         match parent_payload {
-            Some((packet, idx)) => {
+            Some((packet, arg, idx)) => {
                 let offset = T::offset(cast_from_u8::<T>(packet));
-                Some((packet.offset(offset as isize), idx))
+                Some((packet.offset(offset as isize), arg, idx))
             }
             None => None,
         }
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_base_address(idx)
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.parent.next_base_payload(idx)
     }
 }

@@ -9,24 +9,29 @@ pub use self::map_batch::MapBatch;
 pub use self::composition_batch::CompositionBatch;
 pub use self::filter_batch::FilterBatch;
 pub use self::merge_batch::MergeBatch;
+pub use self::context_batch::ContextBatch;
+pub use self::reset_parse::ResetParsingBatch;
 use super::interface::EndOffset;
 use super::pmd::*;
+use std::any::Any;
 
 #[macro_use]
 mod macros;
 
+mod act;
+mod apply_batch;
+mod composition_batch;
+mod context_batch;
+mod filter_batch;
+mod iterator;
+mod map_batch;
+mod merge_batch;
 mod packet_batch;
 mod parsed_batch;
-mod transform_batch;
+mod reset_parse;
 mod receive_batch;
-mod apply_batch;
 mod send_batch;
-mod iterator;
-mod act;
-mod map_batch;
-mod composition_batch;
-mod filter_batch;
-mod merge_batch;
+mod transform_batch;
 
 /// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
 /// the precise batch being processed will be determined by the scheduling policy used.
@@ -69,13 +74,13 @@ pub trait Batch : BatchIterator + Act {
 pub trait HeaderOperations : Batch + Sized {
     type Header : EndOffset;
     /// Transform a header field.
-    fn transform(self, transformer: Box<FnMut(&mut Self::Header)>) -> TransformBatch<Self::Header, Self> {
+    fn transform(self, transformer: Box<FnMut(&mut Self::Header, Option<&mut Any>)>) -> TransformBatch<Self::Header, Self> {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }
 
     /// Map over a set of header fields. Map and transform primarily differ in map being immutable. Immutability
     /// provides some optimization opportunities not otherwise available.
-    fn map(self, transformer: Box<FnMut(&Self::Header)>) -> MapBatch<Self::Header, Self> {
+    fn map(self, transformer: Box<FnMut(&Self::Header, Option<&mut Any>)>) -> MapBatch<Self::Header, Self> {
         MapBatch::<Self::Header, Self>::new(self, transformer)
     }
 
@@ -85,7 +90,14 @@ pub trait HeaderOperations : Batch + Sized {
     }
 
     /// Filter out packets, any packets for which `filter_f` returns false are dropped from the batch.
-    fn filter(self, filter_f: Box<FnMut(&Self::Header) -> bool>) -> FilterBatch<Self::Header, Self> {
+    fn filter(self, filter_f: Box<FnMut(&Self::Header, Option<&mut Any>) -> bool>) -> FilterBatch<Self::Header, Self> {
         FilterBatch::<Self::Header, Self>::new(self, filter_f)
+    }
+
+    // FIXME: Should this be in the general interface?
+    /// Reset the packet pointer to 0. This is identical to composition except for using static dispatch.
+    fn reset(self) -> ResetParsingBatch<Self>
+        where Self:Sized {
+        ResetParsingBatch::<Self>::new(self)
     }
 }

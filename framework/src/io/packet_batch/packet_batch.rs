@@ -7,6 +7,7 @@ use super::super::interface::Result;
 use super::super::interface::ZCSIError;
 use super::super::interface::EndOffset;
 use super::super::pmd::*;
+use std::any::Any;
 
 /// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
 /// receiving packets from DPDK, allocations, etc. As a result many of the actions implemented in other types of batches
@@ -279,9 +280,9 @@ impl BatchIterator for PacketBatch {
     /// Address for the next packet.
     /// Returns packet at index `idx` and the index of the next packet after `idx`.
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         if self.start <= idx && idx < self.array.len() {
-            Some((self.address(idx), idx + 1))
+            Some((self.address(idx), None, idx + 1))
         } else {
             None
         }
@@ -289,21 +290,21 @@ impl BatchIterator for PacketBatch {
 
     /// Payload for the next packet.
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         if self.start <= idx && idx < self.array.len() {
-            Some((self.payload(idx), idx + 1))
+            Some((self.payload(idx), None, idx + 1))
         } else {
             None
         }
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.next_address(idx)
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         self.next_payload(idx)
     }
 }
