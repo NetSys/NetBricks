@@ -253,12 +253,14 @@ impl PacketBatch {
         }
     }
 
-    /// Return the payload for a given packet.
-    /// idx must be a valid index.
+    /// Return the payload for a given packet and size for a given packet.
+    ///
+    /// # Safety
+    /// `idx` must be a valid index.
     #[inline]
-    unsafe fn payload(&mut self, idx: usize) -> *mut u8 {
+    unsafe fn payload(&mut self, idx: usize) -> (*mut u8, usize) {
         let val = &mut *self.array[idx];
-        val.data_address(0)
+        (val.data_address(0), val.data_len())
     }
 
     /// Address for the payload for a given packet.
@@ -292,7 +294,7 @@ impl BatchIterator for PacketBatch {
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         if self.start <= idx && idx < self.array.len() {
-            Some((self.payload(idx), None, idx + 1))
+            Some((self.payload(idx).0, None, idx + 1))
         } else {
             None
         }

@@ -24,7 +24,7 @@ pub trait BatchIterator {
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)>;
 
     /// If packets are available, returns the address of the payload at index `idx` in the current batch, and the index
-    /// for the next packet to be processed. If packets are not available returns None. N.B., header address depends on
+    /// for the next packet to be processed. If packets are not available returns None. N.B., payload address depends on
     /// the number of parse nodes and composition nodes seen so far.
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)>;
 
