@@ -35,7 +35,8 @@ impl fmt::Display for IpHeader {
 impl io::EndOffset for IpHeader {
     #[inline]
     fn offset(&self) -> usize {
-        self.ihl() as usize * 4
+        // FIXME: Figure out what to do with options.
+        20
     }
 
     #[inline]
