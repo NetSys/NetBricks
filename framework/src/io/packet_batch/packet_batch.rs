@@ -292,9 +292,9 @@ impl BatchIterator for PacketBatch {
 
     /// Payload for the next packet.
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         if self.start <= idx && idx < self.array.len() {
-            Some((self.payload(idx).0, None, idx + 1))
+            Some((self.address(idx), self.payload(idx).0, self.payload(idx).1, None, idx + 1))
         } else {
             None
         }
@@ -306,7 +306,7 @@ impl BatchIterator for PacketBatch {
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         self.next_payload(idx)
     }
 }

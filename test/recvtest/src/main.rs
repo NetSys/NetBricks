@@ -32,23 +32,31 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
         hdr.dst = src;
     };
 
-    parent.context::<Flow>()
-          .parse::<MacHeader>()
+    parent.parse::<MacHeader>()
           .transform(f)
           .parse::<IpHeader>()
-          .map(box |hdr, ctx| {
-              match ctx {
-                  Some(x) => {
-                      let s = x.downcast_mut::<Flow>().expect("Wrong type");
-                      s.src_ip = hdr.src();
-                      s.dst_ip = hdr.dst();
-                      s.proto = hdr.protocol();
-                  }
-                  None => panic!("no context"),
-              }
+          .transform(box |hdr, _| {
+              let ttl = hdr.ttl();
+              hdr.set_ttl(ttl + 1)
           })
-          .parse::<UdpHeader>()
-          .filter(box |hdr, _| hdr.src_port() != 21 && hdr.dst_port() != 21)
+          .compose()
+    //parent.context::<Flow>()
+          //.parse::<MacHeader>()
+          //.transform(f)
+          //.parse::<IpHeader>()
+          //.map(box |hdr, ctx| {
+              //match ctx {
+                  //Some(x) => {
+                      //let s = x.downcast_mut::<Flow>().expect("Wrong type");
+                      //s.src_ip = hdr.src();
+                      //s.dst_ip = hdr.dst();
+                      //s.proto = hdr.protocol();
+                  //}
+                  //None => panic!("no context"),
+              //}
+          //})
+          //.parse::<UdpHeader>()
+          //.filter(box |hdr, _| hdr.src_port() != 21 && hdr.dst_port() != 21)
           //.map(box |hdr, ctx| {
               //match ctx {
                   //Some(x) => {
@@ -59,7 +67,7 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
                   //None => panic!("no context"),
               //}
           //})
-          .compose()
+          //.compose()
 }
 
 fn recv_thread(ports: Vec<io::PmdPort>, queue: i32, core: i32) {

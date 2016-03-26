@@ -113,10 +113,12 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         match self.parent.next_payload(idx) {
-            Some((addr, _, iret)) => {
-                Some((addr,
+            Some((haddr, paddr, psize, _, iret)) => {
+                Some((haddr,
+                      paddr,
+                      psize,
                       self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
                       iret))
             }
@@ -137,10 +139,12 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         match self.parent.next_base_payload(idx) {
-            Some((addr, _, iret)) => {
-                Some((addr,
+            Some((haddr, paddr, psize, _, iret)) => {
+                Some((haddr,
+                      paddr,
+                      psize,
                       self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
                       iret))
             }

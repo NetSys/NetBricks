@@ -49,7 +49,7 @@ impl<V> BatchIterator for SendBatch<V>
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, _: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, _: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         panic!("Cannot iterate SendBatch")
     }
 
@@ -59,7 +59,7 @@ impl<V> BatchIterator for SendBatch<V>
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, _: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, _: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         panic!("Cannot iterate SendBatch")
     }
 }

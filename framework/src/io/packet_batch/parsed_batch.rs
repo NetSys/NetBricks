@@ -59,16 +59,21 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
 
     #[inline]
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
-        self.parent.next_payload(idx)
+        match self.parent.next_payload(idx) {
+            None => None,
+            Some((_, payload, _, ctx, next)) => Some((payload, ctx, next)) 
+        }
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         let parent_payload = self.parent.next_payload(idx);
         match parent_payload {
-            Some((packet, arg, idx)) => {
-                let offset = T::offset(cast_from_u8::<T>(packet));
-                Some((packet.offset(offset as isize), arg, idx))
+            Some((_, packet, size, arg, idx)) => {
+                let pkt_as_t = cast_from_u8::<T>(packet);
+                let offset = T::offset(pkt_as_t);
+                let payload_size = T::payload_size(pkt_as_t, size);
+                Some((packet, packet.offset(offset as isize), payload_size, arg, idx))
             }
             None => None,
         }
@@ -80,7 +85,7 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         self.parent.next_base_payload(idx)
     }
 }
