@@ -55,6 +55,11 @@ impl io::EndOffset for MacHeader {
         // The struct itself is always 20 bytes.
         HDR_SIZE
     }
+
+    #[inline]
+    fn payload_size(&self, hint: usize) -> usize {
+        hint - self.offset()
+    }
 }
 
 impl MacHeader {

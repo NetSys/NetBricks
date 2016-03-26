@@ -48,16 +48,17 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
               }
           })
           .parse::<UdpHeader>()
-          .map(box |hdr, ctx| {
-              match ctx {
-                  Some(x) => {
-                      let s = x.downcast_mut::<Flow>().expect("Wrong type");
-                      s.src_port = hdr.src_port();
-                      s.dst_port = hdr.dst_port();
-                  }
-                  None => panic!("no context"),
-              }
-          })
+          .filter(box |hdr, _| hdr.src_port() != 21 && hdr.dst_port() != 21)
+          //.map(box |hdr, ctx| {
+              //match ctx {
+                  //Some(x) => {
+                      //let s = x.downcast_mut::<Flow>().expect("Wrong type");
+                      //s.src_port = hdr.src_port();
+                      //s.dst_port = hdr.dst_port();
+                  //}
+                  //None => panic!("no context"),
+              //}
+          //})
           .compose()
 }
 

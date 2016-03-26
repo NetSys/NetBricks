@@ -20,4 +20,8 @@ impl io::EndOffset for NullHeader {
     fn size() -> usize {
         0
     }
+    #[inline]
+    fn payload_size(&self, hint: usize) -> usize {
+        hint
+    }
 }

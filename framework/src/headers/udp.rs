@@ -33,6 +33,11 @@ impl io::EndOffset for UdpHeader {
     fn size() -> usize {
         8
     }
+
+    #[inline]
+    fn payload_size(&self, _: usize) -> usize {
+        self.length() as usize - self.offset()
+    }
 }
 
 impl UdpHeader {

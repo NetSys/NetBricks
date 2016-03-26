@@ -44,6 +44,11 @@ impl io::EndOffset for IpHeader {
         // The struct itself is always 20 bytes.
         20
     }
+
+    #[inline]
+    fn payload_size(&self, _:usize) -> usize {
+        (self.length() as usize) - self.offset()
+    }
 }
 
 impl IpHeader {
