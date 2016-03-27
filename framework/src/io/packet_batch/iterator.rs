@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use super::super::interface::EndOffset;
 use std::any::Any;
 use std::cell::Cell;
+use std::slice::*;
 /// An interface implemented by all batches for iterating through the set of packets in a batch.
 /// This is private to the framework and not exposed.
 ///
@@ -23,9 +24,9 @@ pub trait BatchIterator {
     /// the number of parse nodes and composition nodes seen so far.
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)>;
 
-    /// If packets are available, returns the address of the payload at index `idx` in the current batch, and the index
-    /// for the next packet to be processed. If packets are not available returns None. N.B., payload address depends on
-    /// the number of parse nodes and composition nodes seen so far.
+    /// If packets are available, returns the address of the header and payload at index `idx` in the current batch, and 
+    /// the index for the next packet to be processed. If packets are not available returns None. N.B., payload address 
+    /// depends on the number of parse nodes and composition nodes seen so far.
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)>;
 
     /// If packets are available, returns the address of the mbuf data_address. This is mostly to allow chained NFs to
@@ -105,6 +106,43 @@ impl<T> PacketBatchEnumerator<T>
                 let packet = cast_from_u8::<T>(addr);
                 self.idx.set(next_idx);
                 Some((original_idx, packet, ctx))
+            }
+            None => None,
+        }
+    }
+}
+
+pub struct PayloadEnumerator<T>
+    where T: EndOffset
+{
+    idx: Cell<usize>,
+    phantom: PhantomData<T>,
+}
+
+impl<T> PayloadEnumerator<T>
+    where T:EndOffset
+{
+    #[inline]
+    pub fn new(batch: &mut BatchIterator) -> PayloadEnumerator<T> {
+        let start = batch.start();
+        PayloadEnumerator {
+            idx: Cell::new(start),
+            phantom: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn next<'a>(&'a self, batch: &'a mut BatchIterator) 
+        -> Option<(usize, &'a mut T, &'a mut [u8], Option<&'a mut Any>)> {
+        let original_idx = self.idx.get();
+        let item = unsafe { batch.next_payload(original_idx) };
+        match item {
+            Some((haddr, payload, payload_size, ctx, next_idx)) => {
+                let header = cast_from_u8::<T>(haddr);
+                // This is safe (assuming our size accounting has been correct so far).
+                let payload_slice = unsafe { from_raw_parts_mut::<u8>(payload, payload_size) };
+                self.idx.set(next_idx);
+                Some((original_idx, header, payload_slice, ctx))
             }
             None => None,
         }
