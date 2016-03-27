@@ -1,4 +1,4 @@
-use super::iterator::{BatchIterator, PacketBatchIterator};
+use super::iterator::{BatchIterator, PayloadEnumerator};
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
@@ -7,15 +7,17 @@ use super::super::interface::Result;
 use super::super::pmd::*;
 use std::any::Any;
 
+pub type MapFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>)>;
+
 pub struct MapBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     parent: V,
-    transformer: Box<FnMut(&T, Option<&mut Any>)>,
+    transformer: MapFn<T>,
 }
 
-batch!{MapBatch, [parent: V, transformer: Box<FnMut(&T, Option<&mut Any>)>], []}
+batch!{MapBatch, [parent: V, transformer: MapFn<T>], []}
 
 impl<T, V> Act for MapBatch<T, V>
     where T: EndOffset,
@@ -26,9 +28,9 @@ impl<T, V> Act for MapBatch<T, V>
         self.parent.act();
         {
             let ref mut f = self.transformer;
-            let iter = PacketBatchIterator::<T>::new(&mut self.parent);
-            while let Some((packet, ctx)) = iter.next(&mut self.parent) {
-                f(packet, ctx);
+            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+            while let Some((_, head, payload, ctx)) = iter.next(&mut self.parent) {
+                f(head, payload, ctx);
             }
         }
     }

@@ -1,4 +1,4 @@
-use super::iterator::{BatchIterator, PacketBatchEnumerator};
+use super::iterator::{BatchIterator, PayloadEnumerator};
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
@@ -7,12 +7,14 @@ use super::super::interface::Result;
 use super::super::pmd::*;
 use std::any::Any;
 
+pub type FilterFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>) -> bool>;
+
 pub struct FilterBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     parent: V,
-    filter: Box<FnMut(&T, Option<&mut Any>) -> bool>,
+    filter: FilterFn<T>,
     capacity: usize,
 }
 
@@ -21,7 +23,7 @@ impl<T, V> FilterBatch<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
-    pub fn new(parent: V, filter: Box<FnMut(&T, Option<&mut Any>) -> bool>) -> FilterBatch<T, V> {
+    pub fn new(parent: V, filter: FilterFn<T>) -> FilterBatch<T, V> {
         let capacity = parent.capacity() as usize;
         FilterBatch {
             parent: parent,
@@ -43,9 +45,9 @@ impl<T, V> Act for FilterBatch<T, V>
         let mut remove = Vec::<usize>::with_capacity(self.capacity);
         {
             let ref mut f = self.filter;
-            let iter = PacketBatchEnumerator::<T>::new(&mut self.parent);
-            while let Some((idx, packet, ctx)) = iter.next(&mut self.parent) {
-                if !f(packet, ctx) {
+            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+            while let Some((idx, head, payload, ctx)) = iter.next(&mut self.parent) {
+                if !f(head, payload, ctx) {
                     remove.push(idx)
                 }
             }

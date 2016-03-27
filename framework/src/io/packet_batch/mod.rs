@@ -6,8 +6,10 @@ pub use self::apply_batch::ReplaceBatch;
 pub use self::receive_batch::ReceiveBatch;
 pub use self::send_batch::SendBatch;
 pub use self::map_batch::MapBatch;
+use self::map_batch::MapFn;
 pub use self::composition_batch::CompositionBatch;
 pub use self::filter_batch::FilterBatch;
+use self::filter_batch::FilterFn;
 pub use self::merge_batch::MergeBatch;
 pub use self::context_batch::ContextBatch;
 pub use self::reset_parse::ResetParsingBatch;
@@ -83,14 +85,14 @@ pub trait HeaderOperations : Batch + Sized {
     type Header : EndOffset;
     /// Transform a header field.
     fn transform(self,
-                 transformer: Box<FnMut(&mut Self::Header, Option<&mut Any>)>)
+                 transformer: Box<FnMut(&mut Self::Header, &mut [u8], Option<&mut Any>)>)
                  -> TransformBatch<Self::Header, Self> {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }
 
     /// Map over a set of header fields. Map and transform primarily differ in map being immutable. Immutability
     /// provides some optimization opportunities not otherwise available.
-    fn map(self, transformer: Box<FnMut(&Self::Header, Option<&mut Any>)>) -> MapBatch<Self::Header, Self> {
+    fn map(self, transformer: MapFn<Self::Header>) -> MapBatch<Self::Header, Self> {
         MapBatch::<Self::Header, Self>::new(self, transformer)
     }
 
@@ -100,7 +102,7 @@ pub trait HeaderOperations : Batch + Sized {
     }
 
     /// Filter out packets, any packets for which `filter_f` returns false are dropped from the batch.
-    fn filter(self, filter_f: Box<FnMut(&Self::Header, Option<&mut Any>) -> bool>) -> FilterBatch<Self::Header, Self> {
+    fn filter(self, filter_f: FilterFn<Self::Header>) -> FilterBatch<Self::Header, Self> {
         FilterBatch::<Self::Header, Self>::new(self, filter_f)
     }
 

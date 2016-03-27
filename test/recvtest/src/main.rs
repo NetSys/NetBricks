@@ -26,7 +26,7 @@ struct Flow {
 }
 
 fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
-    let f = box |hdr: &mut MacHeader, _: Option<&mut Any>| {
+    let f = box |hdr: &mut MacHeader, _: &mut [u8], _: Option<&mut Any>| {
         let src = hdr.src.clone();
         hdr.src = hdr.dst;
         hdr.dst = src;
@@ -35,7 +35,7 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
     parent.parse::<MacHeader>()
           .transform(f)
           .parse::<IpHeader>()
-          .transform(box |hdr, _| {
+          .transform(box |hdr, _, _| {
               let ttl = hdr.ttl();
               hdr.set_ttl(ttl + 1)
           })

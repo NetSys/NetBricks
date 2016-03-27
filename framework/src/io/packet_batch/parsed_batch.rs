@@ -61,7 +61,7 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         match self.parent.next_payload(idx) {
             None => None,
-            Some((_, payload, _, ctx, next)) => Some((payload, ctx, next)) 
+            Some((_, payload, _, ctx, next)) => Some((payload, ctx, next)),
         }
     }
 
@@ -73,7 +73,11 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
                 let pkt_as_t = cast_from_u8::<T>(packet);
                 let offset = T::offset(pkt_as_t);
                 let payload_size = T::payload_size(pkt_as_t, size);
-                Some((packet, packet.offset(offset as isize), payload_size, arg, idx))
+                Some((packet,
+                      packet.offset(offset as isize),
+                      payload_size,
+                      arg,
+                      idx))
             }
             None => None,
         }

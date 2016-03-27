@@ -294,7 +294,11 @@ impl BatchIterator for PacketBatch {
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         if self.start <= idx && idx < self.array.len() {
-            Some((self.address(idx), self.payload(idx).0, self.payload(idx).1, None, idx + 1))
+            Some((self.address(idx),
+                  self.payload(idx).0,
+                  self.payload(idx).1,
+                  None,
+                  idx + 1))
         } else {
             None
         }

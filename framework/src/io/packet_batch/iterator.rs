@@ -24,8 +24,8 @@ pub trait BatchIterator {
     /// the number of parse nodes and composition nodes seen so far.
     unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)>;
 
-    /// If packets are available, returns the address of the header and payload at index `idx` in the current batch, and 
-    /// the index for the next packet to be processed. If packets are not available returns None. N.B., payload address 
+    /// If packets are available, returns the address of the header and payload at index `idx` in the current batch, and
+    /// the index for the next packet to be processed. If packets are not available returns None. N.B., payload address
     /// depends on the number of parse nodes and composition nodes seen so far.
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)>;
 
@@ -78,6 +78,7 @@ impl<T> PacketBatchIterator<T>
 /// from the beginning), might not be sequential (lazy filtering), etc. We however do guarantee that the iterator will
 /// present monotonically increasing indices. Please do not use the index for anything other than as a handle for
 /// packets.
+#[allow(dead_code)]
 pub struct PacketBatchEnumerator<T>
     where T: EndOffset
 {
@@ -85,6 +86,7 @@ pub struct PacketBatchEnumerator<T>
     phantom: PhantomData<T>,
 }
 
+#[allow(dead_code)]
 impl<T> PacketBatchEnumerator<T>
     where T: EndOffset
 {
@@ -112,6 +114,9 @@ impl<T> PacketBatchEnumerator<T>
     }
 }
 
+/// An enumerator over both the header and the payload. The payload is represented as an appropriately sized slice of
+/// bytes. The expectation is therefore that the user can operate on bytes, or make appropriate adjustments as
+/// necessary.
 pub struct PayloadEnumerator<T>
     where T: EndOffset
 {
@@ -120,7 +125,7 @@ pub struct PayloadEnumerator<T>
 }
 
 impl<T> PayloadEnumerator<T>
-    where T:EndOffset
+    where T: EndOffset
 {
     #[inline]
     pub fn new(batch: &mut BatchIterator) -> PayloadEnumerator<T> {
@@ -132,8 +137,9 @@ impl<T> PayloadEnumerator<T>
     }
 
     #[inline]
-    pub fn next<'a>(&'a self, batch: &'a mut BatchIterator) 
-        -> Option<(usize, &'a mut T, &'a mut [u8], Option<&'a mut Any>)> {
+    pub fn next<'a>(&'a self,
+                    batch: &'a mut BatchIterator)
+                    -> Option<(usize, &'a mut T, &'a mut [u8], Option<&'a mut Any>)> {
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_payload(original_idx) };
         match item {

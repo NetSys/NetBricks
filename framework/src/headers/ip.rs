@@ -46,7 +46,7 @@ impl io::EndOffset for IpHeader {
     }
 
     #[inline]
-    fn payload_size(&self, _:usize) -> usize {
+    fn payload_size(&self, _: usize) -> usize {
         (self.length() as usize) - self.offset()
     }
 }

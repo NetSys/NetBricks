@@ -1,4 +1,4 @@
-use super::iterator::{BatchIterator, PacketBatchIterator};
+use super::iterator::{BatchIterator, PayloadEnumerator};
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
@@ -7,15 +7,17 @@ use super::super::interface::Result;
 use super::super::pmd::*;
 use std::any::Any;
 
+pub type TransformFn<T> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>)>;
+
 pub struct TransformBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     parent: V,
-    transformer: Box<FnMut(&mut T, Option<&mut Any>)>,
+    transformer: TransformFn<T>,
 }
 
-batch!{TransformBatch, [parent: V, transformer: Box<FnMut(&mut T, Option<&mut Any>)>], []}
+batch!{TransformBatch, [parent: V, transformer: TransformFn<T>], []}
 
 impl<T, V> Act for TransformBatch<T, V>
     where T: EndOffset,
@@ -26,9 +28,9 @@ impl<T, V> Act for TransformBatch<T, V>
         self.parent.act();
         {
             let ref mut f = self.transformer;
-            let iter = PacketBatchIterator::<T>::new(&mut self.parent);
-            while let Some((packet, ctx)) = iter.next(&mut self.parent) {
-                f(packet, ctx);
+            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+            while let Some((_, hdr, payload, ctx)) = iter.next(&mut self.parent) {
+                f(hdr, payload, ctx);
             }
         }
     }
