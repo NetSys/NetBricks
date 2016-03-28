@@ -8,6 +8,7 @@ build = "build.rs"
 libc = ">= 0.2.4"
 time = ">=0.1.0"
 simd = { git = "https://github.com/huonw/simd" }
+byteorder = "*"
 
 [profile.release]
 opt-level = 3

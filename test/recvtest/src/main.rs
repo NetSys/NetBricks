@@ -7,23 +7,16 @@ extern crate rand;
 use e2d2::io;
 use e2d2::io::*;
 use e2d2::headers::*;
+use e2d2::utils::*;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 use std::thread;
 use std::any::Any;
+use std::net::Ipv4Addr;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
-
-#[derive(Copy, Clone, Default)]
-struct Flow {
-    pub src_ip: u32,
-    pub dst_ip: u32,
-    pub src_port: u16,
-    pub dst_port: u16,
-    pub proto: u8,
-}
 
 fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
     let f = box |hdr: &mut MacHeader, _: &mut [u8], _: Option<&mut Any>| {
@@ -32,8 +25,14 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
         hdr.dst = src;
     };
 
-    parent.parse::<MacHeader>()
+    parent//.context::<Flow>()
+          .parse::<MacHeader>()
           .transform(f)
+          .map(box |_, payload, _| {
+              //let flow = ctx.unwrap().downcast_mut::<Flow>().expect("Wrong type");
+              //*flow = 
+              ipv4_extract_flow(payload);
+          })
           .parse::<IpHeader>()
           .transform(box |hdr, _, _| {
               let ttl = hdr.ttl();
