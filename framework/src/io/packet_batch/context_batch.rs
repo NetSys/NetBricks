@@ -12,7 +12,7 @@ pub struct ContextBatch<T, V>
 {
     parent: V,
     context: Vec<T>,
-    context_size: usize,
+    _context_size: usize,
 }
 
 impl<T, V> ContextBatch<T, V>
@@ -24,7 +24,7 @@ impl<T, V> ContextBatch<T, V>
         ContextBatch {
             parent: parent,
             context: vec![Default::default(); capacity],
-            context_size: capacity,
+            _context_size: capacity,
         }
     }
 }
@@ -46,7 +46,7 @@ impl<T, V> Act for ContextBatch<T, V>
 
     #[inline]
     fn done(&mut self) {
-        self.context = vec![Default::default(); self.context_size];
+        // FIXME: Cheaply zero out the vec.
         self.parent.done();
     }
 
@@ -115,9 +115,9 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         match self.parent.next_payload(idx) {
-            Some((haddr, paddr, psize, _, iret)) => {
-                Some((haddr,
-                      paddr,
+            Some((hdr, payload, psize, _, iret)) => {
+                Some((hdr,
+                      payload,
                       psize,
                       self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
                       iret))
@@ -141,9 +141,9 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     #[inline]
     unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         match self.parent.next_base_payload(idx) {
-            Some((haddr, paddr, psize, _, iret)) => {
-                Some((haddr,
-                      paddr,
+            Some((hdr, payload, psize, _, iret)) => {
+                Some((hdr,
+                      payload,
                       psize,
                       self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
                       iret))

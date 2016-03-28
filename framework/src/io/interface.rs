@@ -16,7 +16,7 @@ mod dpdk {
 /// Initialize system. This must be run before any of the rest of this library is used.
 /// Calling this function is somewhat slow.
 /// # Failures: If a call to this function fails, DPDK will panic and kill the entire application.
-pub fn init_system(name: &String, core: i32) {
+pub fn init_system(name: &str, core: i32) {
     unsafe {
         let ret = dpdk::init_system(name.as_ptr(), name.len() as i32, core);
         if ret != 0 {
@@ -25,10 +25,10 @@ pub fn init_system(name: &String, core: i32) {
     }
 }
 
-pub fn init_system_wl(name: &String, core: i32, pci: &Vec<String>) {
+/// Initialize the system, whitelisting some set of NICs.
+pub fn init_system_wl(name: &str, core: i32, pci: &[String]) {
     let mut whitelist = Vec::<*const u8>::with_capacity(pci.len());
-    for l in 0..pci.len() {
-        let dev = &pci[l];
+    for dev in pci {
         whitelist.push(dev.as_ptr());
     }
     unsafe {

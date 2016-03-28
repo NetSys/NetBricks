@@ -86,7 +86,7 @@ impl PacketBatch {
     #[cfg(unordered_drop)]
     #[inline]
     fn drop_packets_unordered(&mut self, idxes_ordered: Vec<usize>) -> Option<usize> {
-        let mut idxes = idxes_ordered.clone();
+        let mut idxes = idxes_ordered;
         idxes.reverse();
         let mut to_free = Vec::<*mut MBuf>::with_capacity(idxes.len());
         // First remove them from this packetbatch, compacting the batch as appropriate. Note this will not change start
@@ -138,7 +138,7 @@ impl PacketBatch {
 
             // First go through the list of indexes to be filtered and get rid of them.
             while idx_orig < end && (remove_idx < idxes.len()) {
-                let test_idx = idxes.get_unchecked(remove_idx).clone();
+                let test_idx: usize = idxes[remove_idx];
                 assert!(idx_orig <= test_idx);
                 if idx_orig == test_idx {
                     to_free.push(self.array[idx_orig]);
@@ -162,7 +162,7 @@ impl PacketBatch {
             } else {
                 self.start = 0;
                 self.array.set_len(idx_new);
-                if to_free.len() == 0 {
+                if to_free.is_empty() {
                     Some(0)
                 } else {
                     // Now free the dropped packets

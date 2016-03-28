@@ -2,9 +2,10 @@ use super::super::io;
 use std::fmt;
 use std::net::Ipv4Addr;
 use std::convert::From;
+use std::default::Default;
 
 /// IP header using SSE
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[repr(C,packed)]
 pub struct IpHeader {
     version_to_len: u32,
@@ -54,19 +55,12 @@ impl io::EndOffset for IpHeader {
 impl IpHeader {
     #[inline]
     pub fn new() -> IpHeader {
-        IpHeader {
-            version_to_len: 0,
-            id_to_foffset: 0,
-            ttl_to_csum: 0,
-            src_ip: 0,
-            dst_ip: 0,
-        }
+        Default::default()
     }
 
     #[inline]
     pub fn src(&self) -> u32 {
-        let ip = u32::from_be(self.src_ip);
-        ip
+        u32::from_be(self.src_ip)
     }
 
     #[inline]
@@ -76,8 +70,7 @@ impl IpHeader {
 
     #[inline]
     pub fn dst(&self) -> u32 {
-        let ip = u32::from_be(self.dst_ip);
-        ip
+        u32::from_be(self.dst_ip)
     }
 
     #[inline]
@@ -146,7 +139,7 @@ impl IpHeader {
 
     #[inline]
     pub fn set_flags(&mut self, flags: u8) {
-        self.id_to_foffset = (self.id_to_foffset & !0x00e00000) | (((flags & 0x7) as u32) << 16 + 5);
+        self.id_to_foffset = (self.id_to_foffset & !0x00e00000) | (((flags & 0x7) as u32) << (16 + 5));
     }
 
     #[inline]
@@ -165,8 +158,7 @@ impl IpHeader {
 
     #[inline]
     pub fn version(&self) -> u8 {
-        let vihl = ((self.version_to_len & 0xf0) as u8) >> 4;
-        vihl
+        ((self.version_to_len & 0xf0) as u8) >> 4
     }
 
     #[inline]
@@ -176,8 +168,7 @@ impl IpHeader {
 
     #[inline]
     pub fn ihl(&self) -> u8 {
-        let ihl = (self.version_to_len & 0x0f) as u8;
-        ihl
+        (self.version_to_len & 0x0f) as u8
     }
 
     #[inline]
@@ -187,8 +178,7 @@ impl IpHeader {
 
     #[inline]
     pub fn dscp(&self) -> u8 {
-        let dscp_ecn = ((self.version_to_len & 0xfc00) >> 10) as u8;
-        dscp_ecn
+        ((self.version_to_len & 0xfc00) >> 10) as u8
     }
 
     #[inline]
@@ -198,8 +188,7 @@ impl IpHeader {
 
     #[inline]
     pub fn ecn(&self) -> u8 {
-        let ecn = ((self.version_to_len & 0x0300) >> 8) as u8;
-        ecn
+        ((self.version_to_len & 0x0300) >> 8) as u8
     }
 
     #[inline]

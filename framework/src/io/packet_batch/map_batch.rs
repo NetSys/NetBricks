@@ -27,10 +27,9 @@ impl<T, V> Act for MapBatch<T, V>
     fn act(&mut self) {
         self.parent.act();
         {
-            let ref mut f = self.transformer;
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
             while let Some((_, head, payload, ctx)) = iter.next(&mut self.parent) {
-                f(head, payload, ctx);
+                (self.transformer)(head, payload, ctx);
             }
         }
     }

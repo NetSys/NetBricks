@@ -9,6 +9,7 @@ libc = ">= 0.2.4"
 time = ">=0.1.0"
 simd = { git = "https://github.com/huonw/simd" }
 byteorder = "*"
+clippy = { version = "*", optional = true }
 
 [profile.release]
 opt-level = 3
@@ -16,3 +17,7 @@ lto = true
 rpath = true
 debug = true
 debug-assertions = false
+
+[features]
+default = []
+dev = ["clippy"]

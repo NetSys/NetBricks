@@ -14,7 +14,7 @@ use std::env;
 use std::time::Duration;
 use std::thread;
 use std::any::Any;
-use std::net::Ipv4Addr;
+//use std::net::Ipv4Addr;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 
@@ -145,8 +145,8 @@ fn main() {
                                                                 io::PmdPort::new_mq_port(p.clone() as i32,
                                                                                          1,
                                                                                          1,
-                                                                                         &vec![c],
-                                                                                         &vec![c])
+                                                                                         &[c],
+                                                                                         &[c])
                                                                     .expect("Could not initialize port")
                                                             })
                                                             .collect();

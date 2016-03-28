@@ -1,9 +1,10 @@
 use super::super::io;
 use std::fmt;
+use std::default::Default;
 
 /// UDP header using SSE
 // #[repr(C, packed)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[repr(C, packed)]
 pub struct UdpHeader {
     src_port: u16,
@@ -43,12 +44,7 @@ impl io::EndOffset for UdpHeader {
 impl UdpHeader {
     #[inline]
     pub fn new() -> UdpHeader {
-        UdpHeader {
-            src_port: 0,
-            dst_port: 0,
-            len: 0,
-            csum: 0,
-        }
+        Default::default()
     }
 
     #[inline]

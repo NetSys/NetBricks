@@ -1,14 +1,15 @@
 use super::super::io;
 use std::fmt;
+use std::default::Default;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[repr(C, packed)]
 pub struct MacAddress {
     pub addr: [u8; 6],
 }
 
 /// A packet's MAC header.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[repr(C, packed)]
 pub struct MacHeader {
     pub dst: [u8; 6],
@@ -64,10 +65,6 @@ impl io::EndOffset for MacHeader {
 
 impl MacHeader {
     pub fn new() -> Self {
-        MacHeader {
-            dst: [0, 0, 0, 0, 0, 0],
-            src: [0, 0, 0, 0, 0, 0],
-            etype: 0,
-        }
+        Default::default()
     }
 }

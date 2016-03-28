@@ -44,15 +44,15 @@ impl<T, V> Act for FilterBatch<T, V>
         self.parent.act();
         let mut remove = Vec::<usize>::with_capacity(self.capacity);
         {
-            let ref mut f = self.filter;
+            // let ref mut f = self.filter;
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
             while let Some((idx, head, payload, ctx)) = iter.next(&mut self.parent) {
-                if !f(head, payload, ctx) {
+                if (self.filter)(head, payload, ctx) {
                     remove.push(idx)
                 }
             }
         }
-        if remove.len() > 0 {
+        if !remove.is_empty() {
             self.parent.drop_packets(remove).expect("Filtering was performed incorrectly");
         }
     }

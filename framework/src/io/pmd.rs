@@ -11,8 +11,8 @@ extern "C" {
     fn init_pmd_port(port: i32,
                      rxqs: i32,
                      txqs: i32,
-                     rxcores: *const i32,
-                     txcores: *const i32,
+                     rx_cores: *const i32,
+                     tx_cores: *const i32,
                      nrxd: i32,
                      ntxd: i32,
                      loopback: i32,
@@ -68,16 +68,16 @@ impl PmdPort {
     pub fn new(port: i32,
                rxqs: i32,
                txqs: i32,
-               rxcores: &Vec<i32>,
-               txcores: &Vec<i32>,
+               rx_cores: &[i32],
+               tx_cores: &[i32],
                nrxd: i32,
                ntxd: i32,
                loopback: bool,
                tso: bool,
                csumoffload: bool)
                -> Result<PmdPort> {
-        assert_eq!(rxqs as usize, rxcores.len());
-        assert_eq!(txqs as usize, txcores.len());
+        assert_eq!(rxqs as usize, rx_cores.len());
+        assert_eq!(txqs as usize, tx_cores.len());
         let loopbackv = if loopback {
             1
         } else {
@@ -97,8 +97,8 @@ impl PmdPort {
             init_pmd_port(port,
                           rxqs,
                           txqs,
-                          rxcores.as_ptr(),
-                          txcores.as_ptr(),
+                          rx_cores.as_ptr(),
+                          tx_cores.as_ptr(),
                           nrxd,
                           ntxd,
                           loopbackv,
@@ -129,13 +129,13 @@ impl PmdPort {
                               tso: bool,
                               csumoffload: bool)
                               -> Result<PmdPort> {
-        let rxcores = vec![rxcore];
-        let txcores = vec![txcore];
+        let rx_cores = vec![rxcore];
+        let tx_cores = vec![txcore];
         PmdPort::new(port,
                      1,
                      1,
-                     &rxcores,
-                     &txcores,
+                     &rx_cores[..],
+                     &tx_cores[..],
                      nrxd,
                      ntxd,
                      loopback,
@@ -151,12 +151,12 @@ impl PmdPort {
         PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, false, false, false)
     }
 
-    pub fn new_mq_port(port: i32, rxqs: i32, txqs: i32, rxcores: &Vec<i32>, txcores: &Vec<i32>) -> Result<PmdPort> {
+    pub fn new_mq_port(port: i32, rxqs: i32, txqs: i32, rx_cores: &[i32], tx_cores: &[i32]) -> Result<PmdPort> {
         PmdPort::new(port,
                      rxqs,
                      txqs,
-                     rxcores,
-                     txcores,
+                     &rx_cores[..],
+                     &tx_cores[..],
                      NUM_RXD,
                      NUM_TXD,
                      false,

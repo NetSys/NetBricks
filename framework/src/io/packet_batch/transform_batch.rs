@@ -27,10 +27,9 @@ impl<T, V> Act for TransformBatch<T, V>
     fn act(&mut self) {
         self.parent.act();
         {
-            let ref mut f = self.transformer;
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
             while let Some((_, hdr, payload, ctx)) = iter.next(&mut self.parent) {
-                f(hdr, payload, ctx);
+                (self.transformer)(hdr, payload, ctx);
             }
         }
     }
