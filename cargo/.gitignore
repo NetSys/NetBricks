@@ -1,0 +1,11 @@
+/target
+.cargo
+/config.stamp
+/Makefile
+/config.mk
+src/doc/build
+src/etc/*.pyc
+src/registry/target
+src/registry/Cargo.lock
+rustc
+__pycache__
