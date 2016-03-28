@@ -4,6 +4,8 @@ the use of SIMD in Rust. These are now already included in the repository.
 
 To build:
 
+-   If building on a Debian machine, you need to undo some of the craziness wrought by Debian maintainers. In particular
+    libcurl by default will not correctly allow Cargo to check server identity. To solve this install the `libgnutls30 libgnutls-openssl-dev libcurl4-gnutls-dev`
 -   Install Rust nightly. Make sure the `RUST_HOME` environment variable points to some directory where Rust will be
     installed. Also ensure that `${RUST_HOME}/bin` is in your path.
     ```curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --disable-sudo --prefix=$RUST_HOME --verbose```
