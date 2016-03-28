@@ -4,7 +4,7 @@ use std::path::Path;
 use git2;
 
 use support::{git, project, execs, main_file, path2url};
-use support::{COMPILING, UPDATING, RUNNING};
+use support::{COMPILING, UPDATING, RUNNING, ERROR};
 use support::paths::{self, CargoPathExt};
 use hamcrest::{assert_that,existing_file};
 use cargo::util::process;
@@ -381,11 +381,11 @@ test!(cargo_compile_with_short_ssh_git {
         execs()
         .with_stdout("")
         .with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
   invalid url `{}`: relative URL without a base
-", url)));
+", url, error = ERROR)));
 });
 
 test!(two_revs_same_deps {
@@ -622,8 +622,8 @@ test!(update_with_shared_deps {
                 execs().with_stdout(&format!("\
 {updating} git repository `{git}`
 {compiling} bar v0.5.0 ({git}#[..])
-{compiling} [..] v0.5.0 ({dir})
-{compiling} [..] v0.5.0 ({dir})
+{compiling} [..] v0.5.0 ([..])
+{compiling} [..] v0.5.0 ([..])
 {compiling} foo v0.5.0 ({dir})\n",
                     updating = UPDATING, git = git_project.url(),
                     compiling = COMPILING, dir = p.url())));
@@ -650,11 +650,12 @@ test!(update_with_shared_deps {
     assert_that(p.cargo("update")
                  .arg("-p").arg("bar")
                  .arg("--precise").arg("0.1.2"),
-                execs().with_status(101).with_stderr("\
-Unable to update [..]
+                execs().with_status(101).with_stderr(&format!("\
+{error} Unable to update [..]
 
 To learn more, run the command again with --verbose.
-"));
+",
+error = ERROR)));
 
     // Specifying a precise rev to the old rev shouldn't actually update
     // anything because we already have the rev in the db.
@@ -681,8 +682,8 @@ To learn more, run the command again with --verbose.
     assert_that(p.cargo("build"),
                 execs().with_stdout(&format!("\
 {compiling} bar v0.5.0 ({git}#[..])
-{compiling} [..] v0.5.0 ({dir})
-{compiling} [..] v0.5.0 ({dir})
+{compiling} [..] v0.5.0 ({dir}[..]dep[..])
+{compiling} [..] v0.5.0 ({dir}[..]dep[..])
 {compiling} foo v0.5.0 ({dir})\n",
                     git = git_project.url(),
                     compiling = COMPILING, dir = p.url())));
@@ -1355,14 +1356,15 @@ test!(update_ambiguous {
     assert_that(p.cargo("update")
                  .arg("-p").arg("foo"),
                 execs().with_status(101)
-                       .with_stderr("\
-There are multiple `foo` packages in your project, and the specification `foo` \
+                       .with_stderr(&format!("\
+{error} There are multiple `foo` packages in your project, and the specification `foo` \
 is ambiguous.
 Please re-run this command with `-p <spec>` where `<spec>` is one of the \
 following:
   foo:0.[..].0
   foo:0.[..].0
-"));
+",
+error = ERROR)));
 });
 
 test!(update_one_dep_in_repo_with_many_deps {
@@ -1401,8 +1403,8 @@ test!(update_one_dep_in_repo_with_many_deps {
                  .arg("-p").arg("foo"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-Updating git repository `{}`
-", foo.url())));
+{updating} git repository `{}`
+", foo.url(), updating = UPDATING)));
 });
 
 test!(switch_deps_does_not_update_transitive {
@@ -1455,12 +1457,12 @@ test!(switch_deps_does_not_update_transitive {
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-Updating git repository `{}`
-Updating git repository `{}`
+{updating} git repository `{}`
+{updating} git repository `{}`
 {compiling} transitive [..]
 {compiling} dep [..]
 {compiling} project [..]
-", dep1.url(), transitive.url(), compiling = COMPILING)));
+", dep1.url(), transitive.url(), compiling = COMPILING, updating = UPDATING)));
 
     // Update the dependency to point to the second repository, but this
     // shouldn't update the transitive dependency which is the same.
@@ -1476,10 +1478,10 @@ Updating git repository `{}`
     assert_that(p.cargo("build"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-Updating git repository `{}`
+{updating} git repository `{}`
 {compiling} dep [..]
 {compiling} project [..]
-", dep2.url(), compiling = COMPILING)));
+", dep2.url(), compiling = COMPILING, updating = UPDATING)));
 });
 
 test!(update_one_source_updates_all_packages_in_that_git_source {

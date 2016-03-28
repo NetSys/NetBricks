@@ -10,6 +10,8 @@ use git2;
 use registry::{Registry, NewCrate, NewCrateDependency};
 use term::color::BLACK;
 
+use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
+
 use core::source::Source;
 use core::{Package, SourceId};
 use core::dependency::Kind;
@@ -126,8 +128,8 @@ fn transmit(pkg: &Package, tarball: &Path, registry: &mut Registry)
 }
 
 pub fn registry_configuration(config: &Config) -> CargoResult<RegistryConfig> {
-    let index = try!(config.get_string("registry.index")).map(|p| p.0);
-    let token = try!(config.get_string("registry.token")).map(|p| p.0);
+    let index = try!(config.get_string("registry.index")).map(|p| p.val);
+    let token = try!(config.get_string("registry.token")).map(|p| p.val);
     Ok(RegistryConfig { index: index, token: token })
 }
 
@@ -182,7 +184,7 @@ pub fn http_handle(config: &Config) -> CargoResult<http::Handle> {
 /// via environment variables are picked up by libcurl.
 fn http_proxy(config: &Config) -> CargoResult<Option<String>> {
     match try!(config.get_string("http.proxy")) {
-        Some((s, _)) => return Ok(Some(s)),
+        Some(s) => return Ok(Some(s.val)),
         None => {}
     }
     match git2::Config::open_default() {
@@ -218,7 +220,7 @@ pub fn http_proxy_exists(config: &Config) -> CargoResult<bool> {
 
 pub fn http_timeout(config: &Config) -> CargoResult<Option<i64>> {
     match try!(config.get_i64("http.timeout")) {
-        Some((s, _)) => return Ok(Some(s)),
+        Some(s) => return Ok(Some(s.val)),
         None => {}
     }
     Ok(env::var("HTTP_TIMEOUT").ok().and_then(|s| s.parse().ok()))
@@ -340,7 +342,10 @@ pub fn yank(config: &Config,
     Ok(())
 }
 
-pub fn search(query: &str, config: &Config, index: Option<String>) -> CargoResult<()> {
+pub fn search(query: &str,
+              config: &Config,
+              index: Option<String>,
+              limit: u8) -> CargoResult<()> {
     fn truncate_with_ellipsis(s: &str, max_length: usize) -> String {
         if s.len() < max_length {
             s.to_string()
@@ -350,7 +355,7 @@ pub fn search(query: &str, config: &Config, index: Option<String>) -> CargoResul
     }
 
     let (mut registry, _) = try!(registry(config, None, index));
-    let crates = try!(registry.search(query).map_err(|e| {
+    let (crates, total_crates) = try!(registry.search(query, limit).map_err(|e| {
         human(format!("failed to retrieve search results from the registry: {}", e))
     }));
 
@@ -376,6 +381,24 @@ pub fn search(query: &str, config: &Config, index: Option<String>) -> CargoResul
             None => name
         };
         try!(config.shell().say(line, BLACK));
+    }
+
+    let search_max_limit = 100;
+    if total_crates > limit as u32 && limit < search_max_limit {
+        try!(config.shell().say(
+            format!("... and {} crates more (use --limit N to see more)",
+                    total_crates - limit as u32),
+            BLACK)
+        );
+    } else if total_crates > limit as u32 && limit >= search_max_limit {
+        try!(config.shell().say(
+            format!(
+                "... and {} crates more (go to http://crates.io/search?q={} to see more)",
+                total_crates - limit as u32,
+                percent_encode(query.as_bytes(), QUERY_ENCODE_SET)
+            ),
+            BLACK)
+        );
     }
 
     Ok(())

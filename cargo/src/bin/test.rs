@@ -17,8 +17,8 @@ pub struct Options {
     flag_example: Vec<String>,
     flag_test: Vec<String>,
     flag_bench: Vec<String>,
-    flag_verbose: bool,
-    flag_quiet: bool,
+    flag_verbose: Option<bool>,
+    flag_quiet: Option<bool>,
     flag_color: Option<String>,
     flag_release: bool,
     flag_no_fail_fast: bool,
@@ -74,9 +74,10 @@ by passing `--nocapture` to the test binaries:
 ";
 
 pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
+    try!(config.configure_shell(options.flag_verbose,
+                                options.flag_quiet,
+                                &options.flag_color));
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
-    try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
-    try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
 
     let ops = ops::TestOptions {
         no_run: options.flag_no_run,
@@ -106,7 +107,7 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
         None => Ok(None),
         Some(err) => {
             Err(match err.exit.as_ref().and_then(|e| e.code()) {
-                Some(i) => CliError::new("", i),
+                Some(i) => CliError::new("test failed", i),
                 None => CliError::from_error(Human(err), 101)
             })
         }

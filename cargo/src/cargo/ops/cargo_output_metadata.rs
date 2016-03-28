@@ -3,9 +3,8 @@ use std::path::Path;
 use rustc_serialize::{Encodable, Encoder};
 
 use core::resolver::Resolve;
-use core::{Source, Package, PackageId};
+use core::{Package, PackageId, PackageSet};
 use ops;
-use sources::PathSource;
 use util::config::Config;
 use util::CargoResult;
 
@@ -35,10 +34,9 @@ pub fn output_metadata(opt: OutputMetadataOptions, config: &Config) -> CargoResu
 }
 
 fn metadata_no_deps(opt: OutputMetadataOptions, config: &Config) -> CargoResult<ExportInfo> {
-    let mut source = try!(PathSource::for_path(opt.manifest_path.parent().unwrap(), config));
-
+    let root = try!(Package::for_path(opt.manifest_path, config));
     Ok(ExportInfo {
-        packages: vec![try!(source.root_package())],
+        packages: vec![root],
         resolve: None,
         version: VERSION,
     })
@@ -50,6 +48,10 @@ fn metadata_full(opt: OutputMetadataOptions, config: &Config) -> CargoResult<Exp
                                          opt.features,
                                          opt.no_default_features));
     let (packages, resolve) = deps;
+
+    let packages = try!(packages.package_ids()
+                                .map(|i| packages.get(i).map(|p| p.clone()))
+                                .collect());
 
     Ok(ExportInfo {
         packages: packages,
@@ -103,23 +105,15 @@ impl Encodable for MetadataResolve {
 
 /// Loads the manifest and resolves the dependencies of the project to the
 /// concrete used versions. Afterwards available overrides of dependencies are applied.
-fn resolve_dependencies(manifest: &Path,
-                        config: &Config,
-                        features: Vec<String>,
-                        no_default_features: bool)
-                        -> CargoResult<(Vec<Package>, Resolve)> {
-    let mut source = try!(PathSource::for_path(manifest.parent().unwrap(), config));
-    try!(source.update());
-
-    let package = try!(source.root_package());
-
-    let deps = try!(ops::resolve_dependencies(&package,
-                                              config,
-                                              Some(Box::new(source)),
-                                              features,
-                                              no_default_features));
-
-    let (packages, resolve_with_overrides, _) = deps;
-
-    Ok((packages, resolve_with_overrides))
+fn resolve_dependencies<'a>(manifest: &Path,
+                            config: &'a Config,
+                            features: Vec<String>,
+                            no_default_features: bool)
+                            -> CargoResult<(PackageSet<'a>, Resolve)> {
+    let package = try!(Package::for_path(manifest, config));
+    ops::resolve_dependencies(&package,
+                              config,
+                              None,
+                              features,
+                              no_default_features)
 }

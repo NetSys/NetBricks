@@ -185,10 +185,6 @@ type TomlExampleTarget = TomlTarget;
 type TomlTestTarget = TomlTarget;
 type TomlBenchTarget = TomlTarget;
 
-/*
- * TODO: Make all struct fields private
- */
-
 #[derive(RustcDecodable)]
 pub enum TomlDependency {
     Simple(String),
@@ -295,6 +291,7 @@ struct Context<'a, 'b> {
     config: &'b Config,
     warnings: &'a mut Vec<String>,
     platform: Option<Platform>,
+    layout: &'a Layout,
 }
 
 // These functions produce the equivalent of specific manifest entries. One
@@ -385,7 +382,7 @@ impl TomlManifest {
         }
 
         let pkgid = try!(project.to_package_id(source_id));
-        let metadata = pkgid.generate_metadata(&layout.root);
+        let metadata = pkgid.generate_metadata();
 
         // If we have no lib at all, use the inferred lib if available
         // If we have a lib with a path, we're done
@@ -516,6 +513,7 @@ impl TomlManifest {
                 config: config,
                 warnings: &mut warnings,
                 platform: None,
+                layout: &layout,
             };
 
             // Collect the deps
@@ -570,8 +568,8 @@ impl TomlManifest {
                                          profiles,
                                          publish);
         if project.license_file.is_some() && project.license.is_some() {
-            manifest.add_warning(format!("warning: only one of `license` or \
-                                                   `license-file` is necessary"));
+            manifest.add_warning(format!("only one of `license` or \
+                                          `license-file` is necessary"));
         }
         for warning in warnings {
             manifest.add_warning(warning.clone());
@@ -682,7 +680,7 @@ fn process_dependencies(cx: &mut Context,
 
         if details.version.is_none() && details.path.is_none() &&
            details.git.is_none() {
-            cx.warnings.push(format!("warning: dependency ({}) specified \
+            cx.warnings.push(format!("dependency ({}) specified \
                                       without providing a local path, Git \
                                       repository, or version to use. This will \
                                       be considered an error in future \
@@ -702,10 +700,27 @@ fn process_dependencies(cx: &mut Context,
                 Some(SourceId::for_git(&loc, reference))
             }
             None => {
-                details.path.as_ref().map(|path| {
-                    cx.nested_paths.push(PathBuf::from(path));
-                    cx.source_id.clone()
-                })
+                match details.path.as_ref() {
+                    Some(path) => {
+                        cx.nested_paths.push(PathBuf::from(path));
+                        // If the source id for the package we're parsing is a
+                        // path source, then we normalize the path here to get
+                        // rid of components like `..`.
+                        //
+                        // The purpose of this is to get a canonical id for the
+                        // package that we're depending on to ensure that builds
+                        // of this package always end up hashing to the same
+                        // value no matter where it's built from.
+                        if cx.source_id.is_path() {
+                            let path = cx.layout.root.join(path);
+                            let path = util::normalize_path(&path);
+                            Some(try!(SourceId::for_path(&path)))
+                        } else {
+                            Some(cx.source_id.clone())
+                        }
+                    }
+                    None => None,
+                }
             }
         }.unwrap_or(try!(SourceId::for_central(cx.config)));
 
@@ -824,7 +839,7 @@ fn normalize(lib: &Option<TomlLibTarget>,
                 kinds.iter().filter_map(|s| {
                     let kind = LibKind::from_str(s);
                     if let Err(ref error) = kind {
-                        warnings.push(format!("warning: {}", error))
+                        warnings.push(error.to_string());
                     }
                     kind.ok()
                 }).collect()
@@ -835,9 +850,14 @@ fn normalize(lib: &Option<TomlLibTarget>,
             }
         };
 
+        // Binaries, examples, etc, may link to this library. Their crate names
+        // have a high likelihood to being the same as ours, however, so we need
+        // some extra metadata in our name to ensure symbols won't collide.
+        let mut metadata = metadata.clone();
+        metadata.mix(&"lib");
         let mut target = Target::lib_target(&l.name(), crate_types,
                                             &path.to_path(),
-                                            metadata.clone());
+                                            metadata);
         configure(l, &mut target);
         dst.push(target);
     }

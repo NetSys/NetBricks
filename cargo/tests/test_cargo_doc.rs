@@ -1,7 +1,8 @@
 use std::str;
+use std::fs;
 
 use support::{project, execs, path2url};
-use support::{COMPILING, DOCUMENTING, RUNNING};
+use support::{COMPILING, DOCUMENTING, RUNNING, ERROR};
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
 fn setup() {
@@ -101,8 +102,8 @@ test!(doc_deps {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(0).with_stdout(&format!("\
-[..] bar v0.0.1 ({dir})
-[..] bar v0.0.1 ({dir})
+[..] bar v0.0.1 ({dir}/bar)
+[..] bar v0.0.1 ({dir}/bar)
 {documenting} foo v0.0.1 ({dir})
 ",
         documenting = DOCUMENTING,
@@ -148,7 +149,7 @@ test!(doc_no_deps {
 
     assert_that(p.cargo_process("doc").arg("--no-deps"),
                 execs().with_status(0).with_stdout(&format!("\
-{compiling} bar v0.0.1 ({dir})
+{compiling} bar v0.0.1 ({dir}/bar)
 {documenting} foo v0.0.1 ({dir})
 ",
         documenting = DOCUMENTING, compiling = COMPILING,
@@ -205,10 +206,11 @@ test!(doc_lib_bin_same_name {
 
     assert_that(p.cargo_process("doc"),
                 execs().with_status(101)
-                       .with_stderr("\
-cannot document a package where a library and a binary have the same name. \
+                       .with_stderr(&format!("\
+{error} cannot document a package where a library and a binary have the same name. \
 Consider renaming one or marking the target as `doc = false`
-"));
+",
+error = ERROR)));
 });
 
 test!(doc_dash_p {
@@ -524,4 +526,27 @@ test!(features {
     assert_that(&p.root().join("target/doc"), existing_dir());
     assert_that(&p.root().join("target/doc/foo/fn.foo.html"), existing_file());
     assert_that(&p.root().join("target/doc/bar/fn.bar.html"), existing_file());
+});
+
+test!(rerun_when_dir_removed {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#)
+        .file("src/lib.rs", r#"
+            /// dox
+            pub fn foo() {}
+        "#);
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
+
+    fs::remove_dir_all(p.root().join("target/doc/foo")).unwrap();
+
+    assert_that(p.cargo_process("doc"),
+                execs().with_status(0));
+    assert_that(&p.root().join("target/doc/foo/index.html"), existing_file());
 });

@@ -1,4 +1,4 @@
-% Configuration - Cargo Documentation
+% Configuration
 
 This document will explain how Cargo’s configuration system works, as well as
 available keys or configuration.  For configuration of a project through its
@@ -59,16 +59,14 @@ vcs = "none"
 # literal string "$triple", and it will apply whenever that target triple is
 # being compiled to.
 [target]
-# For Cargo builds which do not mention --target, these are the ar/linker tools
-# which are passed to rustc to use (via `-C ar=` and `-C linker=`). By default
-# these flags are not passed to the compiler.
-ar = ".."
+# For Cargo builds which do not mention --target, this is the linker
+# which is passed to rustc (via `-C linker=`). By default this flag is not
+# passed to the compiler.
 linker = ".."
 
 [target.$triple]
-# Similar to the above ar/linker tool configuration, but this only applies to
+# Similar to the above linker configuration, but this only applies to
 # when the `$triple` is being compiled for.
-ar = ".."
 linker = ".."
 
 # Configuration keys related to the registry
@@ -81,17 +79,30 @@ proxy = "..."     # HTTP proxy to use for HTTP requests (defaults to none)
 timeout = 60000   # Timeout for each HTTP request, in milliseconds
 
 [build]
-jobs = 1               # number of jobs to run by default (default to # cpus)
-rustc = "rustc"        # the rust compiler tool
-rustdoc = "rustdoc"    # the doc generator tool
-target = "triple"      # build for the target triple
-target-dir = "target"  # path of where to place all generated artifacts
+jobs = 1                  # number of jobs to run by default (default to # cpus)
+rustc = "rustc"           # the rust compiler tool
+rustdoc = "rustdoc"       # the doc generator tool
+target = "triple"         # build for the target triple
+target-dir = "target"     # path of where to place all generated artifacts
+rustflags = ["..", ".."]  # custom flags to pass to all compiler invocations
+
+[term]
+verbose = false        # whether cargo provides verbose output
+color = 'auto'         # whether cargo colorizes output
 ```
 
 # Environment Variables
 
-Cargo recognizes a few global [environment variables][env] to configure itself.
-Settings specified via config files take precedence over those specified via
+Cargo can also be configured through environment variables in addition to the
+TOML syntax above. For each configuration key above of the form `foo.bar` the
+environment variable `CARGO_FOO_BAR` can also be used to define the value. For
+example the `build.jobs` key can also be defined by `CARGO_BUILD_JOBS`.
+
+Environment variables will take precedent over TOML configuration, and currently
+only integer, boolean, and string keys are supported to be defined by
 environment variables.
+
+In addition to the system above, Cargo recognizes a few other specific
+[environment variables][env].
 
 [env]: environment-variables.html

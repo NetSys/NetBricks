@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::env;
 use tempdir::TempDir;
 
-use support::{execs, paths};
+use support::{execs, paths, ERROR};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file, existing_dir, is_not};
 
@@ -67,13 +67,14 @@ test!(simple_git {
 test!(no_argument {
     assert_that(cargo_process("new"),
                 execs().with_status(1)
-                       .with_stderr("\
-Invalid arguments.
+                       .with_stderr(&format!("\
+{error} Invalid arguments.
 
 Usage:
     cargo new [options] <path>
     cargo new -h | --help
-"));
+",
+error = ERROR)));
 });
 
 test!(existing {
@@ -81,16 +82,26 @@ test!(existing {
     fs::create_dir(&dst).unwrap();
     assert_that(cargo_process("new").arg("foo"),
                 execs().with_status(101)
-                       .with_stderr(format!("destination `{}` already exists\n",
-                                            dst.display())));
+                       .with_stderr(format!("{error} destination `{}` already exists\n",
+                                            dst.display(), error = ERROR)));
 });
 
 test!(invalid_characters {
     assert_that(cargo_process("new").arg("foo.rs"),
                 execs().with_status(101)
-                       .with_stderr("\
-Invalid character `.` in crate name: `foo.rs`
-use --name to override crate name"));
+                       .with_stderr(&format!("\
+{error} Invalid character `.` in crate name: `foo.rs`
+use --name to override crate name",
+error = ERROR)));
+});
+
+test!(reserved_name {
+    assert_that(cargo_process("new").arg("test"),
+                execs().with_status(101)
+                       .with_stderr(&format!("\
+{error} The name `test` cannot be used as a crate name\n\
+use --name to override crate name",
+error = ERROR)));
 });
 
 test!(rust_prefix_stripped {
@@ -273,11 +284,12 @@ test!(subpackage_git_with_vcs_arg {
 test!(unknown_flags {
     assert_that(cargo_process("new").arg("foo").arg("--flag"),
                 execs().with_status(1)
-                       .with_stderr("\
-Unknown flag: '--flag'
+                       .with_stderr(&format!("\
+{error} Unknown flag: '--flag'
 
 Usage:
     cargo new [..]
     cargo new [..]
-"));
+",
+error = ERROR)));
 });

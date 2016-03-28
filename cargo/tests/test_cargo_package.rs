@@ -162,9 +162,22 @@ test!(package_verbose {
     let mut cargo = ::cargo_process();
     cargo.cwd(p.root());
     assert_that(cargo.clone().arg("build"), execs().with_status(0));
-    assert_that(cargo.arg("package").arg("-v").arg("--no-verify"),
+
+    println!("package main repo");
+    assert_that(cargo.clone().arg("package").arg("-v").arg("--no-verify"),
                 execs().with_status(0).with_stdout(&format!("\
 {packaging} foo v0.0.1 ([..])
+{archiving} [..]
+{archiving} [..]
+",
+        packaging = PACKAGING,
+        archiving = ARCHIVING)));
+
+    println!("package sub-repo");
+    assert_that(cargo.arg("package").arg("-v").arg("--no-verify")
+                     .cwd(p.root().join("a")),
+                execs().with_status(0).with_stdout(&format!("\
+{packaging} a v0.0.1 ([..])
 {archiving} [..]
 {archiving} [..]
 ",
@@ -398,6 +411,8 @@ src[..]main.rs
 
 #[cfg(unix)] // windows doesn't allow these characters in filenames
 test!(package_weird_characters {
+
+    use support::ERROR;
     let p = project("foo")
         .file("Cargo.toml", r#"
             [project]
@@ -411,11 +426,12 @@ test!(package_weird_characters {
         .file("src/:foo", "");
 
     assert_that(p.cargo_process("package"),
-                execs().with_status(101).with_stderr("\
+                execs().with_status(101).with_stderr(format!("\
 warning: [..]
-failed to prepare local package for uploading
+{error} failed to prepare local package for uploading
 
 Caused by:
   cannot package a filename with a special character `:`: src/:foo
-"));
+",
+error = ERROR)));
 });
