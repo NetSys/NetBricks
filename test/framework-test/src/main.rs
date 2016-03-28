@@ -14,7 +14,7 @@ use std::env;
 use std::time::Duration;
 use std::thread;
 use std::any::Any;
-//use std::net::Ipv4Addr;
+// use std::net::Ipv4Addr;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 
@@ -39,34 +39,34 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
               hdr.set_ttl(ttl + 1)
           })
           .compose()
-    //parent.context::<Flow>()
-          //.parse::<MacHeader>()
-          //.transform(f)
-          //.parse::<IpHeader>()
-          //.map(box |hdr, ctx| {
-              //match ctx {
-                  //Some(x) => {
-                      //let s = x.downcast_mut::<Flow>().expect("Wrong type");
-                      //s.src_ip = hdr.src();
-                      //s.dst_ip = hdr.dst();
-                      //s.proto = hdr.protocol();
-                  //}
-                  //None => panic!("no context"),
-              //}
-          //})
-          //.parse::<UdpHeader>()
-          //.filter(box |hdr, _| hdr.src_port() != 21 && hdr.dst_port() != 21)
-          //.map(box |hdr, ctx| {
-              //match ctx {
-                  //Some(x) => {
-                      //let s = x.downcast_mut::<Flow>().expect("Wrong type");
-                      //s.src_port = hdr.src_port();
-                      //s.dst_port = hdr.dst_port();
-                  //}
-                  //None => panic!("no context"),
-              //}
-          //})
-          //.compose()
+    // parent.context::<Flow>()
+    // .parse::<MacHeader>()
+    // .transform(f)
+    // .parse::<IpHeader>()
+    // .map(box |hdr, ctx| {
+    // match ctx {
+    // Some(x) => {
+    // let s = x.downcast_mut::<Flow>().expect("Wrong type");
+    // s.src_ip = hdr.src();
+    // s.dst_ip = hdr.dst();
+    // s.proto = hdr.protocol();
+    // }
+    // None => panic!("no context"),
+    // }
+    // })
+    // .parse::<UdpHeader>()
+    // .filter(box |hdr, _| hdr.src_port() != 21 && hdr.dst_port() != 21)
+    // .map(box |hdr, ctx| {
+    // match ctx {
+    // Some(x) => {
+    // let s = x.downcast_mut::<Flow>().expect("Wrong type");
+    // s.src_port = hdr.src_port();
+    // s.dst_port = hdr.dst_port();
+    // }
+    // None => panic!("no context"),
+    // }
+    // })
+    // .compose()
 }
 
 fn recv_thread(ports: Vec<io::PmdPort>, queue: i32, core: i32) {
