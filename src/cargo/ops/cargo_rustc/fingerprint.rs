@@ -59,7 +59,10 @@ pub fn prepare_target<'a, 'cfg>(cx: &mut Context<'a, 'cfg>,
 
     let root = cx.out_dir(unit);
     let mut missing_outputs = false;
-    if !unit.profile.doc {
+    if unit.profile.doc {
+        missing_outputs = !root.join(unit.target.crate_name())
+                               .join("index.html").exists();
+    } else {
         for filename in try!(cx.target_filenames(unit)).iter() {
             missing_outputs |= fs::metadata(root.join(filename)).is_err();
         }
@@ -108,6 +111,7 @@ pub struct Fingerprint {
     deps: Vec<(String, Arc<Fingerprint>)>,
     local: LocalFingerprint,
     memoized_hash: Mutex<Option<u64>>,
+    rustflags: Vec<String>,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Hash)]
@@ -157,6 +161,9 @@ impl Fingerprint {
         if self.profile != old.profile {
             bail!("profile configuration has changed")
         }
+        if self.rustflags != old.rustflags {
+            return Err(internal("RUSTFLAGS has changed"))
+        }
         match (&self.local, &old.local) {
             (&LocalFingerprint::Precalculated(ref a),
              &LocalFingerprint::Precalculated(ref b)) => {
@@ -199,8 +206,9 @@ impl hash::Hash for Fingerprint {
             ref deps,
             ref local,
             memoized_hash: _,
+            ref rustflags,
         } = *self;
-        (rustc, features, target, profile, deps, local).hash(h)
+        (rustc, features, target, profile, deps, local, rustflags).hash(h)
     }
 }
 
@@ -219,6 +227,7 @@ impl Encodable for Fingerprint {
                     (a, b.hash())
                 }).collect::<Vec<_>>().encode(e)
             }));
+            try!(e.emit_struct_field("rustflags", 6, |e| self.rustflags.encode(e)));
             Ok(())
         })
     }
@@ -249,9 +258,11 @@ impl Decodable for Fingerprint {
                             features: String::new(),
                             deps: Vec::new(),
                             memoized_hash: Mutex::new(Some(hash)),
+                            rustflags: Vec::new(),
                         }))
                     }).collect()
-                }
+                },
+                rustflags: try!(d.read_struct_field("rustflags", 6, decode)),
             })
         })
     }
@@ -315,7 +326,8 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
     // elsewhere. Also skip fingerprints of binaries because they don't actually
     // induce a recompile, they're just dependencies in the sense that they need
     // to be built.
-    let deps = try!(cx.dep_targets(unit).iter().filter(|u| {
+    let deps = try!(cx.dep_targets(unit));
+    let deps = try!(deps.iter().filter(|u| {
         !u.target.is_custom_build() && !u.target.is_bin()
     }).map(|unit| {
         calculate(cx, unit).map(|fingerprint| {
@@ -342,6 +354,7 @@ fn calculate<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         deps: deps,
         local: local,
         memoized_hash: Mutex::new(None),
+        rustflags: try!(cx.rustflags_args(unit)),
     });
     cx.fingerprints.insert(*unit, fingerprint.clone());
     Ok(fingerprint)
@@ -421,6 +434,7 @@ pub fn prepare_build_cmd<'a, 'cfg>(cx: &mut Context<'a, 'cfg>, unit: &Unit<'a>)
         deps: Vec::new(),
         local: local,
         memoized_hash: Mutex::new(None),
+        rustflags: Vec::new(),
     };
     let compare = compare_old_fingerprint(&loc, &fingerprint);
     log_compare(unit, &compare);
@@ -562,7 +576,8 @@ fn dep_info_mtime_if_fresh(dep_info: &Path) -> CargoResult<Option<FileTime>> {
 
 fn pkg_fingerprint(cx: &Context, pkg: &Package) -> CargoResult<String> {
     let source_id = pkg.package_id().source_id();
-    let source = try!(cx.sources.get(source_id).chain_error(|| {
+    let sources = cx.packages.sources();
+    let source = try!(sources.get(source_id).chain_error(|| {
         internal("missing package source")
     }));
     source.fingerprint(pkg)

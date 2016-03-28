@@ -6,7 +6,7 @@ use std::thread;
 use bufstream::BufStream;
 use git2;
 
-use support::{project, execs, UPDATING};
+use support::{project, execs, UPDATING, ERROR};
 use support::paths;
 use hamcrest::assert_that;
 
@@ -101,17 +101,19 @@ test!(http_auth_offered {
         addr = addr,
         ))
                       .with_stderr(&format!("\
-Unable to update http://{addr}/foo/bar
+{error} Unable to update http://{addr}/foo/bar
 
 Caused by:
   failed to clone into: [..]
 
 Caused by:
   failed to authenticate when downloading repository
+attempted to find username/password via `credential.helper`, but [..]
 
 To learn more, run the command again with --verbose.
 ",
-        addr = addr)));
+        addr = addr,
+        error = ERROR)));
 
     t.join().ok().unwrap();
 });
@@ -144,7 +146,7 @@ test!(https_something_happens {
         addr = addr,
         ))
                       .with_stderr(&format!("\
-Unable to update https://{addr}/foo/bar
+{error} Unable to update https://{addr}/foo/bar
 
 Caused by:
   failed to clone into: [..]
@@ -153,6 +155,7 @@ Caused by:
   {errmsg}
 ",
         addr = addr,
+        error = ERROR,
         errmsg = if cfg!(windows) {
             "[[..]] failed to send request: [..]\n"
         } else if cfg!(target_os = "macos") {
@@ -195,7 +198,7 @@ test!(ssh_something_happens {
         addr = addr,
         ))
                       .with_stderr(&format!("\
-Unable to update ssh://{addr}/foo/bar
+{error} Unable to update ssh://{addr}/foo/bar
 
 Caused by:
   failed to clone into: [..]
@@ -203,6 +206,7 @@ Caused by:
 Caused by:
   [[..]] Failed to start SSH session: Failed getting banner
 ",
-        addr = addr)));
+        addr = addr,
+        error = ERROR)));
     t.join().ok().unwrap();
 });

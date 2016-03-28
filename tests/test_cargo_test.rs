@@ -3,7 +3,7 @@ use std::io::prelude::*;
 use std::str;
 
 use support::{project, execs, basic_bin_manifest, basic_lib_manifest};
-use support::{COMPILING, RUNNING, DOCTEST};
+use support::{COMPILING, RUNNING, DOCTEST, ERROR};
 use support::paths::CargoPathExt;
 use hamcrest::{assert_that, existing_file, is_not};
 use cargo::util::process;
@@ -82,7 +82,7 @@ test!(cargo_test_release {
 
     assert_that(p.cargo_process("test").arg("-v").arg("--release"),
                 execs().with_stdout(format!("\
-{compiling} bar v0.0.1 ({dir})
+{compiling} bar v0.0.1 ({dir}/bar)
 {running} [..] -C opt-level=3 [..]
 {compiling} foo v0.1.0 ({dir})
 {running} [..] -C opt-level=3 [..]
@@ -314,7 +314,7 @@ test!(test_with_deep_lib_dep {
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} foo v0.0.1 ({dir})
+{compiling} foo v0.0.1 ([..])
 {compiling} bar v0.0.1 ({dir})
 {running} target[..]
 
@@ -742,10 +742,11 @@ test!(bin_without_name {
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
-  binary target bin.name is required")));
+  binary target bin.name is required",
+  error = ERROR)));
 });
 
 test!(bench_without_name {
@@ -786,10 +787,11 @@ test!(bench_without_name {
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
-  bench target bench.name is required")));
+  bench target bench.name is required",
+    error = ERROR)));
 });
 
 test!(test_without_name {
@@ -829,10 +831,11 @@ test!(test_without_name {
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
-  test target test.name is required")));
+  test target test.name is required",
+  error = ERROR)));
 });
 
 test!(example_without_name {
@@ -872,10 +875,11 @@ test!(example_without_name {
     assert_that(p.cargo_process("test"),
                 execs().with_status(101)
                        .with_stderr(&format!("\
-failed to parse manifest at `[..]`
+{error} failed to parse manifest at `[..]`
 
 Caused by:
-  example target example.name is required")));
+  example target example.name is required",
+  error = ERROR)));
 });
 
 test!(bin_there_for_integration {
@@ -951,7 +955,7 @@ test!(test_dylib {
     assert_that(p.cargo_process("test"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} bar v0.0.1 ({dir})
+{compiling} bar v0.0.1 ({dir}/bar)
 {compiling} foo v0.0.1 ({dir})
 {running} target[..]foo-[..]
 
@@ -1259,7 +1263,7 @@ test!(selective_testing {
     assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} d1 v0.0.1 ({dir})
+{compiling} d1 v0.0.1 ({dir}/d1)
 {running} target[..]d1-[..]
 
 running 0 tests
@@ -1279,7 +1283,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
     assert_that(p.cargo("test").arg("-p").arg("d2"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} d2 v0.0.1 ({dir})
+{compiling} d2 v0.0.1 ({dir}/d2)
 {running} target[..]d2-[..]
 
 running 0 tests
@@ -1457,7 +1461,7 @@ test!(selective_testing_with_docs {
     assert_that(p.cargo("test").arg("-p").arg("d1"),
                 execs().with_status(0)
                        .with_stdout(&format!("\
-{compiling} d1 v0.0.1 ({dir})
+{compiling} d1 v0.0.1 ({dir}/d1)
 {running} target[..]deps[..]d1[..]
 
 running 0 tests
@@ -1599,13 +1603,15 @@ test!(bad_example {
         .file("src/lib.rs", "");
 
     assert_that(p.cargo_process("run").arg("--example").arg("foo"),
-                execs().with_status(101).with_stderr("\
-no example target named `foo`
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} no example target named `foo`
+",
+    error = ERROR)));
     assert_that(p.cargo_process("run").arg("--bin").arg("foo"),
-                execs().with_status(101).with_stderr("\
-no bin target named `foo`
-"));
+                execs().with_status(101).with_stderr(&format!("\
+{error} no bin target named `foo`
+",
+    error = ERROR)));
 });
 
 test!(doctest_feature {

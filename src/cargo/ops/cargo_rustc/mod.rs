@@ -3,12 +3,12 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::prelude::*;
-use std::path::{self, PathBuf};
+use std::path::{self, PathBuf, Path};
 use std::sync::Arc;
 
-use core::{SourceMap, Package, PackageId, PackageSet, Target, Resolve};
+use core::{Package, PackageId, PackageSet, Target, Resolve};
 use core::{Profile, Profiles};
-use util::{self, CargoResult, human};
+use util::{self, CargoResult, human, Filesystem};
 use util::{Config, internal, ChainError, profile, join_paths};
 
 use self::job::{Job, Work};
@@ -51,14 +51,13 @@ pub struct TargetConfig {
     pub overrides: HashMap<String, BuildOutput>,
 }
 
-pub type PackagesToBuild<'a> = [(&'a Package,Vec<(&'a Target,&'a Profile)>)];
+pub type PackagesToBuild<'a> = [(&'a Package, Vec<(&'a Target,&'a Profile)>)];
 
 // Returns a mapping of the root package plus its immediate dependencies to
 // where the compiled libraries are all located.
 pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
-                                     deps: &'a PackageSet,
+                                     packages: &'a PackageSet<'cfg>,
                                      resolve: &'a Resolve,
-                                     sources: &'a SourceMap<'cfg>,
                                      config: &'cfg Config,
                                      build_config: BuildConfig,
                                      profiles: &'a Profiles)
@@ -78,23 +77,29 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
             }
         })
     }).collect::<Vec<_>>();
-    try!(links::validate(deps));
 
     let dest = if build_config.release {"release"} else {"debug"};
-    let root = deps.iter().find(|p| p.package_id() == resolve.root()).unwrap();
+    let root = try!(packages.get(resolve.root()));
     let host_layout = Layout::new(config, root, None, &dest);
     let target_layout = build_config.requested_target.as_ref().map(|target| {
         layout::Layout::new(config, root, Some(&target), &dest)
     });
 
-    let mut cx = try!(Context::new(resolve, sources, deps, config,
+    // For now we don't do any more finer-grained locking on the artifact
+    // directory, so just lock the entire thing for the duration of this
+    // compile.
+    let fs = Filesystem::new(host_layout.root().to_path_buf());
+    let path = Path::new(".cargo-lock");
+    let _lock = try!(fs.open_rw(path, config, "build directory"));
+
+    let mut cx = try!(Context::new(resolve, packages, config,
                                    host_layout, target_layout,
                                    build_config, profiles));
 
     let mut queue = JobQueue::new(&cx);
 
     try!(cx.prepare(root));
-    custom_build::build_map(&mut cx, &units);
+    try!(custom_build::build_map(&mut cx, &units));
 
     for unit in units.iter() {
         // Build up a list of pending jobs, each of which represent
@@ -131,7 +136,7 @@ pub fn compile_targets<'a, 'cfg: 'a>(pkg_targets: &'a PackagesToBuild<'a>,
             if !unit.target.is_lib() { continue }
 
             // Include immediate lib deps as well
-            for unit in cx.dep_targets(unit).iter() {
+            for unit in try!(cx.dep_targets(unit)).iter() {
                 let pkgid = unit.pkg.package_id();
                 if !unit.target.is_lib() { continue }
                 if unit.profile.doc { continue }
@@ -178,6 +183,7 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
     let p = profile::start(format!("preparing: {}/{}", unit.pkg,
                                    unit.target.name()));
     try!(fingerprint::prepare_init(cx, unit));
+    try!(cx.links.validate(unit));
 
     let (dirty, fresh, freshness) = if unit.profile.run_custom_build {
         try!(custom_build::prepare(cx, unit))
@@ -192,11 +198,11 @@ fn compile<'a, 'cfg: 'a>(cx: &mut Context<'a, 'cfg>,
         let dirty = work.then(dirty);
         (dirty, fresh, freshness)
     };
-    jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness);
+    try!(jobs.enqueue(cx, unit, Job::new(dirty, fresh), freshness));
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
-    for unit in cx.dep_targets(unit).iter() {
+    for unit in try!(cx.dep_targets(unit)).iter() {
         try!(compile(cx, jobs, unit));
     }
     Ok(())
@@ -244,9 +250,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
     let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
     let cwd = cx.config.cwd().to_path_buf();
 
-    return Ok(Work::new(move |desc_tx| {
-        debug!("about to run: {}", rustc);
+    let rustflags = try!(cx.rustflags_args(unit));
 
+    return Ok(Work::new(move |desc_tx| {
         // Only at runtime have we discovered what the extra -L and -l
         // arguments are for native libraries, so we process those here. We
         // also need to be sure to add any -L paths for our plugins to the
@@ -267,6 +273,9 @@ fn rustc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
                 try!(fs::remove_file(&dst));
             }
         }
+
+        // Add the arguments from RUSTFLAGS
+        rustc.args(&rustflags);
 
         desc_tx.send(rustc.to_string()).ok();
         try!(exec_engine.exec(rustc).chain_error(|| {
@@ -371,12 +380,11 @@ fn rustdoc(cx: &mut Context, unit: &Unit) -> CargoResult<Work> {
            .cwd(cx.config.cwd())
            .arg("--crate-name").arg(&unit.target.crate_name());
 
-    let mut doc_dir = cx.config.target_dir(cx.get_package(cx.resolve.root()));
     if let Some(target) = cx.requested_target() {
         rustdoc.arg("--target").arg(target);
-        doc_dir.push(target);
     }
-    doc_dir.push("doc");
+
+    let doc_dir = cx.out_dir(unit);
 
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
@@ -478,11 +486,6 @@ fn build_base_args(cx: &Context,
     if opt_level == 3 {
         cmd.arg("-C").arg("target-cpu=native");
         cmd.arg("-C").arg("target-feature=+avx,+avx2,+sse4.1,+sse4.2,+movbe");
-        //cmd.arg("-C").arg("target-feature=+avx2");
-        //cmd.arg("-C").arg("target-feature=+sse4.1");
-        //cmd.arg("-C").arg("target-feature=+sse4.2");
-        //cmd.arg("-C").arg("target-feature=+movbe");
-        //cmd.arg("-C").arg("target-feature=+avx512bw");
     }
 
     // Disable LTO for host builds as prefer_dynamic and it are mutually
@@ -571,7 +574,7 @@ fn build_deps_args(cmd: &mut CommandPrototype, cx: &Context, unit: &Unit)
         cmd.env("OUT_DIR", &layout.build_out(unit.pkg));
     }
 
-    for unit in cx.dep_targets(unit).iter() {
+    for unit in try!(cx.dep_targets(unit)).iter() {
         if unit.target.linkable() {
             try!(link_to(cmd, cx, unit));
         }

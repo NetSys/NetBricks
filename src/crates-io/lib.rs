@@ -1,4 +1,5 @@
 extern crate curl;
+extern crate url;
 extern crate rustc_serialize;
 
 use std::collections::HashMap;
@@ -13,6 +14,8 @@ use curl::http;
 use curl::http::handle::Method::{Put, Get, Delete};
 use curl::http::handle::{Method, Request};
 use rustc_serialize::json;
+
+use url::percent_encoding::{percent_encode, QUERY_ENCODE_SET};
 
 pub struct Registry {
     host: String,
@@ -37,6 +40,20 @@ pub enum Error {
     TokenMissing,
     Io(io::Error),
     NotFound,
+    JsonEncodeError(json::EncoderError),
+    JsonDecodeError(json::DecoderError),
+}
+
+impl From<json::EncoderError> for Error {
+    fn from(err: json::EncoderError) -> Error {
+        Error::JsonEncodeError(err)
+    }
+}
+
+impl From<json::DecoderError> for Error {
+    fn from(err: json::DecoderError) -> Error {
+        Error::JsonDecodeError(err)
+    }
 }
 
 #[derive(RustcDecodable)]
@@ -88,7 +105,8 @@ pub struct User {
 #[derive(RustcDecodable)] struct ApiError { detail: String }
 #[derive(RustcEncodable)] struct OwnersReq<'a> { users: &'a [&'a str] }
 #[derive(RustcDecodable)] struct Users { users: Vec<User> }
-#[derive(RustcDecodable)] struct Crates { crates: Vec<Crate> }
+#[derive(RustcDecodable)] struct TotalCrates { total: u32 }
+#[derive(RustcDecodable)] struct Crates { crates: Vec<Crate>, meta: TotalCrates }
 
 impl Registry {
     pub fn new(host: String, token: Option<String>) -> Registry {
@@ -105,28 +123,28 @@ impl Registry {
     }
 
     pub fn add_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = json::encode(&OwnersReq { users: owners }).unwrap();
+        let body = try!(json::encode(&OwnersReq { users: owners }));
         let body = try!(self.put(format!("/crates/{}/owners", krate),
                                  body.as_bytes()));
-        assert!(json::decode::<R>(&body).unwrap().ok);
+        assert!(try!(json::decode::<R>(&body)).ok);
         Ok(())
     }
 
     pub fn remove_owners(&mut self, krate: &str, owners: &[&str]) -> Result<()> {
-        let body = json::encode(&OwnersReq { users: owners }).unwrap();
+        let body = try!(json::encode(&OwnersReq { users: owners }));
         let body = try!(self.delete(format!("/crates/{}/owners", krate),
                                     Some(body.as_bytes())));
-        assert!(json::decode::<R>(&body).unwrap().ok);
+        assert!(try!(json::decode::<R>(&body)).ok);
         Ok(())
     }
 
     pub fn list_owners(&mut self, krate: &str) -> Result<Vec<User>> {
         let body = try!(self.get(format!("/crates/{}/owners", krate)));
-        Ok(json::decode::<Users>(&body).unwrap().users)
+        Ok(try!(json::decode::<Users>(&body)).users)
     }
 
     pub fn publish(&mut self, krate: &NewCrate, tarball: &Path) -> Result<()> {
-        let json = json::encode(krate).unwrap();
+        let json = try!(json::encode(krate));
         // Prepare the body. The format of the upload request is:
         //
         //      <le u32 of json>
@@ -170,24 +188,28 @@ impl Registry {
         Ok(())
     }
 
-    pub fn search(&mut self, query: &str) -> Result<Vec<Crate>> {
-        let body = try!(self.req(format!("/crates?q={}", query), None, Get,
-                                 Auth::Unauthorized));
+    pub fn search(&mut self, query: &str, limit: u8) -> Result<(Vec<Crate>, u32)> {
+        let formated_query = percent_encode(query.as_bytes(), QUERY_ENCODE_SET);
+        let body = try!(self.req(
+            format!("/crates?q={}&per_page={}", formated_query, limit),
+            None, Get, Auth::Unauthorized
+        ));
 
-        Ok(json::decode::<Crates>(&body).unwrap().crates)
+        let crates = try!(json::decode::<Crates>(&body));
+        Ok((crates.crates, crates.meta.total))
     }
 
     pub fn yank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = try!(self.delete(format!("/crates/{}/{}/yank", krate, version),
                                     None));
-        assert!(json::decode::<R>(&body).unwrap().ok);
+        assert!(try!(json::decode::<R>(&body)).ok);
         Ok(())
     }
 
     pub fn unyank(&mut self, krate: &str, version: &str) -> Result<()> {
         let body = try!(self.put(format!("/crates/{}/{}/unyank", krate, version),
                                  &[]));
-        assert!(json::decode::<R>(&body).unwrap().ok);
+        assert!(try!(json::decode::<R>(&body)).ok);
         Ok(())
     }
 
@@ -251,7 +273,6 @@ fn handle(response: result::Result<http::Response, curl::ErrCode>)
 }
 
 impl fmt::Display for Error {
-    #[allow(deprecated)] // connect => join in 1.3
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::NonUtf8Body => write!(f, "response body was not utf-8"),
@@ -260,12 +281,14 @@ impl fmt::Display for Error {
                 write!(f, "failed to get a 200 OK response: {}", resp)
             }
             Error::Api(ref errs) => {
-                write!(f, "api errors: {}", errs.connect(", "))
+                write!(f, "api errors: {}", errs.join(", "))
             }
             Error::Unauthorized => write!(f, "unauthorized API access"),
             Error::TokenMissing => write!(f, "no upload token found, please run `cargo login`"),
             Error::Io(ref e) => write!(f, "io error: {}", e),
             Error::NotFound => write!(f, "cannot find crate"),
+            Error::JsonEncodeError(ref e) => write!(f, "json encode error: {}", e),
+            Error::JsonDecodeError(ref e) => write!(f, "json decode error: {}", e),
         }
     }
 }

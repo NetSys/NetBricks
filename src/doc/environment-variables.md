@@ -1,32 +1,63 @@
 % Environment Variables
 
-Cargo sets a number of environment variables which your code can detect. To get
-the value of any of these variables in a Rust program, do this:
-
-```
-let version = env!("CARGO_PKG_VERSION")
-```
-
-`version` will now contain the value of `CARGO_PKG_VERSION`.
-
-Here are a list of the variables Cargo sets, organized by when it sets them:
+Cargo sets and reads a number of environment variables which your code can detect
+or override. Here is a list of the variables Cargo sets, organized by when it interacts
+with them:
 
 # Environment variables Cargo reads
 
+You can override these environment variables to change Cargo's behavior on your
+system:
+
 * `CARGO_HOME` - Cargo maintains a local cache of the registry index and of git
   checkouts of crates.  By default these are stored under `$HOME/.cargo`, but
-  this variable overrides the location of this directory.
-* `CARGO_PROFILE` - If this is set to a positive integer *N*, Cargo will record
-  timing data as it runs.  When it exits, it will print this data as a profile
-  *N* levels deep.
+  this variable overrides the location of this directory. Once a crate is cached
+  it is not removed by the clean command.
 * `CARGO_TARGET_DIR` - Location of where to place all generated artifacts,
   relative to the current working directory.
 * `RUSTC` - Instead of running `rustc`, Cargo will execute this specified
   compiler instead.
 * `RUSTDOC` - Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead.
+* `RUSTFLAGS` - A space-separated list of custom flags to pass to all compiler
+  invocations that Cargo performs. In contrast with `cargo rustc`, this is
+  useful for passing a flag to *all* compiler instances.
+
+Note that Cargo will also read environment variables for `.cargo/config`
+configuration values, as described in [that documentation][config-env]
+
+[config-env]: config.html#environment-variables
+
+# Environment variables Cargo sets for crates
+
+Cargo exposes these environment variables to your crate when it is compiled. To get the
+value of any of these variables in a Rust program, do this:
+
+```
+let version = env!("CARGO_PKG_VERSION");
+```
+
+`version` will now contain the value of `CARGO_PKG_VERSION`.
+
+* `CARGO_MANIFEST_DIR` - The directory containing the manifest of your package.
+* `CARGO_PKG_VERSION` - The full version of your package.
+* `CARGO_PKG_VERSION_MAJOR` - The major version of your package.
+* `CARGO_PKG_VERSION_MINOR` - The minor version of your package.
+* `CARGO_PKG_VERSION_PATCH` - The patch version of your package.
+* `CARGO_PKG_VERSION_PRE` - The pre-release version of your package.
 
 # Environment variables Cargo sets for build scripts
+
+Cargo sets several environment variables when build scripts are run. Because these variables
+are not yet set when the build script is compiled, the above example using `env!` won't work
+and instead you'll need to retrieve the values when the build script is run:
+
+```
+use std::env;
+let out_dir = env::var("OUT_DIR").unwrap();
+```
+
+`out_dir` will now contain the value of `OUT_DIR`.
 
 * `CARGO_MANIFEST_DIR` - The directory containing the manifest for the package
                          being built (the package containing the build
@@ -56,12 +87,3 @@ Here are a list of the variables Cargo sets, organized by when it sets them:
 [links]: build-script.html#the-links-manifest-key
 [profile]: manifest.html#the-profile-sections
 [clang]:http://clang.llvm.org/docs/CrossCompilation.html#target-triple
-
-# Environment variables Cargo sets for crates
-
-* `CARGO_PKG_VERSION` - The full version of your package.
-* `CARGO_PKG_VERSION_MAJOR` - The major version of your package.
-* `CARGO_PKG_VERSION_MINOR` - The minor version of your package.
-* `CARGO_PKG_VERSION_PATCH` - The patch version of your package.
-* `CARGO_PKG_VERSION_PRE` - The pre-release version of your package.
-

@@ -1,4 +1,5 @@
 extern crate cargo;
+extern crate url;
 extern crate env_logger;
 extern crate git2_curl;
 extern crate rustc_serialize;
@@ -11,14 +12,14 @@ use std::fs;
 use std::path::PathBuf;
 
 use cargo::execute_main_without_stdin;
-use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
+use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult, ChainError};
 
 #[derive(RustcDecodable)]
 pub struct Flags {
     flag_list: bool,
-    flag_verbose: bool,
     flag_version: bool,
-    flag_quiet: bool,
+    flag_verbose: Option<bool>,
+    flag_quiet: Option<bool>,
     flag_color: Option<String>,
     arg_command: String,
     arg_args: Vec<String>,
@@ -95,12 +96,10 @@ macro_rules! each_subcommand{
     }
 }
 
-mod subcommands {
-    macro_rules! declare_mod {
-        ($name:ident) => ( pub mod $name; )
-    }
-    each_subcommand!(declare_mod);
+macro_rules! declare_mod {
+    ($name:ident) => ( pub mod $name; )
 }
+each_subcommand!(declare_mod);
 
 /**
   The top-level `cargo` command handles configuration and project location
@@ -108,8 +107,9 @@ mod subcommands {
   on this top-level information.
 */
 fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
-    try!(config.shell().set_verbosity(flags.flag_verbose, flags.flag_quiet));
-    try!(config.shell().set_color_config(flags.flag_color.as_ref().map(|s| &s[..])));
+    try!(config.configure_shell(flags.flag_verbose,
+                                flags.flag_quiet,
+                                &flags.flag_color));
 
     init_git_transports(config);
     cargo::util::job::setup();
@@ -161,8 +161,8 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
     macro_rules! cmd{
         ($name:ident) => (if args[1] == stringify!($name).replace("_", "-") {
             config.shell().set_verbose(true);
-            let r = cargo::call_main_without_stdin(subcommands::$name::execute, config,
-                                                   subcommands::$name::USAGE,
+            let r = cargo::call_main_without_stdin($name::execute, config,
+                                                   $name::USAGE,
                                                    &args,
                                                    false);
             cargo::process_executed(r, &mut config.shell());
@@ -205,7 +205,9 @@ fn execute_subcommand(config: &Config,
             }))
         }
     };
-    try!(util::process(&command).args(&args[1..]).exec());
+    try!(util::process(&command).args(&args[1..]).exec().chain_error(|| {
+        human(format!("third party subcommand `{}` exited unsuccessfully", command_exe))
+    }));
     Ok(())
 }
 
@@ -256,7 +258,7 @@ fn is_executable(metadata: &fs::Metadata) -> bool {
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {
-    let mut dirs = vec![config.home().join("bin")];
+    let mut dirs = vec![config.home().clone().into_path_unlocked().join("bin")];
     if let Some(val) = env::var_os("PATH") {
         dirs.extend(env::split_paths(&val));
     }

@@ -16,8 +16,9 @@ pub fn package(manifest_path: &Path,
                verify: bool,
                list: bool,
                metadata: bool) -> CargoResult<Option<PathBuf>> {
-    let mut src = try!(PathSource::for_path(manifest_path.parent().unwrap(),
-                                            config));
+    let path = manifest_path.parent().unwrap();
+    let id = try!(SourceId::for_path(path));
+    let mut src = PathSource::new(path, &id, config);
     let pkg = try!(src.root_package());
 
     if metadata {
@@ -92,7 +93,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
         things.push_str(&missing.last().unwrap());
 
         try!(config.shell().warn(
-            &format!("warning: manifest has no {things}. \
+            &format!("manifest has no {things}. \
                     See http://doc.crates.io/manifest.html#package-metadata for more info.",
                     things = things)))
     }

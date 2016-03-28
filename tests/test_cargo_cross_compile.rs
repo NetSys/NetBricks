@@ -1,7 +1,7 @@
 use std::env;
 
 use support::{project, execs, basic_bin_manifest};
-use support::{RUNNING, COMPILING, DOCTEST};
+use support::{RUNNING, COMPILING, DOCTEST, ERROR};
 use hamcrest::{assert_that, existing_file};
 use cargo::util::process;
 
@@ -44,6 +44,21 @@ fn alternate_arch() -> &'static str {
         "x86_64" => "x86",
         _ => unreachable!(),
     }
+}
+
+fn host() -> String {
+    let platform = match env::consts::OS {
+        "linux" => "unknown-linux-gnu",
+        "macos" => "apple-darwin",
+        "windows" => "pc-windows-msvc",
+        _ => unreachable!(),
+    };
+    let arch = match env::consts::ARCH {
+        "x86" => "i686",
+        "x86_64" => "x86_64",
+        _ => unreachable!(),
+    };
+    format!("{}-{}", arch, platform)
 }
 
 test!(simple_cross {
@@ -464,14 +479,64 @@ test test_foo ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
 
-{doctest} foo
+", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target)));
+});
+
+test!(no_cross_doctests {
+    if disabled() { return }
+
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            authors = []
+            version = "0.0.0"
+        "#)
+        .file("src/lib.rs", r#"
+            //! ```
+            //! extern crate foo;
+            //! assert!(true);
+            //! ```
+        "#);
+
+    let host_output = format!("\
+{compiling} foo v0.0.0 ({foo})
+{running} target[..]foo-[..]
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
 
-", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target,
-   doctest = DOCTEST)));
+{doctest} foo
+
+running 1 test
+test _0 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, foo = p.url(), doctest = DOCTEST);
+
+    assert_that(p.cargo_process("test"),
+                execs().with_status(0)
+                       .with_stdout(&host_output));
+
+    let target = host();
+    assert_that(p.cargo_process("test").arg("--target").arg(&target),
+                execs().with_status(0)
+                       .with_stdout(&host_output));
+
+    let target = alternate();
+    assert_that(p.cargo_process("test").arg("--target").arg(&target),
+                execs().with_status(0)
+                       .with_stdout(&format!("\
+{compiling} foo v0.0.0 ({foo})
+{running} target[..]{triple}[..]foo-[..]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured
+
+", compiling = COMPILING, running = RUNNING, foo = p.url(), triple = target)));
 });
 
 test!(simple_cargo_run {
@@ -602,7 +667,7 @@ test!(build_script_needed_for_host_and_target {
     assert_that(p.cargo_process("build").arg("--target").arg(&target).arg("-v"),
                 execs().with_status(0)
                        .with_stdout_contains(&format!("\
-{compiling} d1 v0.0.0 ({url})", compiling = COMPILING, url = p.url()))
+{compiling} d1 v0.0.0 ({url}/d1)", compiling = COMPILING, url = p.url()))
                        .with_stdout_contains(&format!("\
 {running} `rustc d1[..]build.rs [..] --out-dir {dir}[..]target[..]build[..]d1-[..]`",
     running = RUNNING, dir = p.root().display()))
@@ -612,7 +677,7 @@ test!(build_script_needed_for_host_and_target {
                        .with_stdout_contains(&format!("\
 {running} `rustc d1[..]src[..]lib.rs [..]`", running = RUNNING))
                        .with_stdout_contains(&format!("\
-{compiling} d2 v0.0.0 ({url})", compiling = COMPILING, url = p.url()))
+{compiling} d2 v0.0.0 ({url}/d2)", compiling = COMPILING, url = p.url()))
                        .with_stdout_contains(&format!("\
 {running} `rustc d2[..]src[..]lib.rs [..] \
            -L /path/to/{host}`", running = RUNNING, host = host))
@@ -826,16 +891,16 @@ test!(platform_specific_dependencies_do_not_leak {
 
     assert_that(p.cargo_process("build").arg("-v").arg("--target").arg(&target),
                 execs().with_status(101)
-                       .with_stderr("\
+                       .with_stderr(format!("\
 [..] error: can't find crate for `d2`[..]
 [..] extern crate d2;
 [..]
 error: aborting due to previous error
-Could not compile `d1`.
+{error} Could not compile `d1`.
 
 Caused by:
   [..]
-"));
+", error = ERROR)));
 });
 
 test!(platform_specific_variables_reflected_in_build_scripts {

@@ -4,22 +4,25 @@ use std::collections::hash_map::{HashMap};
 use std::env;
 use std::fmt;
 use std::fs::{self, File};
+use std::io::SeekFrom;
 use std::io::prelude::*;
 use std::mem;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use rustc_serialize::{Encodable,Encoder};
 use toml;
 use core::shell::{Verbosity, ColorConfig};
 use core::{MultiShell, Package};
-use util::{CargoResult, ChainError, Rustc, internal, human, paths};
+use util::{CargoResult, CargoError, ChainError, Rustc, internal, human};
+use util::Filesystem;
 
 use util::toml as cargo_toml;
 
 use self::ConfigValue as CV;
 
 pub struct Config {
-    home_path: PathBuf,
+    home_path: Filesystem,
     shell: RefCell<MultiShell>,
     rustc_info: Rustc,
     values: RefCell<HashMap<String, ConfigValue>>,
@@ -35,7 +38,7 @@ impl Config {
                cwd: PathBuf,
                homedir: PathBuf) -> CargoResult<Config> {
         let mut cfg = Config {
-            home_path: homedir,
+            home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             rustc_info: Rustc::blank(),
             cwd: cwd,
@@ -65,25 +68,25 @@ impl Config {
         Config::new(shell, cwd, homedir)
     }
 
-    pub fn home(&self) -> &Path { &self.home_path }
+    pub fn home(&self) -> &Filesystem { &self.home_path }
 
-    pub fn git_db_path(&self) -> PathBuf {
+    pub fn git_db_path(&self) -> Filesystem {
         self.home_path.join("git").join("db")
     }
 
-    pub fn git_checkout_path(&self) -> PathBuf {
+    pub fn git_checkout_path(&self) -> Filesystem {
         self.home_path.join("git").join("checkouts")
     }
 
-    pub fn registry_index_path(&self) -> PathBuf {
+    pub fn registry_index_path(&self) -> Filesystem {
         self.home_path.join("registry").join("index")
     }
 
-    pub fn registry_cache_path(&self) -> PathBuf {
+    pub fn registry_cache_path(&self) -> Filesystem {
         self.home_path.join("registry").join("cache")
     }
 
-    pub fn registry_source_path(&self) -> PathBuf {
+    pub fn registry_source_path(&self) -> Filesystem {
         self.home_path.join("registry").join("src")
     }
 
@@ -117,7 +120,7 @@ impl Config {
         *self.target_dir.borrow_mut() = Some(path.to_owned());
     }
 
-    pub fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
+    fn get(&self, key: &str) -> CargoResult<Option<ConfigValue>> {
         let vals = try!(self.values());
         let mut parts = key.split('.').enumerate();
         let mut val = match vals.get(parts.next().unwrap().1) {
@@ -148,50 +151,115 @@ impl Config {
         Ok(Some(val.clone()))
     }
 
-    pub fn get_string(&self, key: &str) -> CargoResult<Option<(String, PathBuf)>> {
+    fn get_env<V: FromStr>(&self, key: &str) -> CargoResult<Option<Value<V>>>
+        where Box<CargoError>: From<V::Err>
+    {
+        let key = key.replace(".", "_")
+                     .replace("-", "_")
+                     .chars()
+                     .flat_map(|c| c.to_uppercase())
+                     .collect::<String>();
+        match env::var(&format!("CARGO_{}", key)) {
+            Ok(value) => {
+                Ok(Some(Value {
+                    val: try!(value.parse()),
+                    definition: Definition::Environment,
+                }))
+            }
+            Err(..) => Ok(None),
+        }
+    }
+
+    pub fn get_string(&self, key: &str) -> CargoResult<Option<Value<String>>> {
+        if let Some(v) = try!(self.get_env(key)) {
+            return Ok(Some(v))
+        }
         match try!(self.get(key)) {
-            Some(CV::String(i, path)) => Ok(Some((i, path))),
+            Some(CV::String(i, path)) => {
+                Ok(Some(Value {
+                    val: i,
+                    definition: Definition::Path(path),
+                }))
+            }
             Some(val) => self.expected("string", key, val),
             None => Ok(None),
         }
     }
 
-    pub fn get_path(&self, key: &str) -> CargoResult<Option<PathBuf>> {
-        if let Some((specified_path, path_to_config)) = try!(self.get_string(&key)) {
-            if specified_path.contains("/") || (cfg!(windows) && specified_path.contains("\\")) {
-                // An absolute or a relative path
-                let prefix_path = path_to_config.parent().unwrap().parent().unwrap();
-                // Joining an absolute path to any path results in the given absolute path
-                Ok(Some(prefix_path.join(specified_path)))
+    pub fn get_bool(&self, key: &str) -> CargoResult<Option<Value<bool>>> {
+        if let Some(v) = try!(self.get_env(key)) {
+            return Ok(Some(v))
+        }
+        match try!(self.get(key)) {
+            Some(CV::Boolean(b, path)) => {
+                Ok(Some(Value {
+                    val: b,
+                    definition: Definition::Path(path),
+                }))
+            }
+            Some(val) => self.expected("bool", key, val),
+            None => Ok(None),
+        }
+    }
+
+    pub fn get_path(&self, key: &str) -> CargoResult<Option<Value<PathBuf>>> {
+        if let Some(val) = try!(self.get_string(&key)) {
+            let is_path = val.val.contains("/") ||
+                          (cfg!(windows) && val.val.contains("\\"));
+            let path = if is_path {
+                val.definition.root(self).join(val.val)
             } else {
                 // A pathless name
-                Ok(Some(PathBuf::from(specified_path)))
-            }
+                PathBuf::from(val.val)
+            };
+            Ok(Some(Value {
+                val: path,
+                definition: val.definition,
+            }))
         } else {
             Ok(None)
         }
     }
 
-    pub fn get_list(&self, key: &str) -> CargoResult<Option<(Vec<(String, PathBuf)>, PathBuf)>> {
+    pub fn get_list(&self, key: &str)
+                    -> CargoResult<Option<Value<Vec<(String, PathBuf)>>>> {
         match try!(self.get(key)) {
-            Some(CV::List(i, path)) => Ok(Some((i, path))),
+            Some(CV::List(i, path)) => {
+                Ok(Some(Value {
+                    val: i,
+                    definition: Definition::Path(path),
+                }))
+            }
             Some(val) => self.expected("list", key, val),
             None => Ok(None),
         }
     }
 
     pub fn get_table(&self, key: &str)
-                    -> CargoResult<Option<(HashMap<String, CV>, PathBuf)>> {
+                    -> CargoResult<Option<Value<HashMap<String, CV>>>> {
         match try!(self.get(key)) {
-            Some(CV::Table(i, path)) => Ok(Some((i, path))),
+            Some(CV::Table(i, path)) => {
+                Ok(Some(Value {
+                    val: i,
+                    definition: Definition::Path(path),
+                }))
+            }
             Some(val) => self.expected("table", key, val),
             None => Ok(None),
         }
     }
 
-    pub fn get_i64(&self, key: &str) -> CargoResult<Option<(i64, PathBuf)>> {
+    pub fn get_i64(&self, key: &str) -> CargoResult<Option<Value<i64>>> {
+        if let Some(v) = try!(self.get_env(key)) {
+            return Ok(Some(v))
+        }
         match try!(self.get(key)) {
-            Some(CV::Integer(i, path)) => Ok(Some((i, path))),
+            Some(CV::Integer(i, path)) => {
+                Ok(Some(Value {
+                    val: i,
+                    definition: Definition::Path(path),
+                }))
+            }
             Some(val) => self.expected("integer", key, val),
             None => Ok(None),
         }
@@ -201,6 +269,22 @@ impl Config {
         val.expected(ty).map_err(|e| {
             human(format!("invalid configuration for key `{}`\n{}", key, e))
         })
+    }
+
+    pub fn configure_shell(&self,
+                           verbose: Option<bool>,
+                           quiet: Option<bool>,
+                           color: &Option<String>) -> CargoResult<()> {
+        let cfg_verbose = try!(self.get_bool("term.verbose")).map(|v| v.val);
+        let cfg_color = try!(self.get_string("term.color")).map(|v| v.val);
+        let verbose = verbose.or(cfg_verbose).unwrap_or(false);
+        let quiet = quiet.unwrap_or(false);
+        let color = color.as_ref().or(cfg_color.as_ref());
+
+        try!(self.shell().set_verbosity(verbose, quiet));
+        try!(self.shell().set_color_config(color.map(|s| &s[..])));
+
+        Ok(())
     }
 
     fn load_values(&self) -> CargoResult<()> {
@@ -244,12 +328,8 @@ impl Config {
     fn scrape_target_dir_config(&mut self) -> CargoResult<()> {
         if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             *self.target_dir.borrow_mut() = Some(self.cwd.join(dir));
-        } else if let Some((dir, dir2)) = try!(self.get_string("build.target-dir")) {
-            let mut path = PathBuf::from(dir2);
-            path.pop();
-            path.pop();
-            path.push(dir);
-            *self.target_dir.borrow_mut() = Some(path);
+        } else if let Some(val) = try!(self.get_path("build.target-dir")) {
+            *self.target_dir.borrow_mut() = Some(val.val);
         }
         Ok(())
     }
@@ -262,7 +342,7 @@ impl Config {
 
         let var = format!("build.{}", tool);
         if let Some(tool_path) = try!(self.get_path(&var)) {
-            return Ok(tool_path);
+            return Ok(tool_path.val);
         }
 
         Ok(PathBuf::from(tool))
@@ -282,6 +362,16 @@ pub enum ConfigValue {
     List(Vec<(String, PathBuf)>, PathBuf),
     Table(HashMap<String, ConfigValue>, PathBuf),
     Boolean(bool, PathBuf),
+}
+
+pub struct Value<T> {
+    pub val: T,
+    pub definition: Definition,
+}
+
+pub enum Definition {
+    Path(PathBuf),
+    Environment,
 }
 
 impl fmt::Debug for ConfigValue {
@@ -466,6 +556,24 @@ impl ConfigValue {
     }
 }
 
+impl Definition {
+    pub fn root<'a>(&'a self, config: &'a Config) -> &'a Path {
+        match *self {
+            Definition::Path(ref p) => p.parent().unwrap().parent().unwrap(),
+            Definition::Environment => config.cwd(),
+        }
+    }
+}
+
+impl fmt::Display for Definition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Definition::Path(ref p) => p.display().fmt(f),
+            Definition::Environment => "the environment".fmt(f),
+        }
+    }
+}
+
 fn homedir(cwd: &Path) -> Option<PathBuf> {
     let cargo_home = env::var_os("CARGO_HOME").map(|home| {
         cwd.join(home)
@@ -510,23 +618,30 @@ fn walk_tree<F>(pwd: &Path, mut walk: F) -> CargoResult<()>
     Ok(())
 }
 
-pub fn set_config(cfg: &Config, loc: Location, key: &str,
+pub fn set_config(cfg: &Config,
+                  loc: Location,
+                  key: &str,
                   value: ConfigValue) -> CargoResult<()> {
     // TODO: There are a number of drawbacks here
     //
     // 1. Project is unimplemented
     // 2. This blows away all comments in a file
     // 3. This blows away the previous ordering of a file.
-    let file = match loc {
-        Location::Global => cfg.home_path.join("config"),
+    let mut file = match loc {
+        Location::Global => {
+            try!(cfg.home_path.create_dir());
+            try!(cfg.home_path.open_rw(Path::new("config"), cfg,
+                                       "the global config file"))
+        }
         Location::Project => unimplemented!(),
     };
-    try!(fs::create_dir_all(file.parent().unwrap()));
-    let contents = paths::read(&file).unwrap_or(String::new());
-    let mut toml = try!(cargo_toml::parse(&contents, &file));
+    let mut contents = String::new();
+    let _ = file.read_to_string(&mut contents);
+    let mut toml = try!(cargo_toml::parse(&contents, file.path()));
     toml.insert(key.to_string(), value.into_toml());
 
     let contents = toml::Value::Table(toml).to_string();
-    try!(paths::write(&file, contents.as_bytes()));
+    try!(file.seek(SeekFrom::Start(0)));
+    try!(file.write_all(contents.as_bytes()));
     Ok(())
 }
