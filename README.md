@@ -2,7 +2,8 @@ This needs a nightly rust and a modified Cargo (available
 [here](https://github.com/apanda/cargo)). The Cargo modifications mostly enable 
 the use of SIMD in Rust. These are now already included in the repository.
 
-To build:
+To build
+--------
 
 -   If building on a Debian machine, you need to undo some of the craziness wrought by Debian maintainers. In particular
     libcurl by default will not correctly allow Cargo to check server identity. To solve this install the `libgnutls30 libgnutls-openssl-dev libcurl4-gnutls-dev`
@@ -12,7 +13,8 @@ To build:
 -   Run `./build.sh`. This will download and build DPDK, the framework and examples. 
 -   To build documentation run `./build.sh doc`
 
-To run:
+To run
+------
 
 -   You first need to use dpdk_nic_bind.py to associate NICs with DPDK drivers.
     For example on my machines I use
@@ -30,3 +32,11 @@ To run:
     to prevent this, but the current method also works. The `-m` parameter indicates the master core that ZCSI should
     use, while each `-c, -w` pair indicate that ZCSI should associate the given NIC with the given core. The test
     program currently only initializes one queue per core, but this is expected to change.
+
+Current usage
+-------------
+
+Currently the running program takes all received packets, exchanges the source
+and destination MAC address (since we assume we are receiving and sending
+packets back to the same packet generator), performs some other transformations
+(this has been changing as I find more things to do) and sends packets out.
