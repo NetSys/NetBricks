@@ -3,15 +3,17 @@
 set -e
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 
-# Build DPDK
-$BASE_DIR/3rdparty/get-dpdk.sh
-proc="$(nproc)"
-make -j $proc -C native
+deps () {
+	# Build DPDK
+	$BASE_DIR/3rdparty/get-dpdk.sh
+	proc="$(nproc)"
+	make -j $proc -C native
 
-# Build cargo
-pushd $BASE_DIR/cargo
-cargo build --release
-popd
+	# Build cargo
+	pushd $BASE_DIR/cargo
+	cargo build --release
+	popd
+}
 
 if [ $# -ge 1 ]; then
 	TASK=$1
@@ -20,7 +22,17 @@ else
 fi
 
 case $TASK in
+	help)
+		echo "./build.sh <Command>
+		Where command is one of
+		build: Build the project
+		doc: Run rustdoc and produce documentation
+		fmt: Run rustfmt to format text prettily.
+		lint: Run clippy to lint the project
+		"
+		;;
 	build)
+		deps
 		pushd $BASE_DIR/framework
 		$BASE_DIR/cargo/target/release/cargo build --release
 		popd
@@ -30,6 +42,7 @@ case $TASK in
 		popd
 		;;
 	fmt)
+		deps
 		pushd $BASE_DIR/framework
 		$BASE_DIR/cargo/target/release/cargo fmt
 		popd
@@ -39,6 +52,7 @@ case $TASK in
 		popd
 		;;
 	doc)
+		deps
 		pushd $BASE_DIR/framework
 		$BASE_DIR/cargo/target/release/cargo rustdoc -- \
 			--no-defaults --passes "collapse-docs" --passes \
@@ -46,6 +60,7 @@ case $TASK in
 		popd
 		;;
 	lint)
+		deps
 		pushd $BASE_DIR/framework
 		$BASE_DIR/cargo/target/release/cargo clean; $BASE_DIR/cargo/target/release/cargo build --features dev
 		popd
