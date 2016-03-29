@@ -115,4 +115,12 @@ pub trait HeaderOperations : Batch + Sized {
     {
         ResetParsingBatch::<Self>::new(self)
     }
+ 
+    /// Deparse, i.e., go back to the last header.
+    fn deparse<T: EndOffset>(self) -> DeparsedBatch<T, Self>
+        where Self: Sized
+    {
+        DeparsedBatch::<T, Self>::new(self)
+    }
+
 }

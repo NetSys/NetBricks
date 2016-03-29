@@ -27,6 +27,14 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
 
     parent//.context::<Flow>()
           .parse::<MacHeader>()
+          .parse::<IpHeader>()
+          .transform(box |hdr, _, _| {
+              let ttl = hdr.ttl();
+              hdr.set_ttl(ttl + 1)
+          })
+          //.deparse::<MacHeader>()
+          .reset()
+          .parse::<MacHeader>()
           .transform(f)
           .map(box |_, payload, _| {
               //let flow = ctx.unwrap().downcast_mut::<Flow>().expect("Wrong type");
@@ -34,10 +42,6 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
               ipv4_extract_flow(payload);
           })
           //.parse::<IpHeader>()
-          //.transform(box |hdr, _, _| {
-              //let ttl = hdr.ttl();
-              //hdr.set_ttl(ttl + 1)
-          //})
           .compose()
     // parent.context::<Flow>()
     // .parse::<MacHeader>()
