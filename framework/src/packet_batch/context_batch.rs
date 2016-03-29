@@ -2,7 +2,7 @@ use io::PmdPort;
 use io::Result;
 use super::act::Act;
 use super::Batch;
-use super::iterator::BatchIterator;
+use super::iterator::{BatchIterator, PacketDescriptor};
 use std::default::Default;
 use std::any::Any;
 
@@ -99,27 +99,11 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
         self.parent.start()
     }
 
-    // FIXME: Really we should be accepting a token (capability) here and only adding context if the token matches.
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        match self.parent.next_address(idx, pop) {
-            Some((addr, size, _, iret)) => {
-                Some((addr,
-                      size,
-                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
-                      iret))
-            }
-            None => None,
-        }
-    }
-
-    #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_payload(idx) {
-            Some((hdr, payload, psize, _, iret)) => {
-                Some((hdr,
-                      payload,
-                      psize,
+            Some((descriptor, _, iret)) => {
+                Some((descriptor,
                       self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
                       iret))
             }
@@ -128,25 +112,10 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        match self.parent.next_base_address(idx) {
-            Some((addr, size, _, iret)) => {
-                Some((addr,
-                      size,
-                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
-                      iret))
-            }
-            None => None,
-        }
-    }
-
-    #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_base_payload(idx) {
-            Some((hdr, payload, psize, _, iret)) => {
-                Some((hdr,
-                      payload,
-                      psize,
+            Some((descriptor, _, iret)) => {
+                Some((descriptor,
                       self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
                       iret))
             }
@@ -158,12 +127,10 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     unsafe fn next_payload_popped(&mut self,
                                   idx: usize,
                                   pop: i32)
-                                  -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_payload_popped(idx, pop) {
-            Some((hdr, payload, psize, _, iret)) => {
-                Some((hdr,
-                      payload,
-                      psize,
+            Some((descriptor, _, iret)) => {
+                Some((descriptor,
                       self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
                       iret))
             }

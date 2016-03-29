@@ -44,22 +44,12 @@ impl BatchIterator for ReceiveBatch {
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_address(idx, pop)
-    }
-
-    #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.parent.next_payload(idx)
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_base_address(idx)
-    }
-
-    #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.parent.next_base_payload(idx)
     }
 
@@ -67,7 +57,7 @@ impl BatchIterator for ReceiveBatch {
     unsafe fn next_payload_popped(&mut self,
                                   idx: usize,
                                   pop: i32)
-                                  -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.parent.next_payload_popped(idx, pop)
     }
 }

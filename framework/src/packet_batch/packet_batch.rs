@@ -2,7 +2,7 @@ use io::*;
 use std::result;
 use super::act::Act;
 use super::Batch;
-use super::iterator::BatchIterator;
+use super::iterator::{BatchIterator, PacketDescriptor};
 use std::any::Any;
 
 /// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
@@ -275,24 +275,13 @@ impl BatchIterator for PacketBatch {
         self.start
     }
 
-    /// Address for the next packet.
-    /// Returns packet at index `idx` and the index of the next packet after `idx`.
-    #[inline]
-    unsafe fn next_address(&mut self, idx: usize, _: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        if self.start <= idx && idx < self.array.len() {
-            Some((self.address(idx).0, self.address(idx).1, None, idx + 1))
-        } else {
-            None
-        }
-    }
-
     /// Payload for the next packet.
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         if self.start <= idx && idx < self.array.len() {
-            Some((self.address(idx).0,
-                  self.payload(idx).0,
-                  self.payload(idx).1,
+            Some((PacketDescriptor{ header: self.address(idx).0,
+                                    payload: self.payload(idx).0,
+                                    payload_size: self.payload(idx).1,},
                   None,
                   idx + 1))
         } else {
@@ -301,12 +290,7 @@ impl BatchIterator for PacketBatch {
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        self.next_address(idx, 0)
-    }
-
-    #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.next_payload(idx)
     }
 
@@ -314,7 +298,7 @@ impl BatchIterator for PacketBatch {
     unsafe fn next_payload_popped(&mut self,
                                   idx: usize,
                                   _: i32)
-                                  -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.next_payload(idx)
     }
 }

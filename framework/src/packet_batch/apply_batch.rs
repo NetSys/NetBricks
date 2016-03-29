@@ -1,4 +1,4 @@
-use super::iterator::{BatchIterator, PacketBatchIterator};
+use super::iterator::{BatchIterator, PayloadEnumerator, PacketDescriptor};
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
@@ -25,8 +25,8 @@ impl<T, V> Act for ReplaceBatch<T, V>
     #[inline]
     fn act(&mut self) {
         self.parent.act();
-        let iter = PacketBatchIterator::<T>::new(&mut self.parent);
-        while let Some((packet, _)) = iter.next(&mut self.parent) {
+        let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+        while let Some((_, packet, _, _)) = iter.next(&mut self.parent) {
             unsafe {
                 ptr::copy_nonoverlapping(&self.template, packet, 1);
             }
@@ -64,22 +64,12 @@ impl<T, V> BatchIterator for ReplaceBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_address(idx, pop)
-    }
-
-    #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.parent.next_payload(idx)
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_base_address(idx)
-    }
-
-    #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.parent.next_base_payload(idx)
     }
 
@@ -87,7 +77,7 @@ impl<T, V> BatchIterator for ReplaceBatch<T, V>
     unsafe fn next_payload_popped(&mut self,
                                   idx: usize,
                                   pop: i32)
-                                  -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.parent.next_payload_popped(idx, pop)
     }
 }

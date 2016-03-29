@@ -5,6 +5,16 @@ use std::any::Any;
 use std::cell::Cell;
 use std::slice::*;
 
+/// A struct containing all the packet related information passed around by iterators.
+pub struct PacketDescriptor {
+    /// Address for the header.
+    pub header: *mut u8,
+    /// Address for the payload (this comes after the header).
+    pub payload: *mut u8,
+    /// Payload size, useful for making bounded vectors into the packet.
+    pub payload_size: usize,
+}
+
 /// An interface implemented by all batches for iterating through the set of packets in a batch.
 /// This is private to the framework and not exposed.
 ///
@@ -20,108 +30,21 @@ pub trait BatchIterator {
     /// index 0.
     fn start(&mut self) -> usize;
 
-    /// If packets are available, returns the address of the header at index `idx` in the current batch, and the index
-    /// for the next packet to be processed. If packets are not available returns None. N.B., header address depends on
-    /// the number of parse nodes and composition nodes seen so far.
-    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)>;
+    /// If packets are available (i.e., `idx` is not past the end of the batch), returns the descriptor for the `idx`th
+    /// packet, any associated metadata (context) and the next index. Otherwise returns None. Note this should not be
+    /// used directly, use one of the nice iterators below.
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)>;
 
-    /// If packets are available, returns the address of the header and payload at index `idx` in the current batch, and
-    /// the index for the next packet to be processed. If packets are not available returns None. N.B., payload address
-    /// depends on the number of parse nodes and composition nodes seen so far.
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)>;
-
-    /// If packets are available, returns the address of the header and payload from before the most recent parse node.
-    /// Pop allows this to nest and pop arbitrarily many headers, however note the assumption that popped headers must
-    /// match previously parsed headers. When this is not the case, reset() is the only option available. This provides
-    /// better performance than reset when one or a few headers must be removed.
+    /// Same as above, except pop off (subtract packet offset) by as `pop` parse nodes. This allows `DeparsedBatch` to
+    /// be implemented.
     unsafe fn next_payload_popped(&mut self,
                                   idx: usize,
                                   pop: i32)
-                                  -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)>;
+                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)>;
 
-    /// If packets are available, returns the address of the mbuf data_address. This is mostly to allow chained NFs to
-    /// begin accessing data from the beginning. Other semantics are identical to `next_address` above.
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize, Option<&mut Any>, usize)>;
-
-    /// If packets are available, returns the address of the mbuf data_address. This is mostly to allow chained NFs to
-    /// begin accessing data from the beginning. Other semantics are identical to `next_address` above.
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)>;
-}
-
-/// Iterate over packets in a batch. This iterator merely returns the header from the packet, and expects that
-/// applications are agnostic to the index for a packet. N.B., this should be used with a for-loop.
-pub struct PacketBatchIterator<T>
-    where T: EndOffset
-{
-    idx: Cell<usize>,
-    phantom: PhantomData<T>,
-}
-
-impl<T> PacketBatchIterator<T>
-    where T: EndOffset
-{
-    #[inline]
-    pub fn new(batch: &mut BatchIterator) -> PacketBatchIterator<T> {
-        let start = batch.start();
-        PacketBatchIterator {
-            idx: Cell::new(start),
-            phantom: PhantomData,
-        }
-    }
-
-    #[inline]
-    pub fn next<'a>(&'a self, batch: &'a mut BatchIterator) -> Option<(&'a mut T, Option<&'a mut Any>)> {
-        let item = unsafe { batch.next_address(self.idx.get(), 0) };
-        match item {
-            Some((addr, _, ctx, idx)) => {
-                let packet = cast_from_u8::<T>(addr);
-                self.idx.set(idx);
-                Some((packet, ctx))
-            }
-            None => None,
-        }
-    }
-}
-
-/// Enumerate packets in a batch, i.e., return both index and packet. Note, the index is meaningless outside of this
-/// particular batch, in particular the index does not reveal how many packets are in a batch (batch might not start
-/// from the beginning), might not be sequential (lazy filtering), etc. We however do guarantee that the iterator will
-/// present monotonically increasing indices. Please do not use the index for anything other than as a handle for
-/// packets.
-#[allow(dead_code)]
-pub struct PacketBatchEnumerator<T>
-    where T: EndOffset
-{
-    idx: Cell<usize>,
-    phantom: PhantomData<T>,
-}
-
-#[allow(dead_code)]
-impl<T> PacketBatchEnumerator<T>
-    where T: EndOffset
-{
-    #[inline]
-    pub fn new(batch: &mut BatchIterator) -> PacketBatchEnumerator<T> {
-        let start = batch.start();
-        PacketBatchEnumerator {
-            idx: Cell::new(start),
-            phantom: PhantomData,
-        }
-    }
-
-    #[inline]
-    pub fn next<'a>(&'a self, batch: &'a mut BatchIterator) -> Option<(usize, &'a mut T, Option<&'a mut Any>)> {
-        let original_idx = self.idx.get();
-        let item = unsafe { batch.next_address(original_idx, 0) };
-        match item {
-            Some((addr, _, ctx, next_idx)) => {
-                let packet = cast_from_u8::<T>(addr);
-                self.idx.set(next_idx);
-                Some((original_idx, packet, ctx))
-            }
-            None => None,
-        }
-    }
+    /// Same as above, except return addresses from the start of the packet (offset 0). This allows `ResetBatch` to be
+    /// implemented.
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)>;
 }
 
 /// An enumerator over both the header and the payload. The payload is represented as an appropriately sized slice of
@@ -130,6 +53,9 @@ impl<T> PacketBatchEnumerator<T>
 pub struct PayloadEnumerator<T>
     where T: EndOffset
 {
+    // Was originally using a cell here so we didn't have to borrow the iterator mutably. I think at this point, given
+    // that the batch is not stored in the iterator this might be a moot point, but it does allow the iterator to be
+    // entirely immutable for the moment, which makes sense.
     idx: Cell<usize>,
     phantom: PhantomData<T>,
 }
@@ -137,6 +63,7 @@ pub struct PayloadEnumerator<T>
 impl<T> PayloadEnumerator<T>
     where T: EndOffset
 {
+    /// Create a new iterator.
     #[inline]
     pub fn new(batch: &mut BatchIterator) -> PayloadEnumerator<T> {
         let start = batch.start();
@@ -146,6 +73,8 @@ impl<T> PayloadEnumerator<T>
         }
     }
 
+    /// Used for looping over packets. Note this iterator is not safe if packets are added or dropped during iteration,
+    /// so you should not do that if possible.
     #[inline]
     pub fn next<'a>(&'a self,
                     batch: &'a mut BatchIterator)
@@ -153,7 +82,7 @@ impl<T> PayloadEnumerator<T>
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_payload(original_idx) };
         match item {
-            Some((haddr, payload, payload_size, ctx, next_idx)) => {
+            Some((PacketDescriptor{header: haddr, payload, payload_size}, ctx, next_idx)) => {
                 let header = cast_from_u8::<T>(haddr);
                 // This is safe (assuming our size accounting has been correct so far).
                 let payload_slice = unsafe { from_raw_parts_mut::<u8>(payload, payload_size) };

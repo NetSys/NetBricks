@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
-use super::iterator::BatchIterator;
+use super::iterator::{BatchIterator, PacketDescriptor};
 use io::PmdPort;
 use io::EndOffset;
 use io::Result;
@@ -57,22 +57,12 @@ impl<T, V> BatchIterator for DeparsedBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_address(idx, pop + 1)
-    }
-
-    #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.next_payload_popped(idx, 1)
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_base_address(idx)
-    }
-
-    #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.parent.next_base_payload(idx)
     }
 
@@ -80,7 +70,7 @@ impl<T, V> BatchIterator for DeparsedBatch<T, V>
     unsafe fn next_payload_popped(&mut self,
                                   idx: usize,
                                   pop: i32)
-                                  -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         self.parent.next_payload_popped(idx, pop + 1)
     }
 }
