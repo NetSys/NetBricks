@@ -1,6 +1,6 @@
 use super::packet_batch::cast_from_u8;
 use std::marker::PhantomData;
-use super::super::interface::EndOffset;
+use io::EndOffset;
 use std::any::Any;
 use std::cell::Cell;
 use std::slice::*;

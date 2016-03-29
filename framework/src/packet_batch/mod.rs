@@ -14,8 +14,7 @@ use self::filter_batch::FilterFn;
 pub use self::merge_batch::MergeBatch;
 pub use self::context_batch::ContextBatch;
 pub use self::reset_parse::ResetParsingBatch;
-use super::interface::EndOffset;
-use super::pmd::*;
+use super::io::*;
 use std::any::Any;
 
 #[macro_use]

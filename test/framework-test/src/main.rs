@@ -4,10 +4,10 @@ extern crate time;
 extern crate simd;
 extern crate getopts;
 extern crate rand;
-use e2d2::io;
 use e2d2::io::*;
 use e2d2::headers::*;
 use e2d2::utils::*;
+use e2d2::packet_batch::*;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;
@@ -36,7 +36,7 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
           .transform(f)
           .map(box |_, payload, _| {
               //let flow = ctx.unwrap().downcast_mut::<Flow>().expect("Wrong type");
-              //*flow = 
+              //*flow =
               ipv4_extract_flow(payload);
           })
           .compose()
@@ -70,13 +70,13 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
     // .compose()
 }
 
-fn recv_thread(ports: Vec<io::PmdPort>, queue: i32, core: i32) {
-    io::init_thread(core, core);
+fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32) {
+    init_thread(core, core);
     println!("Receiving started");
 
     let pipelines: Vec<_> = ports.iter()
                                  .map(|port| {
-                                     monitor(io::ReceiveBatch::new(port.copy(), queue))
+                                     monitor(ReceiveBatch::new(port.copy(), queue))
                                          .send(port.copy(), queue)
                                          .compose()
                                  })
@@ -134,20 +134,16 @@ fn main() {
         }
     }
 
-    io::init_system_wl(&format!("recv{}", cores_str.join("")),
-                       master_core,
-                       &whitelisted);
+    init_system_wl(&format!("recv{}", cores_str.join("")),
+                   master_core,
+                   &whitelisted);
     let ports_by_core: HashMap<_, _> = core_map.iter()
                                                .map(|(core, ports)| {
                                                    let c = core.clone();
                                                    let recv_ports: Vec<_> =
                                                        ports.iter()
                                                             .map(|p| {
-                                                                io::PmdPort::new_mq_port(p.clone() as i32,
-                                                                                         1,
-                                                                                         1,
-                                                                                         &[c],
-                                                                                         &[c])
+                                                                PmdPort::new_mq_port(p.clone() as i32, 1, 1, &[c], &[c])
                                                                     .expect("Could not initialize port")
                                                             })
                                                             .collect();

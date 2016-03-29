@@ -1,26 +1,43 @@
+use io::PmdPort;
+use io::Result;
 use super::act::Act;
 use super::Batch;
-use super::iterator::BatchIterator;
-use super::super::pmd::*;
-use super::super::interface::Result;
+use super::packet_batch::PacketBatch;
+use super::iterator::*;
 use std::any::Any;
 
-/// CompositionBatch allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
-/// can treat packets as originating from the NF itself.
-pub struct CompositionBatch {
-    parent: Box<Batch>,
+// FIXME: Should we be handling multiple queues and ports here?
+pub struct ReceiveBatch {
+    parent: PacketBatch,
+    port: PmdPort,
+    queue: i32,
+    pub received: u64,
 }
 
-impl CompositionBatch {
-    pub fn new(parent: Box<Batch>) -> CompositionBatch {
-        CompositionBatch { parent: parent }
+impl ReceiveBatch {
+    pub fn new_with_parent(parent: PacketBatch, port: PmdPort, queue: i32) -> ReceiveBatch {
+        ReceiveBatch {
+            parent: parent,
+            port: port,
+            queue: queue,
+            received: 0,
+        }
+    }
+
+    pub fn new(port: PmdPort, queue: i32) -> ReceiveBatch {
+        ReceiveBatch {
+            parent: PacketBatch::new(32),
+            port: port,
+            queue: queue,
+            received: 0,
+        }
 
     }
 }
 
-impl Batch for CompositionBatch {}
+impl Batch for ReceiveBatch {}
 
-impl BatchIterator for CompositionBatch {
+impl BatchIterator for ReceiveBatch {
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
@@ -28,15 +45,12 @@ impl BatchIterator for CompositionBatch {
 
     #[inline]
     unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        if pop != 0 {
-            panic!("Cannot pop beyond a composition batch")
-        }
-        self.parent.next_base_address(idx)
+        self.parent.next_address(idx, pop)
     }
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_base_payload(idx)
+        self.parent.next_payload(idx)
     }
 
     #[inline]
@@ -51,23 +65,31 @@ impl BatchIterator for CompositionBatch {
 
     #[inline]
     unsafe fn next_payload_popped(&mut self,
-                                  _: usize,
-                                  _: i32)
+                                  idx: usize,
+                                  pop: i32)
                                   -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
-        panic!("Cannot pop beyond a composition batch")
+        self.parent.next_payload_popped(idx, pop)
     }
 }
 
 /// Internal interface for packets.
-impl Act for CompositionBatch {
+impl Act for ReceiveBatch {
     #[inline]
     fn act(&mut self) {
         self.parent.act();
+        self.parent
+            .recv_queue(&mut self.port, self.queue)
+            .and_then(|x| {
+                self.received += x as u64;
+                Ok(x)
+            })
+            .expect("Receive failed");
     }
 
     #[inline]
     fn done(&mut self) {
-        self.parent.done();
+        // Free up memory
+        self.parent.deallocate_batch().expect("Deallocation failed");
     }
 
     #[inline]

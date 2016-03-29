@@ -1,8 +1,8 @@
+use io::PmdPort;
+use io::Result;
 use super::act::Act;
 use super::Batch;
 use super::iterator::BatchIterator;
-use super::super::pmd::*;
-use super::super::interface::Result;
 use std::default::Default;
 use std::any::Any;
 

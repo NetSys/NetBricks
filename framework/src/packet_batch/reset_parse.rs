@@ -1,43 +1,33 @@
+use io::PmdPort;
+use io::Result;
 use super::act::Act;
 use super::Batch;
-use super::packet_batch::PacketBatch;
 use super::iterator::*;
-use super::super::pmd::*;
-use super::super::interface::Result;
 use std::any::Any;
 
-// FIXME: Should we be handling multiple queues and ports here?
-pub struct ReceiveBatch {
-    parent: PacketBatch,
-    port: PmdPort,
-    queue: i32,
-    pub received: u64,
+// FIXME: Reconsider this choice some day
+/// This is really the same thing as composition except that by accepting a template it is somewhat faster (since we
+/// don't need dynamic dispatch).
+pub struct ResetParsingBatch<V>
+    where V: Batch + BatchIterator + Act
+{
+    parent: V,
 }
 
-impl ReceiveBatch {
-    pub fn new_with_parent(parent: PacketBatch, port: PmdPort, queue: i32) -> ReceiveBatch {
-        ReceiveBatch {
-            parent: parent,
-            port: port,
-            queue: queue,
-            received: 0,
-        }
-    }
-
-    pub fn new(port: PmdPort, queue: i32) -> ReceiveBatch {
-        ReceiveBatch {
-            parent: PacketBatch::new(32),
-            port: port,
-            queue: queue,
-            received: 0,
-        }
+impl<V> ResetParsingBatch<V>
+    where V: Batch + BatchIterator + Act
+{
+    pub fn new(parent: V) -> ResetParsingBatch<V> {
+        ResetParsingBatch { parent: parent }
 
     }
 }
 
-impl Batch for ReceiveBatch {}
+impl<V> Batch for ResetParsingBatch<V> where V: Batch + BatchIterator + Act {}
 
-impl BatchIterator for ReceiveBatch {
+impl<V> BatchIterator for ResetParsingBatch<V>
+    where V: Batch + BatchIterator + Act
+{
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
@@ -45,12 +35,15 @@ impl BatchIterator for ReceiveBatch {
 
     #[inline]
     unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_address(idx, pop)
+        if pop > 0 {
+            panic!("Cannot pop past a reset operation");
+        }
+        self.parent.next_base_address(idx)
     }
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_payload(idx)
+        self.parent.next_base_payload(idx)
     }
 
     #[inline]
@@ -65,31 +58,25 @@ impl BatchIterator for ReceiveBatch {
 
     #[inline]
     unsafe fn next_payload_popped(&mut self,
-                                  idx: usize,
-                                  pop: i32)
+                                  _: usize,
+                                  _: i32)
                                   -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_payload_popped(idx, pop)
+        panic!("Cannot pop past a rest operation")
     }
 }
 
 /// Internal interface for packets.
-impl Act for ReceiveBatch {
+impl<V> Act for ResetParsingBatch<V>
+    where V: Batch + BatchIterator + Act
+{
     #[inline]
     fn act(&mut self) {
         self.parent.act();
-        self.parent
-            .recv_queue(&mut self.port, self.queue)
-            .and_then(|x| {
-                self.received += x as u64;
-                Ok(x)
-            })
-            .expect("Receive failed");
     }
 
     #[inline]
     fn done(&mut self) {
-        // Free up memory
-        self.parent.deallocate_batch().expect("Deallocation failed");
+        self.parent.done();
     }
 
     #[inline]

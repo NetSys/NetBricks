@@ -1,33 +1,26 @@
 use super::act::Act;
 use super::Batch;
-use super::iterator::*;
-use super::super::pmd::*;
-use super::super::interface::Result;
+use super::iterator::BatchIterator;
+use io::PmdPort;
+use io::Result;
 use std::any::Any;
 
-// FIXME: Reconsider this choice some day
-/// This is really the same thing as composition except that by accepting a template it is somewhat faster (since we
-/// don't need dynamic dispatch).
-pub struct ResetParsingBatch<V>
-    where V: Batch + BatchIterator + Act
-{
-    parent: V,
+/// CompositionBatch allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
+/// can treat packets as originating from the NF itself.
+pub struct CompositionBatch {
+    parent: Box<Batch>,
 }
 
-impl<V> ResetParsingBatch<V>
-    where V: Batch + BatchIterator + Act
-{
-    pub fn new(parent: V) -> ResetParsingBatch<V> {
-        ResetParsingBatch { parent: parent }
+impl CompositionBatch {
+    pub fn new(parent: Box<Batch>) -> CompositionBatch {
+        CompositionBatch { parent: parent }
 
     }
 }
 
-impl<V> Batch for ResetParsingBatch<V> where V: Batch + BatchIterator + Act {}
+impl Batch for CompositionBatch {}
 
-impl<V> BatchIterator for ResetParsingBatch<V>
-    where V: Batch + BatchIterator + Act
-{
+impl BatchIterator for CompositionBatch {
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
@@ -35,8 +28,8 @@ impl<V> BatchIterator for ResetParsingBatch<V>
 
     #[inline]
     unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        if pop > 0 {
-            panic!("Cannot pop past a reset operation");
+        if pop != 0 {
+            panic!("Cannot pop beyond a composition batch")
         }
         self.parent.next_base_address(idx)
     }
@@ -61,14 +54,12 @@ impl<V> BatchIterator for ResetParsingBatch<V>
                                   _: usize,
                                   _: i32)
                                   -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
-        panic!("Cannot pop past a rest operation")
+        panic!("Cannot pop beyond a composition batch")
     }
 }
 
 /// Internal interface for packets.
-impl<V> Act for ResetParsingBatch<V>
-    where V: Batch + BatchIterator + Act
-{
+impl Act for CompositionBatch {
     #[inline]
     fn act(&mut self) {
         self.parent.act();

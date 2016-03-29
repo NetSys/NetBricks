@@ -1,27 +1,60 @@
-use std::marker::PhantomData;
+use super::iterator::{BatchIterator, PayloadEnumerator};
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
-use super::iterator::BatchIterator;
-use super::super::interface::EndOffset;
-use super::super::pmd::*;
-use super::super::interface::Result;
+use io::PmdPort;
+use io::EndOffset;
+use io::Result;
 use std::any::Any;
 
-pub struct DeparsedBatch<T: EndOffset, V>
-    where V: Batch + BatchIterator + Act
+pub type FilterFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>) -> bool>;
+
+pub struct FilterBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
 {
     parent: V,
-    phantom: PhantomData<T>,
+    filter: FilterFn<T>,
+    capacity: usize,
 }
 
-impl<T, V> Act for DeparsedBatch<T, V>
+impl<T, V> FilterBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
+{
+    #[inline]
+    pub fn new(parent: V, filter: FilterFn<T>) -> FilterBatch<T, V> {
+        let capacity = parent.capacity() as usize;
+        FilterBatch {
+            parent: parent,
+            filter: filter,
+            capacity: capacity,
+        }
+    }
+}
+
+batch_no_new!{FilterBatch}
+
+impl<T, V> Act for FilterBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     #[inline]
     fn act(&mut self) {
         self.parent.act();
+        let mut remove = Vec::<usize>::with_capacity(self.capacity);
+        {
+            // let ref mut f = self.filter;
+            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+            while let Some((idx, head, payload, ctx)) = iter.next(&mut self.parent) {
+                if (self.filter)(head, payload, ctx) {
+                    remove.push(idx)
+                }
+            }
+        }
+        if !remove.is_empty() {
+            self.parent.drop_packets(remove).expect("Filtering was performed incorrectly");
+        }
     }
 
     #[inline]
@@ -45,9 +78,7 @@ impl<T, V> Act for DeparsedBatch<T, V>
     }
 }
 
-batch!{DeparsedBatch, [parent: V], [phantom: PhantomData]}
-
-impl<T, V> BatchIterator for DeparsedBatch<T, V>
+impl<T, V> BatchIterator for FilterBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
@@ -58,12 +89,12 @@ impl<T, V> BatchIterator for DeparsedBatch<T, V>
 
     #[inline]
     unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_address(idx, pop + 1)
+        self.parent.next_address(idx, pop)
     }
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
-        self.next_payload_popped(idx, 1)
+        self.parent.next_payload(idx)
     }
 
     #[inline]
@@ -81,6 +112,6 @@ impl<T, V> BatchIterator for DeparsedBatch<T, V>
                                   idx: usize,
                                   pop: i32)
                                   -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
-        self.parent.next_payload_popped(idx, pop + 1)
+        self.parent.next_payload_popped(idx, pop)
     }
 }

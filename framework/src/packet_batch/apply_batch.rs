@@ -2,10 +2,10 @@ use super::iterator::{BatchIterator, PacketBatchIterator};
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
-use super::super::pmd::*;
-use super::super::interface::EndOffset;
+use io::PmdPort;
+use io::EndOffset;
+use io::Result;
 use std::ptr;
-use super::super::interface::Result;
 use std::any::Any;
 
 pub struct ReplaceBatch<T, V>

@@ -1,8 +1,8 @@
+use io::PmdPort;
+use io::Result;
 use super::act::Act;
 use super::Batch;
 use super::iterator::*;
-use super::super::pmd::*;
-use super::super::interface::Result;
 use std::any::Any;
 
 // FIXME: Should we be handling multiple queues and ports here?

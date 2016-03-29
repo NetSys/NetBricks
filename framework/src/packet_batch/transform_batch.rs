@@ -1,10 +1,10 @@
+use io::PmdPort;
+use io::EndOffset;
+use io::Result;
 use super::iterator::*;
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
-use super::super::interface::EndOffset;
-use super::super::interface::Result;
-use super::super::pmd::*;
 use std::any::Any;
 
 pub type TransformFn<T> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>)>;

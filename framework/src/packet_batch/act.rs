@@ -1,5 +1,5 @@
-use super::super::pmd::*;
-use super::super::interface::Result;
+use io::PmdPort;
+use io::Result;
 pub trait Act {
     /// Actually perform whatever needs to be done by this processing node.
     fn act(&mut self);

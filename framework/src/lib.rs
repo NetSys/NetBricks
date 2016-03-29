@@ -13,4 +13,5 @@ extern crate libc;
 extern crate byteorder;
 pub mod headers;
 pub mod io;
+pub mod packet_batch;
 pub mod utils;

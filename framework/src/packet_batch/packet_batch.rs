@@ -1,12 +1,8 @@
+use io::*;
 use std::result;
 use super::act::Act;
 use super::Batch;
 use super::iterator::BatchIterator;
-use super::super::mbuf::*;
-use super::super::interface::Result;
-use super::super::interface::ZCSIError;
-use super::super::interface::EndOffset;
-use super::super::pmd::*;
 use std::any::Any;
 
 /// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
