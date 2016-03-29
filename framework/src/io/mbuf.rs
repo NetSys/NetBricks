@@ -7,7 +7,7 @@ pub struct MBuf {
     refcnt: u16,
     nb_segs: u8,
     port: u8,
-    ol_flags: u8,
+    ol_flags: u64,
     packet_type: u32,
     pkt_len: u32,
     data_len: u16,

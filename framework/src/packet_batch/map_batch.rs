@@ -28,8 +28,7 @@ impl<T, V> Act for MapBatch<T, V>
         self.parent.act();
         {
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some(ParsedDescriptor { header: head, payload, ctx, .. }) =
-                      iter.next(&mut self.parent) {
+            while let Some(ParsedDescriptor { header: head, payload, ctx, .. }) = iter.next(&mut self.parent) {
                 (self.transformer)(head, payload, ctx);
             }
         }

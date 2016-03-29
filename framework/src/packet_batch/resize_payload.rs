@@ -1,35 +1,66 @@
-use io::PmdPort;
-use io::EndOffset;
-use io::Result;
 use super::iterator::*;
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
+use io::PmdPort;
+use io::EndOffset;
+use io::Result;
 use std::any::Any;
 
-pub type TransformFn<T> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>)>;
+/// Takes in the header, payload and context, and returns the difference between the current packet size and desired
+/// packet size.
+pub type ResizeFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>) -> isize>;
 
-pub struct TransformBatch<T, V>
+pub struct ResizePayload<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     parent: V,
-    transformer: TransformFn<T>,
+    resize_fn: ResizeFn<T>,
+    capacity: usize,
 }
 
-batch!{TransformBatch, [parent: V, transformer: TransformFn<T>], []}
+impl<T, V> ResizePayload<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
+{
+    #[inline]
+    pub fn new(parent: V, resize_fn: ResizeFn<T>) -> ResizePayload<T, V> {
+        let capacity = parent.capacity() as usize;
+        ResizePayload {
+            parent: parent,
+            resize_fn: resize_fn,
+            capacity: capacity,
+        }
+    }
+}
 
-impl<T, V> Act for TransformBatch<T, V>
+batch_no_new!{ResizePayload}
+
+impl<T, V> Act for ResizePayload<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     #[inline]
     fn act(&mut self) {
         self.parent.act();
+        let mut idxes_sizes = Vec::<(usize, isize)>::with_capacity(self.capacity);
         {
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some(ParsedDescriptor { header: hdr, payload, ctx, .. }) = iter.next(&mut self.parent) {
-                (self.transformer)(hdr, payload, ctx);
+            while let Some(ParsedDescriptor { index: idx, header: head, payload, ctx, .. }) =
+                      iter.next(&mut self.parent) {
+                let new_size = (self.resize_fn)(head, payload, ctx);
+                if new_size != 0 {
+                    idxes_sizes.push((idx, new_size))
+                }
+            }
+        }
+        for (idx, size) in idxes_sizes {
+            // FIXME: Error handling, this currently just panics, but it should do something different. Maybe
+            // take a failure handler?
+            match self.parent.adjust_payload_size(idx, size) {
+                Some(_) => (),
+                None => panic!("Resize failed {}", idx),
             }
         }
     }
@@ -60,7 +91,7 @@ impl<T, V> Act for TransformBatch<T, V>
     }
 }
 
-impl<T, V> BatchIterator for TransformBatch<T, V>
+impl<T, V> BatchIterator for ResizePayload<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {

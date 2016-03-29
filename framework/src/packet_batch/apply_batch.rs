@@ -26,8 +26,7 @@ impl<T, V> Act for ReplaceBatch<T, V>
     fn act(&mut self) {
         self.parent.act();
         let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-        while let Some(ParsedDescriptor { header: packet, .. }) =
-                  iter.next(&mut self.parent) {
+        while let Some(ParsedDescriptor { header: packet, .. }) = iter.next(&mut self.parent) {
             unsafe {
                 ptr::copy_nonoverlapping(&self.template, packet, 1);
             }

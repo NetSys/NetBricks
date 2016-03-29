@@ -1,18 +1,22 @@
 use self::act::Act;
 use self::iterator::BatchIterator;
-pub use self::parsed_batch::ParsedBatch;
-pub use self::deparsed_batch::DeparsedBatch;
-pub use self::transform_batch::TransformBatch;
+
 pub use self::apply_batch::ReplaceBatch;
-pub use self::receive_batch::ReceiveBatch;
-pub use self::send_batch::SendBatch;
-pub use self::map_batch::MapBatch;
-use self::map_batch::MapFn;
 pub use self::composition_batch::CompositionBatch;
-pub use self::filter_batch::FilterBatch;
-use self::filter_batch::FilterFn;
-pub use self::merge_batch::MergeBatch;
 pub use self::context_batch::ContextBatch;
+pub use self::deparsed_batch::DeparsedBatch;
+pub use self::filter_batch::FilterBatch;
+pub use self::map_batch::MapBatch;
+pub use self::merge_batch::MergeBatch;
+pub use self::parsed_batch::ParsedBatch;
+pub use self::receive_batch::ReceiveBatch;
+pub use self::resize_payload::ResizePayload;
+pub use self::send_batch::SendBatch;
+pub use self::transform_batch::TransformBatch;
+
+use self::map_batch::MapFn;
+use self::filter_batch::FilterFn;
+use self::resize_payload::ResizeFn;
 pub use self::reset_parse::ResetParsingBatch;
 use super::io::*;
 use std::any::Any;
@@ -31,8 +35,9 @@ mod map_batch;
 mod merge_batch;
 mod packet_batch;
 mod parsed_batch;
-mod reset_parse;
 mod receive_batch;
+mod reset_parse;
+mod resize_payload;
 mod send_batch;
 mod transform_batch;
 
@@ -120,5 +125,9 @@ pub trait HeaderOperations : Batch + Sized {
         where Self: Sized
     {
         DeparsedBatch::<T, Self>::new(self)
+    }
+
+    fn resize(self, resize_f: ResizeFn<Self::Header>) -> ResizePayload<Self::Header, Self> {
+        ResizePayload::<Self::Header, Self>::new(self, resize_f)
     }
 }
