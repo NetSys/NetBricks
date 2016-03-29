@@ -28,7 +28,8 @@ impl<T, V> Act for TransformBatch<T, V>
         self.parent.act();
         {
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some((_, hdr, payload, ctx)) = iter.next(&mut self.parent) {
+            while let Some(ParsedDescriptor { header: hdr, payload, ctx, .. }) =
+                      iter.next(&mut self.parent) {
                 (self.transformer)(hdr, payload, ctx);
             }
         }
@@ -52,6 +53,11 @@ impl<T, V> Act for TransformBatch<T, V>
     #[inline]
     fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
         self.parent.drop_packets(idxes)
+    }
+
+    #[inline]
+    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_payload_size(idx, size)
     }
 }
 

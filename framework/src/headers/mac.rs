@@ -45,10 +45,14 @@ const HDR_SIZE_802_1AD: usize = HDR_SIZE_802_1Q + 4;
 impl io::EndOffset for MacHeader {
     #[inline]
     fn offset(&self) -> usize {
-        match self.etype {
-            0x8100 => HDR_SIZE_802_1Q,
-            0x9100 => HDR_SIZE_802_1AD,
-            _ => HDR_SIZE,
+        if cfg!(feature = "performance") {
+            HDR_SIZE
+        } else {
+            match self.etype {
+                0x8100 => HDR_SIZE_802_1Q,
+                0x9100 => HDR_SIZE_802_1AD,
+                _ => HDR_SIZE,
+            }
         }
     }
     #[inline]

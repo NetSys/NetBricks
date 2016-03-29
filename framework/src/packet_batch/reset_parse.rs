@@ -44,10 +44,7 @@ impl<V> BatchIterator for ResetParsingBatch<V>
     }
 
     #[inline]
-    unsafe fn next_payload_popped(&mut self,
-                                  _: usize,
-                                  _: i32)
-                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
+    unsafe fn next_payload_popped(&mut self, _: usize, _: i32) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         panic!("Cannot pop past a rest operation")
     }
 }
@@ -79,5 +76,10 @@ impl<V> Act for ResetParsingBatch<V>
     #[inline]
     fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
         self.parent.drop_packets(idxes)
+    }
+
+    #[inline]
+    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_payload_size(idx, size)
     }
 }

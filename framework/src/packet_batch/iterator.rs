@@ -7,6 +7,7 @@ use std::slice::*;
 
 /// A struct containing all the packet related information passed around by iterators.
 pub struct PacketDescriptor {
+    pub offset: usize,
     /// Address for the header.
     pub header: *mut u8,
     /// Address for the payload (this comes after the header).
@@ -47,6 +48,18 @@ pub trait BatchIterator {
     unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)>;
 }
 
+/// A struct containing the parsed information returned by the PayloadEnumerator.
+pub struct ParsedDescriptor<'a, T>
+    where T: 'a + EndOffset
+{
+    pub index: usize,
+    pub header: &'a mut T,
+    pub payload: &'a mut [u8],
+    pub ctx: Option<&'a mut Any>,
+    /// Offset (from 0) at which the current payload resides.
+    pub offset: usize,
+}
+
 /// An enumerator over both the header and the payload. The payload is represented as an appropriately sized slice of
 /// bytes. The expectation is therefore that the user can operate on bytes, or make appropriate adjustments as
 /// necessary.
@@ -76,18 +89,24 @@ impl<T> PayloadEnumerator<T>
     /// Used for looping over packets. Note this iterator is not safe if packets are added or dropped during iteration,
     /// so you should not do that if possible.
     #[inline]
-    pub fn next<'a>(&'a self,
-                    batch: &'a mut BatchIterator)
-                    -> Option<(usize, &'a mut T, &'a mut [u8], Option<&'a mut Any>)> {
+    pub fn next<'a>(&'a self, batch: &'a mut BatchIterator) -> Option<ParsedDescriptor<'a, T>> {
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_payload(original_idx) };
         match item {
-            Some((PacketDescriptor{header: haddr, payload, payload_size}, ctx, next_idx)) => {
+            Some((PacketDescriptor{offset, header: haddr, payload, payload_size},
+                  ctx,
+                  next_idx)) => {
                 let header = cast_from_u8::<T>(haddr);
                 // This is safe (assuming our size accounting has been correct so far).
                 let payload_slice = unsafe { from_raw_parts_mut::<u8>(payload, payload_size) };
                 self.idx.set(next_idx);
-                Some((original_idx, header, payload_slice, ctx))
+                Some(ParsedDescriptor {
+                    offset: offset,
+                    index: original_idx,
+                    header: header,
+                    payload: payload_slice,
+                    ctx: ctx,
+                })
             }
             None => None,
         }

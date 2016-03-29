@@ -43,6 +43,11 @@ impl<T, V> Act for DeparsedBatch<T, V>
     fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
         self.parent.drop_packets(idxes)
     }
+
+    #[inline]
+    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_payload_size(idx, size)
+    }
 }
 
 batch!{DeparsedBatch, [parent: V], [phantom: PhantomData]}

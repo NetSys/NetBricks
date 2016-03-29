@@ -1,4 +1,4 @@
-use super::iterator::{BatchIterator, PayloadEnumerator, PacketDescriptor};
+use super::iterator::*;
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
@@ -26,7 +26,8 @@ impl<T, V> Act for ReplaceBatch<T, V>
     fn act(&mut self) {
         self.parent.act();
         let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-        while let Some((_, packet, _, _)) = iter.next(&mut self.parent) {
+        while let Some(ParsedDescriptor { header: packet, .. }) =
+                  iter.next(&mut self.parent) {
             unsafe {
                 ptr::copy_nonoverlapping(&self.template, packet, 1);
             }
@@ -51,6 +52,11 @@ impl<T, V> Act for ReplaceBatch<T, V>
     #[inline]
     fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
         self.parent.drop_packets(idxes)
+    }
+
+    #[inline]
+    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_payload_size(idx, size)
     }
 }
 

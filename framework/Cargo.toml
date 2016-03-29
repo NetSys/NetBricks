@@ -20,4 +20,5 @@ debug-assertions = false
 
 [features]
 default = []
+performance = []
 dev = ["clippy"]

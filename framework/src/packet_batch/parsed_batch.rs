@@ -44,6 +44,11 @@ impl<T, V> Act for ParsedBatch<T, V>
     fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
         self.parent.drop_packets(idxes)
     }
+
+    #[inline]
+    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_payload_size(idx, size)
+    }
 }
 
 batch!{ParsedBatch, [parent: V], [phantom: PhantomData]}
@@ -61,13 +66,18 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         let parent_payload = self.parent.next_payload(idx);
         match parent_payload {
-            Some((PacketDescriptor { header: _, payload: packet, payload_size: size }, arg, idx)) => {
+            Some((PacketDescriptor { offset: prev_offset, payload: packet, payload_size: size, .. },
+                  arg,
+                  idx)) => {
                 let pkt_as_t = cast_from_u8::<T>(packet);
                 let offset = T::offset(pkt_as_t);
                 let payload_size = T::payload_size(pkt_as_t, size);
-                Some((PacketDescriptor { header: packet,
-                                         payload: packet.offset(offset as isize),
-                                         payload_size: payload_size, },
+                Some((PacketDescriptor {
+                    header: packet,
+                    offset: prev_offset + offset,
+                    payload: packet.offset(offset as isize),
+                    payload_size: payload_size,
+                },
                       arg,
                       idx))
             }

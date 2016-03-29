@@ -88,6 +88,11 @@ impl<T, V> Act for ContextBatch<T, V>
         }
         self.parent.drop_packets(idxes)
     }
+
+    #[inline]
+    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_payload_size(idx, size)
+    }
 }
 
 impl<T, V> BatchIterator for ContextBatch<T, V>

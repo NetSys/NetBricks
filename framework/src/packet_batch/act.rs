@@ -12,4 +12,8 @@ pub trait Act {
     fn capacity(&self) -> i32;
 
     fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize>;
+
+    /// Add bytes at the end of the packet. `size` is the new size requested, returns the new size after adjustment or 0
+    /// if not done. Note `size` here is the amount by which packet size should change overall.
+    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize>;
 }

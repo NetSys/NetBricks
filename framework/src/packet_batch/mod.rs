@@ -121,5 +121,4 @@ pub trait HeaderOperations : Batch + Sized {
     {
         DeparsedBatch::<T, Self>::new(self)
     }
-
 }

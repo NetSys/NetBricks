@@ -81,4 +81,9 @@ impl Act for MergeBatch {
     fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
         self.parents[self.which].drop_packets(idxes)
     }
+
+    #[inline]
+    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parents[self.which].adjust_payload_size(idx, size)
+    }
 }

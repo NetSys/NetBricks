@@ -265,6 +265,28 @@ impl PacketBatch {
         let val = &mut *self.array[idx];
         (val.data_address(0), val.data_len())
     }
+
+    #[inline]
+    unsafe fn adjust_packet_size(&mut self, idx: usize, size: isize) -> Option<isize> {
+        if size < 0 {
+            let abs_size = (-size) as usize;
+            let ret = (*self.array[idx]).remove_data_end(abs_size);
+            if ret > 0 {
+                Some(-(ret as isize))
+            } else {
+                None
+            }
+        } else if size > 0 {
+            let ret = (*self.array[idx]).add_data_end(size as usize);
+            if ret > 0 {
+                Some(ret as isize)
+            } else {
+                None
+            }
+        } else {
+            Some(0)
+        }
+    }
 }
 
 // A packet batch is also a batch (just a special kind)
@@ -279,9 +301,12 @@ impl BatchIterator for PacketBatch {
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         if self.start <= idx && idx < self.array.len() {
-            Some((PacketDescriptor{ header: self.address(idx).0,
-                                    payload: self.payload(idx).0,
-                                    payload_size: self.payload(idx).1,},
+            Some((PacketDescriptor {
+                offset: 0,
+                header: self.address(idx).0,
+                payload: self.payload(idx).0,
+                payload_size: self.payload(idx).1,
+            },
                   None,
                   idx + 1))
         } else {
@@ -330,6 +355,11 @@ impl Act for PacketBatch {
     #[inline]
     fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
         self.drop_packets_stable(idxes)
+    }
+
+    #[inline]
+    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
+        unsafe { self.adjust_packet_size(idx, size) }
     }
 }
 

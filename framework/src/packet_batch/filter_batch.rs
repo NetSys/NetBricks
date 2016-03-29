@@ -1,4 +1,4 @@
-use super::iterator::{BatchIterator, PayloadEnumerator, PacketDescriptor};
+use super::iterator::*;
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
@@ -46,7 +46,8 @@ impl<T, V> Act for FilterBatch<T, V>
         {
             // let ref mut f = self.filter;
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some((idx, head, payload, ctx)) = iter.next(&mut self.parent) {
+            while let Some(ParsedDescriptor { index: idx, header: head, payload, ctx, .. }) =
+                      iter.next(&mut self.parent) {
                 if (self.filter)(head, payload, ctx) {
                     remove.push(idx)
                 }
@@ -75,6 +76,11 @@ impl<T, V> Act for FilterBatch<T, V>
     #[inline]
     fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
         self.parent.drop_packets(idxes)
+    }
+
+    #[inline]
+    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_payload_size(idx, size)
     }
 }
 
