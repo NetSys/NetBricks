@@ -32,16 +32,13 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
               let ttl = hdr.ttl();
               hdr.set_ttl(ttl + 1)
           })
-          //.deparse::<MacHeader>()
-          .reset()
-          .parse::<MacHeader>()
+          .deparse::<MacHeader>()
           .transform(f)
           .map(box |_, payload, _| {
               //let flow = ctx.unwrap().downcast_mut::<Flow>().expect("Wrong type");
               //*flow = 
               ipv4_extract_flow(payload);
           })
-          //.parse::<IpHeader>()
           .compose()
     // parent.context::<Flow>()
     // .parse::<MacHeader>()

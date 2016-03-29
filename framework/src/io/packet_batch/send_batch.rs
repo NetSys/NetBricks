@@ -62,6 +62,11 @@ impl<V> BatchIterator for SendBatch<V>
     unsafe fn next_base_payload(&mut self, _: usize) -> payload_iterator_return!{} {
         panic!("Cannot iterate SendBatch")
     }
+
+    #[inline]
+    unsafe fn next_payload_popped(&mut self, _: usize, _: i32) -> payload_iterator_return!{} {
+        panic!("Cannot iterate SendBatch")
+    }
 }
 
 /// Internal interface for packets.

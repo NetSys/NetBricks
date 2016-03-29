@@ -313,6 +313,11 @@ impl BatchIterator for PacketBatch {
     unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         self.next_payload(idx)
     }
+
+    #[inline]
+    unsafe fn next_payload_popped(&mut self, idx: usize, _: i32) -> payload_iterator_return!{} {
+        self.next_payload(idx)
+    }
 }
 
 /// Internal interface for packets.

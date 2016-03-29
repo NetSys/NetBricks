@@ -3,7 +3,6 @@ use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
 use super::iterator::BatchIterator;
-use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
 use super::super::pmd::*;
 use super::super::interface::Result;
@@ -64,21 +63,22 @@ impl<T, V> BatchIterator for DeparsedBatch<T, V>
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
-        let parent_hdr = self.parent.next_address(idx, 1);
-        match parent_hdr {
-            None => None,
-            Some((packet, packet_size, arg, idx)) => {
-                let pkt_as_t = cast_from_u8::<T>(packet);
-                let offset = T::offset(pkt_as_t);
-                let payload_size = T::payload_size(pkt_as_t, packet_size);
-                Some((packet,
-                     packet.offset(offset as isize),
-                     payload_size,
-                     arg,
-                     idx))
+        self.next_payload_popped(idx, 1)
+        //let parent_hdr = self.parent.next_address(idx, 1);
+        //match parent_hdr {
+            //None => None,
+            //Some((packet, packet_size, arg, idx)) => {
+                //let pkt_as_t = cast_from_u8::<T>(packet);
+                //let offset = T::offset(pkt_as_t);
+                //let payload_size = T::payload_size(pkt_as_t, packet_size);
+                //Some((packet,
+                     //packet.offset(offset as isize),
+                     //payload_size,
+                     //arg,
+                     //idx))
 
-            }
-        }
+            //}
+        //}
     }
 
     #[inline]
@@ -89,5 +89,10 @@ impl<T, V> BatchIterator for DeparsedBatch<T, V>
     #[inline]
     unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         self.parent.next_base_payload(idx)
+    }
+
+    #[inline]
+    unsafe fn next_payload_popped(&mut self, idx: usize, pop: i32) -> payload_iterator_return!{} {
+        self.parent.next_payload_popped(idx, pop + 1)
     }
 }

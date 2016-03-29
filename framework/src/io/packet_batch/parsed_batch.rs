@@ -96,4 +96,13 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         self.parent.next_base_payload(idx)
     }
+
+    #[inline]
+    unsafe fn next_payload_popped(&mut self, idx: usize, pop: i32) -> payload_iterator_return!{} {
+        if pop - 1 == 0 {
+            self.next_payload(idx)
+        } else {
+            self.parent.next_payload_popped(idx, pop - 1)
+        }
+    }
 }

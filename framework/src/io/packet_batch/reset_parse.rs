@@ -55,6 +55,11 @@ impl<V> BatchIterator for ResetParsingBatch<V>
     unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         self.parent.next_base_payload(idx)
     }
+
+    #[inline]
+    unsafe fn next_payload_popped(&mut self, _: usize, _: i32) -> payload_iterator_return!{} {
+        panic!("Cannot pop past a rest operation")
+    }
 }
 
 /// Internal interface for packets.

@@ -30,6 +30,11 @@ pub trait BatchIterator {
     /// depends on the number of parse nodes and composition nodes seen so far.
     unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{};
 
+    /// If packets are available, returns the address of the header and payload at index `idx` in the current batch, and
+    /// the index for the next packet to be processed. If packets are not available returns None. N.B., payload address
+    /// depends on the number of parse nodes and composition nodes seen so far.
+    unsafe fn next_payload_popped(&mut self, idx: usize, pop: i32) -> payload_iterator_return!{};
+
     /// If packets are available, returns the address of the mbuf data_address. This is mostly to allow chained NFs to
     /// begin accessing data from the beginning. Other semantics are identical to `next_address` above.
     unsafe fn next_base_address(&mut self, idx: usize) -> address_iterator_return!{};

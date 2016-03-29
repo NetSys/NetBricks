@@ -153,4 +153,10 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
             None => None,
         }
     }
+
+    // FIXME
+    #[inline]
+    unsafe fn next_payload_popped(&mut self, idx: usize, pop: i32) -> payload_iterator_return!{} {
+        self.parent.next_payload_popped(idx, pop)
+    }
 }
