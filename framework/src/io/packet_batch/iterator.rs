@@ -30,9 +30,10 @@ pub trait BatchIterator {
     /// depends on the number of parse nodes and composition nodes seen so far.
     unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{};
 
-    /// If packets are available, returns the address of the header and payload at index `idx` in the current batch, and
-    /// the index for the next packet to be processed. If packets are not available returns None. N.B., payload address
-    /// depends on the number of parse nodes and composition nodes seen so far.
+    /// If packets are available, returns the address of the header and payload from before the most recent parse node.
+    /// Pop allows this to nest and pop arbitrarily many headers, however note the assumption that popped headers must
+    /// match previously parsed headers. When this is not the case, reset() is the only option available. This provides
+    /// better performance than reset when one or a few headers must be removed.
     unsafe fn next_payload_popped(&mut self, idx: usize, pop: i32) -> payload_iterator_return!{};
 
     /// If packets are available, returns the address of the mbuf data_address. This is mostly to allow chained NFs to
