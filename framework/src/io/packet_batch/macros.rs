@@ -33,5 +33,5 @@ macro_rules! batch_no_new {
 }
 
 
-macro_rules! address_iterator_return { () => { Option<(*mut u8, usize, Option<&mut Any>, usize)> }}
-macro_rules! payload_iterator_return { () => { Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> }}
+// macro_rules! address_iterator_return { () => { Option<(*mut u8, usize, Option<&mut Any>, usize)> }}
+// macro_rules! payload_iterator_return { () => { Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> }}

@@ -108,14 +108,13 @@ pub trait HeaderOperations : Batch + Sized {
         FilterBatch::<Self::Header, Self>::new(self, filter_f)
     }
 
-    // FIXME: Should this be in the general interface?
     /// Reset the packet pointer to 0. This is identical to composition except for using static dispatch.
     fn reset(self) -> ResetParsingBatch<Self>
         where Self: Sized
     {
         ResetParsingBatch::<Self>::new(self)
     }
- 
+
     /// Deparse, i.e., remove the last patched header. Note the assumption here is that T = the last header parsed
     /// (which we cannot statically enforce since we loose reference to that header).
     fn deparse<T: EndOffset>(self) -> DeparsedBatch<T, Self>

@@ -1,5 +1,5 @@
 extern crate byteorder;
-use byteorder::{ByteOrder, BigEndian};
+use byteorder::{BigEndian, ByteOrder};
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Flow {

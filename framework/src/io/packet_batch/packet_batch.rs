@@ -282,7 +282,7 @@ impl BatchIterator for PacketBatch {
     /// Address for the next packet.
     /// Returns packet at index `idx` and the index of the next packet after `idx`.
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize, _: i32) -> address_iterator_return!{} {
+    unsafe fn next_address(&mut self, idx: usize, _: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
         if self.start <= idx && idx < self.array.len() {
             Some((self.address(idx).0, self.address(idx).1, None, idx + 1))
         } else {
@@ -292,7 +292,7 @@ impl BatchIterator for PacketBatch {
 
     /// Payload for the next packet.
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         if self.start <= idx && idx < self.array.len() {
             Some((self.address(idx).0,
                   self.payload(idx).0,
@@ -305,17 +305,20 @@ impl BatchIterator for PacketBatch {
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> address_iterator_return!{} {
+    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize, Option<&mut Any>, usize)> {
         self.next_address(idx, 0)
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         self.next_payload(idx)
     }
 
     #[inline]
-    unsafe fn next_payload_popped(&mut self, idx: usize, _: i32) -> payload_iterator_return!{} {
+    unsafe fn next_payload_popped(&mut self,
+                                  idx: usize,
+                                  _: i32)
+                                  -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
         self.next_payload(idx)
     }
 }

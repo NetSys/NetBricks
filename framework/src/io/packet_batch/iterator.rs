@@ -23,26 +23,29 @@ pub trait BatchIterator {
     /// If packets are available, returns the address of the header at index `idx` in the current batch, and the index
     /// for the next packet to be processed. If packets are not available returns None. N.B., header address depends on
     /// the number of parse nodes and composition nodes seen so far.
-    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> address_iterator_return!{};
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, usize, Option<&mut Any>, usize)>;
 
     /// If packets are available, returns the address of the header and payload at index `idx` in the current batch, and
     /// the index for the next packet to be processed. If packets are not available returns None. N.B., payload address
     /// depends on the number of parse nodes and composition nodes seen so far.
-    unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{};
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)>;
 
     /// If packets are available, returns the address of the header and payload from before the most recent parse node.
     /// Pop allows this to nest and pop arbitrarily many headers, however note the assumption that popped headers must
     /// match previously parsed headers. When this is not the case, reset() is the only option available. This provides
     /// better performance than reset when one or a few headers must be removed.
-    unsafe fn next_payload_popped(&mut self, idx: usize, pop: i32) -> payload_iterator_return!{};
+    unsafe fn next_payload_popped(&mut self,
+                                  idx: usize,
+                                  pop: i32)
+                                  -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)>;
 
     /// If packets are available, returns the address of the mbuf data_address. This is mostly to allow chained NFs to
     /// begin accessing data from the beginning. Other semantics are identical to `next_address` above.
-    unsafe fn next_base_address(&mut self, idx: usize) -> address_iterator_return!{};
+    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, usize, Option<&mut Any>, usize)>;
 
     /// If packets are available, returns the address of the mbuf data_address. This is mostly to allow chained NFs to
     /// begin accessing data from the beginning. Other semantics are identical to `next_address` above.
-    unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{};
+    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)>;
 }
 
 /// Iterate over packets in a batch. This iterator merely returns the header from the packet, and expects that
