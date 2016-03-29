@@ -50,18 +50,63 @@ impl MBuf {
         self.pkt_len as usize
     }
 
-    /// Change the length of data in this packet.
-    ///
-    /// FIXME: This does not consider segments
     #[inline]
-    pub fn change_data_len(&mut self, len: usize) {
-        self.pkt_len = len as u32;
-        self.data_len = len as u16;
+    fn pkt_headroom(&self) -> usize {
+        self.data_off as usize
     }
 
-    /// Add data to this packet.
-    pub fn append_data(&mut self, len: usize) {
-        self.pkt_len = self.pkt_len + (len as u32);
-        self.data_len = self.data_len + (len as u16);
+    #[inline]
+    fn pkt_tailroom(&self) -> usize {
+        self.buf_len() - self.data_off as usize - self.data_len()
+    }
+
+    /// Add data to the beginning of the packet. This might fail (i.e., return 0) when no more headroom is left.
+    #[inline]
+    pub fn add_data_beginning(&mut self, len: usize) -> usize {
+        // If only we could add a likely here.
+        if len > self.pkt_headroom() {
+            0
+        } else {
+            self.data_off -= len as u16;
+            self.data_len += len as u16;
+            self.pkt_len += len as u32;
+            len
+        }
+    }
+
+    /// Add data to the end of a packet buffer. This might fail (i.e., return 0) when no more tailroom is left. We do
+    /// not currently deal with packet with multiple segments.
+    #[inline]
+    pub fn add_data_end(&mut self, len: usize) -> usize {
+        if len > self.pkt_tailroom() {
+            0
+        } else {
+            self.data_len += len as u16;
+            self.pkt_len += len as u32;
+            len
+        }
+    }
+
+    #[inline]
+    pub fn remove_data_beginning(&mut self, len: usize) -> usize {
+        if len > self.data_len() {
+            0
+        } else {
+            self.data_off += len as u16;
+            self.data_len -= len as u16;
+            self.pkt_len -= len as u32;
+            len
+        }
+    }
+
+    #[inline]
+    pub fn remove_data_end(&mut self, len: usize) -> usize {
+        if len > self.data_len() {
+            0
+        } else {
+            self.data_len -= len as u16;
+            self.pkt_len -= len as u32;
+            len
+        }
     }
 }
