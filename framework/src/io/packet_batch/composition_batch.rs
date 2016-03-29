@@ -29,7 +29,10 @@ impl BatchIterator for CompositionBatch {
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+        if pop != 0 {
+            panic!("Cannot pop beyond a composition batch")
+        }
         self.parent.next_base_address(idx)
     }
 

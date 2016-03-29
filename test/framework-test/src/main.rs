@@ -33,11 +33,11 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
               //*flow = 
               ipv4_extract_flow(payload);
           })
-          .parse::<IpHeader>()
-          .transform(box |hdr, _, _| {
-              let ttl = hdr.ttl();
-              hdr.set_ttl(ttl + 1)
-          })
+          //.parse::<IpHeader>()
+          //.transform(box |hdr, _, _| {
+              //let ttl = hdr.ttl();
+              //hdr.set_ttl(ttl + 1)
+          //})
           .compose()
     // parent.context::<Flow>()
     // .parse::<MacHeader>()

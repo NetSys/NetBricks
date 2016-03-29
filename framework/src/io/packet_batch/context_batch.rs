@@ -101,8 +101,8 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
 
     // FIXME: Really we should be accepting a token (capability) here and only adding context if the token matches.
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
-        match self.parent.next_address(idx) {
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+        match self.parent.next_address(idx, pop) {
             Some((addr, _, iret)) => {
                 Some((addr,
                       self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),

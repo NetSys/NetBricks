@@ -22,7 +22,7 @@ pub trait BatchIterator {
     /// If packets are available, returns the address of the header at index `idx` in the current batch, and the index
     /// for the next packet to be processed. If packets are not available returns None. N.B., header address depends on
     /// the number of parse nodes and composition nodes seen so far.
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)>;
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, Option<&mut Any>, usize)>;
 
     /// If packets are available, returns the address of the header and payload at index `idx` in the current batch, and
     /// the index for the next packet to be processed. If packets are not available returns None. N.B., payload address
@@ -61,7 +61,7 @@ impl<T> PacketBatchIterator<T>
 
     #[inline]
     pub fn next<'a>(&'a self, batch: &'a mut BatchIterator) -> Option<(&'a mut T, Option<&'a mut Any>)> {
-        let item = unsafe { batch.next_address(self.idx.get()) };
+        let item = unsafe { batch.next_address(self.idx.get(), 0) };
         match item {
             Some((addr, ctx, idx)) => {
                 let packet = cast_from_u8::<T>(addr);
@@ -102,7 +102,7 @@ impl<T> PacketBatchEnumerator<T>
     #[inline]
     pub fn next<'a>(&'a self, batch: &'a mut BatchIterator) -> Option<(usize, &'a mut T, Option<&'a mut Any>)> {
         let original_idx = self.idx.get();
-        let item = unsafe { batch.next_address(original_idx) };
+        let item = unsafe { batch.next_address(original_idx, 0) };
         match item {
             Some((addr, ctx, next_idx)) => {
                 let packet = cast_from_u8::<T>(addr);

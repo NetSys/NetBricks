@@ -282,7 +282,7 @@ impl BatchIterator for PacketBatch {
     /// Address for the next packet.
     /// Returns packet at index `idx` and the index of the next packet after `idx`.
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_address(&mut self, idx: usize, _: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         if self.start <= idx && idx < self.array.len() {
             Some((self.address(idx), None, idx + 1))
         } else {
@@ -306,7 +306,7 @@ impl BatchIterator for PacketBatch {
 
     #[inline]
     unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
-        self.next_address(idx)
+        self.next_address(idx, 0)
     }
 
     #[inline]

@@ -44,7 +44,7 @@ impl<V> BatchIterator for SendBatch<V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, _: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_address(&mut self, _: usize, _: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
         panic!("Cannot iterate SendBatch")
     }
 

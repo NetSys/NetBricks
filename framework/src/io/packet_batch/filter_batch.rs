@@ -88,8 +88,8 @@ impl<T, V> BatchIterator for FilterBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
-        self.parent.next_address(idx)
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+        self.parent.next_address(idx, pop)
     }
 
     #[inline]

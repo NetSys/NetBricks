@@ -58,10 +58,14 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
-        match self.parent.next_payload(idx) {
-            None => None,
-            Some((_, payload, _, ctx, next)) => Some((payload, ctx, next)),
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+        if pop > 1 {
+            self.parent.next_address(idx, pop - 1)
+        } else {
+            match self.parent.next_payload(idx) {
+                None => None,
+                Some((_, payload, _, ctx, next)) => Some((payload, ctx, next)),
+            }
         }
     }
 

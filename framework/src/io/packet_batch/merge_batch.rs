@@ -36,8 +36,8 @@ impl BatchIterator for MergeBatch {
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
-        self.parents[self.which].next_address(idx)
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+        self.parents[self.which].next_address(idx, pop)
     }
 
     #[inline]
