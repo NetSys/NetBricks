@@ -1,6 +1,6 @@
 use super::act::Act;
 use super::Batch;
-use super::iterator::BatchIterator;
+use super::iterator::*;
 use super::super::pmd::*;
 use super::super::interface::Result;
 use std::any::Any;
@@ -44,22 +44,22 @@ impl<V> BatchIterator for SendBatch<V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, _: usize, _: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_address(&mut self, _: usize, _: i32) -> address_iterator_return!{} {
         panic!("Cannot iterate SendBatch")
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, _: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, _: usize) -> payload_iterator_return!{} {
         panic!("Cannot iterate SendBatch")
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, _: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_base_address(&mut self, _: usize) -> address_iterator_return!{} {
         panic!("Cannot iterate SendBatch")
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, _: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, _: usize) -> payload_iterator_return!{} {
         panic!("Cannot iterate SendBatch")
     }
 }

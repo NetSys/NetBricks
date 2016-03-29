@@ -65,22 +65,22 @@ impl<T, V> BatchIterator for MapBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> address_iterator_return!{} {
         self.parent.next_address(idx, pop)
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         self.parent.next_payload(idx)
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_base_address(&mut self, idx: usize) -> address_iterator_return!{} {
         self.parent.next_base_address(idx)
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         self.parent.next_base_payload(idx)
     }
 }

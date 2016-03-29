@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
-use super::iterator::BatchIterator;
+use super::iterator::*;
 use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
 use super::super::pmd::*;
@@ -58,19 +58,19 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> address_iterator_return!{} {
         if pop > 1 {
             self.parent.next_address(idx, pop - 1)
         } else {
             match self.parent.next_payload(idx) {
                 None => None,
-                Some((_, payload, _, ctx, next)) => Some((payload, ctx, next)),
+                Some((_, payload, size, ctx, next)) => Some((payload, size, ctx, next)),
             }
         }
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         let parent_payload = self.parent.next_payload(idx);
         match parent_payload {
             Some((_, packet, size, arg, idx)) => {
@@ -88,12 +88,12 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_base_address(&mut self, idx: usize) -> address_iterator_return!{} {
         self.parent.next_base_address(idx)
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         self.parent.next_base_payload(idx)
     }
 }

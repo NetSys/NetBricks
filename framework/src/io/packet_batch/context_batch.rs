@@ -101,10 +101,11 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
 
     // FIXME: Really we should be accepting a token (capability) here and only adding context if the token matches.
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> address_iterator_return!{} {
         match self.parent.next_address(idx, pop) {
-            Some((addr, _, iret)) => {
+            Some((addr, size, _, iret)) => {
                 Some((addr,
+                      size,
                       self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
                       iret))
             }
@@ -113,7 +114,7 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         match self.parent.next_payload(idx) {
             Some((hdr, payload, psize, _, iret)) => {
                 Some((hdr,
@@ -127,10 +128,11 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_base_address(&mut self, idx: usize) -> address_iterator_return!{} {
         match self.parent.next_base_address(idx) {
-            Some((addr, _, iret)) => {
+            Some((addr, size, _, iret)) => {
                 Some((addr,
+                      size,
                       self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
                       iret))
             }
@@ -139,7 +141,7 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         match self.parent.next_base_payload(idx) {
             Some((hdr, payload, psize, _, iret)) => {
                 Some((hdr,

@@ -1,6 +1,7 @@
 use self::act::Act;
 use self::iterator::BatchIterator;
 pub use self::parsed_batch::ParsedBatch;
+pub use self::deparsed_batch::DeparsedBatch;
 pub use self::transform_batch::TransformBatch;
 pub use self::apply_batch::ReplaceBatch;
 pub use self::receive_batch::ReceiveBatch;
@@ -24,6 +25,7 @@ mod act;
 mod apply_batch;
 mod composition_batch;
 mod context_batch;
+mod deparsed_batch;
 mod filter_batch;
 mod iterator;
 mod map_batch;

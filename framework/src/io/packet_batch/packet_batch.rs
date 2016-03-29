@@ -265,9 +265,9 @@ impl PacketBatch {
 
     /// Address for the payload for a given packet.
     #[inline]
-    unsafe fn address(&mut self, idx: usize) -> *mut u8 {
+    unsafe fn address(&mut self, idx: usize) -> (*mut u8, usize) {
         let val = &mut *self.array[idx];
-        val.data_address(0)
+        (val.data_address(0), val.data_len())
     }
 }
 
@@ -282,9 +282,9 @@ impl BatchIterator for PacketBatch {
     /// Address for the next packet.
     /// Returns packet at index `idx` and the index of the next packet after `idx`.
     #[inline]
-    unsafe fn next_address(&mut self, idx: usize, _: i32) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_address(&mut self, idx: usize, _: i32) -> address_iterator_return!{} {
         if self.start <= idx && idx < self.array.len() {
-            Some((self.address(idx), None, idx + 1))
+            Some((self.address(idx).0, self.address(idx).1, None, idx + 1))
         } else {
             None
         }
@@ -292,9 +292,9 @@ impl BatchIterator for PacketBatch {
 
     /// Payload for the next packet.
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         if self.start <= idx && idx < self.array.len() {
-            Some((self.address(idx),
+            Some((self.address(idx).0,
                   self.payload(idx).0,
                   self.payload(idx).1,
                   None,
@@ -305,12 +305,12 @@ impl BatchIterator for PacketBatch {
     }
 
     #[inline]
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)> {
+    unsafe fn next_base_address(&mut self, idx: usize) -> address_iterator_return!{} {
         self.next_address(idx, 0)
     }
 
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)> {
+    unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
         self.next_payload(idx)
     }
 }

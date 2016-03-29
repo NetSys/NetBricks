@@ -1,6 +1,7 @@
 #![feature(repr_simd)]
 #![feature(log_syntax)]
 #![feature(box_syntax)]
+#![feature(type_macros)]
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 // We need this since rx_cores and tx_cores triggers a similar names warning.
 #![cfg_attr(feature = "dev", allow(similar_names))]

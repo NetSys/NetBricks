@@ -4,6 +4,7 @@ use super::super::interface::EndOffset;
 use std::any::Any;
 use std::cell::Cell;
 use std::slice::*;
+
 /// An interface implemented by all batches for iterating through the set of packets in a batch.
 /// This is private to the framework and not exposed.
 ///
@@ -22,20 +23,20 @@ pub trait BatchIterator {
     /// If packets are available, returns the address of the header at index `idx` in the current batch, and the index
     /// for the next packet to be processed. If packets are not available returns None. N.B., header address depends on
     /// the number of parse nodes and composition nodes seen so far.
-    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> Option<(*mut u8, Option<&mut Any>, usize)>;
+    unsafe fn next_address(&mut self, idx: usize, pop: i32) -> address_iterator_return!{};
 
     /// If packets are available, returns the address of the header and payload at index `idx` in the current batch, and
     /// the index for the next packet to be processed. If packets are not available returns None. N.B., payload address
     /// depends on the number of parse nodes and composition nodes seen so far.
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)>;
+    unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{};
 
     /// If packets are available, returns the address of the mbuf data_address. This is mostly to allow chained NFs to
     /// begin accessing data from the beginning. Other semantics are identical to `next_address` above.
-    unsafe fn next_base_address(&mut self, idx: usize) -> Option<(*mut u8, Option<&mut Any>, usize)>;
+    unsafe fn next_base_address(&mut self, idx: usize) -> address_iterator_return!{};
 
     /// If packets are available, returns the address of the mbuf data_address. This is mostly to allow chained NFs to
     /// begin accessing data from the beginning. Other semantics are identical to `next_address` above.
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(*mut u8, *mut u8, usize, Option<&mut Any>, usize)>;
+    unsafe fn next_base_payload(&mut self, idx: usize) -> payload_iterator_return!{};
 }
 
 /// Iterate over packets in a batch. This iterator merely returns the header from the packet, and expects that
@@ -63,7 +64,7 @@ impl<T> PacketBatchIterator<T>
     pub fn next<'a>(&'a self, batch: &'a mut BatchIterator) -> Option<(&'a mut T, Option<&'a mut Any>)> {
         let item = unsafe { batch.next_address(self.idx.get(), 0) };
         match item {
-            Some((addr, ctx, idx)) => {
+            Some((addr, _, ctx, idx)) => {
                 let packet = cast_from_u8::<T>(addr);
                 self.idx.set(idx);
                 Some((packet, ctx))
@@ -104,7 +105,7 @@ impl<T> PacketBatchEnumerator<T>
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_address(original_idx, 0) };
         match item {
-            Some((addr, ctx, next_idx)) => {
+            Some((addr, _, ctx, next_idx)) => {
                 let packet = cast_from_u8::<T>(addr);
                 self.idx.set(next_idx);
                 Some((original_idx, packet, ctx))

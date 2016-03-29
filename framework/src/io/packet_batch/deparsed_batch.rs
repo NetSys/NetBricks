@@ -1,37 +1,28 @@
-use super::iterator::*;
+use std::marker::PhantomData;
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
+use super::iterator::BatchIterator;
+use super::packet_batch::cast_from_u8;
 use super::super::interface::EndOffset;
-use super::super::interface::Result;
 use super::super::pmd::*;
+use super::super::interface::Result;
 use std::any::Any;
 
-pub type TransformFn<T> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>)>;
-
-pub struct TransformBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
+pub struct DeparsedBatch<T: EndOffset, V>
+    where V: Batch + BatchIterator + Act
 {
     parent: V,
-    transformer: TransformFn<T>,
+    phantom: PhantomData<T>,
 }
 
-batch!{TransformBatch, [parent: V, transformer: TransformFn<T>], []}
-
-impl<T, V> Act for TransformBatch<T, V>
+impl<T, V> Act for DeparsedBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     #[inline]
     fn act(&mut self) {
         self.parent.act();
-        {
-            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some((_, hdr, payload, ctx)) = iter.next(&mut self.parent) {
-                (self.transformer)(hdr, payload, ctx);
-            }
-        }
     }
 
     #[inline]
@@ -55,7 +46,9 @@ impl<T, V> Act for TransformBatch<T, V>
     }
 }
 
-impl<T, V> BatchIterator for TransformBatch<T, V>
+batch!{DeparsedBatch, [parent: V], [phantom: PhantomData]}
+
+impl<T, V> BatchIterator for DeparsedBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
@@ -66,12 +59,26 @@ impl<T, V> BatchIterator for TransformBatch<T, V>
 
     #[inline]
     unsafe fn next_address(&mut self, idx: usize, pop: i32) -> address_iterator_return!{} {
-        self.parent.next_address(idx, pop)
+        self.parent.next_address(idx, pop + 1)
     }
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> payload_iterator_return!{} {
-        self.parent.next_payload(idx)
+        let parent_hdr = self.parent.next_address(idx, 1);
+        match parent_hdr {
+            None => None,
+            Some((packet, packet_size, arg, idx)) => {
+                let pkt_as_t = cast_from_u8::<T>(packet);
+                let offset = T::offset(pkt_as_t);
+                let payload_size = T::payload_size(pkt_as_t, packet_size);
+                Some((packet,
+                     packet.offset(offset as isize),
+                     payload_size,
+                     arg,
+                     idx))
+
+            }
+        }
     }
 
     #[inline]
