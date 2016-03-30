@@ -8,6 +8,7 @@ use super::HeaderOperations;
 use super::iterator::*;
 use super::packet_batch::cast_from_u8;
 use std::any::Any;
+use std::cmp::min;
 
 pub struct ParsedBatch<T: EndOffset, V>
     where V: Batch + BatchIterator + Act
@@ -71,7 +72,8 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
                   idx)) => {
                 let pkt_as_t = cast_from_u8::<T>(packet);
                 let offset = T::offset(pkt_as_t);
-                let payload_size = T::payload_size(pkt_as_t, size);
+                // Under no circumstances should we allow an incorrectly reported payload size to cause problems.
+                let payload_size = min(T::payload_size(pkt_as_t, size), size - offset);
                 Some((PacketDescriptor {
                     header: packet,
                     offset: prev_offset + offset,

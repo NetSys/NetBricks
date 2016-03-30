@@ -9,7 +9,7 @@ use std::any::Any;
 
 /// Takes in the header, payload and context, and returns the difference between the current packet size and desired
 /// packet size.
-pub type ResizeFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>) -> isize>;
+pub type ResizeFn<T> = Box<FnMut(&mut T, &[u8], Option<&mut Any>) -> isize>;
 
 pub struct ResizePayload<T, V>
     where T: EndOffset,
@@ -57,7 +57,7 @@ impl<T, V> Act for ResizePayload<T, V>
         }
         for (idx, size) in idxes_sizes {
             // FIXME: Error handling, this currently just panics, but it should do something different. Maybe
-            // take a failure handler?
+            // take a failure handler or drop the packet instead of panicing?
             match self.parent.adjust_payload_size(idx, size) {
                 Some(_) => (),
                 None => panic!("Resize failed {}", idx),

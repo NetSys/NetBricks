@@ -28,7 +28,11 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
     parent//.context::<Flow>()
           .parse::<MacHeader>()
           .parse::<IpHeader>()
-          .resize(box |_, _, _| { 128 })
+          .resize(box |hdr, _, _| {
+              let old_len = hdr.length();
+              hdr.set_length(old_len + 128);
+              128
+          })
           .transform(box |hdr, _, _| {
               let ttl = hdr.ttl();
               hdr.set_ttl(ttl + 1)

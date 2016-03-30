@@ -97,6 +97,7 @@ impl<T> PayloadEnumerator<T>
                   ctx,
                   next_idx)) => {
                 let header = cast_from_u8::<T>(haddr);
+                //println!("Payload size is {}", payload_size);
                 // This is safe (assuming our size accounting has been correct so far).
                 let payload_slice = unsafe { from_raw_parts_mut::<u8>(payload, payload_size) };
                 self.idx.set(next_idx);

@@ -201,7 +201,7 @@ impl IpHeader {
 
     #[inline]
     pub fn length(&self) -> u16 {
-        ((self.version_to_len & 0xffff0000) >> 16) as u16
+        u16::from_be(((self.version_to_len & 0xffff0000) >> 16) as u16)
     }
 
     #[inline]
