@@ -79,8 +79,8 @@ impl<V> Act for SendBatch<V>
 
     fn done(&mut self) {}
 
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parent.send_queue(port, queue)
+    fn send_queue(&mut self, _: &mut PmdPort, _: i32) -> Result<u32> {
+        panic!("Cannot send a sent packet batch")
     }
 
     fn capacity(&self) -> i32 {
@@ -88,12 +88,17 @@ impl<V> Act for SendBatch<V>
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
-        self.parent.drop_packets(idxes)
+    fn drop_packets(&mut self, _: Vec<usize>) -> Option<usize> {
+        panic!("Cannot drop packets from a sent batch")
     }
 
     #[inline]
-    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
-        self.parent.adjust_payload_size(idx, size)
+    fn adjust_payload_size(&mut self, _: usize, _: isize) -> Option<isize> {
+        panic!("Cannot resize a sent batch")
+    }
+
+    #[inline]
+    fn adjust_headroom(&mut self, _: usize, _: isize) -> Option<isize> {
+        panic!("Cannot resize a sent batch")
     }
 }

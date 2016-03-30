@@ -82,6 +82,11 @@ impl<T, V> Act for FilterBatch<T, V>
     fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
         self.parent.adjust_payload_size(idx, size)
     }
+
+    #[inline]
+    fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_headroom(idx, size)
+    }
 }
 
 impl<T, V> BatchIterator for FilterBatch<T, V>

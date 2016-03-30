@@ -50,6 +50,11 @@ impl<T, V> Act for ParsedBatch<T, V>
     fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
         self.parent.adjust_payload_size(idx, size)
     }
+
+    #[inline]
+    fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_headroom(idx, size)
+    }
 }
 
 batch!{ParsedBatch, [parent: V], [phantom: PhantomData]}
@@ -97,6 +102,7 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
                                   idx: usize,
                                   pop: i32)
                                   -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
+        // mark as likely (can do this with llvm expect intrinsic)
         if pop - 1 == 0 {
             self.next_payload(idx)
         } else {

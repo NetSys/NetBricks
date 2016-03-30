@@ -48,6 +48,11 @@ impl<T, V> Act for DeparsedBatch<T, V>
     fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
         self.parent.adjust_payload_size(idx, size)
     }
+
+    #[inline]
+    fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_headroom(idx, size)
+    }
 }
 
 batch!{DeparsedBatch, [parent: V], [phantom: PhantomData]}

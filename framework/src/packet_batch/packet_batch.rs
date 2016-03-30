@@ -287,6 +287,28 @@ impl PacketBatch {
             Some(0)
         }
     }
+
+    #[inline]
+    unsafe fn adjust_packet_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
+        if size < 0 {
+            let abs_size = (-size) as usize;
+            let ret = (*self.array[idx]).remove_data_beginning(abs_size);
+            if ret > 0 {
+                Some(-(ret as isize))
+            } else {
+                None
+            }
+        } else if size > 0 {
+            let ret = (*self.array[idx]).add_data_beginning(size as usize);
+            if ret > 0 {
+                Some(ret as isize)
+            } else {
+                None
+            }
+        } else {
+            Some(0)
+        }
+    }
 }
 
 // A packet batch is also a batch (just a special kind)
@@ -360,6 +382,11 @@ impl Act for PacketBatch {
     #[inline]
     fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
         unsafe { self.adjust_packet_size(idx, size) }
+    }
+
+    #[inline]
+    fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
+        unsafe { self.adjust_packet_headroom(idx, size) }
     }
 }
 

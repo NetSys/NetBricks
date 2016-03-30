@@ -16,4 +16,6 @@ pub trait Act {
     /// Add bytes at the end of the packet. `size` is the new size requested, returns the new size after adjustment or 0
     /// if not done. Note `size` here is the amount by which packet size should change overall.
     fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize>;
+
+    fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize>;
 }

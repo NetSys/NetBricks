@@ -73,4 +73,9 @@ impl Act for CompositionBatch {
     fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
         self.parent.adjust_payload_size(idx, size)
     }
+
+    #[inline]
+    fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
+        self.parent.adjust_headroom(idx, size)
+    }
 }
