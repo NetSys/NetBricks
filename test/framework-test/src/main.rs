@@ -1,5 +1,6 @@
 #![feature(box_syntax)]
 extern crate e2d2;
+extern crate fnv;
 extern crate time;
 extern crate simd;
 extern crate getopts;
@@ -8,15 +9,19 @@ use e2d2::io::*;
 use e2d2::headers::*;
 use e2d2::utils::*;
 use e2d2::packet_batch::*;
+use fnv::FnvHasher;
 use getopts::Options;
+use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
+use std::hash::BuildHasherDefault;
 use std::env;
 use std::time::Duration;
 use std::thread;
 use std::any::Any;
-// use std::net::Ipv4Addr;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 const CONVERSION_FACTOR: u64 = 1000000000;
+type FnvHash = BuildHasherDefault<FnvHasher>;
 
 fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
     let f = box |hdr: &mut MacHeader, _: &mut [u8], _: Option<&mut Any>| {
@@ -24,25 +29,36 @@ fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
         hdr.src = hdr.dst;
         hdr.dst = src;
     };
-
+    // Need box since we are going to make a pretty large hashmap for now.
+    //let mut monitoring_cache = 
+        //box HashMap::<Flow, AtomicUsize, FnvHash>::with_capacity_and_hasher(1 << 16, Default::default());
+    let mut _monitoring_cache = box BTreeMap::<Flow, AtomicUsize>::new();
+    const VEC_SIZE: usize = 1<<16;
+    let mut monitoring_cache = box Vec::<AtomicUsize>::with_capacity(VEC_SIZE);
+    for _ in 0..VEC_SIZE {
+        monitoring_cache.push(Default::default());
+    }
     parent//.context::<Flow>()
           .parse::<MacHeader>()
           .parse::<IpHeader>()
-          .resize(box |hdr, _, _| {
-              let old_len = hdr.length();
-              hdr.set_length(old_len + 128);
-              128
-          })
+          //.resize(box |hdr, _, _| {
+              //let old_len = hdr.length();
+              //hdr.set_length(old_len + 128);
+              //128
+          //})
           .transform(box |hdr, _, _| {
               let ttl = hdr.ttl();
               hdr.set_ttl(ttl + 1)
           })
           .deparse::<MacHeader>()
           .transform(f)
-          .map(box |_, payload, _| {
-              //let flow = ctx.unwrap().downcast_mut::<Flow>().expect("Wrong type");
-              //*flow =
-              ipv4_extract_flow(payload);
+          .map(box move |_, payload, _| {
+              let idx = ipv4_flow_hash(payload, 0) as usize % VEC_SIZE;
+              monitoring_cache[idx].store(monitoring_cache[idx].load(Ordering::Relaxed) + 1, Ordering::Relaxed);
+              //ipv4_flow_hash(payload, 0);
+              //let _ = monitoring_cache.entry(ipv4_extract_flow(payload)).or_insert(AtomicUsize::new(0));
+              //// No one else should be writing to this, so I think relaxed is safe here.
+              //entry.store(entry.load(Ordering::Relaxed) + 1, Ordering::Relaxed);
           })
           .compose()
     // parent.context::<Flow>()

@@ -11,6 +11,7 @@
 #![cfg_attr(feature = "dev", plugin(clippy))]
 extern crate libc;
 extern crate byteorder;
+extern crate farmhash;
 pub mod headers;
 pub mod io;
 pub mod packet_batch;

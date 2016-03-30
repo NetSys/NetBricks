@@ -10,6 +10,8 @@ time = ">=0.1.0"
 simd = { git = "https://github.com/huonw/simd" }
 byteorder = "*"
 clippy = { version = "*", optional = true }
+fnv = "*"
+farmhash = "*"
 
 [profile.release]
 opt-level = 3
