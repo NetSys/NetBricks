@@ -1,5 +1,5 @@
 use io::PmdPort;
-use io::EndOffset;
+use headers::EndOffset;
 use io::Result;
 use std::marker::PhantomData;
 use super::act::Act;

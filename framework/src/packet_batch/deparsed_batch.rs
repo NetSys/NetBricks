@@ -4,7 +4,7 @@ use super::Batch;
 use super::HeaderOperations;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use io::PmdPort;
-use io::EndOffset;
+use headers::EndOffset;
 use io::Result;
 use std::any::Any;
 

@@ -1,5 +1,5 @@
 use io::PmdPort;
-use io::EndOffset;
+use headers::EndOffset;
 use io::Result;
 use super::iterator::*;
 use super::act::Act;

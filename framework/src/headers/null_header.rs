@@ -1,4 +1,4 @@
-use super::super::io;
+use super::EndOffset;
 use std::fmt;
 
 #[derive(Debug)]
@@ -11,7 +11,7 @@ impl fmt::Display for NullHeader {
     }
 }
 
-impl io::EndOffset for NullHeader {
+impl EndOffset for NullHeader {
     #[inline]
     fn offset(&self) -> usize {
         0

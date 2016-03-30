@@ -1,4 +1,4 @@
-use super::super::io;
+use super::EndOffset;
 use std::fmt;
 use std::default::Default;
 
@@ -42,7 +42,7 @@ const HDR_SIZE: usize = 14;
 const HDR_SIZE_802_1Q: usize = HDR_SIZE + 4;
 const HDR_SIZE_802_1AD: usize = HDR_SIZE_802_1Q + 4;
 
-impl io::EndOffset for MacHeader {
+impl EndOffset for MacHeader {
     #[inline]
     fn offset(&self) -> usize {
         if cfg!(feature = "performance") {

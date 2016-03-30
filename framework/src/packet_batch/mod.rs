@@ -19,6 +19,7 @@ use self::filter_batch::FilterFn;
 use self::resize_payload::ResizeFn;
 pub use self::reset_parse::ResetParsingBatch;
 use super::io::*;
+use super::headers::*;
 use std::any::Any;
 
 #[macro_use]

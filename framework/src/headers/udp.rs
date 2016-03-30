@@ -1,4 +1,4 @@
-use super::super::io;
+use super::EndOffset;
 use std::fmt;
 use std::default::Default;
 
@@ -24,7 +24,7 @@ impl fmt::Display for UdpHeader {
     }
 }
 
-impl io::EndOffset for UdpHeader {
+impl EndOffset for UdpHeader {
     #[inline]
     fn offset(&self) -> usize {
         8 // 8 bytes

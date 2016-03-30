@@ -1,4 +1,4 @@
-use super::super::io;
+use super::EndOffset;
 use std::fmt;
 use std::net::Ipv4Addr;
 use std::convert::From;
@@ -33,7 +33,7 @@ impl fmt::Display for IpHeader {
 }
 
 
-impl io::EndOffset for IpHeader {
+impl EndOffset for IpHeader {
     #[inline]
     fn offset(&self) -> usize {
         if cfg!(feature = "performance") {
