@@ -32,10 +32,10 @@ pub fn ipv4_extract_flow(bytes: &[u8]) -> Flow {
 }
 
 /// Given the MAC payload, generate a flow hash. The flow hash generated depends on the IV, so different IVs will
-/// produce different results (in cases when implementing Cuckoo hashing, etc.). 
+/// produce different results (in cases when implementing Cuckoo hashing, etc.).
 #[inline]
 pub fn ipv4_flow_hash(bytes: &[u8], iv: u32) -> u32 {
-    if cfg!(feature = "crc_hash") { 
+    if cfg!(feature = "crc_hash") {
         crc_hash::<Flow>(&ipv4_extract_flow(bytes), iv)
     } else {
         farmhash::hash32(flow_as_u8(&ipv4_extract_flow(bytes)))
@@ -52,7 +52,7 @@ extern "C" {
 /// Intel processor's with SSE 4.2 and beyond, CRC32 is implemented in hardware, making it a bit faster than other
 /// things, and is also what DPDK supports. Hence we use it here.
 #[inline(always)]
-pub fn crc_hash<T:Sized>(to_hash: &T, iv: u32) -> u32 {
+pub fn crc_hash<T: Sized>(to_hash: &T, iv: u32) -> u32 {
     let size = mem::size_of::<T>();
     unsafe {
         let to_hash_bytes = (to_hash as *const T) as *const u8;
@@ -62,7 +62,5 @@ pub fn crc_hash<T:Sized>(to_hash: &T, iv: u32) -> u32 {
 
 fn flow_as_u8<'a>(flow: &'a Flow) -> &'a [u8] {
     let size = mem::size_of::<Flow>();
-    unsafe {
-        slice::from_raw_parts(((flow as *const Flow) as *const u8), size)
-    }
+    unsafe { slice::from_raw_parts(((flow as *const Flow) as *const u8), size) }
 }

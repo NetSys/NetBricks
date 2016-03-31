@@ -2,14 +2,15 @@ use fnv::FnvHasher;
 
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
-use std::sync::mpsc::*;
+use std::collections::hash_map::Iter;
+use std::sync::mpsc::{SyncSender, Receiver, sync_channel};
 
 use utils::Flow;
 
 /// A generic store for associating a counter with each flow. This one assumes the counts are only ready by the control
 /// plane (which allows us to improve datapath performance).
 type FnvHash = BuildHasherDefault<FnvHasher>;
-const VEC_SIZE: usize = 1<<24;
+const VEC_SIZE: usize = 1 << 24;
 #[derive(Clone)]
 pub struct ControlPlaneCounterDataPath {
     /// Contains the counts on the data path.
@@ -72,17 +73,19 @@ impl ControlPlaneCounterControlPlane {
 
 /// Create a ControlPlaneCounter. `delay` specifies the number of buckets buffered together, while `channel_size`
 /// specifies the number of outstanding messages.
-pub fn new_cp_flow_counter(delay: usize, channel_size: usize) ->
-    (ControlPlaneCounterDataPath, Box<ControlPlaneCounterControlPlane>) {
+pub fn new_cp_flow_counter(delay: usize,
+                           channel_size: usize)
+                           -> (ControlPlaneCounterDataPath,
+                               Box<ControlPlaneCounterControlPlane>) {
     let (sender, receiver) = sync_channel(channel_size);
     (ControlPlaneCounterDataPath {
-       cache: Vec::with_capacity(delay),
-       updates: 0,
-       delay: delay,
-       channel: sender,
+        cache: Vec::with_capacity(delay),
+        updates: 0,
+        delay: delay,
+        channel: sender,
     },
-    box ControlPlaneCounterControlPlane {
-       // FIXME: Don't need this to be quite this big?
+     box ControlPlaneCounterControlPlane {
+        // FIXME: Don't need this to be quite this big?
         flow_counters: HashMap::with_capacity_and_hasher(VEC_SIZE, Default::default()),
         channel: receiver,
     })
