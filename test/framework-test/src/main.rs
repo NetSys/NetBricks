@@ -22,7 +22,7 @@ use std::thread;
 const CONVERSION_FACTOR: u64 = 1000000000;
 type FnvHash = BuildHasherDefault<FnvHasher>;
 
-fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: ControlPlaneCounterDataPath) -> CompositionBatch {
+fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: CpMergeableStoreDataPath<isize>) -> CompositionBatch {
     parent.parse::<MacHeader>()
           .transform(box move |hdr, payload, _| {
               // No one else should be writing to this, so I think relaxed is safe here.
@@ -39,7 +39,7 @@ fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: ControlPlaneCoun
           .compose()
 }
 
-fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32, counter: ControlPlaneCounterDataPath) {
+fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32, counter: CpMergeableStoreDataPath<isize>) {
     init_thread(core, core);
     println!("Receiving started");
 
@@ -122,7 +122,7 @@ fn main() {
                                                .collect();
     const BATCH: usize = 1 << 10;
     const CHANNEL_SIZE: usize = 256;
-    let (producer, mut consumer) = new_cp_flow_counter(BATCH, 4 * CHANNEL_SIZE); 
+    let (producer, mut consumer) = new_cp_mergeable_store::<isize>(BATCH, 4 * CHANNEL_SIZE);
     let _thread: Vec<_> = ports_by_core.iter()
                                        .map(|(core, ports)| {
                                            let c = core.clone();
