@@ -12,7 +12,9 @@
 extern crate libc;
 extern crate byteorder;
 extern crate farmhash;
+extern crate fnv;
 pub mod headers;
 pub mod io;
 pub mod packet_batch;
 pub mod utils;
+pub mod state;

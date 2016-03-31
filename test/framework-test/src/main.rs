@@ -9,95 +9,44 @@ use e2d2::io::*;
 use e2d2::headers::*;
 use e2d2::utils::*;
 use e2d2::packet_batch::*;
+use e2d2::state::*;
 use fnv::FnvHasher;
 use getopts::Options;
-use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 use std::env;
 use std::time::Duration;
 use std::thread;
-use std::any::Any;
-use std::sync::atomic::{AtomicUsize, Ordering};
+//use std::any::Any;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 type FnvHash = BuildHasherDefault<FnvHasher>;
 
-fn monitor<T: 'static + Batch>(parent: T) -> CompositionBatch {
-    let f = box |hdr: &mut MacHeader, _: &mut [u8], _: Option<&mut Any>| {
-        let src = hdr.src.clone();
-        hdr.src = hdr.dst;
-        hdr.dst = src;
-    };
-    // Need box since we are going to make a pretty large hashmap for now.
-    //let mut monitoring_cache = 
-        //box HashMap::<Flow, AtomicUsize, FnvHash>::with_capacity_and_hasher(1 << 16, Default::default());
-    let mut _monitoring_cache = box BTreeMap::<Flow, AtomicUsize>::new();
-    const VEC_SIZE: usize = 1<<16;
-    let mut monitoring_cache = box Vec::<AtomicUsize>::with_capacity(VEC_SIZE);
-    for _ in 0..VEC_SIZE {
-        monitoring_cache.push(Default::default());
-    }
-    parent//.context::<Flow>()
-          .parse::<MacHeader>()
+fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: ControlPlaneCounterDataPath) -> CompositionBatch {
+    parent.parse::<MacHeader>()
+          .transform(box move |hdr, payload, _| {
+              // No one else should be writing to this, so I think relaxed is safe here.
+              let src = hdr.src.clone();
+              hdr.src = hdr.dst;
+              hdr.dst = src;
+              monitoring_cache.update(ipv4_extract_flow(payload), 1);
+          })
           .parse::<IpHeader>()
-          //.resize(box |hdr, _, _| {
-              //let old_len = hdr.length();
-              //hdr.set_length(old_len + 128);
-              //128
-          //})
           .transform(box |hdr, _, _| {
               let ttl = hdr.ttl();
               hdr.set_ttl(ttl + 1)
           })
-          .deparse::<MacHeader>()
-          .transform(f)
-          .map(box move |_, payload, _| {
-              let idx = ipv4_flow_hash(payload, 0) as usize % VEC_SIZE;
-              monitoring_cache[idx].store(monitoring_cache[idx].load(Ordering::Relaxed) + 1, Ordering::Relaxed);
-              //ipv4_flow_hash(payload, 0);
-              //let _ = monitoring_cache.entry(ipv4_extract_flow(payload)).or_insert(AtomicUsize::new(0));
-              //// No one else should be writing to this, so I think relaxed is safe here.
-              //entry.store(entry.load(Ordering::Relaxed) + 1, Ordering::Relaxed);
-          })
           .compose()
-    // parent.context::<Flow>()
-    // .parse::<MacHeader>()
-    // .transform(f)
-    // .parse::<IpHeader>()
-    // .map(box |hdr, ctx| {
-    // match ctx {
-    // Some(x) => {
-    // let s = x.downcast_mut::<Flow>().expect("Wrong type");
-    // s.src_ip = hdr.src();
-    // s.dst_ip = hdr.dst();
-    // s.proto = hdr.protocol();
-    // }
-    // None => panic!("no context"),
-    // }
-    // })
-    // .parse::<UdpHeader>()
-    // .filter(box |hdr, _| hdr.src_port() != 21 && hdr.dst_port() != 21)
-    // .map(box |hdr, ctx| {
-    // match ctx {
-    // Some(x) => {
-    // let s = x.downcast_mut::<Flow>().expect("Wrong type");
-    // s.src_port = hdr.src_port();
-    // s.dst_port = hdr.dst_port();
-    // }
-    // None => panic!("no context"),
-    // }
-    // })
-    // .compose()
 }
 
-fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32) {
+fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32, counter: ControlPlaneCounterDataPath) {
     init_thread(core, core);
     println!("Receiving started");
 
     let pipelines: Vec<_> = ports.iter()
                                  .map(|port| {
-                                     monitor(ReceiveBatch::new(port.copy(), queue))
+                                     let ctr = counter.clone();
+                                     monitor(ReceiveBatch::new(port.copy(), queue), ctr)
                                          .send(port.copy(), queue)
                                          .compose()
                                  })
@@ -171,31 +120,38 @@ fn main() {
                                                    (c, recv_ports)
                                                })
                                                .collect();
+    const BATCH: usize = 1 << 10;
+    const CHANNEL_SIZE: usize = 256;
+    let (producer, mut consumer) = new_cp_flow_counter(BATCH, 4 * CHANNEL_SIZE); 
     let _thread: Vec<_> = ports_by_core.iter()
                                        .map(|(core, ports)| {
                                            let c = core.clone();
+                                           let mon = producer.clone();
                                            let p: Vec<_> = ports.iter().map(|p| p.copy()).collect();
-                                           std::thread::spawn(move || recv_thread(p, 0, c))
+                                           std::thread::spawn(move || recv_thread(p, 0, c, mon))
                                        })
                                        .collect();
     let mut pkts_so_far = (0, 0);
     let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
-    let sleep_time = Duration::from_secs(1);
+    let sleep_time = Duration::from_millis(50);
     loop {
         thread::sleep(sleep_time); // Sleep for a bit
         let now = time::precise_time_ns() / CONVERSION_FACTOR;
-        let pkts = ports_by_core.values()
-                                .map(|pvec| {
-                                    pvec.iter()
-                                        .map(|p| p.stats(0))
-                                        .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp))
-                                })
-                                .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp));
-        println!("{} OVERALL RX {} TX {}",
-                 now - start,
-                 pkts.0 - pkts_so_far.0,
-                 pkts.1 - pkts_so_far.1);
-        start = now;
-        pkts_so_far = pkts;
+        consumer.recv();
+        if now != start {
+            let pkts = ports_by_core.values()
+                                    .map(|pvec| {
+                                        pvec.iter()
+                                            .map(|p| p.stats(0))
+                                            .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp))
+                                    })
+                                    .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp));
+            println!("{} OVERALL RX {} TX {}",
+                     now - start,
+                     pkts.0 - pkts_so_far.0,
+                     pkts.1 - pkts_so_far.1);
+            start = now;
+            pkts_so_far = pkts;
+        }
     }
 }
