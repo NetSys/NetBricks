@@ -6,10 +6,10 @@ use std::collections::hash_map::Iter;
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::ops::AddAssign;
 
-use utils::Flow;
+use utils::{Flow, flow_hash};
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
-const VEC_SIZE: usize = 1 << 24;
+const VEC_SIZE: usize = 1 << 20;
 
 /// A generic store for associating some merge-able type with each flow. Note, the merge must be commutative, we do not
 /// guarantee ordering for things being merged. The merge function is implemented by implementing the
@@ -19,8 +19,10 @@ const VEC_SIZE: usize = 1 << 24;
 ///
 /// #[FIXME]
 /// Garbage collection.
+// FIXME: Consider using a channel
 #[derive(Clone)]
-pub struct CpMergeableStoreDataPath<T: AddAssign<T> + Default + Clone> {
+pub struct MergeableStoreDataPath<T: AddAssign<T> + Default + Clone> {
+    flow_counters: Vec<T>,
     /// Contains the counts on the data path.
     cache: Vec<(Flow, T)>,
     /// How many updates has this counter seen.
@@ -30,13 +32,19 @@ pub struct CpMergeableStoreDataPath<T: AddAssign<T> + Default + Clone> {
     channel: SyncSender<Vec<(Flow, T)>>,
 }
 
-pub struct CpMergeableStoreControlPlane<T: AddAssign<T> + Default + Clone> {
+pub struct MergeableStoreControlPlane<T: AddAssign<T> + Default + Clone> {
     /// The actual values.
     flow_counters: HashMap<Flow, T, FnvHash>,
     channel: Receiver<Vec<(Flow, T)>>,
 }
 
-impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreDataPath<T> {
+impl<T: AddAssign<T> + Default + Clone> MergeableStoreDataPath<T> {
+    #[inline]
+    fn update_cache(&mut self) {
+        for (f, v) in self.cache.clone() {
+            self.flow_counters[flow_hash(&f) as usize % VEC_SIZE] += v;
+        }
+    }
     /// Change the value for the given `Flow`.
     #[inline]
     pub fn update(&mut self, flow: Flow, inc: T) {
@@ -44,15 +52,34 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreDataPath<T> {
         self.updates += 1;
         if self.updates >= self.delay {
             self.updates = 0;
+            self.update_cache();
             match self.channel.try_send(self.cache.drain(0..).collect()) {
                 Ok(_) => (),
                 Err(_) => (),
             };
         }
     }
+
+    #[inline]
+    pub fn get(&self, flow: &Flow) -> T {
+        self.flow_counters[flow_hash(&flow) as usize % VEC_SIZE].clone()
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.flow_counters.len()
+    }
+
+    /// Remove an entry from the table.
+    #[inline]
+    pub fn remove(&mut self, flow: &Flow) -> T {
+        let val = self.flow_counters[flow_hash(&flow) as usize % VEC_SIZE].clone();
+        self.flow_counters[flow_hash(&flow) as usize % VEC_SIZE] = Default::default();
+        val
+    }
 }
 
-impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreControlPlane<T> {
+impl<T: AddAssign<T> + Default + Clone> MergeableStoreControlPlane<T> {
     fn update_internal(&mut self, v: Vec<(Flow, T)>) {
         for (flow, c) in v {
             *(self.flow_counters.entry(flow).or_insert(Default::default())) += c;
@@ -67,6 +94,7 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreControlPlane<T> {
         }
     }
 
+    #[inline]
     pub fn get(&self, flow: &Flow) -> T {
         match self.flow_counters.get(flow) {
             Some(i) => i.clone(),
@@ -74,10 +102,12 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreControlPlane<T> {
         }
     }
 
+    #[inline]
     pub fn iter(&self) -> Iter<Flow, T> {
         self.flow_counters.iter()
     }
 
+    #[inline]
     pub fn len(&self) -> usize {
         self.flow_counters.len()
     }
@@ -89,20 +119,22 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreControlPlane<T> {
     }
 }
 
-/// Create a CpMergeableStore. `delay` specifies the number of buckets buffered together, while `channel_size`
+/// Create a MergeableStore. `delay` specifies the number of buckets buffered together, while `channel_size`
 /// specifies the number of outstanding messages.
-pub fn new_cp_mergeable_store<T: AddAssign<T> + Default + Clone>(delay: usize,
+pub fn new_mergeable_store<T: AddAssign<T> + Default + Clone>(delay: usize,
                                                                  channel_size: usize)
-                                                                 -> (CpMergeableStoreDataPath<T>,
-                                                                     Box<CpMergeableStoreControlPlane<T>>) {
+                                                                 -> (MergeableStoreDataPath<T>,
+                                                                     Box<MergeableStoreControlPlane<T>>) {
     let (sender, receiver) = sync_channel(channel_size);
-    (CpMergeableStoreDataPath {
+    (MergeableStoreDataPath {
         cache: Vec::with_capacity(delay),
+        // FIXME: Maybe cuckoo hash this?
+        flow_counters: vec![Default::default(); VEC_SIZE],
         updates: 0,
         delay: delay,
         channel: sender,
     },
-     box CpMergeableStoreControlPlane {
+     box MergeableStoreControlPlane {
         // FIXME: Don't need this to be quite this big?
         flow_counters: HashMap::with_capacity_and_hasher(VEC_SIZE, Default::default()),
         channel: receiver,

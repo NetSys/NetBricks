@@ -1,6 +1,7 @@
-extern crate byteorder;
-extern crate farmhash;
+use fnv::FnvHasher;
+
 use byteorder::{BigEndian, ByteOrder};
+use std::hash::Hasher;
 use std::mem;
 use std::slice;
 
@@ -34,12 +35,16 @@ pub fn ipv4_extract_flow(bytes: &[u8]) -> Flow {
 /// Given the MAC payload, generate a flow hash. The flow hash generated depends on the IV, so different IVs will
 /// produce different results (in cases when implementing Cuckoo hashing, etc.).
 #[inline]
-pub fn ipv4_flow_hash(bytes: &[u8], iv: u32) -> u32 {
-    if cfg!(feature = "crc_hash") {
-        crc_hash::<Flow>(&ipv4_extract_flow(bytes), iv)
-    } else {
-        farmhash::hash32(flow_as_u8(&ipv4_extract_flow(bytes)))
-    }
+pub fn ipv4_flow_hash(bytes: &[u8], _iv: u32) -> usize {
+    flow_hash(&ipv4_extract_flow(bytes))
+}
+
+#[inline]
+pub fn flow_hash(flow: &Flow) -> usize {
+     let mut hasher = FnvHasher::default();
+     hasher.write(flow_as_u8(flow));
+     hasher.finish() as usize
+    //farmhash::hash32(flow_as_u8(flow))
 }
 
 #[link(name = "zcsi")]
