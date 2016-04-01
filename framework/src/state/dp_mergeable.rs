@@ -11,7 +11,8 @@ use utils::Flow;
 /// guarantee ordering for things being merged. The merge function is implemented by implementing the
 /// [AddAssign](https://doc.rust-lang.org/std/ops/trait.AddAssign.html) trait and overriding the `add_assign` method
 /// there. We assume that the quantity stored here does not need to be accessed by the control plane and can only be
-/// accessed from the data plane.
+/// accessed from the data plane. The `cache_size` should be tuned depending on whether gets or puts are the most common
+/// operation in this table.
 ///
 /// #[FIXME]
 /// Garbage collection.
@@ -21,27 +22,42 @@ const VEC_SIZE: usize = 1 << 24;
 pub struct DpMergeableStore<T: AddAssign<T> + Default> {
     /// Contains the counts on the data path.
     flow_counters: HashMap<Flow, T, FnvHash>,
+    cache: Vec<(Flow, T)>,
+    cache_size: usize,
 }
-
+const CACHE_SIZE: usize = 1 << 14;
 impl<T: AddAssign<T> + Default> DpMergeableStore<T> {
-    pub fn with_size(size: usize) -> DpMergeableStore<T> {
-        DpMergeableStore { flow_counters: HashMap::with_capacity_and_hasher(size, Default::default()) }
+    pub fn with_cache_and_size(cache: usize, size: usize) -> DpMergeableStore<T> {
+        DpMergeableStore {
+            flow_counters: HashMap::with_capacity_and_hasher(size, Default::default()),
+            cache: Vec::with_capacity(cache),
+            cache_size: cache,
+        }
     }
 
     pub fn new() -> DpMergeableStore<T> {
-        DpMergeableStore::with_size(VEC_SIZE)
+        DpMergeableStore::with_cache_and_size(CACHE_SIZE, VEC_SIZE)
+    }
+
+    fn merge_cache(&mut self) {
+        self.flow_counters.extend(self.cache.drain(0..));
     }
 
     /// Change the value for the given `Flow`.
     #[inline]
     pub fn update(&mut self, flow: Flow, inc: T) {
-        let entry = self.flow_counters.entry(flow).or_insert(Default::default());
-        *entry += inc;
+        {
+            self.cache.push((flow, inc));
+        }
+        if self.cache.len() >= self.cache_size {
+            self.merge_cache();
+        }
     }
 
     /// Remove an entry from the table.
     #[inline]
     pub fn remove(&mut self, flow: &Flow) -> T {
+        self.merge_cache();
         self.flow_counters.remove(flow).unwrap_or(Default::default())
     }
 
@@ -49,12 +65,14 @@ impl<T: AddAssign<T> + Default> DpMergeableStore<T> {
     ///
     /// #[Warning]
     /// This might have severe performance penalties.
-    pub fn iter(&self) -> Iter<Flow, T> {
+    pub fn iter(&mut self) -> Iter<Flow, T> {
+        self.merge_cache();
         self.flow_counters.iter()
     }
 
     /// Length of the table.
-    pub fn len(&self) -> usize {
+    pub fn len(&mut self) -> usize {
+        self.merge_cache();
         self.flow_counters.len()
     }
 }

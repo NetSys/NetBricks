@@ -21,7 +21,7 @@ use std::thread;
 const CONVERSION_FACTOR: u64 = 1000000000;
 type FnvHash = BuildHasherDefault<FnvHasher>;
 
-fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: CpMergeableStoreDataPath<isize>) -> CompositionBatch {
+fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: DpMergeableStore<isize>) -> CompositionBatch {
     parent.parse::<MacHeader>()
           .transform(box move |hdr, payload, _| {
               // No one else should be writing to this, so I think relaxed is safe here.
@@ -38,7 +38,7 @@ fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: CpMergeableStore
           .compose()
 }
 
-fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32, counter: CpMergeableStoreDataPath<isize>) {
+fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32, counter: DpMergeableStore<isize>) {
     init_thread(core, core);
     println!("Receiving started");
 
@@ -119,9 +119,9 @@ fn main() {
                                                    (c, recv_ports)
                                                })
                                                .collect();
-    const BATCH: usize = 1 << 10;
-    const CHANNEL_SIZE: usize = 256;
-    let (producer, mut consumer) = new_cp_mergeable_store::<isize>(BATCH, 4 * CHANNEL_SIZE);
+    const _BATCH: usize = 1 << 10;
+    const _CHANNEL_SIZE: usize = 256;
+    let producer = DpMergeableStore::new();
     let _thread: Vec<_> = ports_by_core.iter()
                                        .map(|(core, ports)| {
                                            let c = core.clone();
@@ -136,7 +136,7 @@ fn main() {
     loop {
         thread::sleep(sleep_time); // Sleep for a bit
         let now = time::precise_time_ns() / CONVERSION_FACTOR;
-        consumer.recv();
+        //consumer.recv();
         if now != start {
             let pkts = ports_by_core.values()
                                     .map(|pvec| {
@@ -149,7 +149,7 @@ fn main() {
                      now - start,
                      pkts.0 - pkts_so_far.0,
                      pkts.1 - pkts_so_far.1,
-                     consumer.len());
+                     0);
             start = now;
             pkts_so_far = pkts;
         }
