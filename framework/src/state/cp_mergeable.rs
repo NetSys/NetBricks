@@ -1,4 +1,4 @@
-use fnv::FnvHasher;
+use twox_hash::XxHash;
 
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
@@ -8,7 +8,8 @@ use std::ops::AddAssign;
 
 use utils::Flow;
 
-type FnvHash = BuildHasherDefault<FnvHasher>;
+//type FnvHash = BuildHasherDefault<FnvHasher>;
+type XxHasher = BuildHasherDefault<XxHash>;
 const VEC_SIZE: usize = 1 << 24;
 
 /// A generic store for associating some merge-able type with each flow. Note, the merge must be commutative, we do not
@@ -32,7 +33,7 @@ pub struct CpMergeableStoreDataPath<T: AddAssign<T> + Default + Clone> {
 
 pub struct CpMergeableStoreControlPlane<T: AddAssign<T> + Default + Clone> {
     /// The actual values.
-    flow_counters: HashMap<Flow, T, FnvHash>,
+    flow_counters: HashMap<Flow, T, XxHasher>,
     channel: Receiver<Vec<(Flow, T)>>,
 }
 

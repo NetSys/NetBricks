@@ -12,6 +12,7 @@ byteorder = "*"
 clippy = { version = "*", optional = true }
 fnv = "*"
 farmhash = "*"
+twox-hash = "*"
 
 [profile.release]
 opt-level = 3

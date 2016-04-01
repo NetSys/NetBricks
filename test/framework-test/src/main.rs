@@ -17,12 +17,11 @@ use std::hash::BuildHasherDefault;
 use std::env;
 use std::time::Duration;
 use std::thread;
-// use std::any::Any;
 
 const CONVERSION_FACTOR: u64 = 1000000000;
 type FnvHash = BuildHasherDefault<FnvHasher>;
 
-fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: MergeableStoreDataPath<isize>) -> CompositionBatch {
+fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: CpMergeableStoreDataPath<isize>) -> CompositionBatch {
     parent.parse::<MacHeader>()
           .transform(box move |hdr, payload, _| {
               // No one else should be writing to this, so I think relaxed is safe here.
@@ -39,7 +38,7 @@ fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: MergeableStoreDa
           .compose()
 }
 
-fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32, counter: MergeableStoreDataPath<isize>) {
+fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32, counter: CpMergeableStoreDataPath<isize>) {
     init_thread(core, core);
     println!("Receiving started");
 
@@ -122,7 +121,7 @@ fn main() {
                                                .collect();
     const BATCH: usize = 1 << 10;
     const CHANNEL_SIZE: usize = 256;
-    let (producer, mut consumer) = new_mergeable_store::<isize>(BATCH, 4 * CHANNEL_SIZE);
+    let (producer, mut consumer) = new_cp_mergeable_store::<isize>(BATCH, 4 * CHANNEL_SIZE);
     let _thread: Vec<_> = ports_by_core.iter()
                                        .map(|(core, ports)| {
                                            let c = core.clone();

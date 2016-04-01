@@ -13,6 +13,7 @@ extern crate libc;
 extern crate byteorder;
 extern crate farmhash;
 extern crate fnv;
+extern crate twox_hash;
 pub mod headers;
 pub mod io;
 pub mod packet_batch;
