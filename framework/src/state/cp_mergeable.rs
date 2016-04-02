@@ -8,7 +8,6 @@ use std::ops::AddAssign;
 
 use utils::Flow;
 
-//type FnvHash = BuildHasherDefault<FnvHasher>;
 type XxHasher = BuildHasherDefault<XxHash>;
 const VEC_SIZE: usize = 1 << 24;
 
