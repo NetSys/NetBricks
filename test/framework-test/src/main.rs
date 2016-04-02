@@ -18,7 +18,7 @@ use std::env;
 use std::time::Duration;
 use std::thread;
 
-const CONVERSION_FACTOR: u64 = 1000000000;
+const CONVERSION_FACTOR: f64 = 1000000000.;
 type FnvHash = BuildHasherDefault<FnvHasher>;
 
 fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: MergeableStoreDP<isize>) -> CompositionBatch {
@@ -122,24 +122,22 @@ fn main() {
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
     let mut consumer = MergeableStoreCP::new();
-    let producer = consumer.dp_store();
-
     let _thread: Vec<_> = ports_by_core.iter()
                                        .map(|(core, ports)| {
                                            let c = core.clone();
-                                           let mon = producer.clone();
+                                           let mon = consumer.dp_store();
                                            let p: Vec<_> = ports.iter().map(|p| p.copy()).collect();
                                            std::thread::spawn(move || recv_thread(p, 0, c, mon))
                                        })
                                        .collect();
     let mut pkts_so_far = (0, 0);
-    let mut start = time::precise_time_ns() / CONVERSION_FACTOR;
-    let sleep_time = Duration::from_millis(50);
+    let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
+    let sleep_time = Duration::from_millis(500);
     loop {
         thread::sleep(sleep_time); // Sleep for a bit
-        let now = time::precise_time_ns() / CONVERSION_FACTOR;
-        //consumer.recv();
-        if now != start {
+        consumer.sync();
+        let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
+        if now - start > 1.0 {
             let pkts = ports_by_core.values()
                                     .map(|pvec| {
                                         pvec.iter()
@@ -147,11 +145,11 @@ fn main() {
                                             .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp))
                                     })
                                     .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp));
-            println!("{} OVERALL RX {} TX {} FLOWS {}",
+            println!("{:.2} OVERALL RX {:.2} TX {:.2} FLOWS {}",
                      now - start,
-                     pkts.0 - pkts_so_far.0,
-                     pkts.1 - pkts_so_far.1,
-                     0);
+                     (pkts.0 - pkts_so_far.0) as f64 / (now - start),
+                     (pkts.1 - pkts_so_far.1) as f64 / (now - start),
+                     consumer.len());
             start = now;
             pkts_so_far = pkts;
         }
