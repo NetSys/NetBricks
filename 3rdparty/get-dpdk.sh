@@ -13,6 +13,7 @@ fi
 
 tar zxvf "${DOWNLOAD_PATH}" -C "${DPDK_RESULT}" --strip-components=1
 cp "${BASE_DIR}/common_linuxapp-${DPDK_VER}" "${DPDK_RESULT}/config/common_linuxapp"
+export RTE_TARGET=x86_64-native-linuxapp-gcc
 make config -C "${DPDK_RESULT}" T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-g3 -Wno-error=maybe-uninitialized"
 PROCS="$(nproc)"
 make -j $PROCS -C "${DPDK_RESULT}"

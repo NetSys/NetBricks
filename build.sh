@@ -6,6 +6,7 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 deps () {
 	# Build DPDK
 	$BASE_DIR/3rdparty/get-dpdk.sh
+    export RTE_TARGET=x86_64-native-linuxapp-gcc
 	proc="$(nproc)"
 	make -j $proc -C native
 

@@ -1,0 +1,24 @@
+[package]
+name = "zcsi-delay"
+version = "0.1.0"
+authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
+
+[dependencies]
+e2d2 = { path = "../../framework", features = ["performance"] }
+time = ">=0.1.0"
+simd = { git = "https://github.com/huonw/simd" }
+getopts = "0.2.14"
+rand = "0.3"
+fnv = "*"
+x86 = "*"
+
+[features]
+default = []
+print = []
+
+[profile.release]
+opt-level = 3
+lto = true
+rpath = true
+debug = true
+debug-assertions = false
