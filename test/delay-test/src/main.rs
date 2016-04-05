@@ -64,13 +64,13 @@ fn delay<T: 'static + Batch>(parent: T, delay: u64) -> CompositionBatch {
           .compose()
 }
 
-fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32) {
+fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32, delay_arg: u64) {
     init_thread(core, core);
     println!("Receiving started");
 
     let pipelines: Vec<_> = ports.iter()
                                  .map(|port| {
-                                     delay(ReceiveBatch::new(port.copy(), queue), 50)
+                                     delay(ReceiveBatch::new(port.copy(), queue), delay_arg)
                                          .send(port.copy(), queue)
                                          .compose()
                                  }).collect();
@@ -89,6 +89,7 @@ fn main() {
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optflag("h", "help", "print this help menu");
     opts.optopt("m", "master", "Master core", "master");
+    opts.optopt("d", "delay", "Delay cycles", "cycles");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
@@ -101,6 +102,10 @@ fn main() {
                              .unwrap_or_else(|| String::from("0"))
                              .parse()
                              .expect("Could not parse master core spec");
+    let delay_arg = matches.opt_str("d")
+                       .unwrap_or_else(|| String::from("100"))
+                       .parse()
+                       .expect("Could not parse delay");
     println!("Using master core {}", master_core);
 
     let whitelisted = matches.opt_strs("w");
@@ -149,7 +154,7 @@ fn main() {
                                        .map(|(core, ports)| {
                                            let c = core.clone();
                                            let p: Vec<_> = ports.iter().map(|p| p.copy()).collect();
-                                           std::thread::spawn(move || recv_thread(p, 0, c))
+                                           std::thread::spawn(move || recv_thread(p, 0, c, delay_arg))
                                        })
                                        .collect();
     let mut pkts_so_far = (0, 0);
