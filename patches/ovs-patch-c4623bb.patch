@@ -1,0 +1,96 @@
+From bd343b970095b0d568245025ef10761efeb221d1 Mon Sep 17 00:00:00 2001
+From: apanda <apanda@cs.berkeley.edu>
+Date: Wed, 6 Apr 2016 10:08:21 -0700
+Subject: [PATCH] Changes for ZCSI evaluation
+
+- Do not build kernel module when building with ovs-dev
+- Support for mainline DPDK head.
+- Fix an uninitialized variable
+---
+ lib/netdev-dpdk.c    | 16 ++++++++--------
+ lib/odp-util.c       |  2 +-
+ utilities/ovs-dev.py |  4 ++--
+ 3 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/lib/netdev-dpdk.c b/lib/netdev-dpdk.c
+index e09b471..7fc44fb 100644
+--- a/lib/netdev-dpdk.c
++++ b/lib/netdev-dpdk.c
+@@ -1740,31 +1740,31 @@ netdev_dpdk_get_features(const struct netdev *netdev_,
+     link = dev->link;
+     ovs_mutex_unlock(&dev->mutex);
+ 
+-    if (link.link_duplex == ETH_LINK_AUTONEG_DUPLEX) {
++    if (link.link_duplex == ETH_LINK_FULL_DUPLEX) {
+         if (link.link_speed == ETH_LINK_SPEED_AUTONEG) {
+             *current = NETDEV_F_AUTONEG;
+         }
+     } else if (link.link_duplex == ETH_LINK_HALF_DUPLEX) {
+-        if (link.link_speed == ETH_LINK_SPEED_10) {
++        if (link.link_speed == ETH_LINK_SPEED_10M_HD) {
+             *current = NETDEV_F_10MB_HD;
+         }
+-        if (link.link_speed == ETH_LINK_SPEED_100) {
++        if (link.link_speed == ETH_LINK_SPEED_100M_HD) {
+             *current = NETDEV_F_100MB_HD;
+         }
+-        if (link.link_speed == ETH_LINK_SPEED_1000) {
++        if (link.link_speed == ETH_LINK_SPEED_1G) {
+             *current = NETDEV_F_1GB_HD;
+         }
+     } else if (link.link_duplex == ETH_LINK_FULL_DUPLEX) {
+-        if (link.link_speed == ETH_LINK_SPEED_10) {
++        if (link.link_speed == ETH_LINK_SPEED_10M) {
+             *current = NETDEV_F_10MB_FD;
+         }
+-        if (link.link_speed == ETH_LINK_SPEED_100) {
++        if (link.link_speed == ETH_LINK_SPEED_100M) {
+             *current = NETDEV_F_100MB_FD;
+         }
+-        if (link.link_speed == ETH_LINK_SPEED_1000) {
++        if (link.link_speed == ETH_LINK_SPEED_1G) {
+             *current = NETDEV_F_1GB_FD;
+         }
+-        if (link.link_speed == ETH_LINK_SPEED_10000) {
++        if (link.link_speed == ETH_LINK_SPEED_10G) {
+             *current = NETDEV_F_10GB_FD;
+         }
+     }
+diff --git a/lib/odp-util.c b/lib/odp-util.c
+index b4689cc..dc933c2 100644
+--- a/lib/odp-util.c
++++ b/lib/odp-util.c
+@@ -2366,7 +2366,7 @@ format_odp_tun_vxlan_opt(const struct nlattr *attr,
+         case OVS_VXLAN_EXT_GBP: {
+             uint32_t key = nl_attr_get_u32(a);
+             ovs_be16 id, id_mask;
+-            uint8_t flags, flags_mask;
++            uint8_t flags = 0, flags_mask = 0;
+ 
+             id = htons(key & 0xFFFF);
+             flags = (key >> 16) & 0xFF;
+diff --git a/utilities/ovs-dev.py b/utilities/ovs-dev.py
+index c121706..b24ac57 100755
+--- a/utilities/ovs-dev.py
++++ b/utilities/ovs-dev.py
+@@ -92,7 +92,7 @@ def conf():
+     if options.optimize is None:
+         options.optimize = 0
+ 
+-    cflags += " -O%s" % str(options.optimize)
++    cflags += " -O%s -march=native" % str(options.optimize)
+ 
+     ENV["CFLAGS"] = cflags
+ 
+@@ -104,7 +104,7 @@ def conf():
+         pass # Directory exists.
+ 
+     os.chdir(BUILD_GCC)
+-    _sh(*(configure + ["--with-linux=/lib/modules/%s/build" % uname()]))
++    _sh(*(configure))
+ 
+     try:
+         _sh("clang --version", check=True)
+-- 
+2.8.0.rc3
+
