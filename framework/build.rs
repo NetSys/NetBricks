@@ -5,7 +5,8 @@ fn main() {
     // Get the directory where we are building.
     let dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     // Send current directory as -L
-    println!("cargo:rustc-link-search=native={}", dir);
+    println!("cargo:rustc-link-search=native={}", dir.clone() + "/../3rdparty/dpdk/build/lib");
+    println!("cargo:rustc-link-search=native={}", dir + "/../native");
     // Add -ldpdk
     println!("cargo:rustc-link-lib=dylib=dpdk");
 }

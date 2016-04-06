@@ -7,8 +7,8 @@
 #define HW_TXCSUM		0
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 static const struct rte_eth_conf default_eth_conf = {
-	.link_speed = ETH_LINK_SPEED_AUTONEG,   /* auto negotiate speed */
-	.link_duplex = ETH_LINK_AUTONEG_DUPLEX,	/* auto negotiation duplex */
+	.link_speeds = ETH_LINK_SPEED_AUTONEG,   /* auto negotiate speed */
+	/*.link_duplex = ETH_LINK_AUTONEG_DUPLEX,	[> auto negotiation duplex <]*/
 	.lpbk_mode = 0,
 	.rxmode = {
 		.mq_mode = ETH_MQ_RX_RSS,	/* Use RSS without DCB or VMDQ */

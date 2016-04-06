@@ -41,6 +41,10 @@ case $TASK in
 		pushd $BASE_DIR/test/framework-test
 		$BASE_DIR/cargo/target/release/cargo build --release
 		popd
+		
+		pushd $BASE_DIR/test/delay-test
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
 		;;
 	fmt)
 		deps
