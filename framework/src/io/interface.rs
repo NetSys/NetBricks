@@ -10,6 +10,12 @@ mod dpdk {
                                        wlcount: i32)
                                        -> i32;
         pub fn init_thread(tid: i32, core: i32);
+        pub fn init_secondary(name: *const u8,
+                              nlen: i32,
+                              core: i32,
+                              vdevs: *mut *const u8,
+                              vdev_count: i32)
+                              -> i32;
     }
 }
 
@@ -39,6 +45,24 @@ pub fn init_system_wl(name: &str, core: i32, pci: &[String]) {
                                                 pci.len() as i32);
         if ret != 0 {
             panic!("Could not initialize the system errno {}", ret)
+        }
+    }
+}
+
+/// Initialize the system as a DPDK secondary process with a set of VDEVs. User must specify mempool name to use.
+pub fn init_system_secondary(name: &str, core: i32, vdevs: &[String]) {
+    let mut vdev_list = Vec::<*const u8>::with_capacity(vdevs.len());
+    for dev in vdevs {
+        vdev_list.push(dev.as_ptr());
+    }
+    unsafe {
+        let ret = dpdk::init_secondary(name.as_ptr(),
+                                       name.len() as i32,
+                                       core,
+                                       vdev_list.as_mut_ptr(),
+                                       vdevs.len() as i32);
+        if ret != 0 {
+            panic!("Could not initialize secondary process errno {}", ret)
         }
     }
 }

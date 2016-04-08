@@ -58,7 +58,10 @@ fn delay_loop(delay: u64) {
 
 fn delay<T: 'static + Batch>(parent: T, delay: u64) -> CompositionBatch {
     parent.parse::<MacHeader>()
-          .transform(box move |_, _, _| {
+          .transform(box move |hdr, _, _| {
+              let src = hdr.src.clone();
+              hdr.src = hdr.dst;
+              hdr.dst = src;
               delay_loop(delay);
           })
           .compose()

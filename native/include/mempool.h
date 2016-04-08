@@ -12,6 +12,8 @@ RTE_DECLARE_PER_LCORE(int, _mempool_core);
 typedef struct rte_mbuf* restrict * restrict mbuf_array_t;
 /* Called by system initialization */
 int init_mempool();
+int init_secondary_mempool(const char* mempool_name);
+int find_secondary_mempool();
 struct rte_mbuf *mbuf_alloc();
 void mbuf_free(struct rte_mbuf* buf);
 int mbuf_alloc_bulk(mbuf_array_t array, uint16_t len, int cnt);

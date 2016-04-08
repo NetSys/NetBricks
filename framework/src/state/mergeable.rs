@@ -67,9 +67,7 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreCP<T> {
             for hmap in self.hashmaps.iter() {
                 {
                     match hmap.try_read() {
-                        Ok(g) =>  {
-                            copies.push(MergeableStoreCP::to_vec(&g))
-                        },
+                        Ok(g) => copies.push(MergeableStoreCP::to_vec(&g)),
                         _ => (),
                     }
                 }
@@ -108,13 +106,13 @@ pub struct MergeableStoreDP<T: AddAssign<T> + Default + Clone> {
 }
 
 impl<T: AddAssign<T> + Default + Clone> MergeableStoreDP<T> {
-
     fn merge_cache(&mut self) {
         match self.flow_counters.try_write() {
-            Ok(mut g) => { 
-                g.extend(self.cache.drain(0..)); self.cache_size = self.base_cache_size;
+            Ok(mut g) => {
+                g.extend(self.cache.drain(0..));
+                self.cache_size = self.base_cache_size;
                 self.len = g.len();
-            },
+            }
             _ => self.cache_size = max(self.cache_size * 2, MAX_CACHE_SIZE),
         }
     }
@@ -133,13 +131,14 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreDP<T> {
     /// Remove an entry from the table.
     #[inline]
     pub fn remove(&mut self, flow: &Flow) -> T {
-        //self.merge_cache();
+        // self.merge_cache();
         match self.flow_counters.write() {
             Ok(mut g) => {
-                g.extend(self.cache.drain(0..)); self.cache_size = self.base_cache_size;
+                g.extend(self.cache.drain(0..));
+                self.cache_size = self.base_cache_size;
                 self.len = g.len();
                 g.remove(flow).unwrap_or(Default::default())
-            },
+            }
             _ => panic!("Could not acquire write lock"),
         }
     }

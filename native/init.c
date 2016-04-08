@@ -11,6 +11,7 @@
 #include <rte_eal.h>
 
 #include "mempool.h"
+
 /* Taken from SoftNIC (dpdk.c) */
 /* Get NUMA count */
 static int get_numa_count()
@@ -38,13 +39,17 @@ fail:
 	return 1;
 }
 
-static int init_eal(char* name, int core, char* whitelist[], int wl_count)
+static int init_eal(char* name, int secondary, int core, 
+		char* whitelist[], int wl_count,
+		char* vdevs[], int vdev_count)
 {
 	/* As opposed to SoftNIC, this call only initializes the master thread.
 	 * We cannot rely on threads launched by DPDK within ZCSI, the threads
 	 * must be launched by the runtime */
 	int rte_argc = 0;
-	char *rte_argv[64];
+
+	/* FIXME: Make sure number of arguments is not exceeded */
+	char *rte_argv[128];
 
 	char opt_master_lcore[1024];
 	char opt_lcore_bitmap[1024];
@@ -69,8 +74,6 @@ static int init_eal(char* name, int core, char* whitelist[], int wl_count)
 	 * physical cores and will not work when new threads are allocated. We
 	 * could hack around this another way, but this seems more reasonable.*/
 	sprintf(opt_lcore_bitmap, "0x%x", (1u << core));
-	printf("Using name %s\n", name);
-	printf("Core mask : %s\n", opt_lcore_bitmap);
 
 	sprintf(opt_socket_mem, "%s", socket_mem);
 	for(i = 1; i < numa_count; i++)
@@ -78,6 +81,9 @@ static int init_eal(char* name, int core, char* whitelist[], int wl_count)
 				",%s", socket_mem);
 
 	rte_argv[rte_argc++] = "lzcsi";
+	if (secondary) {
+		rte_argv[rte_argc++] = "--secondary";
+	}
 	rte_argv[rte_argc++] = "--file-prefix";
 	rte_argv[rte_argc++] = name;
 	rte_argv[rte_argc++] = "-c";
@@ -85,10 +91,13 @@ static int init_eal(char* name, int core, char* whitelist[], int wl_count)
 	/* Otherwise assume everything is white listed */
 	if (wl_count > 0) {
 		for (int i = 0; i < wl_count; i++) {
-			printf("Whitelisting %s\n", whitelist[i]);
 			rte_argv[rte_argc++] = "-w";
 			rte_argv[rte_argc++] = whitelist[i];
 		}
+	}
+	for (int i = 0; i < vdev_count; i++) {
+		rte_argv[rte_argc++] = "--vdev";
+		rte_argv[rte_argc++] = vdevs[i];
 	}
 	rte_argv[rte_argc++] = "--master-lcore";
 	rte_argv[rte_argc++] = opt_master_lcore;
@@ -117,18 +126,38 @@ static void init_timer()
 	rte_timer_subsystem_init();
 }
 
-int init_system_whitelisted(const char* name, int nlen, int core, 
-		char *whitelist[], int wlcount) {
+#define MAX_NAME_LEN 256
+int init_secondary(const char* name, int nlen, int core,
+		char *vdevs[], int vdev_count) {
 	int ret = 0;
-	if (name == NULL || nlen >= 256) {
+	char clean_name[MAX_NAME_LEN];
+	if (name == NULL || nlen >= MAX_NAME_LEN) {
 		return -EINVAL;
 	}
-	char clean_name[256];
 	strncpy(clean_name, name, nlen);
 	clean_name[nlen] = '\0';
 
 	init_timer();
-	if ((ret = init_eal(clean_name, core, whitelist, wlcount)) < 0) {
+	if ((ret = init_eal(clean_name, 1, core,
+			NULL, 0, vdevs, vdev_count)) < 0) {
+		return ret;
+	}
+	return find_secondary_mempool();
+}
+
+int init_system_whitelisted(const char* name, int nlen, int core, 
+		char *whitelist[], int wlcount) {
+	int ret = 0;
+	if (name == NULL || nlen >= MAX_NAME_LEN) {
+		return -EINVAL;
+	}
+	char clean_name[MAX_NAME_LEN];
+	strncpy(clean_name, name, nlen);
+	clean_name[nlen] = '\0';
+
+	init_timer();
+	if ((ret = init_eal(clean_name, 0, core, 
+			whitelist, wlcount, NULL, 0)) < 0) {
 		return ret;
 
 	}

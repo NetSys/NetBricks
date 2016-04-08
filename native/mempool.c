@@ -121,6 +121,66 @@ fail:
 	return -ENOMEM;
 }
 
+static void set_mempool(struct rte_mempool *mempool) {
+#if (!PER_CORE)
+	int initialized[RTE_MAX_NUMA_NODES];
+	for (int i = 0; i < RTE_MAX_NUMA_NODES; i++) {
+		initialized[i] = 0;
+	}
+#endif
+	/* Loop through all cores, to see if any of them belong to this
+	 * socket. */
+	for (int i = 0; i < RTE_MAX_LCORE; i++) {
+		int sid = rte_lcore_to_socket_id(i);
+#if (!PER_CORE)
+		if (!initialized[sid]) {
+#endif
+			struct rte_mbuf *mbuf;
+			pframe_pool[i] = mempool;
+			/* Initialize mbuf template */
+#if PER_CORE
+			mbuf = rte_pktmbuf_alloc(pframe_pool[i]);
+			mbuf_template[i] = *mbuf;
+			rte_pktmbuf_free(mbuf);
+#else
+			mbuf = rte_pktmbuf_alloc(pframe_pool[sid]);
+			mbuf_template[sid] = *mbuf;
+			rte_pktmbuf_free(mbuf);
+#endif
+#if (!PER_CORE)
+			initialized[sid] = 1;
+		}
+#endif
+	}
+}
+
+static void find_mempool_helper(const struct rte_mempool *mp, void *ptr) {
+	const struct rte_mempool **result = ptr;
+	if (*result == NULL) {
+		*result = mp;
+	}
+}
+
+int find_secondary_mempool() {
+	struct rte_mempool *mempool = NULL;
+	rte_mempool_walk(&find_mempool_helper, (void*)&mempool);
+	if (mempool == NULL) {
+		return -EINVAL;
+	}
+	set_mempool(mempool);
+	return 0;
+}
+
+int init_secondary_mempool(const char* mempool_name) {
+	struct rte_mempool *mempool = rte_mempool_lookup(mempool_name);
+	if (mempool == NULL) {
+		return -EINVAL;
+	}
+
+	set_mempool(mempool);
+	return 0;
+}
+
 struct rte_mbuf* mbuf_alloc()
 {
 	return rte_pktmbuf_alloc(current_pframe_pool());

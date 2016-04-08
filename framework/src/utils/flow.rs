@@ -41,10 +41,10 @@ pub fn ipv4_flow_hash(bytes: &[u8], _iv: u32) -> usize {
 
 #[inline]
 pub fn flow_hash(flow: &Flow) -> usize {
-     let mut hasher = FnvHasher::default();
-     hasher.write(flow_as_u8(flow));
-     hasher.finish() as usize
-    //farmhash::hash32(flow_as_u8(flow))
+    let mut hasher = FnvHasher::default();
+    hasher.write(flow_as_u8(flow));
+    hasher.finish() as usize
+    // farmhash::hash32(flow_as_u8(flow))
 }
 
 #[link(name = "zcsi")]
