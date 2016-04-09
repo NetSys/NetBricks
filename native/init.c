@@ -83,7 +83,7 @@ static int init_eal(char* name, int secondary, int core,
 	rte_argv[rte_argc++] = "lzcsi";
 	if (secondary) {
 		rte_argv[rte_argc++] = "--proc-type";
-		rte_argv[rte_argc++] = "auto";
+		rte_argv[rte_argc++] = "secondary";
 	}
 	rte_argv[rte_argc++] = "--file-prefix";
 	rte_argv[rte_argc++] = name;
