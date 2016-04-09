@@ -24,6 +24,7 @@ extern "C" {
     fn send_pkts(port: i32, qid: i32, pkts: *mut *mut MBuf, len: i32) -> i32;
     fn num_pmd_ports() -> i32;
     fn rte_eth_macaddr_get(port: i32, address: *mut MacAddress);
+    fn init_bess_eth_ring(ifname: *const u8, core: i32) -> i32;
 }
 
 pub struct PmdPort {
@@ -162,6 +163,28 @@ impl PmdPort {
                      false,
                      false,
                      false)
+    }
+
+    /// Create a new port that can talk to BESS. Really shouldn't need to do this but fixing this requires patching
+    /// DPDK.
+    pub fn new_bess_port(name: &str, core: i32) -> Result<PmdPort> {
+        // This call returns the port number
+        let port = unsafe {
+            init_bess_eth_ring(name.as_ptr(), core)
+        };
+        if port >= 0 {
+            Ok(PmdPort {
+                connected: true,
+                port: port,
+                rxqs: 1,
+                txqs: 1,
+                should_close: false,
+                stats_rx: vec![Arc::new(AtomicUsize::new(0)); 1],
+                stats_tx: vec![Arc::new(AtomicUsize::new(0)); 1],
+            })
+        } else {
+            Err(ZCSIError::FailedToInitializePort)
+        }
     }
 
     pub fn null_port() -> Result<PmdPort> {

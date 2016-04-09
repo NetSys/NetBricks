@@ -88,9 +88,12 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
     let mut opts = Options::new();
-    opts.optmulti("w", "whitelist", "Whitelist PCI", "PCI");
-    opts.optmulti("c", "core", "Core to use", "core");
     opts.optflag("h", "help", "print this help menu");
+    opts.optflag("", "secondary", "run as a secondary process");
+    opts.optopt("n", "name", "name to use for the current process", "name");
+    opts.optmulti("w", "whitelist", "Whitelist PCI", "PCI");
+    opts.optmulti("v", "vdevs", "Virtual Devices to add", "PCI");
+    opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
     opts.optopt("d", "delay", "Delay cycles", "cycles");
     let matches = match opts.parse(&args[1..]) {
@@ -110,47 +113,65 @@ fn main() {
                        .parse()
                        .expect("Could not parse delay");
     println!("Using master core {}", master_core);
+    let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
 
-    let whitelisted = matches.opt_strs("w");
-    if cores_str.len() > whitelisted.len() {
-        println!("More cores than ports");
-        std::process::exit(1);
-    }
+
+
     let cores: Vec<i32> = cores_str.iter()
                                    .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
                                    .collect();
-    for (core, wl) in cores.iter().zip(whitelisted.iter()) {
-        println!("Going to use core {} for wl {}", core, wl);
-    }
-    let mut core_map = HashMap::<i32, Vec<i32>>::with_capacity(cores.len());
-    for (core, port) in cores.iter().zip(0..whitelisted.len()) {
-        {
-            match core_map.get(&core) {
-                Some(_) => core_map.get_mut(&core).expect("Incorrect logic").push(port as i32),
-                None => {
-                    core_map.insert(core.clone(), vec![port as i32]);
-                    ()
-                }
+
+    let ports = if matches.opt_present("secondary") {
+        let vdevs = matches.opt_strs("v");
+        if cores.len() > vdevs.len() {
+            println!("More cores than vdevs");
+            std::process::exit(1);
+        }
+        init_system_secondary(&name,
+                              master_core,
+                              &[]);
+        // Fix this so we don't assume Bess.
+        let mut ports = Vec::with_capacity(vdevs.len());
+        for (core, vdev) in cores.iter().zip(vdevs.iter()) {
+            println!("Going to use core {} for vdev {}", core, vdev);
+            let parts: Vec<_> = vdev.split(':').collect();
+            if parts.len() != 2 {
+                panic!(format!("Cannot parse vdev definition {}", vdev));
+            }
+            match parts[0] {
+            "bess" =>
+                ports.push(PmdPort::new_bess_port(parts[1], *core).expect("Could not initialize vdev")),
+            _ =>
+                panic!(format!("Unrecognized type {}", parts[0]))
             }
         }
-    }
+        ports
+    } else {
+        let whitelisted = matches.opt_strs("w");
+        if cores.len() > whitelisted.len() {
+            println!("More cores than ports");
+            std::process::exit(1);
+        }
+        init_system_wl(&name,
+                       master_core,
+                       &whitelisted);
+        let mut ports = Vec::with_capacity(whitelisted.len());
+        for (core, wl) in cores.iter().zip(whitelisted.iter()) {
+            println!("Going to use core {} for wl {}", core, wl);
+        }
+        for (core, port) in cores.iter().zip(0..whitelisted.len()) {
+            ports.push(PmdPort::new_mq_port(port as i32, 1, 1, &[*core], &[*core])
+                       .expect("Could not initialize port"))
+        }
+        ports
+    };
 
-    init_system_wl(&format!("recv{}", cores_str.join("")),
-                   master_core,
-                   &whitelisted);
-    let ports_by_core: HashMap<_, _> = core_map.iter()
-                                               .map(|(core, ports)| {
-                                                   let c = core.clone();
-                                                   let recv_ports: Vec<_> =
-                                                       ports.iter()
-                                                            .map(|p| {
-                                                                PmdPort::new_mq_port(p.clone() as i32, 1, 1, &[c], &[c])
-                                                                    .expect("Could not initialize port")
-                                                            })
-                                                            .collect();
-                                                   (c, recv_ports)
-                                               })
-                                               .collect();
+    let mut ports_by_core = HashMap::<i32, Vec<PmdPort>>::with_capacity(cores.len());
+    for (core, port) in cores.iter().zip(ports.iter()) {
+        {
+            ports_by_core.entry(*core).or_insert(vec![]).push(port.copy());
+        }
+    }
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
     let _thread: Vec<_> = ports_by_core.iter()

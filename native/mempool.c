@@ -57,6 +57,14 @@ struct rte_mempool *get_pframe_pool(int coreid, int sid) {
 #endif
 }
 
+struct rte_mempool *get_mempool_for_core(int coreid) {
+#if PER_CORE
+	return pframe_pool[coreid];
+#else
+	return pframe_pool[rte_lcore_to_socket_id(coreid)];
+#endif
+}
+
 static int init_mempool_socket(int coreid, int sid)
 {
 	char name[256];
@@ -128,6 +136,9 @@ static void set_mempool(struct rte_mempool *mempool) {
 		initialized[i] = 0;
 	}
 #endif
+	if (mempool == NULL) {
+		rte_panic("Got a NULL mempool");
+	}
 	/* Loop through all cores, to see if any of them belong to this
 	 * socket. */
 	for (int i = 0; i < RTE_MAX_LCORE; i++) {
@@ -135,15 +146,27 @@ static void set_mempool(struct rte_mempool *mempool) {
 #if (!PER_CORE)
 		if (!initialized[sid]) {
 #endif
-			struct rte_mbuf *mbuf;
+			struct rte_mbuf *mbuf = NULL;
+#if (PER_CORE)
 			pframe_pool[i] = mempool;
+#else
+			pframe_pool[sid] = mempool;
+#endif
 			/* Initialize mbuf template */
 #if PER_CORE
 			mbuf = rte_pktmbuf_alloc(pframe_pool[i]);
+			if (mbuf == NULL) {
+				rte_panic("Bad mbuf");
+			}
 			mbuf_template[i] = *mbuf;
 			rte_pktmbuf_free(mbuf);
 #else
 			mbuf = rte_pktmbuf_alloc(pframe_pool[sid]);
+			if (mbuf == NULL || 
+			    mbuf->next != NULL || 
+			    mbuf->pool == NULL) {
+				rte_panic("Bad mbuf");
+			}
 			mbuf_template[sid] = *mbuf;
 			rte_pktmbuf_free(mbuf);
 #endif
@@ -156,7 +179,7 @@ static void set_mempool(struct rte_mempool *mempool) {
 
 static void find_mempool_helper(const struct rte_mempool *mp, void *ptr) {
 	const struct rte_mempool **result = ptr;
-	if (*result == NULL) {
+	if (mp != NULL) {
 		*result = mp;
 	}
 }
@@ -167,6 +190,7 @@ int find_secondary_mempool() {
 	if (mempool == NULL) {
 		return -EINVAL;
 	}
+	printf("Chose mp %s", mempool->name);
 	set_mempool(mempool);
 	return 0;
 }

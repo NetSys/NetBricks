@@ -82,7 +82,8 @@ static int init_eal(char* name, int secondary, int core,
 
 	rte_argv[rte_argc++] = "lzcsi";
 	if (secondary) {
-		rte_argv[rte_argc++] = "--secondary";
+		rte_argv[rte_argc++] = "--proc-type";
+		rte_argv[rte_argc++] = "auto";
 	}
 	rte_argv[rte_argc++] = "--file-prefix";
 	rte_argv[rte_argc++] = name;
@@ -99,6 +100,8 @@ static int init_eal(char* name, int secondary, int core,
 		rte_argv[rte_argc++] = "--vdev";
 		rte_argv[rte_argc++] = vdevs[i];
 	}
+	rte_argv[rte_argc++] = "-w";
+	rte_argv[rte_argc++] = "99:99.0";
 	rte_argv[rte_argc++] = "--master-lcore";
 	rte_argv[rte_argc++] = opt_master_lcore;
 	rte_argv[rte_argc++] = "-n";
@@ -114,6 +117,9 @@ static int init_eal(char* name, int secondary, int core,
 
 	/* rte_eal_init: Initializes EAL */
 	ret = rte_eal_init(rte_argc, rte_argv);
+	if (secondary && rte_eal_process_type() != RTE_PROC_SECONDARY) {
+		rte_panic("Not a secondary process");
+	}
 
 	/* Change lcore ID */
 	RTE_PER_LCORE(_lcore_id) = tid;
