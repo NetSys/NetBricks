@@ -179,7 +179,7 @@ static void set_mempool(struct rte_mempool *mempool) {
 
 static void find_mempool_helper(const struct rte_mempool *mp, void *ptr) {
 	const struct rte_mempool **result = ptr;
-	if (mp != NULL) {
+	if (mp != NULL && (*result == NULL || (*result)->size < mp->size)) {
 		*result = mp;
 	}
 }
