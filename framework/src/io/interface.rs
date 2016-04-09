@@ -81,6 +81,7 @@ pub enum ZCSIError {
     FailedToInitializePort,
     BadQueue,
     CannotSend,
+    BadVdev,
 }
 
 pub type Result<T> = result::Result<T, ZCSIError>;

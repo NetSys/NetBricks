@@ -133,17 +133,7 @@ fn main() {
         // Fix this so we don't assume Bess.
         let mut ports = Vec::with_capacity(vdevs.len());
         for (core, vdev) in cores.iter().zip(vdevs.iter()) {
-            println!("Going to use core {} for vdev {}", core, vdev);
-            let parts: Vec<_> = vdev.split(':').collect();
-            if parts.len() != 2 {
-                panic!(format!("Cannot parse vdev definition {}", vdev));
-            }
-            match parts[0] {
-            "bess" =>
-                ports.push(PmdPort::new_bess_port(parts[1], *core).expect("Could not initialize vdev")),
-            _ =>
-                panic!(format!("Unrecognized type {}", parts[0]))
-            }
+            ports.push(PmdPort::new_vdev(vdev, *core).expect("Could not initialize vdev"))
         }
         ports
     } else {

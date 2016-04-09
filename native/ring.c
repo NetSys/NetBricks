@@ -70,12 +70,12 @@ static int init_bess_ring(const char *ifname, struct rte_mempool *mempool)
 		RTE_LOG(WARNING, PMD, "Could not find bar\n");
 		return -EINVAL;
 	}
-	RTE_LOG(INFO, PMD,"Initing vport %p found name %s\n", 
+	RTE_LOG(INFO, PMD,"Initing vport %p found name %s\n",
 			bar, bar->name);
 	RTE_LOG(INFO, PMD,"String length %d\n", PORT_NAME_LEN);
-	RTE_LOG(INFO, PMD,"num_inc_q offset %d\n", 
+	RTE_LOG(INFO, PMD,"num_inc_q offset %d\n",
 			(int)offsetof(struct rte_ring_bar, num_inc_q));
-	RTE_LOG(INFO, PMD,"num_out_q offset %d\n", 
+	RTE_LOG(INFO, PMD,"num_out_q offset %d\n",
 			(int)offsetof(struct rte_ring_bar, num_out_q));
 	RTE_LOG(INFO, PMD, "Going to init ring port %s\n", ifname);
 	RTE_LOG(INFO, PMD, "Going to create port %s %d %d\n",
@@ -97,5 +97,33 @@ static int init_bess_ring(const char *ifname, struct rte_mempool *mempool)
 
 /* FIXME: Take name length */
 int init_bess_eth_ring(const char* ifname, int core) {
-	return init_bess_ring(ifname, get_mempool_for_core(core)); 
+	return init_bess_ring(ifname, get_mempool_for_core(core));
+}
+
+static int init_ovs_ring(int iface, struct rte_mempool *mempool) {
+	const int Q_NAME = 64;
+	const char *RING_NAME = "dpdkr%u";
+	const char *MP_CLIENT_RXQ_NAME = "dpdkr%u_tx";
+	const char *MP_CLIENT_TXQ_NAME = "dpdkr%u_rx";
+	char rxq_name[Q_NAME];
+	char txq_name[Q_NAME];
+	char port_name[Q_NAME];
+	struct rte_ring *rxq = NULL;
+	struct rte_ring *txq = NULL;
+	int port = 0;
+	/* Get queue names */
+	snprintf(rxq_name, Q_NAME, MP_CLIENT_RXQ_NAME, iface);
+	snprintf(txq_name, Q_NAME, MP_CLIENT_TXQ_NAME, iface);
+	snprintf(port_name, Q_NAME, RING_NAME, iface);
+	rxq = rte_ring_lookup(rxq_name);
+	txq = rte_ring_lookup(txq_name);
+
+	port = rte_eth_from_rings(port_name, &rxq, 1, &txq, 1, 0);
+	rte_eth_rx_queue_setup(port, 0, 32, 0, NULL, mempool);
+	rte_eth_tx_queue_setup(port, 0, 32, 0, NULL);
+	return port;
+}
+
+int init_ovs_eth_ring(int iface, int core) {
+	return init_ovs_ring(iface, get_mempool_for_core(core));
 }

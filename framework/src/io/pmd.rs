@@ -25,6 +25,7 @@ extern "C" {
     fn num_pmd_ports() -> i32;
     fn rte_eth_macaddr_get(port: i32, address: *mut MacAddress);
     fn init_bess_eth_ring(ifname: *const u8, core: i32) -> i32;
+    fn init_ovs_eth_ring(iface: i32, core: i32) -> i32;
 }
 
 pub struct PmdPort {
@@ -167,7 +168,7 @@ impl PmdPort {
 
     /// Create a new port that can talk to BESS. Really shouldn't need to do this but fixing this requires patching
     /// DPDK.
-    pub fn new_bess_port(name: &str, core: i32) -> Result<PmdPort> {
+    fn new_bess_port(name: &str, core: i32) -> Result<PmdPort> {
         // This call returns the port number
         let port = unsafe {
             init_bess_eth_ring(name.as_ptr(), core)
@@ -184,6 +185,44 @@ impl PmdPort {
             })
         } else {
             Err(ZCSIError::FailedToInitializePort)
+        }
+    }
+
+    fn new_ovs_port(name: &str, core: i32) -> Result<PmdPort> {
+        match name.parse() {
+            Ok(iface) => {
+                // This call returns the port number
+                let port = unsafe {
+                    init_ovs_eth_ring(iface, core)
+                };
+                if port >= 0 {
+                    Ok(PmdPort {
+                        connected: true,
+                        port: port,
+                        rxqs: 1,
+                        txqs: 1,
+                        should_close: false,
+                        stats_rx: vec![Arc::new(AtomicUsize::new(0)); 1],
+                        stats_tx: vec![Arc::new(AtomicUsize::new(0)); 1],
+                    })
+                } else {
+                    Err(ZCSIError::FailedToInitializePort)
+                }
+            }
+            _ => Err(ZCSIError::BadVdev),
+        }
+    }
+
+    pub fn new_vdev(name: &str, core: i32) -> Result<PmdPort> {
+        let parts: Vec<_> = name.split(':').collect();
+        if parts.len() != 2 {
+            Err(ZCSIError::BadVdev)
+        } else {
+            match parts[0] {
+                "bess" => PmdPort::new_bess_port(parts[1], core),
+                "ovs"  => PmdPort::new_ovs_port(parts[1], core), 
+                 _     => Err(ZCSIError::BadVdev),
+            }
         }
     }
 
