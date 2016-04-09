@@ -8,7 +8,7 @@ deps () {
 	$BASE_DIR/3rdparty/get-dpdk.sh
     export RTE_TARGET=x86_64-native-linuxapp-gcc
 	proc="$(nproc)"
-	make -j $proc -C native
+	make -j $proc -C $BASE_DIR/native
 
 	# Build cargo
 	pushd $BASE_DIR/cargo

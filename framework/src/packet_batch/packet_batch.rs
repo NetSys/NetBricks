@@ -360,13 +360,22 @@ impl Act for PacketBatch {
 
     #[inline]
     fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        unsafe {
-            port.send_queue(queue, self.packet_ptr(), self.available() as i32)
-                .and_then(|sent| {
-                    self.consumed_batch(sent as usize);
-                    Ok(sent)
-                })
+        let mut total_sent = 0;
+        // FIXME: Make it optionally possible to wait for all packets to be sent.
+        while self.available() > 0 {
+            unsafe {
+                match port.send_queue(queue, self.packet_ptr(), self.available() as i32)
+                    .and_then(|sent| {
+                        self.consumed_batch(sent as usize);
+                        Ok(sent)
+                    }) {
+                    Ok(sent) => total_sent += sent,
+                    e  @ _ => return e
+                }
+            }
+            break;
         }
+        Ok(total_sent)
     }
 
     #[inline]
