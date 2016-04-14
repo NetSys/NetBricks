@@ -21,20 +21,21 @@ case $cmd in
 		mcore=$4
 		rcore=$5
 		iface=$6
-		docker run -ti --privileged --cidfile="${name}.cid" \
+		iface_array=($iface)
+		docker run -d --privileged --cidfile="${name}.cid" \
 			--name=${name} \
 			--cpuset-cpus="${mcore},${rcore}" \
 			-e DELAY=$delay \
 			-e MCORE=$mcore \
 			-e RCORE=$rcore \
-			-e IFACE="$iface" \
+			-e IFACE= \
 			-v /sys/bus/pci/drivers:/sys/bus/pci/drivers \
 			-v /sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages \
 			-v /mnt/huge/:/mnt/huge/ \
 			-v /dev:/dev \
 			-v /sys/devices/system/node:/sys/devices/system/node \
 			-v /var/run:/var/run \
-			-v  /tmp/sn_vports:/tmp/sn_vports e2d2/zcsi:latest
+			-v  /tmp/sn_vports:/tmp/sn_vports e2d2/zcsi:0.2
 	;;
 	stop)
 		if [ "$#" -ne 2 ]; then
