@@ -724,31 +724,40 @@ test!(ignores_carriage_return_in_lockfile {
                 execs().with_status(0));
 });
 
-test!(crate_version_env_vars {
+test!(crate_env_vars {
     let p = project("foo")
         .file("Cargo.toml", r#"
-            [project]
-            name = "foo"
-            version = "0.5.1-alpha.1"
-            authors = ["wycats@example.com"]
+	    [project]
+	    name = "foo"
+	    version = "0.5.1-alpha.1"
+	    description = "This is foo"
+	    homepage = "http://example.com"
+	    authors = ["wycats@example.com"]
         "#)
         .file("src/main.rs", r#"
             extern crate foo;
 
-            static VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
-            static VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
-            static VERSION_PATCH: &'static str = env!("CARGO_PKG_VERSION_PATCH");
-            static VERSION_PRE: &'static str = env!("CARGO_PKG_VERSION_PRE");
-            static VERSION: &'static str = env!("CARGO_PKG_VERSION");
-            static CARGO_MANIFEST_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
+
+	    static VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
+	    static VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
+	    static VERSION_PATCH: &'static str = env!("CARGO_PKG_VERSION_PATCH");
+	    static VERSION_PRE: &'static str = env!("CARGO_PKG_VERSION_PRE");
+	    static VERSION: &'static str = env!("CARGO_PKG_VERSION");
+	    static CARGO_MANIFEST_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
+	    static PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
+	    static HOMEPAGE: &'static str = env!("CARGO_PKG_HOMEPAGE");
+	    static DESCRIPTION: &'static str = env!("CARGO_PKG_DESCRIPTION");
 
             fn main() {
                 let s = format!("{}-{}-{} @ {} in {}", VERSION_MAJOR,
                                 VERSION_MINOR, VERSION_PATCH, VERSION_PRE,
                                 CARGO_MANIFEST_DIR);
-                assert_eq!(s, foo::version());
-                println!("{}", s);
-                assert_eq!(s, VERSION);
+		 assert_eq!(s, foo::version());
+		 println!("{}", s);
+		 assert_eq!("foo", PKG_NAME);
+		 assert_eq!("http://example.com", HOMEPAGE);
+		 assert_eq!("This is foo", DESCRIPTION);
+		 assert_eq!(s, VERSION);
             }
         "#)
         .file("src/lib.rs", r#"
@@ -769,6 +778,44 @@ test!(crate_version_env_vars {
     assert_that(process(&p.bin("foo")),
                 execs().with_stdout(&format!("0-5-1 @ alpha.1 in {}\n",
                                             p.root().display())));
+
+    println!("test");
+    assert_that(p.cargo("test").arg("-v"),
+                execs().with_status(0));
+});
+
+test!(crate_authors_env_vars {
+    let p = project("foo")
+        .file("Cargo.toml", r#"
+            [project]
+            name = "foo"
+            version = "0.5.1-alpha.1"
+            authors = ["wycats@example.com", "neikos@example.com"]
+        "#)
+        .file("src/main.rs", r#"
+            extern crate foo;
+
+            static AUTHORS: &'static str = env!("CARGO_PKG_AUTHORS");
+
+            fn main() {
+                let s = "wycats@example.com:neikos@example.com";
+                assert_eq!(AUTHORS, foo::authors());
+                println!("{}", AUTHORS);
+                assert_eq!(s, AUTHORS);
+            }
+        "#)
+        .file("src/lib.rs", r#"
+            pub fn authors() -> String {
+                format!("{}", env!("CARGO_PKG_AUTHORS"))
+            }
+        "#);
+
+    println!("build");
+    assert_that(p.cargo_process("build").arg("-v"), execs().with_status(0));
+
+    println!("bin");
+    assert_that(process(&p.bin("foo")),
+                execs().with_stdout(&format!("wycats@example.com:neikos@example.com")));
 
     println!("test");
     assert_that(p.cargo("test").arg("-v"),
