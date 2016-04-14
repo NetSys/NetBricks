@@ -9,7 +9,9 @@ To build
     libcurl by default will not correctly allow Cargo to check server identity. To solve this install the `libgnutls30 libgnutls-openssl-dev libcurl4-gnutls-dev`
 -   Install Rust nightly. Make sure the `RUST_HOME` environment variable points to some directory where Rust will be
     installed. Also ensure that `${RUST_HOME}/bin` is in your path.
-    ```curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --disable-sudo --prefix=$RUST_HOME --verbose```
+    ```curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --disable-sudo --prefix=$RUST_HOME --verbose --date=2016-04-13```
+    For now use the nightly from 2016-04-13, the one on the 14th seems to have
+    trouble when using LTO and debug together.
 -   Run `./build.sh`. This will download and build DPDK, the framework and examples. 
 -   To build documentation run `./build.sh doc`
 
