@@ -1,8 +1,6 @@
 #![feature(box_syntax)]
 extern crate e2d2;
-extern crate fnv;
 extern crate time;
-extern crate simd;
 extern crate getopts;
 extern crate rand;
 use e2d2::io::*;
@@ -10,16 +8,13 @@ use e2d2::headers::*;
 use e2d2::utils::*;
 use e2d2::packet_batch::*;
 use e2d2::state::*;
-use fnv::FnvHasher;
 use getopts::Options;
 use std::collections::HashMap;
-use std::hash::BuildHasherDefault;
 use std::env;
 use std::time::Duration;
 use std::thread;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
-type FnvHash = BuildHasherDefault<FnvHasher>;
 
 fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: MergeableStoreDP<isize>) -> CompositionBatch {
     parent.parse::<MacHeader>()
