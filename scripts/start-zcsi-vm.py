@@ -27,7 +27,7 @@ for status in status_out:
         if dpdk_ports:
             parts = status.split()
             if len(parts) > 1:
-                match = re.match(pcie_re, parts[0]):
+                match = re.match(pcie_re, parts[0])
                 if match:
                     port = "%s:%s.%s"%(match.group(1), match.group(2), \
                             match.group(3))
