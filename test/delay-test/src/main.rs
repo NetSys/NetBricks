@@ -172,12 +172,14 @@ fn main() {
                                        })
                                        .collect();
     let mut pkts_so_far = (0, 0);
+    let mut last_printed = 0.;
+    const MAX_PRINT_INTERVAL : f64 = 15.;
     let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-    let sleep_time = Duration::from_millis(500);
+    let sleep_time = Duration::from_millis(5000);
     loop {
         thread::sleep(sleep_time); // Sleep for a bit
         let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-        if now - start > 1.0 {
+        if now - start > 10.0 {
             let pkts = ports_by_core.values()
                                     .map(|pvec| {
                                         pvec.iter()
@@ -189,13 +191,17 @@ fn main() {
             delay_loop(100);
             let end_cycles = rdtscp();
             let delay = end_cycles - start_cycles;
-            println!("{:.2} OVERALL RX {:.2} TX {:.2} CYCLE_PER_DELAY {} {} {}",
-                     now - start,
-                     (pkts.0 - pkts_so_far.0) as f64 / (now - start),
-                     (pkts.1 - pkts_so_far.1) as f64 / (now - start),
-                     start_cycles,
-                     end_cycles,
-                     delay);
+            let rx_pkts = pkts.0 - pkts_so_far.0;
+            if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
+                println!("{:.2} OVERALL RX {:.2} TX {:.2} CYCLE_PER_DELAY {} {} {}",
+                         now - start,
+                         rx_pkts as f64 / (now - start),
+                         (pkts.1 - pkts_so_far.1) as f64 / (now - start),
+                         start_cycles,
+                         end_cycles,
+                         delay);
+                last_printed = now;
+            }
             start = now;
             pkts_so_far = pkts;
         }
