@@ -30,5 +30,5 @@ for status in status_out:
                 if re.match(pcie_re, parts[0]):
                     ports.append(parts[0])
 ports = map(lambda p: '-c 1 -w %s'%p, ports)
-print "%s/test/target/release/zcsi-delay -m 0 %s -d %s"%(zcsi_home, \
+print "%s/test/delay-test/target/release/zcsi-delay -m 0 %s -d %s"%(zcsi_home, \
         ' '.join(ports), delay)
