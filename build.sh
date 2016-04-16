@@ -70,4 +70,20 @@ case $TASK in
 		$BASE_DIR/cargo/target/release/cargo clean; $BASE_DIR/cargo/target/release/cargo build --features dev
 		popd
 		;;
+	clean)
+		rm $BASE_DIR/3rdparty/dpdk.tar.gz
+		rm -rf $BASE_DIR/3rdparty/dpdk
+		make -C $BASE_DIR/native clean
+		pushd $BASE_DIR/framework
+		$BASE_DIR/cargo/target/release/cargo clean
+		popd
+
+		pushd $BASE_DIR/test/framework-test
+		$BASE_DIR/cargo/target/release/cargo clean
+		popd
+		
+		pushd $BASE_DIR/test/delay-test
+                $BASE_DIR/cargo/target/release/cargo clean
+                popd
+		;;
 esac
