@@ -6,7 +6,7 @@ import re
 if len(sys.argv) > 1:
     delay = sys.argv[1]
 else:
-    delay = 0
+    delay = "0"
 dpdk_home=os.environ["DPDK_HOME"]
 zcsi_home=os.environ["ZCSI_HOME"]
 status_out = subprocess.check_output([dpdk_home + "/tools/dpdk_nic_bind.py", \
@@ -30,4 +30,5 @@ for status in status_out:
                 if re.match(pcie_re, parts[0]):
                     ports.append(parts[0])
 ports = map(lambda p: '-c 1 -w %s'%p, ports)
-print "%s/test/target/release/zcsi-delay -m 0 %s"%(zcsi_home, ' '.join(ports))
+print "%s/test/target/release/zcsi-delay -m 0 %s -d %s"%(zcsi_home, \
+        ' '.join(ports), delay)
