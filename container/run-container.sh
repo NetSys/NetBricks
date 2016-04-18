@@ -21,7 +21,7 @@ case $cmd in
 		mcore=$4
 		rcore=$5
 		iface=$6
-		docker run -ti --privileged --cidfile="${name}.cid" \
+		docker run -d --privileged --cidfile="${name}.cid" \
 			--name=${name} \
 			--cpuset-cpus="${mcore},${rcore}" \
 			-e DELAY=$delay \
