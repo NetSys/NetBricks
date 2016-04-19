@@ -1,4 +1,4 @@
-use io::PmdPort;
+use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
@@ -51,8 +51,8 @@ impl<T, V> Act for ContextBatch<T, V>
     }
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parent.send_queue(port, queue)
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+        self.parent.send_q(port)
     }
 
     #[inline]

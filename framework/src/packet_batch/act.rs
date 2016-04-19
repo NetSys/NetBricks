@@ -1,4 +1,4 @@
-use io::PmdPort;
+use io::PortQueue;
 use io::Result;
 pub trait Act {
     /// Actually perform whatever needs to be done by this processing node.
@@ -7,7 +7,7 @@ pub trait Act {
     /// Notification indicating we are done processing the current batch of packets
     fn done(&mut self);
 
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32>;
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32>;
 
     fn capacity(&self) -> i32;
 

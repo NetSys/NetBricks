@@ -6,7 +6,6 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 deps () {
 	# Build DPDK
 	$BASE_DIR/3rdparty/get-dpdk.sh
-    export RTE_TARGET=x86_64-native-linuxapp-gcc
 	proc="$(nproc)"
 	make -j $proc -C $BASE_DIR/native
 
@@ -53,6 +52,10 @@ case $TASK in
 		popd
 
 		pushd $BASE_DIR/test/framework-test
+		$BASE_DIR/cargo/target/release/cargo fmt
+		popd
+
+		pushd $BASE_DIR/test/delay-test
 		$BASE_DIR/cargo/target/release/cargo fmt
 		popd
 		;;

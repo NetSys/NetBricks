@@ -25,14 +25,12 @@ static const struct rte_eth_conf default_eth_conf = {
 	.txmode = {
 		.mq_mode = ETH_MQ_TX_NONE,      /* Disable DCB and VMDQ */
 	},
-	/* Cannot use TCP port for IPv4 due to fragmentation */
+	/* FIXME: Find supported RSS hashes from rte_eth_dev_get_info */
 	.rx_adv_conf.rss_conf = {
-		.rss_hf = ETH_RSS_IPV4 |
-			  ETH_RSS_IPV6 |
-			  ETH_RSS_IPV6_EX |
-			  ETH_RSS_IPV6_TCP_EX |
-			  ETH_RSS_IPV6_EX |
-			  ETH_RSS_IPV6_UDP_EX,
+		.rss_hf = ETH_RSS_IP |
+			  ETH_RSS_UDP |
+			  ETH_RSS_TCP |
+			  ETH_RSS_SCTP,
 		.rss_key = NULL,
 	},
 	/* No flow director */
@@ -185,3 +183,6 @@ int send_pkts(int port, int qid, mbuf_array_t pkts, int len)
 	return rte_eth_tx_burst(port, (uint16_t) qid, (struct rte_mbuf **)pkts, 
 			(uint16_t)len);
 }
+
+/* FIXME: Add function to modify RSS hash function using 
+ * rte_eth_dev_rss_hash_update */

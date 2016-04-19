@@ -48,7 +48,7 @@ pub trait BatchIterator {
     unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)>;
 }
 
-/// A struct containing the parsed information returned by the PayloadEnumerator.
+/// A struct containing the parsed information returned by the `PayloadEnumerator`.
 pub struct ParsedDescriptor<'a, T>
     where T: 'a + EndOffset
 {

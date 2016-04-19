@@ -60,10 +60,10 @@ pub trait Batch : BatchIterator + Act {
     }
 
     /// Send this batch out a particular port and queue.
-    fn send(self, port: PmdPort, queue: i32) -> SendBatch<Self>
+    fn send(self, port: PortQueue) -> SendBatch<Self>
         where Self: Sized
     {
-        SendBatch::<Self>::new(self, port, queue)
+        SendBatch::<Self>::new(self, port)
     }
 
     /// Erase type information. This is essential to allow different kinds of types to be collected together, as done

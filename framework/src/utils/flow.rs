@@ -56,6 +56,7 @@ extern "C" {
 /// collision resistant, and when implemented using normal instructions it is not particularly efficient. However, on
 /// Intel processor's with SSE 4.2 and beyond, CRC32 is implemented in hardware, making it a bit faster than other
 /// things, and is also what DPDK supports. Hence we use it here.
+#[allow(inline_always)]
 #[inline(always)]
 pub fn crc_hash<T: Sized>(to_hash: &T, iv: u32) -> u32 {
     let size = mem::size_of::<T>();
@@ -65,7 +66,7 @@ pub fn crc_hash<T: Sized>(to_hash: &T, iv: u32) -> u32 {
     }
 }
 
-fn flow_as_u8<'a>(flow: &'a Flow) -> &'a [u8] {
+fn flow_as_u8(flow: &Flow) -> &[u8] {
     let size = mem::size_of::<Flow>();
     unsafe { slice::from_raw_parts(((flow as *const Flow) as *const u8), size) }
 }

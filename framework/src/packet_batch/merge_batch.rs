@@ -1,4 +1,4 @@
-use io::PmdPort;
+use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
@@ -68,8 +68,8 @@ impl Act for MergeBatch {
     }
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parents[self.which].send_queue(port, queue)
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+        self.parents[self.which].send_q(port)
     }
 
     #[inline]

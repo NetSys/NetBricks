@@ -1,4 +1,4 @@
-use io::PmdPort;
+use io::PortQueue;
 use headers::EndOffset;
 use io::Result;
 use super::iterator::*;
@@ -40,8 +40,8 @@ impl<T, V> Act for MapBatch<T, V>
     }
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parent.send_queue(port, queue)
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+        self.parent.send_q(port)
     }
 
     #[inline]

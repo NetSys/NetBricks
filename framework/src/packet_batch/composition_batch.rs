@@ -1,11 +1,11 @@
 use super::act::Act;
 use super::Batch;
 use super::iterator::{BatchIterator, PacketDescriptor};
-use io::PmdPort;
+use io::PortQueue;
 use io::Result;
 use std::any::Any;
 
-/// CompositionBatch allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
+/// `CompositionBatch` allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
 /// can treat packets as originating from the NF itself.
 pub struct CompositionBatch {
     parent: Box<Batch>,
@@ -55,8 +55,8 @@ impl Act for CompositionBatch {
     }
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parent.send_queue(port, queue)
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+        self.parent.send_q(port)
     }
 
     #[inline]

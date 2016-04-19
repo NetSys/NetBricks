@@ -58,7 +58,7 @@ impl<T: AddAssign<T> + Default> DpMergeableStore<T> {
     #[inline]
     pub fn remove(&mut self, flow: &Flow) -> T {
         self.merge_cache();
-        self.flow_counters.remove(flow).unwrap_or(Default::default())
+        self.flow_counters.remove(flow).unwrap_or_else(Default::default)
     }
 
     /// Iterate over all the stored entries. This is a bit weird to do in the data plane.
@@ -74,5 +74,10 @@ impl<T: AddAssign<T> + Default> DpMergeableStore<T> {
     pub fn len(&mut self) -> usize {
         self.merge_cache();
         self.flow_counters.len()
+    }
+
+    /// Is table empty
+    pub fn is_empty(&self) -> bool {
+        self.flow_counters.is_empty() && self.cache.is_empty()
     }
 }

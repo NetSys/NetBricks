@@ -1,4 +1,4 @@
-use io::PmdPort;
+use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
@@ -10,8 +10,7 @@ use std::any::Any;
 pub struct SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
-    port: PmdPort,
-    queue: i32,
+    port: PortQueue,
     parent: V,
     pub sent: u64,
 }
@@ -19,10 +18,9 @@ pub struct SendBatch<V>
 impl<V> SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
-    pub fn new(parent: V, port: PmdPort, queue: i32) -> SendBatch<V> {
+    pub fn new(parent: V, port: PortQueue) -> SendBatch<V> {
         SendBatch {
             port: port,
-            queue: queue,
             sent: 0,
             parent: parent,
         }
@@ -68,7 +66,7 @@ impl<V> Act for SendBatch<V>
         // First everything is applied
         self.parent.act();
         self.parent
-            .send_queue(&mut self.port, self.queue)
+            .send_q(&mut self.port)
             .and_then(|x| {
                 self.sent += x as u64;
                 Ok(x)
@@ -79,7 +77,7 @@ impl<V> Act for SendBatch<V>
 
     fn done(&mut self) {}
 
-    fn send_queue(&mut self, _: &mut PmdPort, _: i32) -> Result<u32> {
+    fn send_q(&mut self, _: &mut PortQueue) -> Result<u32> {
         panic!("Cannot send a sent packet batch")
     }
 

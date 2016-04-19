@@ -1,4 +1,4 @@
-use io::PmdPort;
+use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
@@ -9,26 +9,23 @@ use std::any::Any;
 // FIXME: Should we be handling multiple queues and ports here?
 pub struct ReceiveBatch {
     parent: PacketBatch,
-    port: PmdPort,
-    queue: i32,
+    port: PortQueue,
     pub received: u64,
 }
 
 impl ReceiveBatch {
-    pub fn new_with_parent(parent: PacketBatch, port: PmdPort, queue: i32) -> ReceiveBatch {
+    pub fn new_with_parent(parent: PacketBatch, port: PortQueue) -> ReceiveBatch {
         ReceiveBatch {
             parent: parent,
             port: port,
-            queue: queue,
             received: 0,
         }
     }
 
-    pub fn new(port: PmdPort, queue: i32) -> ReceiveBatch {
+    pub fn new(port: PortQueue) -> ReceiveBatch {
         ReceiveBatch {
             parent: PacketBatch::new(32),
             port: port,
-            queue: queue,
             received: 0,
         }
 
@@ -68,7 +65,7 @@ impl Act for ReceiveBatch {
     fn act(&mut self) {
         self.parent.act();
         self.parent
-            .recv_queue(&mut self.port, self.queue)
+            .recv(&mut self.port)
             .and_then(|x| {
                 self.received += x as u64;
                 Ok(x)
@@ -83,8 +80,8 @@ impl Act for ReceiveBatch {
     }
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parent.send_queue(port, queue)
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+        self.parent.send_q(port)
     }
 
     #[inline]

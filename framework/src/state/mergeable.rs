@@ -55,20 +55,19 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreCP<T> {
         MergeableStoreCP::dp_store_with_cache_and_size(self, CACHE_SIZE, VEC_SIZE)
     }
 
-    fn to_vec(hash: &RwLockReadGuard<HashMap<Flow, T, FnvHash>>) -> Vec<(Flow, T)> {
+    fn hmap_to_vec(hash: &RwLockReadGuard<HashMap<Flow, T, FnvHash>>) -> Vec<(Flow, T)> {
         let mut t = Vec::with_capacity(hash.len());
-        t.extend(hash.iter().map(|(f, v)| (f.clone(), v.clone())));
+        t.extend(hash.iter().map(|(f, v)| (*f, v.clone())));
         t
     }
 
     pub fn sync(&mut self) {
         let mut copies: Vec<Vec<_>> = Vec::with_capacity(self.hashmaps.len());
         {
-            for hmap in self.hashmaps.iter() {
+            for hmap in &self.hashmaps {
                 {
-                    match hmap.try_read() {
-                        Ok(g) => copies.push(MergeableStoreCP::to_vec(&g)),
-                        _ => (),
+                    if let Ok(g) = hmap.try_read() {
+                        copies.push(MergeableStoreCP::hmap_to_vec(&g));
                     }
                 }
             }
@@ -92,6 +91,10 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreCP<T> {
 
     pub fn len(&self) -> usize {
         self.flow_counters.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.flow_counters.is_empty()
     }
 }
 
@@ -137,7 +140,7 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreDP<T> {
                 g.extend(self.cache.drain(0..));
                 self.cache_size = self.base_cache_size;
                 self.len = g.len();
-                g.remove(flow).unwrap_or(Default::default())
+                g.remove(flow).unwrap_or_else(Default::default)
             }
             _ => panic!("Could not acquire write lock"),
         }
@@ -146,5 +149,9 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreDP<T> {
     /// Approximate length of the table. 
     pub fn len(&mut self) -> usize {
         self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len != 0
     }
 }

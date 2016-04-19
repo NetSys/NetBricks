@@ -68,11 +68,11 @@ impl PacketBatch {
 
     /// Receive packets from a PMD port queue.
     #[inline]
-    pub fn recv_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
+    pub fn recv(&mut self, port: &mut PortQueue) -> Result<u32> {
         unsafe {
             match self.deallocate_batch() {
                 Err(err) => Err(err),
-                Ok(_) => self.recv_internal(port, queue),
+                Ok(_) => self.recv_internal(port),
             }
         }
     }
@@ -200,8 +200,8 @@ impl PacketBatch {
 
     // Assumes we have already deallocated batch.
     #[inline]
-    unsafe fn recv_internal(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        match port.recv_queue(queue, self.packet_ptr(), self.max_size() as i32) {
+    unsafe fn recv_internal(&mut self, port: &mut PortQueue) -> Result<u32> {
+        match port.recv(self.packet_ptr(), self.max_size() as i32) {
             e @ Err(_) => e,
             Ok(recv) => {
                 self.add_to_batch(recv as usize);
@@ -359,18 +359,18 @@ impl Act for PacketBatch {
     fn done(&mut self) {}
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
         let mut total_sent = 0;
         // FIXME: Make it optionally possible to wait for all packets to be sent.
         while self.available() > 0 {
             unsafe {
-                match port.send_queue(queue, self.packet_ptr(), self.available() as i32)
-                    .and_then(|sent| {
-                        self.consumed_batch(sent as usize);
-                        Ok(sent)
-                    }) {
+                match port.send(self.packet_ptr(), self.available() as i32)
+                          .and_then(|sent| {
+                              self.consumed_batch(sent as usize);
+                              Ok(sent)
+                          }) {
                     Ok(sent) => total_sent += sent,
-                    e  @ _ => return e
+                    e => return e,
                 }
             }
             break;
