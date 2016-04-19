@@ -104,7 +104,7 @@ impl PortQueue {
 }
 
 // Utility function to go from Rust bools to C ints. Allowing match bools since this looks nicer to me.
-#[allow(match_bool)]
+#[cfg_attr(feature = "dev", allow(match_bool))]
 fn i32_from_bool(x: bool) -> i32 {
     match x {
         true => 1,
@@ -149,7 +149,6 @@ impl PmdPort {
     }
 
     /// Create a PMD port with a given number of RX and TXQs.
-    #[allow(if_not_else)]
     pub fn new(port: i32,
                rxqs: i32,
                txqs: i32,
