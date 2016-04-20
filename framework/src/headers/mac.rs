@@ -8,6 +8,15 @@ pub struct MacAddress {
     pub addr: [u8; 6],
 }
 
+impl fmt::Display for MacAddress {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,
+               "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+               self.addr[0], self.addr[1], self.addr[2],
+               self.addr[3], self.addr[4], self.addr[5])
+    }
+}
+
 /// A packet's MAC header.
 #[derive(Debug, Default)]
 #[repr(C, packed)]

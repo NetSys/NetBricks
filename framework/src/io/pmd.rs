@@ -26,6 +26,7 @@ extern "C" {
     fn rte_eth_macaddr_get(port: i32, address: *mut MacAddress);
     fn init_bess_eth_ring(ifname: *const u8, core: i32) -> i32;
     fn init_ovs_eth_ring(iface: i32, core: i32) -> i32;
+    fn find_port_with_pci_address(pciaddr: *const u8) -> i32;
 }
 
 // Why?
@@ -101,6 +102,14 @@ impl PortQueue {
             Ok(recv as u32)
         }
     }
+
+    pub fn txq(&self) -> i32 {
+        self.txq
+    }
+
+    pub fn rxq(&self) -> i32 {
+        self.rxq
+    }
 }
 
 // Utility function to go from Rust bools to C ints. Allowing match bools since this looks nicer to me.
@@ -116,6 +125,20 @@ impl PmdPort {
     /// Determine the number of ports in a system.
     pub fn num_pmd_ports() -> i32 {
         unsafe { num_pmd_ports() }
+    }
+
+    pub fn find_port_id(pcie: &str) -> i32 {
+        unsafe {
+            find_port_with_pci_address(pcie.as_ptr())
+        }
+    }
+
+    pub fn rxqs(&self) -> i32 {
+        self.rxqs
+    }
+
+    pub fn txqs(&self) -> i32 {
+        self.txqs
     }
 
     pub fn new_queue_pair(port: &Arc<PmdPort>, rxq: i32, txq: i32) -> Result<PortQueue> {
