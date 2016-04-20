@@ -51,8 +51,8 @@ pub struct PortQueue {
     port_id: i32,
     txq: i32,
     rxq: i32,
-    stats_rx: Vec<Arc<AtomicUsize>>,
-    stats_tx: Vec<Arc<AtomicUsize>>,
+    stats_rx: Arc<AtomicUsize>,
+    stats_tx: Arc<AtomicUsize>,
 }
 
 impl Drop for PmdPort {
@@ -87,8 +87,8 @@ impl PortQueue {
     fn send_queue(&mut self, queue: i32, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
         unsafe {
             let sent = send_pkts(self.port_id, queue, pkts, to_send);
-            let update = self.stats_tx[queue as usize].load(Ordering::Relaxed) + sent as usize;
-            self.stats_tx[queue as usize].store(update, Ordering::Relaxed);
+            let update = self.stats_tx.load(Ordering::Relaxed) + sent as usize;
+            self.stats_tx.store(update, Ordering::Relaxed);
             Ok(sent as u32)
         }
     }
@@ -97,8 +97,8 @@ impl PortQueue {
     fn recv_queue(&self, queue: i32, pkts: *mut *mut MBuf, to_recv: i32) -> Result<u32> {
         unsafe {
             let recv = recv_pkts(self.port_id, queue, pkts, to_recv);
-            let update = self.stats_rx[queue as usize].load(Ordering::Relaxed) + recv as usize;
-            self.stats_rx[queue as usize].store(update, Ordering::Relaxed);
+            let update = self.stats_rx.load(Ordering::Relaxed) + recv as usize;
+            self.stats_rx.store(update, Ordering::Relaxed);
             Ok(recv as u32)
         }
     }
@@ -142,9 +142,9 @@ impl PmdPort {
     }
 
     pub fn new_queue_pair(port: &Arc<PmdPort>, rxq: i32, txq: i32) -> Result<PortQueue> {
-        if rxq > port.rxqs {
+        if rxq > port.rxqs || rxq < 0 {
             Err(ZCSIError::BadRxQueue)
-        } else if txq > port.txqs {
+        } else if txq > port.txqs || txq < 0 {
             Err(ZCSIError::BadTxQueue)
         } else {
             Ok(PortQueue {
@@ -152,8 +152,8 @@ impl PmdPort {
                 port_id: port.port,
                 txq: txq,
                 rxq: rxq,
-                stats_rx: port.stats_rx.clone(),
-                stats_tx: port.stats_tx.clone(),
+                stats_rx: port.stats_rx[rxq as usize].clone(),
+                stats_tx: port.stats_tx[txq as usize].clone(),
             })
         }
     }
@@ -208,8 +208,8 @@ impl PmdPort {
                     rxqs: rxqs,
                     txqs: txqs,
                     should_close: true,
-                    stats_rx: vec![Arc::new(AtomicUsize::new(0)); rxqs as usize],
-                    stats_tx: vec![Arc::new(AtomicUsize::new(0)); txqs as usize],
+                    stats_rx: (0..rxqs).map(|_| Arc::new(AtomicUsize::new(0))).collect(),
+                    stats_tx: (0..txqs).map(|_| Arc::new(AtomicUsize::new(0))).collect(),
                 }))
             } else {
                 Err(ZCSIError::FailedToInitializePort)
