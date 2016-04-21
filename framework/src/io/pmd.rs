@@ -30,7 +30,7 @@ extern "C" {
 }
 
 // Why?
-const NUM_RXD: i32 = 256 * 4;
+const NUM_RXD: i32 = 256;
 const NUM_TXD: i32 = 256;
 
 pub struct PmdPort {

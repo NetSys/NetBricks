@@ -167,6 +167,7 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[],
 void free_pmd_port(int port)
 {
     rte_eth_dev_stop(port);
+    rte_eth_dev_close(port);
 }
 
 int recv_pkts(int port, int qid, mbuf_array_t pkts, int len)
