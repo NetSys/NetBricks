@@ -167,7 +167,7 @@ int init_system_whitelisted(const char* name, int nlen, int core,
 		return ret;
 
 	}
-	return init_mempool();
+	return init_mempool(core);
 }
 
 /* Call this from the main thread on ZCSI to initialize things. This initializes
@@ -190,6 +190,7 @@ void init_thread(int tid, int core)
 	CPU_ZERO(&cpuset);
 	CPU_SET(core, &cpuset);
 	rte_thread_set_affinity(&cpuset);
+	init_mempool_core(core);
 	/* Set thread ID correctly */
 	RTE_PER_LCORE(_lcore_id) = tid;
 	RTE_PER_LCORE(_mempool_core) = core;

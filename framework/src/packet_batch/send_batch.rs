@@ -62,6 +62,15 @@ impl<V> Act for SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
     #[inline]
+    fn parent(&mut self) -> &mut Batch{
+        &mut self.parent
+    }
+
+    #[inline]
+    fn parent_immutable(&self) -> &Batch {
+        &self.parent
+    }
+    #[inline]
     fn act(&mut self) {
         // First everything is applied
         self.parent.act();

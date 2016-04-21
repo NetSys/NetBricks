@@ -353,6 +353,16 @@ impl BatchIterator for PacketBatch {
 /// Internal interface for packets.
 impl Act for PacketBatch {
     #[inline]
+    fn parent(&mut self) -> &mut Batch{
+        self
+    }
+
+    #[inline]
+    fn parent_immutable(&self) -> &Batch {
+        self
+    }
+
+    #[inline]
     fn act(&mut self) {}
 
     #[inline]

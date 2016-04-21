@@ -16,6 +16,12 @@ impl CompositionBatch {
         CompositionBatch { parent: parent }
 
     }
+
+    #[inline]
+    pub fn process(&mut self) {
+        self.act();
+        self.done();
+    }
 }
 
 impl Batch for CompositionBatch {}
@@ -44,38 +50,5 @@ impl BatchIterator for CompositionBatch {
 
 /// Internal interface for packets.
 impl Act for CompositionBatch {
-    #[inline]
-    fn act(&mut self) {
-        self.parent.act();
-    }
-
-    #[inline]
-    fn done(&mut self) {
-        self.parent.done();
-    }
-
-    #[inline]
-    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
-        self.parent.send_q(port)
-    }
-
-    #[inline]
-    fn capacity(&self) -> i32 {
-        self.parent.capacity()
-    }
-
-    #[inline]
-    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
-        self.parent.drop_packets(idxes)
-    }
-
-    #[inline]
-    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
-        self.parent.adjust_payload_size(idx, size)
-    }
-
-    #[inline]
-    fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
-        self.parent.adjust_headroom(idx, size)
-    }
+    act!{}
 }

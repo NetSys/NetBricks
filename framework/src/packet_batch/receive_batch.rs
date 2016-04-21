@@ -62,6 +62,15 @@ impl BatchIterator for ReceiveBatch {
 /// Internal interface for packets.
 impl Act for ReceiveBatch {
     #[inline]
+    fn parent(&mut self) -> &mut Batch{
+        &mut self.parent
+    }
+
+    #[inline]
+    fn parent_immutable(&self) -> &Batch {
+        &self.parent
+    }
+    #[inline]
     fn act(&mut self) {
         self.parent.act();
         self.parent

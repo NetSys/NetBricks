@@ -57,6 +57,15 @@ impl BatchIterator for MergeBatch {
 /// Internal interface for packets.
 impl Act for MergeBatch {
     #[inline]
+    fn parent(&mut self) -> &mut Batch{
+        &mut self.parents[self.which]
+    }
+
+    #[inline]
+    fn parent_immutable(&self) -> &Batch {
+        &self.parents[self.which]
+    }
+    #[inline]
     fn act(&mut self) {
         self.parents[self.which].act()
     }

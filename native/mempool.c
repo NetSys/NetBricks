@@ -13,7 +13,7 @@
 #include <simd.h>
 #include <mempool.h>
 
-#define PER_CORE 0
+#define PER_CORE 1
 
 /* Largely taken from SoftNIC (snbuf.c) */
 #define NUM_PFRAMES	(16384 - 1) // Number of pframes in the mempool
@@ -26,6 +26,7 @@ RTE_DEFINE_PER_LCORE(int, _mempool_core) = 0;
 static struct rte_mempool *pframe_pool[RTE_MAX_LCORE];
 /*Needed for bulk allocation */
 struct rte_mbuf mbuf_template[RTE_MAX_LCORE];
+static int mempool_initialized[RTE_MAX_LCORE]; 
 #else 
 /* Creating one pool per NUMA node. */
 static struct rte_mempool *pframe_pool[RTE_MAX_NUMA_NODES];
@@ -49,8 +50,40 @@ static inline struct rte_mbuf *current_template() {
 	return &mbuf_template[MEMPOOL_ID];
 }
 
+int init_mempool_core(int core)
+{
+#if PER_CORE
+	int sid;
+	struct rte_mbuf *mbuf;
+	char name[256];
+	if (mempool_initialized[core]) {
+		return 0;
+	}
+	sprintf(name, "pframe%d", core);
+	sid = rte_lcore_to_socket_id(core);
+	pframe_pool[core] = rte_pktmbuf_pool_create(name,
+			NUM_PFRAMES,
+			NUM_MEMPOOL_CACHE,
+			0,
+			RTE_MBUF_DEFAULT_BUF_SIZE,
+			sid);
+	if (pframe_pool[core] == NULL) {
+		return -ENOMEM;
+	}
+	mbuf = rte_pktmbuf_alloc(pframe_pool[core]);
+	mbuf_template[core] = *mbuf;
+	mempool_initialized[core] = 1;
+	rte_pktmbuf_free(mbuf);
+#endif
+	return 0;
+}
+
 struct rte_mempool *get_pframe_pool(int coreid, int sid) {
 #if PER_CORE
+	if (unlikely(mempool_initialized[coreid] == 0)) {
+		init_mempool_core(coreid);
+		/* If mempool is not initialized it will be NULL */
+	}
 	return pframe_pool[coreid];
 #else
 	return pframe_pool[sid];
@@ -58,26 +91,13 @@ struct rte_mempool *get_pframe_pool(int coreid, int sid) {
 }
 
 struct rte_mempool *get_mempool_for_core(int coreid) {
-#if PER_CORE
-	return pframe_pool[coreid];
-#else
-	return pframe_pool[rte_lcore_to_socket_id(coreid)];
-#endif
+	return get_pframe_pool(coreid, rte_lcore_to_socket_id(coreid));
 }
 
-static int init_mempool_socket(int coreid, int sid)
+static int init_mempool_socket(int sid)
 {
 	char name[256];
-	sprintf(name, "pframe%d", coreid);
-#if PER_CORE
-	pframe_pool[coreid] = rte_pktmbuf_pool_create(name,
-			NUM_PFRAMES,
-			NUM_MEMPOOL_CACHE,
-			0,
-			RTE_MBUF_DEFAULT_BUF_SIZE,
-			sid);
-	return pframe_pool[coreid] != NULL;
-#else
+	sprintf(name, "pframe%d", sid);
 	pframe_pool[sid] = rte_pktmbuf_pool_create(name,
 			NUM_PFRAMES,
 			NUM_MEMPOOL_CACHE,
@@ -85,48 +105,41 @@ static int init_mempool_socket(int coreid, int sid)
 			RTE_MBUF_DEFAULT_BUF_SIZE,
 			sid);
 	return pframe_pool[sid] != NULL;
-#endif
 }
 
-int init_mempool()
+int init_mempool(int master_core)
 {
 #if (!PER_CORE)
 	int initialized[RTE_MAX_NUMA_NODES];
 	for (int i = 0; i < RTE_MAX_NUMA_NODES; i++) {
 		initialized[i] = 0;
 	}
-#endif
+
 	/* Loop through all cores, to see if any of them belong to this
 	 * socket. */
 	for (int i = 0; i < RTE_MAX_LCORE; i++) {
 		int sid = rte_lcore_to_socket_id(i);
-#if (!PER_CORE)
 		if (!initialized[sid]) {
-#endif
 			struct rte_mbuf *mbuf;
-			if (!init_mempool_socket(i, sid)) {
+			if (!init_mempool_socket(sid)) {
 				goto fail;
 			}
 			/* Initialize mbuf template */
-#if PER_CORE
-			mbuf = rte_pktmbuf_alloc(pframe_pool[i]);
-			mbuf_template[i] = *mbuf;
-			rte_pktmbuf_free(mbuf);
-#else
 			mbuf = rte_pktmbuf_alloc(pframe_pool[sid]);
 			mbuf_template[sid] = *mbuf;
 			rte_pktmbuf_free(mbuf);
-#endif
-#if (!PER_CORE)
 			initialized[sid] = 1;
 		}
-#endif
 	}
 	return 0;
 fail:
 	/* FIXME: Should ideally free up the pools here, but have no way of
 	 * doing so currently */
 	return -ENOMEM;
+#else
+	memset(mempool_initialized, 0, sizeof(int) * RTE_MAX_LCORE);
+	return init_mempool_core(master_core);
+#endif
 }
 
 static void set_mempool(struct rte_mempool *mempool) {
@@ -142,8 +155,8 @@ static void set_mempool(struct rte_mempool *mempool) {
 	/* Loop through all cores, to see if any of them belong to this
 	 * socket. */
 	for (int i = 0; i < RTE_MAX_LCORE; i++) {
-		int sid = rte_lcore_to_socket_id(i);
 #if (!PER_CORE)
+		int sid = rte_lcore_to_socket_id(i);
 		if (!initialized[sid]) {
 #endif
 			struct rte_mbuf *mbuf = NULL;

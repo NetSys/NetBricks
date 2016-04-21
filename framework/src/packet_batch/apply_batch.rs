@@ -23,6 +23,16 @@ impl<T, V> Act for ReplaceBatch<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
+    fn parent(&mut self) -> &mut Batch{
+        &mut self.parent
+    }
+
+    #[inline]
+    fn parent_immutable(&self) -> &Batch {
+        &self.parent
+    }
+
+    #[inline]
     fn act(&mut self) {
         self.parent.act();
         let iter = PayloadEnumerator::<T>::new(&mut self.parent);
