@@ -62,7 +62,7 @@ impl BatchIterator for ReceiveBatch {
 /// Internal interface for packets.
 impl Act for ReceiveBatch {
     #[inline]
-    fn parent(&mut self) -> &mut Batch{
+    fn parent(&mut self) -> &mut Batch {
         &mut self.parent
     }
 

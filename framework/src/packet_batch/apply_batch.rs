@@ -23,7 +23,7 @@ impl<T, V> Act for ReplaceBatch<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn parent(&mut self) -> &mut Batch{
+    fn parent(&mut self) -> &mut Batch {
         &mut self.parent
     }
 

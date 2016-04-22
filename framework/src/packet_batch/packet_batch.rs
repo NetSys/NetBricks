@@ -1,4 +1,5 @@
 use io::*;
+use utils::*;
 use std::result;
 use super::act::Act;
 use super::Batch;
@@ -75,6 +76,32 @@ impl PacketBatch {
                 Ok(_) => self.recv_internal(port),
             }
         }
+    }
+
+    // Assumes we have already deallocated batch.
+    #[inline]
+    unsafe fn recv_internal(&mut self, port: &mut PortQueue) -> Result<u32> {
+        match port.recv(self.packet_ptr(), self.max_size() as i32) {
+            e @ Err(_) => e,
+            Ok(recv) => {
+                self.add_to_batch(recv as usize);
+                Ok(recv)
+            }
+        }
+    }
+
+    #[inline]
+    pub fn recv_spsc_queue(&mut self, queue: &SpscConsumer) -> Result<u32> {
+        match self.deallocate_batch() {
+            Err(err) => Err(err),
+            Ok(_) => self.recv_spsc_internal(queue),
+        }
+    }
+
+    #[inline]
+    fn recv_spsc_internal(&mut self, queue: &SpscConsumer) -> Result<u32> {
+        let cnt = self.cnt as usize;
+        Ok(queue.dequeue(&mut self.array, cnt) as u32)
     }
 
     /// This drops a given vector of packets. This method is O(n) in number of packets, however it does not preserve
@@ -194,20 +221,7 @@ impl PacketBatch {
     #[inline]
     unsafe fn add_to_batch(&mut self, added: usize) {
         assert_eq!(self.start, 0);
-        self.start = 0;
         self.array.set_len(added);
-    }
-
-    // Assumes we have already deallocated batch.
-    #[inline]
-    unsafe fn recv_internal(&mut self, port: &mut PortQueue) -> Result<u32> {
-        match port.recv(self.packet_ptr(), self.max_size() as i32) {
-            e @ Err(_) => e,
-            Ok(recv) => {
-                self.add_to_batch(recv as usize);
-                Ok(recv)
-            }
-        }
     }
 
     #[inline]
@@ -353,7 +367,7 @@ impl BatchIterator for PacketBatch {
 /// Internal interface for packets.
 impl Act for PacketBatch {
     #[inline]
-    fn parent(&mut self) -> &mut Batch{
+    fn parent(&mut self) -> &mut Batch {
         self
     }
 

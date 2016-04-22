@@ -62,7 +62,7 @@ impl<V> Act for SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn parent(&mut self) -> &mut Batch{
+    fn parent(&mut self) -> &mut Batch {
         &mut self.parent
     }
 

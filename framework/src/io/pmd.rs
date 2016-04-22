@@ -128,9 +128,7 @@ impl PmdPort {
     }
 
     pub fn find_port_id(pcie: &str) -> i32 {
-        unsafe {
-            find_port_with_pci_address(pcie.as_ptr())
-        }
+        unsafe { find_port_with_pci_address(pcie.as_ptr()) }
     }
 
     pub fn rxqs(&self) -> i32 {

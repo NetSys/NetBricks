@@ -35,15 +35,14 @@ macro_rules! batch_no_new {
 macro_rules! act {
     () => {
         #[inline]
-        fn parent(&mut self) -> &mut Batch {
-            &mut *self.parent
-        }
-        
-        #[inline]
-        fn parent_immutable(&self) -> &Batch {
-            &*self.parent
+        fn parent(&mut self) -> &mut Batch{
+            &mut self.parent
         }
 
+        #[inline]
+        fn parent_immutable(&self) -> &Batch {
+            &self.parent
+        }
         #[inline]
         fn act(&mut self) {
             self.parent.act();

@@ -13,6 +13,7 @@ pub use self::receive_batch::ReceiveBatch;
 pub use self::resize_payload::ResizePayload;
 pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
+pub use self::group_by::*;
 
 use self::map_batch::MapFn;
 use self::filter_batch::FilterFn;
@@ -31,6 +32,7 @@ mod composition_batch;
 mod context_batch;
 mod deparsed_batch;
 mod filter_batch;
+mod group_by;
 mod iterator;
 mod map_batch;
 mod merge_batch;
