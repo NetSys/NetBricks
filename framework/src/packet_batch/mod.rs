@@ -10,6 +10,7 @@ pub use self::map_batch::MapBatch;
 pub use self::merge_batch::MergeBatch;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::receive_batch::ReceiveBatch;
+pub use self::receive_queue::ReceiveQueue;
 pub use self::resize_payload::ResizePayload;
 pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
@@ -39,6 +40,7 @@ mod merge_batch;
 mod packet_batch;
 mod parsed_batch;
 mod receive_batch;
+mod receive_queue;
 mod reset_parse;
 mod resize_payload;
 mod send_batch;
@@ -133,4 +135,11 @@ pub trait HeaderOperations : Batch + Sized {
     fn resize(self, resize_f: ResizeFn<Self::Header>) -> ResizePayload<Self::Header, Self> {
         ResizePayload::<Self::Header, Self>::new(self, resize_f)
     }
+}
+
+/// All projects involve building a thread pool. This is the task equivalent for the threadpool in NetBricks/ZCSI/E2D2.
+/// Anything that implements Runnable can be polled by the scheduler. This thing can be a `Batch` (e.g., `SendBatch`) or
+/// something else (e.g., the `GroupBy` operator). Eventually this trait will have more stuff.
+pub trait Executable {
+    fn execute(&mut self);
 }

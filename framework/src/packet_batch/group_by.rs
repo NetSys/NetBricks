@@ -1,10 +1,9 @@
 use headers::EndOffset;
 use utils::{SpscConsumer,SpscProducer, new_spsc_queue};
-use io::PortQueue;
-use io::Result;
 use super::act::Act;
 use super::Batch;
-use super::packet_batch::PacketBatch;
+use super::Executable;
+use super::ReceiveQueue;
 use super::iterator::*;
 use std::any::Any;
 use std::collections::HashMap;
@@ -27,7 +26,6 @@ impl<T, V> GroupBy<T, V>
           V: Batch + BatchIterator + Act
 {
     pub fn new(parent: V, groups: usize, group_fn: GroupFn<T>) -> Arc<GroupBy<T, V>> {
-        let cnt = parent.capacity();
         let (producers, consumers) = {
             let mut producers = Vec::with_capacity(groups);
             let mut consumers = HashMap::with_capacity(groups);
@@ -39,14 +37,13 @@ impl<T, V> GroupBy<T, V>
             (producers, consumers)
         };
 
-        let mut obj = Arc::new(GroupBy {
+        Arc::new(GroupBy {
             parent: parent,
             group_ct: groups,
             group_fn: group_fn,
             producers: producers,
             consumers: consumers,
-        });
-        obj
+        })
     }
 
     #[inline]
@@ -54,67 +51,32 @@ impl<T, V> GroupBy<T, V>
         self.group_ct
     }
 
-}
-
-pub struct GroupedBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
-{
-    parent: PacketBatch,
-    operator: Arc<GroupBy<T, V>>,
-}
-
-impl<T, V> GroupedBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
-{
-    pub fn new(parent: PacketBatch, operator: Arc<GroupBy<T, V>>) -> GroupedBatch<T, V> {
-        GroupedBatch {
-            parent: parent,
-            operator: operator,
+    #[inline]
+    pub fn get_group(&mut self, group: usize) -> Option<ReceiveQueue> {
+        if group > self.group_ct {
+            None
+        } else {
+            self.consumers.remove(&group)
+                          .and_then(|q| Some(ReceiveQueue::new(q)))
         }
-
     }
 }
 
-impl<T, V> Batch for GroupedBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
-{
-}
-
-impl<T, V> BatchIterator for GroupedBatch<T, V>
+impl<T, V> Executable for GroupBy<T, V> 
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn start(&mut self) -> usize {
-        self.parent.start()
+    fn execute(&mut self) {
+        self.parent.act(); // Let the parent get some packets in.
+        {
+            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+            let mut groups = Vec::with_capacity(self.group_ct);
+            while let Some(ParsedDescriptor { header: hdr, payload, ctx, index, .. }) = iter.next(&mut self.parent) {
+                let group = (self.group_fn)(hdr, payload, ctx);
+                groups.push((index, group));
+            }
+            // At this time groups contains what we need to distribute
+        }
     }
-
-    #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        self.parent.next_base_payload(idx)
-    }
-
-    #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        self.parent.next_base_payload(idx)
-    }
-
-    #[inline]
-    unsafe fn next_payload_popped(&mut self,
-                                  idx: usize,
-                                  pop: i32)
-                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        self.parent.next_payload_popped(idx, pop)
-    }
-}
-
-/// Internal interface for packets.
-impl<T, V> Act for GroupedBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
-{
-    act!{}
 }
