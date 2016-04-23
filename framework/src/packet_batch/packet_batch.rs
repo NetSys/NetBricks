@@ -104,41 +104,52 @@ impl PacketBatch {
         Ok(queue.dequeue(&mut self.array, cnt) as u32)
     }
 
-    /// This drops a given vector of packets. This method is O(n) in number of packets, however it does not preserve
-    /// ordering. Currently hidden behind a cfg flag.
-    #[cfg(unordered_drop)]
     #[inline]
-    fn drop_packets_unordered(&mut self, idxes_ordered: Vec<usize>) -> Option<usize> {
-        let mut idxes = idxes_ordered;
-        idxes.reverse();
-        let mut to_free = Vec::<*mut MBuf>::with_capacity(idxes.len());
-        // First remove them from this packetbatch, compacting the batch as appropriate. Note this will not change start
-        // so is safe.
-        for idx in idxes {
-            to_free.push(self.array.swap_remove(idx));
-        }
-
-        // Great we removed everything
-        if self.start == self.array.len() {
-            unsafe {
-                self.start = 0;
-                self.array.set_len(0);
+    pub fn distribute_spsc_queues(&mut self, queue: &Vec<SpscProducer>, groups: Vec<(usize, usize)>, 
+                                  free_if_not_enqueued: bool) {
+        let mut enqueued_idxes = Vec::with_capacity(self.cnt as usize);
+        for (idx, group) in groups {
+            let enqueued = queue[group].enqueue_one(self.array[idx]);
+            if enqueued {
+                enqueued_idxes.push(idx);
+            } else {
+                // Assume we cannot enqueue anymore packets, this might not be true for cross-core queues, however
+                // making this assumption gives us more of a chance that ordering can be preserved in cases where
+                // enqueing is attempted again.
+                break;
             }
         }
 
-        if to_free.len() == 0 {
-            Some(0)
-        } else {
-            // Now free the dropped packets
+        if enqueued_idxes.len() == self.available() {
             unsafe {
-                let len = to_free.len();
-                // No need to offset here since to_free is tight.
-                let array_ptr = to_free.as_mut_ptr();
-                let ret = mbuf_free_bulk(array_ptr, (len as i32));
-                if ret == 0 {
-                    Some(len)
+                self.consumed_batch(enqueued_idxes.len());
+            }
+        } else {
+            let mut idx = self.start;
+            let mut move_idx = 0;
+            let mut remove_idx = 0;
+            let end = self.array.len();
+            while idx < end && remove_idx < enqueued_idxes.len() {
+                let test_idx = enqueued_idxes[remove_idx];
+                assert!(idx <= test_idx);
+                // If this is part of the preserved group then move it to its final position.
+                if idx == test_idx {
+                    // We are onto the next index to remove
+                    remove_idx += 1;
                 } else {
-                    None
+                    self.array[move_idx] = self.array[idx];
+                    move_idx += 1;
+                }
+                idx += 1;
+            }
+            self.start = 0;
+            unsafe {
+                self.array.set_len(move_idx);
+                if move_idx > 0 && free_if_not_enqueued {
+                    // Free the remaining elements
+                    if let Err(_) = self.deallocate_batch()  {
+                        // FIXME: Log failure!
+                    }
                 }
             }
         }
@@ -420,6 +431,12 @@ impl Act for PacketBatch {
     #[inline]
     fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
         unsafe { self.adjust_packet_headroom(idx, size) }
+    }
+    
+    #[inline]
+    fn distribute_to_queues(&mut self, queues: &Vec<SpscProducer>, groups: Vec<(usize, usize)>,
+                                 free_if_not_enqueued: bool) {
+        self.distribute_spsc_queues(queues, groups, free_if_not_enqueued)
     }
 }
 

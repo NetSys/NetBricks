@@ -7,6 +7,7 @@ use io::PortQueue;
 use headers::EndOffset;
 use io::Result;
 use std::any::Any;
+use utils::SpscProducer;
 
 pub struct DeparsedBatch<T: EndOffset, V>
     where V: Batch + BatchIterator + Act

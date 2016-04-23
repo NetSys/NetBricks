@@ -9,6 +9,7 @@ use super::iterator::*;
 use super::packet_batch::cast_from_u8;
 use std::any::Any;
 use std::cmp::min;
+use utils::SpscProducer;
 
 pub struct ParsedBatch<T: EndOffset, V>
     where V: Batch + BatchIterator + Act

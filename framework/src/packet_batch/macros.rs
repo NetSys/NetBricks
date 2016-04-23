@@ -77,5 +77,11 @@ macro_rules! act {
         fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
             self.parent.adjust_headroom(idx, size)
         }
+
+        #[inline]
+        fn distribute_to_queues(&mut self, queues: &Vec<SpscProducer>, groups: Vec<(usize, usize)>,
+                                     free_if_not_enqueued: bool) {
+            self.parent.distribute_to_queues(queues, groups, free_if_not_enqueued)
+        }
     }
 }

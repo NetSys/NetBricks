@@ -7,7 +7,6 @@ use super::ReceiveQueue;
 use super::iterator::*;
 use std::any::Any;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 pub type GroupFn<T> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>) -> usize>;
 pub struct GroupBy<T, V>
@@ -25,7 +24,7 @@ impl<T, V> GroupBy<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
-    pub fn new(parent: V, groups: usize, group_fn: GroupFn<T>) -> Arc<GroupBy<T, V>> {
+    pub fn new(parent: V, groups: usize, group_fn: GroupFn<T>) -> GroupBy<T, V> {
         let (producers, consumers) = {
             let mut producers = Vec::with_capacity(groups);
             let mut consumers = HashMap::with_capacity(groups);
@@ -37,13 +36,13 @@ impl<T, V> GroupBy<T, V>
             (producers, consumers)
         };
 
-        Arc::new(GroupBy {
+        GroupBy {
             parent: parent,
             group_ct: groups,
             group_fn: group_fn,
             producers: producers,
             consumers: consumers,
-        })
+        }
     }
 
     #[inline]
@@ -76,7 +75,8 @@ impl<T, V> Executable for GroupBy<T, V>
                 let group = (self.group_fn)(hdr, payload, ctx);
                 groups.push((index, group));
             }
-            // At this time groups contains what we need to distribute
+            // At this time groups contains what we need to distribute, so distribute it out.
+            self.parent.distribute_to_queues(&self.producers, groups, true)
         }
     }
 }

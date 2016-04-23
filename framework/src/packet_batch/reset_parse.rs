@@ -4,6 +4,7 @@ use super::act::Act;
 use super::Batch;
 use super::iterator::*;
 use std::any::Any;
+use utils::SpscProducer;
 
 // FIXME: Reconsider this choice some day
 /// This is really the same thing as composition except that by accepting a template it is somewhat faster (since we
