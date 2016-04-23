@@ -93,9 +93,7 @@ impl<T> PayloadEnumerator<T>
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_payload(original_idx) };
         match item {
-            Some((PacketDescriptor{offset, header: haddr, payload, payload_size},
-                  ctx,
-                  next_idx)) => {
+            Some((PacketDescriptor { offset, header: haddr, payload, payload_size }, ctx, next_idx)) => {
                 let header = cast_from_u8::<T>(haddr);
                 // println!("Payload size is {}", payload_size);
                 // This is safe (assuming our size accounting has been correct so far).

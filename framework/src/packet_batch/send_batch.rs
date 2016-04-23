@@ -2,9 +2,9 @@ use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
-use super::Executable;
 use super::iterator::*;
 use std::any::Any;
+use scheduler::Executable;
 
 // FIXME: Should we be handling multiple queues and ports here?
 // FIXME: Should this really even be a batch?

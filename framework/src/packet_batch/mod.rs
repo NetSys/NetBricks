@@ -55,7 +55,7 @@ pub fn merge(batches: Vec<CompositionBatch>) -> MergeBatch {
 
 /// Public trait implemented by every packet batch type. This trait should be used as a constraint for any functions or
 /// places where a Batch type is required.
-pub trait Batch : BatchIterator + Act {
+pub trait Batch: BatchIterator + Act {
     /// Parse the payload as header of type.
     fn parse<T: EndOffset>(self) -> ParsedBatch<T, Self>
         where Self: Sized
@@ -92,8 +92,8 @@ pub trait Batch : BatchIterator + Act {
 }
 
 /// Public interface implemented by packet batches which manipulate headers.
-pub trait HeaderOperations : Batch + Sized {
-    type Header : EndOffset;
+pub trait HeaderOperations: Batch + Sized {
+    type Header: EndOffset;
     /// Transform a header field.
     fn transform(self,
                  transformer: Box<FnMut(&mut Self::Header, &mut [u8], Option<&mut Any>)>)
@@ -135,11 +135,4 @@ pub trait HeaderOperations : Batch + Sized {
     fn resize(self, resize_f: ResizeFn<Self::Header>) -> ResizePayload<Self::Header, Self> {
         ResizePayload::<Self::Header, Self>::new(self, resize_f)
     }
-}
-
-/// All projects involve building a thread pool. This is the task equivalent for the threadpool in NetBricks/ZCSI/E2D2.
-/// Anything that implements Runnable can be polled by the scheduler. This thing can be a `Batch` (e.g., `SendBatch`) or
-/// something else (e.g., the `GroupBy` operator). Eventually this trait will have more stuff.
-pub trait Executable {
-    fn execute(&mut self);
 }

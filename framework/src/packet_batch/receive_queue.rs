@@ -76,7 +76,7 @@ impl Act for ReceiveQueue {
     fn act(&mut self) {
         self.parent.act();
         self.parent
-            .recv_spsc_queue(&mut self.queue)
+            .recv_spsc_queue(&self.queue)
             .and_then(|x| {
                 self.received += x as u64;
                 Ok(x)

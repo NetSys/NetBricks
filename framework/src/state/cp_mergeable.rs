@@ -94,10 +94,10 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreControlPlane<T> {
 
 /// Create a `CpMergeableStore`. `delay` specifies the number of buckets buffered together, while `channel_size`
 /// specifies the number of outstanding messages.
-pub fn new_cp_mergeable_store<T: AddAssign<T> + Default + Clone>(delay: usize,
-                                                                 channel_size: usize)
-                                                                 -> (CpMergeableStoreDataPath<T>,
-                                                                     Box<CpMergeableStoreControlPlane<T>>) {
+pub fn new_cp_mergeable_store<T: AddAssign<T> + Default + Clone>
+    (delay: usize,
+     channel_size: usize)
+     -> (CpMergeableStoreDataPath<T>, Box<CpMergeableStoreControlPlane<T>>) {
     let (sender, receiver) = sync_channel(channel_size);
     (CpMergeableStoreDataPath {
         cache: Vec::with_capacity(delay),

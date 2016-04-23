@@ -122,9 +122,7 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_payload(idx) {
             Some((descriptor, _, iret)) => {
-                Some((descriptor,
-                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
-                      iret))
+                Some((descriptor, self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)), iret))
             }
             None => None,
         }
@@ -134,9 +132,7 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_base_payload(idx) {
             Some((descriptor, _, iret)) => {
-                Some((descriptor,
-                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
-                      iret))
+                Some((descriptor, self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)), iret))
             }
             None => None,
         }
@@ -149,9 +145,7 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
                                   -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_payload_popped(idx, pop) {
             Some((descriptor, _, iret)) => {
-                Some((descriptor,
-                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
-                      iret))
+                Some((descriptor, self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)), iret))
             }
             None => None,
         }

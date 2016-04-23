@@ -2,11 +2,11 @@ use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
-use super::Executable;
 use super::CompositionBatch;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use std::cmp;
 use std::any::Any;
+use scheduler::Executable;
 
 pub struct MergeBatch {
     parents: Vec<CompositionBatch>,

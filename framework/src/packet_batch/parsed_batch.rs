@@ -40,9 +40,7 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         let parent_payload = self.parent.next_payload(idx);
         match parent_payload {
-            Some((PacketDescriptor { offset: prev_offset, payload: packet, payload_size: size, .. },
-                  arg,
-                  idx)) => {
+            Some((PacketDescriptor { offset: prev_offset, payload: packet, payload_size: size, .. }, arg, idx)) => {
                 let pkt_as_t = cast_from_u8::<T>(packet);
                 let offset = T::offset(pkt_as_t);
                 // Under no circumstances should we allow an incorrectly reported payload size to cause problems.

@@ -9,6 +9,7 @@ extern crate rand;
 use e2d2::io::*;
 use e2d2::headers::*;
 use e2d2::packet_batch::*;
+use e2d2::scheduler::Executable;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;

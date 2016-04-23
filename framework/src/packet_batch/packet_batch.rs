@@ -106,7 +106,7 @@ impl PacketBatch {
 
     #[inline]
     pub fn distribute_spsc_queues(&mut self,
-                                  queue: &Vec<SpscProducer>,
+                                  queue: &[SpscProducer],
                                   groups: Vec<(usize, usize)>,
                                   free_if_not_enqueued: bool) {
         let mut enqueued_idxes = Vec::with_capacity(self.cnt as usize);
@@ -437,7 +437,7 @@ impl Act for PacketBatch {
 
     #[inline]
     fn distribute_to_queues(&mut self,
-                            queues: &Vec<SpscProducer>,
+                            queues: &[SpscProducer],
                             groups: Vec<(usize, usize)>,
                             free_if_not_enqueued: bool) {
         self.distribute_spsc_queues(queues, groups, free_if_not_enqueued)

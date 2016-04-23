@@ -7,6 +7,7 @@ use e2d2::io::*;
 use e2d2::headers::*;
 use e2d2::utils::*;
 use e2d2::packet_batch::*;
+use e2d2::scheduler::Executable;
 use e2d2::state::*;
 use getopts::Options;
 use std::collections::HashMap;

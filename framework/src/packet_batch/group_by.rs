@@ -2,7 +2,7 @@ use headers::EndOffset;
 use utils::{SpscConsumer, SpscProducer, new_spsc_queue};
 use super::act::Act;
 use super::Batch;
-use super::Executable;
+use scheduler::Executable;
 use super::ReceiveQueue;
 use super::iterator::*;
 use std::any::Any;

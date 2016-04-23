@@ -1,4 +1,4 @@
-/// A single producer single consumer queue for mbufs. This is to do both GroupBys and Shuffles (which are really the
+/// A single producer single consumer queue for mbufs. This is to do both `GroupBys` and Shuffles (which are really the
 /// same thing in this case).
 use io::*;
 use std::ptr;
@@ -38,8 +38,7 @@ pub fn new_spsc_queue(size: usize) -> Option<(SpscProducer, SpscConsumer)> {
         None
     } else {
         let q = Arc::new(SpscQueue::new(size).unwrap());
-        Some((SpscProducer { queue: q.clone() },
-              SpscConsumer { queue: q.clone() }))
+        Some((SpscProducer { queue: q.clone() }, SpscConsumer { queue: q.clone() }))
     }
 }
 

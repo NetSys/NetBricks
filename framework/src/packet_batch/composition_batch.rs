@@ -1,10 +1,10 @@
 use super::act::Act;
 use super::Batch;
-use super::Executable;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use io::PortQueue;
 use io::Result;
 use std::any::Any;
+use scheduler::Executable;
 
 /// `CompositionBatch` allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
 /// can treat packets as originating from the NF itself.
