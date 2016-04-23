@@ -48,7 +48,7 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, counter: MergeableStoreDP<isize
     println!("Running {} pipelines", pipelines.len());
     let mut combined = merge(pipelines);
     loop {
-        combined.process();
+        combined.execute();
     }
 }
 

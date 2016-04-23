@@ -5,7 +5,7 @@ use super::Batch;
 use super::packet_batch::PacketBatch;
 use super::iterator::*;
 use std::any::Any;
-use utils::{SpscConsumer};
+use utils::SpscConsumer;
 
 // FIXME: Should we be handling multiple queues and ports here?
 pub struct ReceiveQueue {

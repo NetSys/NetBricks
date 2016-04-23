@@ -1,5 +1,5 @@
 use headers::EndOffset;
-use utils::{SpscConsumer,SpscProducer, new_spsc_queue};
+use utils::{SpscConsumer, SpscProducer, new_spsc_queue};
 use super::act::Act;
 use super::Batch;
 use super::Executable;
@@ -29,10 +29,10 @@ impl<T, V> GroupBy<T, V>
             let mut producers = Vec::with_capacity(groups);
             let mut consumers = HashMap::with_capacity(groups);
             for i in 0..groups {
-                let (prod, consumer) = new_spsc_queue(1<<10).unwrap();
+                let (prod, consumer) = new_spsc_queue(1 << 10).unwrap();
                 producers.push(prod);
                 consumers.insert(i, consumer);
-            };
+            }
             (producers, consumers)
         };
 
@@ -52,16 +52,18 @@ impl<T, V> GroupBy<T, V>
 
     #[inline]
     pub fn get_group(&mut self, group: usize) -> Option<ReceiveQueue> {
+        // FIXME: This currently loses all the parsing, we should fix it to not be the case.
         if group > self.group_ct {
             None
         } else {
-            self.consumers.remove(&group)
-                          .and_then(|q| Some(ReceiveQueue::new(q)))
+            self.consumers
+                .remove(&group)
+                .and_then(|q| Some(ReceiveQueue::new(q)))
         }
     }
 }
 
-impl<T, V> Executable for GroupBy<T, V> 
+impl<T, V> Executable for GroupBy<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {

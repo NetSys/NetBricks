@@ -54,5 +54,5 @@ impl<V> BatchIterator for ResetParsingBatch<V>
 impl<V> Act for ResetParsingBatch<V>
     where V: Batch + BatchIterator + Act
 {
-    act!{}
+    act![]
 }

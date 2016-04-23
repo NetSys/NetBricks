@@ -2,6 +2,7 @@ use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
+use super::Executable;
 use super::CompositionBatch;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use std::cmp;
@@ -18,12 +19,6 @@ impl MergeBatch {
             parents: parents,
             which: 0,
         }
-    }
-
-    #[inline]
-    pub fn process(&mut self) {
-        self.act();
-        self.done();
     }
 }
 
@@ -99,5 +94,13 @@ impl Act for MergeBatch {
     #[inline]
     fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
         self.parents[self.which].adjust_headroom(idx, size)
+    }
+}
+
+impl Executable for MergeBatch {
+    #[inline]
+    fn execute(&mut self) {
+        self.act();
+        self.done();
     }
 }

@@ -105,7 +105,9 @@ impl PacketBatch {
     }
 
     #[inline]
-    pub fn distribute_spsc_queues(&mut self, queue: &Vec<SpscProducer>, groups: Vec<(usize, usize)>, 
+    pub fn distribute_spsc_queues(&mut self,
+                                  queue: &Vec<SpscProducer>,
+                                  groups: Vec<(usize, usize)>,
                                   free_if_not_enqueued: bool) {
         let mut enqueued_idxes = Vec::with_capacity(self.cnt as usize);
         for (idx, group) in groups {
@@ -147,7 +149,7 @@ impl PacketBatch {
                 self.array.set_len(move_idx);
                 if move_idx > 0 && free_if_not_enqueued {
                     // Free the remaining elements
-                    if let Err(_) = self.deallocate_batch()  {
+                    if let Err(_) = self.deallocate_batch() {
                         // FIXME: Log failure!
                     }
                 }
@@ -432,10 +434,12 @@ impl Act for PacketBatch {
     fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
         unsafe { self.adjust_packet_headroom(idx, size) }
     }
-    
+
     #[inline]
-    fn distribute_to_queues(&mut self, queues: &Vec<SpscProducer>, groups: Vec<(usize, usize)>,
-                                 free_if_not_enqueued: bool) {
+    fn distribute_to_queues(&mut self,
+                            queues: &Vec<SpscProducer>,
+                            groups: Vec<(usize, usize)>,
+                            free_if_not_enqueued: bool) {
         self.distribute_spsc_queues(queues, groups, free_if_not_enqueued)
     }
 }

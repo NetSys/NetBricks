@@ -124,7 +124,7 @@ pub trait HeaderOperations : Batch + Sized {
         ResetParsingBatch::<Self>::new(self)
     }
 
-    /// Deparse, i.e., remove the last patched header. Note the assumption here is that T = the last header parsed
+    /// Deparse, i.e., remove the last parsed header. Note the assumption here is that T = the last header parsed
     /// (which we cannot statically enforce since we loose reference to that header).
     fn deparse<T: EndOffset>(self) -> DeparsedBatch<T, Self>
         where Self: Sized

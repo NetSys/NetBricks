@@ -1,5 +1,6 @@
 use super::act::Act;
 use super::Batch;
+use super::Executable;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use io::PortQueue;
 use io::Result;
@@ -15,12 +16,6 @@ impl CompositionBatch {
     pub fn new(parent: Box<Batch>) -> CompositionBatch {
         CompositionBatch { parent: parent }
 
-    }
-
-    #[inline]
-    pub fn process(&mut self) {
-        self.act();
-        self.done();
     }
 }
 
@@ -93,5 +88,13 @@ impl Act for CompositionBatch {
     #[inline]
     fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
         self.parent.adjust_headroom(idx, size)
+    }
+}
+
+impl Executable for CompositionBatch {
+    #[inline]
+    fn execute(&mut self) {
+        self.act();
+        self.done();
     }
 }

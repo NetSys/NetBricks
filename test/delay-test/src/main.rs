@@ -74,24 +74,29 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, delay_arg: u64) {
     init_thread(core, core);
     println!("Receiving started");
     for port in &ports {
-        println!("Receiving port {} rxq {} txq {} on core {} delay {}", 
-                 port.port.mac_address(), port.rxq(), port.txq(), core, delay_arg);
+        println!("Receiving port {} rxq {} txq {} on core {} delay {}",
+                 port.port.mac_address(),
+                 port.rxq(),
+                 port.txq(),
+                 core,
+                 delay_arg);
     }
 
     let mut pipelines: Vec<_> = ports.iter()
-                                 .map(|port| {
-                                     delay(ReceiveBatch::new(port.clone()), delay_arg)
-                                         .send(port.clone())
-                                         .compose()
-                                 })
-                                 .collect();
+                                     .map(|port| {
+                                         delay(ReceiveBatch::new(port.clone()), delay_arg)
+                                             .send(port.clone())
+                                             .compose()
+                                     })
+                                     .collect();
     println!("Running {} pipelines", pipelines.len());
-    if pipelines.len() > 1 {
-        let mut combined = merge(pipelines);
-        loop { combined.process(); }
+    let mut pipeline = if pipelines.len() > 1 {
+        box merge(pipelines) as Box<Executable>
     } else {
-        let mut pipeline = pipelines.pop().unwrap();
-        loop { pipeline.process(); }
+        box pipelines.pop().unwrap() as Box<Executable>
+    };
+    loop {
+        pipeline.execute()
     }
 }
 

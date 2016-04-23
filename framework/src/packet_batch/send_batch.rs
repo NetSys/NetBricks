@@ -2,6 +2,7 @@ use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
+use super::Executable;
 use super::iterator::*;
 use std::any::Any;
 
@@ -24,10 +25,6 @@ impl<V> SendBatch<V>
             sent: 0,
             parent: parent,
         }
-    }
-
-    pub fn process(&mut self) {
-        self.act();
     }
 }
 
@@ -107,5 +104,14 @@ impl<V> Act for SendBatch<V>
     #[inline]
     fn adjust_headroom(&mut self, _: usize, _: isize) -> Option<isize> {
         panic!("Cannot resize a sent batch")
+    }
+}
+
+impl<V> Executable for SendBatch<V>
+    where V: Batch + BatchIterator + Act
+{
+    #[inline]
+    fn execute(&mut self) {
+        self.act()
     }
 }
