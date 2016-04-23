@@ -22,7 +22,7 @@ impl<T, V> Act for ParsedBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
-    act![]
+    act!{}
 }
 
 batch!{ParsedBatch, [parent: V], [phantom: PhantomData]}
