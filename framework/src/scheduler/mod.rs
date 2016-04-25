@@ -5,6 +5,12 @@ extern crate getopts;
 pub trait Executable {
     fn execute(&mut self);
 }
+
+impl<F> Executable for F where F: FnMut() {
+    fn execute(&mut self) {
+        (*self)()
+    }
+}
 pub use self::scheduler::*;
 
 mod scheduler;

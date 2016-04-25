@@ -2,29 +2,39 @@ use headers::EndOffset;
 use utils::{SpscConsumer, SpscProducer, new_spsc_queue};
 use super::act::Act;
 use super::Batch;
-use scheduler::Executable;
+use scheduler::{Executable, Scheduler};
 use super::ReceiveQueue;
 use super::iterator::*;
 use std::any::Any;
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::marker::PhantomData;
 
 pub type GroupFn<T> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>) -> usize>;
-pub struct GroupBy<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
+struct GroupByProducer<T, V>
+    where T: EndOffset + 'static,
+          V: Batch + BatchIterator + Act + 'static
 {
     parent: V,
     group_ct: usize,
     group_fn: GroupFn<T>,
     producers: Vec<SpscProducer>,
+}
+pub struct GroupBy<T, V>
+    where T: EndOffset + 'static,
+          V: Batch + BatchIterator + Act + 'static
+{
+    group_ct: usize,
     consumers: HashMap<usize, SpscConsumer>,
+    phantom_t: PhantomData<T>,
+    phantom_v: PhantomData<V>,
 }
 
 impl<T, V> GroupBy<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
+    where T: EndOffset + 'static,
+          V: Batch + BatchIterator + Act + 'static
 {
-    pub fn new(parent: V, groups: usize, group_fn: GroupFn<T>) -> GroupBy<T, V> {
+    pub fn new(parent: V, groups: usize, group_fn: GroupFn<T>, sched: &mut Scheduler) -> GroupBy<T, V> {
         let (producers, consumers) = {
             let mut producers = Vec::with_capacity(groups);
             let mut consumers = HashMap::with_capacity(groups);
@@ -35,13 +45,17 @@ impl<T, V> GroupBy<T, V>
             }
             (producers, consumers)
         };
-
-        GroupBy {
+        sched.add_task(RefCell::new(box GroupByProducer::<T, V> {
             parent: parent,
             group_ct: groups,
             group_fn: group_fn,
-            producers: producers,
+            producers:producers,
+        }));
+        GroupBy {
+            group_ct: groups,
             consumers: consumers,
+            phantom_t: PhantomData,
+            phantom_v: PhantomData,
         }
     }
 
@@ -63,13 +77,13 @@ impl<T, V> GroupBy<T, V>
     }
 }
 
-impl<T, V> Executable for GroupBy<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
+impl<T, V> Executable for GroupByProducer<T, V>
+    where T: EndOffset + 'static,
+          V: Batch + BatchIterator + Act + 'static
 {
     #[inline]
     fn execute(&mut self) {
-        self.parent.act(); // Let the parent get some packets in.
+        self.parent.act(); // Let the parent get some packets.
         {
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
             let mut groups = Vec::with_capacity(self.group_ct);
