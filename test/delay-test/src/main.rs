@@ -7,7 +7,6 @@ extern crate simd;
 extern crate getopts;
 extern crate rand;
 use e2d2::io::*;
-use e2d2::headers::*;
 use e2d2::packet_batch::*;
 use e2d2::scheduler::*;
 use getopts::Options;
@@ -17,6 +16,8 @@ use std::time::Duration;
 use std::thread;
 use std::sync::Arc;
 use std::cell::RefCell;
+use self::nf::*;
+mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
@@ -41,36 +42,6 @@ fn rdtscp() -> u64 {
     rdtscp_unsafe()
 }
 
-#[inline]
-fn lat() {
-    unsafe {
-        asm!("nop"
-             :
-             :
-             :
-             : "volatile");
-    }
-}
-
-#[inline]
-fn delay_loop(delay: u64) {
-    let mut d = 0;
-    while d < delay {
-        lat();
-        d += 1;
-    }
-}
-
-fn delay<T: 'static + Batch>(parent: T, delay: u64) -> CompositionBatch {
-    parent.parse::<MacHeader>()
-          .transform(box move |hdr, _, _| {
-              let src = hdr.src.clone();
-              hdr.src = hdr.dst;
-              hdr.dst = src;
-              delay_loop(delay);
-          })
-          .compose()
-}
 
 fn recv_thread(ports: Vec<PortQueue>, core: i32, delay_arg: u64) {
     init_thread(core, core);
