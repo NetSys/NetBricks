@@ -3,10 +3,11 @@ use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
 use super::iterator::{BatchIterator, PacketDescriptor};
-use io::PmdPort;
+use io::PortQueue;
 use headers::EndOffset;
 use io::Result;
 use std::any::Any;
+use utils::SpscProducer;
 
 pub struct DeparsedBatch<T: EndOffset, V>
     where V: Batch + BatchIterator + Act
@@ -19,40 +20,7 @@ impl<T, V> Act for DeparsedBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
-    #[inline]
-    fn act(&mut self) {
-        self.parent.act();
-    }
-
-    #[inline]
-    fn done(&mut self) {
-        self.parent.done();
-    }
-
-    #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parent.send_queue(port, queue)
-    }
-
-    #[inline]
-    fn capacity(&self) -> i32 {
-        self.parent.capacity()
-    }
-
-    #[inline]
-    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
-        self.parent.drop_packets(idxes)
-    }
-
-    #[inline]
-    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
-        self.parent.adjust_payload_size(idx, size)
-    }
-
-    #[inline]
-    fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
-        self.parent.adjust_headroom(idx, size)
-    }
+    act!{}
 }
 
 batch!{DeparsedBatch, [parent: V], [phantom: PhantomData]}

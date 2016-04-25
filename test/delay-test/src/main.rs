@@ -9,14 +9,17 @@ extern crate rand;
 use e2d2::io::*;
 use e2d2::headers::*;
 use e2d2::packet_batch::*;
+use e2d2::scheduler::Executable;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 use std::thread;
+use std::sync::Arc;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
+#[allow(dead_code)]
 #[inline]
 fn rdtscp_unsafe() -> u64 {
     unsafe {
@@ -25,12 +28,13 @@ fn rdtscp_unsafe() -> u64 {
         asm!("rdtscp"
              : "={eax}" (low), "={edx}" (high)
              :
-             : "{ecx}"
+             : "{rcx} {rdx} {rax}"
              : "volatile");
         ((high as u64) << 32) | (low as u64)
     }
 }
 
+#[allow(dead_code)]
 #[inline]
 fn rdtscp() -> u64 {
     rdtscp_unsafe()
@@ -67,20 +71,33 @@ fn delay<T: 'static + Batch>(parent: T, delay: u64) -> CompositionBatch {
           .compose()
 }
 
-fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32, delay_arg: u64) {
+fn recv_thread(ports: Vec<PortQueue>, core: i32, delay_arg: u64) {
     init_thread(core, core);
     println!("Receiving started");
+    for port in &ports {
+        println!("Receiving port {} rxq {} txq {} on core {} delay {}",
+                 port.port.mac_address(),
+                 port.rxq(),
+                 port.txq(),
+                 core,
+                 delay_arg);
+    }
 
-    let pipelines: Vec<_> = ports.iter()
-                                 .map(|port| {
-                                     delay(ReceiveBatch::new(port.copy(), queue), delay_arg)
-                                         .send(port.copy(), queue)
-                                         .compose()
-                                 }).collect();
+    let mut pipelines: Vec<_> = ports.iter()
+                                     .map(|port| {
+                                         delay(ReceiveBatch::new(port.clone()), delay_arg)
+                                             .send(port.clone())
+                                             .compose()
+                                     })
+                                     .collect();
     println!("Running {} pipelines", pipelines.len());
-    let mut combined = merge(pipelines);
+    let mut pipeline = if pipelines.len() > 1 {
+        box merge(pipelines) as Box<Executable>
+    } else {
+        box pipelines.pop().unwrap() as Box<Executable>
+    };
     loop {
-        combined.process();
+        pipeline.execute()
     }
 }
 
@@ -103,108 +120,117 @@ fn main() {
     if matches.opt_present("h") {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
     }
+
+    let delay_arg = matches.opt_str("d")
+                           .unwrap_or_else(|| String::from("100"))
+                           .parse()
+                           .expect("Could not parse delay");
+
     let cores_str = matches.opt_strs("c");
     let master_core = matches.opt_str("m")
                              .unwrap_or_else(|| String::from("0"))
                              .parse()
                              .expect("Could not parse master core spec");
-    let delay_arg = matches.opt_str("d")
-                       .unwrap_or_else(|| String::from("100"))
-                       .parse()
-                       .expect("Could not parse delay");
     println!("Using master core {}", master_core);
     let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
-
-
 
     let cores: Vec<i32> = cores_str.iter()
                                    .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
                                    .collect();
 
-    let ports = if matches.opt_present("secondary") {
-        let vdevs = matches.opt_strs("v");
-        if cores.len() > vdevs.len() {
-            println!("More cores than vdevs");
-            std::process::exit(1);
+
+    fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
+        let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
+        for (port, core) in ports.iter().zip(cores.iter()) {
+            cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
         }
-        init_system_secondary(&name,
-                              master_core,
-                              &[]);
-        // Fix this so we don't assume Bess.
-        let mut ports = Vec::with_capacity(vdevs.len());
-        for (core, vdev) in cores.iter().zip(vdevs.iter()) {
-            ports.push(PmdPort::new_vdev(vdev, *core).expect("Could not initialize vdev"))
-        }
-        ports
+        cores_for_port
+    }
+
+    let primary = !matches.opt_present("secondary");
+
+    let cores_for_port = if primary {
+        extract_cores_for_port(&matches.opt_strs("w"), &cores)
     } else {
-        let whitelisted = matches.opt_strs("w");
-        if cores.len() > whitelisted.len() {
-            println!("More cores than ports");
-            std::process::exit(1);
-        }
-        init_system_wl(&name,
-                       master_core,
-                       &whitelisted);
-        let mut ports = Vec::with_capacity(whitelisted.len());
-        for (core, wl) in cores.iter().zip(whitelisted.iter()) {
-            println!("Going to use core {} for wl {}", core, wl);
-        }
-        for (core, port) in cores.iter().zip(0..whitelisted.len()) {
-            ports.push(PmdPort::new_mq_port(port as i32, 1, 1, &[*core], &[*core])
-                       .expect("Could not initialize port"))
-        }
-        ports
+        extract_cores_for_port(&matches.opt_strs("v"), &cores)
     };
 
-    let mut ports_by_core = HashMap::<i32, Vec<PmdPort>>::with_capacity(cores.len());
-    for (core, port) in cores.iter().zip(ports.iter()) {
-        {
-            ports_by_core.entry(*core).or_insert(vec![]).push(port.copy());
-        }
+    if primary {
+        let whitelisted: Vec<_> = cores_for_port.keys().map(|p| p.clone()).collect();
+        init_system_wl(&name, master_core, &whitelisted[..]);
+    } else {
+        init_system_secondary(&name, master_core, &[]);
     }
+
+    let ports_to_activate: Vec<_> = cores_for_port.keys().collect();
+
+    let mut queues_by_core = HashMap::<i32, Vec<_>>::with_capacity(cores.len());
+    let mut ports = Vec::<Arc<PmdPort>>::with_capacity(ports_to_activate.len());
+    for port in &ports_to_activate {
+        let cores = cores_for_port.get(*port).unwrap();
+        let pmd_port = if primary {
+            let port_id = PmdPort::find_port_id(*port);
+            if port_id < 0 {
+                println!("Could not find port {}", port);
+                panic!("Could not find port")
+            } else {
+                let queues = cores.len() as i32;
+                PmdPort::new_mq_port(port_id, queues, queues, cores, cores).expect("Could not initialize port")
+            }
+        } else {
+            assert!(cores.len() == 1);
+            PmdPort::new_vdev(*port, cores[0]).expect("Could not initialize vdev")
+        };
+        for (idx, core) in cores.iter().enumerate() {
+            let queue = idx as i32;
+            queues_by_core.entry(*core)
+                          .or_insert(vec![])
+                          .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
+        }
+        ports.push(pmd_port);
+    }
+
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
-    let _thread: Vec<_> = ports_by_core.iter()
-                                       .map(|(core, ports)| {
-                                           let c = core.clone();
-                                           let p: Vec<_> = ports.iter().map(|p| p.copy()).collect();
-                                           std::thread::spawn(move || recv_thread(p, 0, c, delay_arg))
-                                       })
-                                       .collect();
+    let _thread: Vec<_> = queues_by_core.iter()
+                                        .map(|(core, ports)| {
+                                            let c = core.clone();
+                                            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
+                                            std::thread::spawn(move || recv_thread(p, c, delay_arg))
+                                        })
+                                        .collect();
     let mut pkts_so_far = (0, 0);
     let mut last_printed = 0.;
-    const MAX_PRINT_INTERVAL : f64 = 15.;
+    const MAX_PRINT_INTERVAL: f64 = 15.;
+    const PRINT_DELAY: f64 = 10.;
+    let sleep_delay = (PRINT_DELAY / 2.) as u64;
     let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-    let sleep_time = Duration::from_millis(5000);
+    let sleep_time = Duration::from_millis(sleep_delay);
     println!("0 OVERALL RX 0.00 TX 0.00 CYCLE_PER_DELAY 0 0 0");
     loop {
         thread::sleep(sleep_time); // Sleep for a bit
         let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-        if now - start > 10.0 {
-            let pkts = ports_by_core.values()
-                                    .map(|pvec| {
-                                        pvec.iter()
-                                            .map(|p| p.stats(0))
-                                            .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp))
-                                    })
-                                    .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp));
-            let start_cycles = rdtscp();
-            delay_loop(100);
-            let end_cycles = rdtscp();
-            let delay = end_cycles - start_cycles;
+        if now - start > PRINT_DELAY {
+            let mut rx = 0;
+            let mut tx = 0;
+            for port in &ports {
+                for q in 0..port.rxqs() {
+                    let (rp, tp) = port.stats(q);
+                    rx += rp;
+                    tx += tp;
+                }
+            }
+            let pkts = (rx, tx);
             let rx_pkts = pkts.0 - pkts_so_far.0;
             if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
-                println!("{:.2} OVERALL RX {:.2} TX {:.2} CYCLE_PER_DELAY {} {} {}",
+                println!("{:.2} OVERALL RX {:.2} TX {:.2}",
                          now - start,
                          rx_pkts as f64 / (now - start),
-                         (pkts.1 - pkts_so_far.1) as f64 / (now - start),
-                         start_cycles,
-                         end_cycles,
-                         delay);
+                         (pkts.1 - pkts_so_far.1) as f64 / (now - start));
                 last_printed = now;
+                start = now;
+                pkts_so_far = pkts;
             }
-            start = now;
-            pkts_so_far = pkts;
         }
     }
 }

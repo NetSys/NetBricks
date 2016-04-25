@@ -10,12 +10,7 @@ mod dpdk {
                                        wlcount: i32)
                                        -> i32;
         pub fn init_thread(tid: i32, core: i32);
-        pub fn init_secondary(name: *const u8,
-                              nlen: i32,
-                              core: i32,
-                              vdevs: *mut *const u8,
-                              vdev_count: i32)
-                              -> i32;
+        pub fn init_secondary(name: *const u8, nlen: i32, core: i32, vdevs: *mut *const u8, vdev_count: i32) -> i32;
     }
 }
 
@@ -82,6 +77,8 @@ pub enum ZCSIError {
     BadQueue,
     CannotSend,
     BadVdev,
+    BadTxQueue,
+    BadRxQueue,
 }
 
 pub type Result<T> = result::Result<T, ZCSIError>;

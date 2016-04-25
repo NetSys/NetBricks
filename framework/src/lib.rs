@@ -15,6 +15,7 @@ extern crate fnv;
 extern crate twox_hash;
 pub mod headers;
 pub mod io;
-pub mod packet_batch;
+pub mod scheduler;
 pub mod utils;
 pub mod state;
+pub mod packet_batch;

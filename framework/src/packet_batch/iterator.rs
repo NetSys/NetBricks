@@ -48,7 +48,7 @@ pub trait BatchIterator {
     unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)>;
 }
 
-/// A struct containing the parsed information returned by the PayloadEnumerator.
+/// A struct containing the parsed information returned by the `PayloadEnumerator`.
 pub struct ParsedDescriptor<'a, T>
     where T: 'a + EndOffset
 {
@@ -93,9 +93,7 @@ impl<T> PayloadEnumerator<T>
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_payload(original_idx) };
         match item {
-            Some((PacketDescriptor{offset, header: haddr, payload, payload_size},
-                  ctx,
-                  next_idx)) => {
+            Some((PacketDescriptor { offset, header: haddr, payload, payload_size }, ctx, next_idx)) => {
                 let header = cast_from_u8::<T>(haddr);
                 // println!("Payload size is {}", payload_size);
                 // This is safe (assuming our size accounting has been correct so far).

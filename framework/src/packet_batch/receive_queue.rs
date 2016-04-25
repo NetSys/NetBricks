@@ -5,36 +5,37 @@ use super::Batch;
 use super::packet_batch::PacketBatch;
 use super::iterator::*;
 use std::any::Any;
+use utils::SpscConsumer;
 
 // FIXME: Should we be handling multiple queues and ports here?
-pub struct ReceiveBatch {
+pub struct ReceiveQueue {
     parent: PacketBatch,
-    port: PortQueue,
+    queue: SpscConsumer,
     pub received: u64,
 }
 
-impl ReceiveBatch {
-    pub fn new_with_parent(parent: PacketBatch, port: PortQueue) -> ReceiveBatch {
-        ReceiveBatch {
+impl ReceiveQueue {
+    pub fn new_with_parent(parent: PacketBatch, queue: SpscConsumer) -> ReceiveQueue {
+        ReceiveQueue {
             parent: parent,
-            port: port,
+            queue: queue,
             received: 0,
         }
     }
 
-    pub fn new(port: PortQueue) -> ReceiveBatch {
-        ReceiveBatch {
+    pub fn new(queue: SpscConsumer) -> ReceiveQueue {
+        ReceiveQueue {
             parent: PacketBatch::new(32),
-            port: port,
+            queue: queue,
             received: 0,
         }
 
     }
 }
 
-impl Batch for ReceiveBatch {}
+impl Batch for ReceiveQueue {}
 
-impl BatchIterator for ReceiveBatch {
+impl BatchIterator for ReceiveQueue {
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
@@ -60,7 +61,7 @@ impl BatchIterator for ReceiveBatch {
 }
 
 /// Internal interface for packets.
-impl Act for ReceiveBatch {
+impl Act for ReceiveQueue {
     #[inline]
     fn parent(&mut self) -> &mut Batch {
         &mut self.parent
@@ -70,11 +71,12 @@ impl Act for ReceiveBatch {
     fn parent_immutable(&self) -> &Batch {
         &self.parent
     }
+
     #[inline]
     fn act(&mut self) {
         self.parent.act();
         self.parent
-            .recv(&mut self.port)
+            .recv_spsc_queue(&self.queue)
             .and_then(|x| {
                 self.received += x as u64;
                 Ok(x)

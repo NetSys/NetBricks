@@ -44,10 +44,9 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreDataPath<T> {
         self.updates += 1;
         if self.updates >= self.delay {
             self.updates = 0;
-            match self.channel.try_send(self.cache.drain(0..).collect()) {
-                Ok(_) => (),
-                Err(_) => (),
-            };
+            if let Ok(_) = self.channel.try_send(self.cache.drain(0..).collect()) {
+                ()
+            }
         }
     }
 }
@@ -55,7 +54,7 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreDataPath<T> {
 impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreControlPlane<T> {
     fn update_internal(&mut self, v: Vec<(Flow, T)>) {
         for (flow, c) in v {
-            *(self.flow_counters.entry(flow).or_insert(Default::default())) += c;
+            *(self.flow_counters.entry(flow).or_insert_with(Default::default)) += c;
         }
     }
 
@@ -82,19 +81,23 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreControlPlane<T> {
         self.flow_counters.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.flow_counters.is_empty()
+    }
+
     /// Remove an entry from the table.
     #[inline]
     pub fn remove(&mut self, flow: &Flow) -> T {
-        self.flow_counters.remove(flow).unwrap_or(Default::default())
+        self.flow_counters.remove(flow).unwrap_or_else(Default::default)
     }
 }
 
-/// Create a CpMergeableStore. `delay` specifies the number of buckets buffered together, while `channel_size`
+/// Create a `CpMergeableStore`. `delay` specifies the number of buckets buffered together, while `channel_size`
 /// specifies the number of outstanding messages.
-pub fn new_cp_mergeable_store<T: AddAssign<T> + Default + Clone>(delay: usize,
-                                                                 channel_size: usize)
-                                                                 -> (CpMergeableStoreDataPath<T>,
-                                                                     Box<CpMergeableStoreControlPlane<T>>) {
+pub fn new_cp_mergeable_store<T: AddAssign<T> + Default + Clone>
+    (delay: usize,
+     channel_size: usize)
+     -> (CpMergeableStoreDataPath<T>, Box<CpMergeableStoreControlPlane<T>>) {
     let (sender, receiver) = sync_channel(channel_size);
     (CpMergeableStoreDataPath {
         cache: Vec::with_capacity(delay),

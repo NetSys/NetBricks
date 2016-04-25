@@ -1,4 +1,4 @@
-use io::PmdPort;
+use io::PortQueue;
 use headers::EndOffset;
 use io::Result;
 use std::marker::PhantomData;
@@ -9,6 +9,7 @@ use super::iterator::*;
 use super::packet_batch::cast_from_u8;
 use std::any::Any;
 use std::cmp::min;
+use utils::SpscProducer;
 
 pub struct ParsedBatch<T: EndOffset, V>
     where V: Batch + BatchIterator + Act
@@ -21,40 +22,7 @@ impl<T, V> Act for ParsedBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
-    #[inline]
-    fn act(&mut self) {
-        self.parent.act();
-    }
-
-    #[inline]
-    fn done(&mut self) {
-        self.parent.done();
-    }
-
-    #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parent.send_queue(port, queue)
-    }
-
-    #[inline]
-    fn capacity(&self) -> i32 {
-        self.parent.capacity()
-    }
-
-    #[inline]
-    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
-        self.parent.drop_packets(idxes)
-    }
-
-    #[inline]
-    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
-        self.parent.adjust_payload_size(idx, size)
-    }
-
-    #[inline]
-    fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
-        self.parent.adjust_headroom(idx, size)
-    }
+    act!{}
 }
 
 batch!{ParsedBatch, [parent: V], [phantom: PhantomData]}
@@ -72,9 +40,7 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         let parent_payload = self.parent.next_payload(idx);
         match parent_payload {
-            Some((PacketDescriptor { offset: prev_offset, payload: packet, payload_size: size, .. },
-                  arg,
-                  idx)) => {
+            Some((PacketDescriptor { offset: prev_offset, payload: packet, payload_size: size, .. }, arg, idx)) => {
                 let pkt_as_t = cast_from_u8::<T>(packet);
                 let offset = T::offset(pkt_as_t);
                 // Under no circumstances should we allow an incorrectly reported payload size to cause problems.

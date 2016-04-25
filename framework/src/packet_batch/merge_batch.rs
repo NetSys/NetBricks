@@ -1,4 +1,4 @@
-use io::PmdPort;
+use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
@@ -6,6 +6,7 @@ use super::CompositionBatch;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use std::cmp;
 use std::any::Any;
+use scheduler::Executable;
 
 pub struct MergeBatch {
     parents: Vec<CompositionBatch>,
@@ -18,12 +19,6 @@ impl MergeBatch {
             parents: parents,
             which: 0,
         }
-    }
-
-    #[inline]
-    pub fn process(&mut self) {
-        self.act();
-        self.done();
     }
 }
 
@@ -57,6 +52,15 @@ impl BatchIterator for MergeBatch {
 /// Internal interface for packets.
 impl Act for MergeBatch {
     #[inline]
+    fn parent(&mut self) -> &mut Batch {
+        &mut self.parents[self.which]
+    }
+
+    #[inline]
+    fn parent_immutable(&self) -> &Batch {
+        &self.parents[self.which]
+    }
+    #[inline]
     fn act(&mut self) {
         self.parents[self.which].act()
     }
@@ -68,8 +72,8 @@ impl Act for MergeBatch {
     }
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parents[self.which].send_queue(port, queue)
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+        self.parents[self.which].send_q(port)
     }
 
     #[inline]
@@ -90,5 +94,13 @@ impl Act for MergeBatch {
     #[inline]
     fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
         self.parents[self.which].adjust_headroom(idx, size)
+    }
+}
+
+impl Executable for MergeBatch {
+    #[inline]
+    fn execute(&mut self) {
+        self.act();
+        self.done();
     }
 }

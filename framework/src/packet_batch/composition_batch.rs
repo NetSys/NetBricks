@@ -1,11 +1,12 @@
 use super::act::Act;
 use super::Batch;
 use super::iterator::{BatchIterator, PacketDescriptor};
-use io::PmdPort;
+use io::PortQueue;
 use io::Result;
 use std::any::Any;
+use scheduler::Executable;
 
-/// CompositionBatch allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
+/// `CompositionBatch` allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
 /// can treat packets as originating from the NF itself.
 pub struct CompositionBatch {
     parent: Box<Batch>,
@@ -45,6 +46,16 @@ impl BatchIterator for CompositionBatch {
 /// Internal interface for packets.
 impl Act for CompositionBatch {
     #[inline]
+    fn parent(&mut self) -> &mut Batch {
+        &mut *self.parent
+    }
+
+    #[inline]
+    fn parent_immutable(&self) -> &Batch {
+        &*self.parent
+    }
+
+    #[inline]
     fn act(&mut self) {
         self.parent.act();
     }
@@ -55,8 +66,8 @@ impl Act for CompositionBatch {
     }
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parent.send_queue(port, queue)
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+        self.parent.send_q(port)
     }
 
     #[inline]
@@ -77,5 +88,13 @@ impl Act for CompositionBatch {
     #[inline]
     fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
         self.parent.adjust_headroom(idx, size)
+    }
+}
+
+impl Executable for CompositionBatch {
+    #[inline]
+    fn execute(&mut self) {
+        self.act();
+        self.done();
     }
 }

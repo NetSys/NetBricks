@@ -1,4 +1,5 @@
 use io::*;
+use utils::*;
 use std::result;
 use super::act::Act;
 use super::Batch;
@@ -68,50 +69,89 @@ impl PacketBatch {
 
     /// Receive packets from a PMD port queue.
     #[inline]
-    pub fn recv_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
+    pub fn recv(&mut self, port: &mut PortQueue) -> Result<u32> {
         unsafe {
             match self.deallocate_batch() {
                 Err(err) => Err(err),
-                Ok(_) => self.recv_internal(port, queue),
+                Ok(_) => self.recv_internal(port),
             }
         }
     }
 
-    /// This drops a given vector of packets. This method is O(n) in number of packets, however it does not preserve
-    /// ordering. Currently hidden behind a cfg flag.
-    #[cfg(unordered_drop)]
+    // Assumes we have already deallocated batch.
     #[inline]
-    fn drop_packets_unordered(&mut self, idxes_ordered: Vec<usize>) -> Option<usize> {
-        let mut idxes = idxes_ordered;
-        idxes.reverse();
-        let mut to_free = Vec::<*mut MBuf>::with_capacity(idxes.len());
-        // First remove them from this packetbatch, compacting the batch as appropriate. Note this will not change start
-        // so is safe.
-        for idx in idxes {
-            to_free.push(self.array.swap_remove(idx));
+    unsafe fn recv_internal(&mut self, port: &mut PortQueue) -> Result<u32> {
+        match port.recv(self.packet_ptr(), self.max_size() as i32) {
+            e @ Err(_) => e,
+            Ok(recv) => {
+                self.add_to_batch(recv as usize);
+                Ok(recv)
+            }
         }
+    }
 
-        // Great we removed everything
-        if self.start == self.array.len() {
-            unsafe {
-                self.start = 0;
-                self.array.set_len(0);
+    #[inline]
+    pub fn recv_spsc_queue(&mut self, queue: &SpscConsumer) -> Result<u32> {
+        match self.deallocate_batch() {
+            Err(err) => Err(err),
+            Ok(_) => self.recv_spsc_internal(queue),
+        }
+    }
+
+    #[inline]
+    fn recv_spsc_internal(&mut self, queue: &SpscConsumer) -> Result<u32> {
+        let cnt = self.cnt as usize;
+        Ok(queue.dequeue(&mut self.array, cnt) as u32)
+    }
+
+    #[inline]
+    pub fn distribute_spsc_queues(&mut self,
+                                  queue: &[SpscProducer],
+                                  groups: Vec<(usize, usize)>,
+                                  free_if_not_enqueued: bool) {
+        let mut enqueued_idxes = Vec::with_capacity(self.cnt as usize);
+        for (idx, group) in groups {
+            let enqueued = queue[group].enqueue_one(self.array[idx]);
+            if enqueued {
+                enqueued_idxes.push(idx);
+            } else {
+                // Assume we cannot enqueue anymore packets, this might not be true for cross-core queues, however
+                // making this assumption gives us more of a chance that ordering can be preserved in cases where
+                // enqueing is attempted again.
+                break;
             }
         }
 
-        if to_free.len() == 0 {
-            Some(0)
-        } else {
-            // Now free the dropped packets
+        if enqueued_idxes.len() == self.available() {
             unsafe {
-                let len = to_free.len();
-                // No need to offset here since to_free is tight.
-                let array_ptr = to_free.as_mut_ptr();
-                let ret = mbuf_free_bulk(array_ptr, (len as i32));
-                if ret == 0 {
-                    Some(len)
+                self.consumed_batch(enqueued_idxes.len());
+            }
+        } else {
+            let mut idx = self.start;
+            let mut move_idx = 0;
+            let mut remove_idx = 0;
+            let end = self.array.len();
+            while idx < end && remove_idx < enqueued_idxes.len() {
+                let test_idx = enqueued_idxes[remove_idx];
+                assert!(idx <= test_idx);
+                // If this is part of the preserved group then move it to its final position.
+                if idx == test_idx {
+                    // We are onto the next index to remove
+                    remove_idx += 1;
                 } else {
-                    None
+                    self.array[move_idx] = self.array[idx];
+                    move_idx += 1;
+                }
+                idx += 1;
+            }
+            self.start = 0;
+            unsafe {
+                self.array.set_len(move_idx);
+                if move_idx > 0 && free_if_not_enqueued {
+                    // Free the remaining elements
+                    if let Err(_) = self.deallocate_batch() {
+                        // FIXME: Log failure!
+                    }
                 }
             }
         }
@@ -194,20 +234,7 @@ impl PacketBatch {
     #[inline]
     unsafe fn add_to_batch(&mut self, added: usize) {
         assert_eq!(self.start, 0);
-        self.start = 0;
         self.array.set_len(added);
-    }
-
-    // Assumes we have already deallocated batch.
-    #[inline]
-    unsafe fn recv_internal(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        match port.recv_queue(queue, self.packet_ptr(), self.max_size() as i32) {
-            e @ Err(_) => e,
-            Ok(recv) => {
-                self.add_to_batch(recv as usize);
-                Ok(recv)
-            }
-        }
     }
 
     #[inline]
@@ -353,24 +380,34 @@ impl BatchIterator for PacketBatch {
 /// Internal interface for packets.
 impl Act for PacketBatch {
     #[inline]
+    fn parent(&mut self) -> &mut Batch {
+        self
+    }
+
+    #[inline]
+    fn parent_immutable(&self) -> &Batch {
+        self
+    }
+
+    #[inline]
     fn act(&mut self) {}
 
     #[inline]
     fn done(&mut self) {}
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
         let mut total_sent = 0;
         // FIXME: Make it optionally possible to wait for all packets to be sent.
         while self.available() > 0 {
             unsafe {
-                match port.send_queue(queue, self.packet_ptr(), self.available() as i32)
-                    .and_then(|sent| {
-                        self.consumed_batch(sent as usize);
-                        Ok(sent)
-                    }) {
+                match port.send(self.packet_ptr(), self.available() as i32)
+                          .and_then(|sent| {
+                              self.consumed_batch(sent as usize);
+                              Ok(sent)
+                          }) {
                     Ok(sent) => total_sent += sent,
-                    e  @ _ => return e
+                    e => return e,
                 }
             }
             break;
@@ -396,6 +433,14 @@ impl Act for PacketBatch {
     #[inline]
     fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
         unsafe { self.adjust_packet_headroom(idx, size) }
+    }
+
+    #[inline]
+    fn distribute_to_queues(&mut self,
+                            queues: &[SpscProducer],
+                            groups: Vec<(usize, usize)>,
+                            free_if_not_enqueued: bool) {
+        self.distribute_spsc_queues(queues, groups, free_if_not_enqueued)
     }
 }
 

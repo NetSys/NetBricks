@@ -7,6 +7,7 @@ use e2d2::io::*;
 use e2d2::headers::*;
 use e2d2::utils::*;
 use e2d2::packet_batch::*;
+use e2d2::scheduler::Executable;
 use e2d2::state::*;
 use getopts::Options;
 use std::collections::HashMap;
@@ -33,22 +34,22 @@ fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: MergeableStoreDP
           .compose()
 }
 
-fn recv_thread(ports: Vec<PmdPort>, queue: i32, core: i32, counter: MergeableStoreDP<isize>) {
+fn recv_thread(ports: Vec<PortQueue>, core: i32, counter: MergeableStoreDP<isize>) {
     init_thread(core, core);
     println!("Receiving started");
 
     let pipelines: Vec<_> = ports.iter()
                                  .map(|port| {
                                      let ctr = counter.clone();
-                                     monitor(ReceiveBatch::new(port.copy(), queue), ctr)
-                                         .send(port.copy(), queue)
+                                     monitor(ReceiveBatch::new(port.clone()), ctr)
+                                         .send(port.clone())
                                          .compose()
                                  })
                                  .collect();
     println!("Running {} pipelines", pipelines.len());
     let mut combined = merge(pipelines);
     loop {
-        combined.process();
+        combined.execute();
     }
 }
 
@@ -121,8 +122,10 @@ fn main() {
                                        .map(|(core, ports)| {
                                            let c = core.clone();
                                            let mon = consumer.dp_store();
-                                           let p: Vec<_> = ports.iter().map(|p| p.copy()).collect();
-                                           std::thread::spawn(move || recv_thread(p, 0, c, mon))
+                                           let p: Vec<_> = ports.iter()
+                                                                .map(|p| PmdPort::new_queue_pair(p, 0, 0).unwrap())
+                                                                .collect();
+                                           std::thread::spawn(move || recv_thread(p, c, mon))
                                        })
                                        .collect();
     let mut pkts_so_far = (0, 0);

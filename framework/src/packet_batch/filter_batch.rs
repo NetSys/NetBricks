@@ -2,7 +2,7 @@ use super::iterator::*;
 use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
-use io::PmdPort;
+use io::PortQueue;
 use headers::EndOffset;
 use io::Result;
 use std::any::Any;
@@ -40,6 +40,15 @@ impl<T, V> Act for FilterBatch<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
+    fn parent(&mut self) -> &mut Batch {
+        &mut self.parent
+    }
+
+    #[inline]
+    fn parent_immutable(&self) -> &Batch {
+        &self.parent
+    }
+    #[inline]
     fn act(&mut self) {
         self.parent.act();
         let mut remove = Vec::<usize>::with_capacity(self.capacity);
@@ -64,8 +73,8 @@ impl<T, V> Act for FilterBatch<T, V>
     }
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parent.send_queue(port, queue)
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+        self.parent.send_q(port)
     }
 
     #[inline]

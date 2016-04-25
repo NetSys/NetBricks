@@ -10,9 +10,11 @@ pub use self::map_batch::MapBatch;
 pub use self::merge_batch::MergeBatch;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::receive_batch::ReceiveBatch;
+pub use self::receive_queue::ReceiveQueue;
 pub use self::resize_payload::ResizePayload;
 pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
+pub use self::group_by::*;
 
 use self::map_batch::MapFn;
 use self::filter_batch::FilterFn;
@@ -31,12 +33,14 @@ mod composition_batch;
 mod context_batch;
 mod deparsed_batch;
 mod filter_batch;
+mod group_by;
 mod iterator;
 mod map_batch;
 mod merge_batch;
 mod packet_batch;
 mod parsed_batch;
 mod receive_batch;
+mod receive_queue;
 mod reset_parse;
 mod resize_payload;
 mod send_batch;
@@ -51,7 +55,7 @@ pub fn merge(batches: Vec<CompositionBatch>) -> MergeBatch {
 
 /// Public trait implemented by every packet batch type. This trait should be used as a constraint for any functions or
 /// places where a Batch type is required.
-pub trait Batch : BatchIterator + Act {
+pub trait Batch: BatchIterator + Act {
     /// Parse the payload as header of type.
     fn parse<T: EndOffset>(self) -> ParsedBatch<T, Self>
         where Self: Sized
@@ -60,10 +64,10 @@ pub trait Batch : BatchIterator + Act {
     }
 
     /// Send this batch out a particular port and queue.
-    fn send(self, port: PmdPort, queue: i32) -> SendBatch<Self>
+    fn send(self, port: PortQueue) -> SendBatch<Self>
         where Self: Sized
     {
-        SendBatch::<Self>::new(self, port, queue)
+        SendBatch::<Self>::new(self, port)
     }
 
     /// Erase type information. This is essential to allow different kinds of types to be collected together, as done
@@ -88,8 +92,8 @@ pub trait Batch : BatchIterator + Act {
 }
 
 /// Public interface implemented by packet batches which manipulate headers.
-pub trait HeaderOperations : Batch + Sized {
-    type Header : EndOffset;
+pub trait HeaderOperations: Batch + Sized {
+    type Header: EndOffset;
     /// Transform a header field.
     fn transform(self,
                  transformer: Box<FnMut(&mut Self::Header, &mut [u8], Option<&mut Any>)>)
@@ -120,7 +124,7 @@ pub trait HeaderOperations : Batch + Sized {
         ResetParsingBatch::<Self>::new(self)
     }
 
-    /// Deparse, i.e., remove the last patched header. Note the assumption here is that T = the last header parsed
+    /// Deparse, i.e., remove the last parsed header. Note the assumption here is that T = the last header parsed
     /// (which we cannot statically enforce since we loose reference to that header).
     fn deparse<T: EndOffset>(self) -> DeparsedBatch<T, Self>
         where Self: Sized

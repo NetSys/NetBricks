@@ -1,4 +1,4 @@
-use io::PmdPort;
+use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
@@ -40,6 +40,15 @@ impl<T, V> Act for ContextBatch<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
+    fn parent(&mut self) -> &mut Batch {
+        &mut self.parent
+    }
+
+    #[inline]
+    fn parent_immutable(&self) -> &Batch {
+        &self.parent
+    }
+    #[inline]
     fn act(&mut self) {
         self.parent.act();
     }
@@ -51,8 +60,8 @@ impl<T, V> Act for ContextBatch<T, V>
     }
 
     #[inline]
-    fn send_queue(&mut self, port: &mut PmdPort, queue: i32) -> Result<u32> {
-        self.parent.send_queue(port, queue)
+    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+        self.parent.send_q(port)
     }
 
     #[inline]
@@ -113,9 +122,7 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_payload(idx) {
             Some((descriptor, _, iret)) => {
-                Some((descriptor,
-                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
-                      iret))
+                Some((descriptor, self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)), iret))
             }
             None => None,
         }
@@ -125,9 +132,7 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
     unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_base_payload(idx) {
             Some((descriptor, _, iret)) => {
-                Some((descriptor,
-                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
-                      iret))
+                Some((descriptor, self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)), iret))
             }
             None => None,
         }
@@ -140,9 +145,7 @@ impl<T, V> BatchIterator for ContextBatch<T, V>
                                   -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_payload_popped(idx, pop) {
             Some((descriptor, _, iret)) => {
-                Some((descriptor,
-                      self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)),
-                      iret))
+                Some((descriptor, self.context.get_mut(idx).and_then(|x| Some(x as &mut Any)), iret))
             }
             None => None,
         }
