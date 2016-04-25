@@ -6,7 +6,6 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 deps () {
 	# Build DPDK
 	$BASE_DIR/3rdparty/get-dpdk.sh
-    export RTE_TARGET=x86_64-native-linuxapp-gcc
 	proc="$(nproc)"
 	make -j $proc -C $BASE_DIR/native
 
@@ -55,6 +54,10 @@ case $TASK in
 		pushd $BASE_DIR/test/framework-test
 		$BASE_DIR/cargo/target/release/cargo fmt
 		popd
+
+		pushd $BASE_DIR/test/delay-test
+		$BASE_DIR/cargo/target/release/cargo fmt
+		popd
 		;;
 	doc)
 		deps
@@ -71,19 +74,19 @@ case $TASK in
 		popd
 		;;
 	clean)
-		rm $BASE_DIR/3rdparty/dpdk.tar.gz
-		rm -rf $BASE_DIR/3rdparty/dpdk
-		make -C $BASE_DIR/native clean
+		rm $BASE_DIR/3rdparty/dpdk.tar.gz || true
+		rm -rf $BASE_DIR/3rdparty/dpdk || true
+		make -C $BASE_DIR/native clean || true
 		pushd $BASE_DIR/framework
-		$BASE_DIR/cargo/target/release/cargo clean
+		$BASE_DIR/cargo/target/release/cargo clean || true
 		popd
 
 		pushd $BASE_DIR/test/framework-test
-		$BASE_DIR/cargo/target/release/cargo clean
+		$BASE_DIR/cargo/target/release/cargo clean || true
 		popd
 		
 		pushd $BASE_DIR/test/delay-test
-                $BASE_DIR/cargo/target/release/cargo clean
+                $BASE_DIR/cargo/target/release/cargo clean || true
                 popd
 		;;
 esac

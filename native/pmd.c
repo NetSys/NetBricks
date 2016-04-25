@@ -185,3 +185,51 @@ int send_pkts(int port, int qid, mbuf_array_t pkts, int len)
 	return rte_eth_tx_burst(port, (uint16_t) qid, (struct rte_mbuf **)pkts, 
 			(uint16_t)len);
 }
+
+int find_port_with_pci_address(const char* pci) {
+    struct rte_pci_addr addr;
+    char devargs[1024];
+    int ret;
+    uint8_t port_id;
+
+    // Cannot parse address
+    if (eal_parse_pci_DomBDF(pci, &addr) != 0 && 
+            eal_parse_pci_BDF(pci, &addr) != 0) {
+        return -1;
+    }
+
+    for (int i = 0; i < RTE_MAX_ETHPORTS; i++) {
+        if (!rte_eth_devices[i].attached) {
+            continue;
+        }
+
+        if (!rte_eth_devices[i].pci_dev) {
+            continue;
+        }
+
+        if (rte_eal_compare_pci_addr(&addr, &rte_eth_devices[i].pci_dev->addr)) {
+            continue;
+        }
+
+        return i;
+    }
+
+    /* If not found, maybe the device has not been attached yet */
+
+    snprintf(devargs, 1024, "%04x:%02x:%02x.%02x",
+            addr.domain,
+            addr.bus,
+            addr.devid,
+            addr.function);
+
+    ret = rte_eth_dev_attach(devargs, &port_id);
+
+    if (ret < 0) {
+        return -1;
+    }
+    return (int)port_id;
+
+}
+
+/* FIXME: Add function to modify RSS hash function using 
+ * rte_eth_dev_rss_hash_update */
