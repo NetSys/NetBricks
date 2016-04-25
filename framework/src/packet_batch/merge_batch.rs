@@ -68,7 +68,13 @@ impl Act for MergeBatch {
     #[inline]
     fn done(&mut self) {
         self.parents[self.which].done();
-        self.which = (self.which + 1) % self.parents.len();
+        //self.which = (self.which + 1) % self.parents.len();
+        let next = self.which + 1;
+        if next == self.parents.len() {
+            self.which = 0
+        } else {
+            self.which = next
+        }
     }
 
     #[inline]

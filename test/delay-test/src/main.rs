@@ -9,13 +9,14 @@ extern crate rand;
 use e2d2::io::*;
 use e2d2::headers::*;
 use e2d2::packet_batch::*;
-use e2d2::scheduler::Executable;
+use e2d2::scheduler::*;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 use std::thread;
 use std::sync::Arc;
+use std::cell::RefCell;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
@@ -91,14 +92,17 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, delay_arg: u64) {
                                      })
                                      .collect();
     println!("Running {} pipelines", pipelines.len());
-    let mut pipeline = if pipelines.len() > 1 {
+    let pipeline = RefCell::new(if pipelines.len() > 1 {
         box merge(pipelines) as Box<Executable>
     } else {
         box pipelines.pop().unwrap() as Box<Executable>
-    };
-    loop {
-        pipeline.execute()
-    }
+    });
+    let mut sched = Scheduler::new();
+    sched.add_task(pipeline);
+    sched.execute_loop();
+    //loop {
+        //pipeline.execute()
+    //}
 }
 
 fn main() {
