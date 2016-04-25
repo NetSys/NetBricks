@@ -6,7 +6,7 @@ RTE_SDK = $(abspath ../3rdparty/dpdk/)
 #endif
 
 ifndef RTE_TARGET
-$(error RTE_TARGET is undefined)
+	RTE_TARGET="build"
 endif
 
 ifneq ($(wildcard $(RTE_SDK)/$(RTE_TARGET)*),)
