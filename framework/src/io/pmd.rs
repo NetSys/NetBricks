@@ -29,9 +29,27 @@ extern "C" {
     fn find_port_with_pci_address(pciaddr: *const u8) -> i32;
 }
 
-// Why?
+// Make this into an input parameter
 const NUM_RXD: i32 = 256;
 const NUM_TXD: i32 = 256;
+
+#[derive(Default)]
+#[repr(simd)]
+struct CacheLine(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64);
+
+struct PmdStats {
+    pub stats: AtomicUsize,
+    _pad: [CacheLine; 0],
+}
+
+impl PmdStats {
+    pub fn new() -> PmdStats {
+        PmdStats {
+            stats: AtomicUsize::new(0),
+            _pad: [],
+        }
+    }
+}
 
 pub struct PmdPort {
     connected: bool,
@@ -39,8 +57,8 @@ pub struct PmdPort {
     rxqs: i32,
     txqs: i32,
     should_close: bool,
-    stats_rx: Vec<Arc<AtomicUsize>>,
-    stats_tx: Vec<Arc<AtomicUsize>>,
+    stats_rx: Vec<Arc<PmdStats>>,
+    stats_tx: Vec<Arc<PmdStats>>,
 }
 
 #[derive(Clone)]
@@ -51,8 +69,8 @@ pub struct PortQueue {
     port_id: i32,
     txq: i32,
     rxq: i32,
-    stats_rx: Arc<AtomicUsize>,
-    stats_tx: Arc<AtomicUsize>,
+    stats_rx: Arc<PmdStats>,
+    stats_tx: Arc<PmdStats>,
 }
 
 impl Drop for PmdPort {
@@ -87,8 +105,8 @@ impl PortQueue {
     fn send_queue(&mut self, queue: i32, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
         unsafe {
             let sent = send_pkts(self.port_id, queue, pkts, to_send);
-            let update = self.stats_tx.load(Ordering::Relaxed) + sent as usize;
-            self.stats_tx.store(update, Ordering::Relaxed);
+            let update = self.stats_tx.stats.load(Ordering::Relaxed) + sent as usize;
+            self.stats_tx.stats.store(update, Ordering::Relaxed);
             Ok(sent as u32)
         }
     }
@@ -97,8 +115,8 @@ impl PortQueue {
     fn recv_queue(&self, queue: i32, pkts: *mut *mut MBuf, to_recv: i32) -> Result<u32> {
         unsafe {
             let recv = recv_pkts(self.port_id, queue, pkts, to_recv);
-            let update = self.stats_rx.load(Ordering::Relaxed) + recv as usize;
-            self.stats_rx.store(update, Ordering::Relaxed);
+            let update = self.stats_rx.stats.load(Ordering::Relaxed) + recv as usize;
+            self.stats_rx.stats.store(update, Ordering::Relaxed);
             Ok(recv as u32)
         }
     }
@@ -165,7 +183,7 @@ impl PmdPort {
     /// Get stats for an RX/TX queue pair.
     pub fn stats(&self, queue: i32) -> (usize, usize) {
         let idx = queue as usize;
-        (self.stats_rx[idx].load(Ordering::Relaxed), self.stats_tx[idx].load(Ordering::Relaxed))
+        (self.stats_rx[idx].stats.load(Ordering::Relaxed), self.stats_tx[idx].stats.load(Ordering::Relaxed))
     }
 
     /// Create a PMD port with a given number of RX and TXQs.
@@ -205,8 +223,8 @@ impl PmdPort {
                     rxqs: rxqs,
                     txqs: txqs,
                     should_close: true,
-                    stats_rx: (0..rxqs).map(|_| Arc::new(AtomicUsize::new(0))).collect(),
-                    stats_tx: (0..txqs).map(|_| Arc::new(AtomicUsize::new(0))).collect(),
+                    stats_rx: (0..rxqs).map(|_| Arc::new(PmdStats::new())).collect(),
+                    stats_tx: (0..txqs).map(|_| Arc::new(PmdStats::new())).collect(),
                 }))
             } else {
                 Err(ZCSIError::FailedToInitializePort)
@@ -275,8 +293,8 @@ impl PmdPort {
                 rxqs: 1,
                 txqs: 1,
                 should_close: false,
-                stats_rx: vec![Arc::new(AtomicUsize::new(0)); 1],
-                stats_tx: vec![Arc::new(AtomicUsize::new(0)); 1],
+                stats_rx: vec![Arc::new(PmdStats::new())],
+                stats_tx: vec![Arc::new(PmdStats::new())],
             }))
         } else {
             Err(ZCSIError::FailedToInitializePort)
@@ -295,8 +313,8 @@ impl PmdPort {
                         rxqs: 1,
                         txqs: 1,
                         should_close: false,
-                        stats_rx: vec![Arc::new(AtomicUsize::new(0)); 1],
-                        stats_tx: vec![Arc::new(AtomicUsize::new(0)); 1],
+                        stats_rx: vec![Arc::new(PmdStats::new())],
+                        stats_tx: vec![Arc::new(PmdStats::new())],
                     }))
                 } else {
                     Err(ZCSIError::FailedToInitializePort)
@@ -326,8 +344,8 @@ impl PmdPort {
             rxqs: 0,
             txqs: 0,
             should_close: false,
-            stats_rx: vec![Arc::new(AtomicUsize::new(0)); 0],
-            stats_tx: vec![Arc::new(AtomicUsize::new(0)); 0],
+            stats_rx: vec![Arc::new(PmdStats::new())],
+            stats_tx: vec![Arc::new(PmdStats::new())],
         }))
     }
 

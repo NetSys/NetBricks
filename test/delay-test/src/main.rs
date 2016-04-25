@@ -120,15 +120,17 @@ fn main() {
     if matches.opt_present("h") {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
     }
+
+    let delay_arg = matches.opt_str("d")
+                           .unwrap_or_else(|| String::from("100"))
+                           .parse()
+                           .expect("Could not parse delay");
+
     let cores_str = matches.opt_strs("c");
     let master_core = matches.opt_str("m")
                              .unwrap_or_else(|| String::from("0"))
                              .parse()
                              .expect("Could not parse master core spec");
-    let delay_arg = matches.opt_str("d")
-                           .unwrap_or_else(|| String::from("100"))
-                           .parse()
-                           .expect("Could not parse delay");
     println!("Using master core {}", master_core);
     let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
 
