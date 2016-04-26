@@ -1,6 +1,7 @@
-use fnv::FnvHasher;
-
 use byteorder::{BigEndian, ByteOrder};
+use fnv::FnvHasher;
+use headers::MacHeader;
+
 use std::hash::Hasher;
 use std::mem;
 use std::slice;
@@ -21,22 +22,30 @@ const IHL_TO_BYTE_FACTOR: usize = 4; // IHL is in terms of number of 32-bit word
 
 /// This assumes the function is given the Mac Payload
 #[inline]
-pub fn ipv4_extract_flow(bytes: &[u8]) -> Flow {
-    let port_start = (bytes[0] & 0xf) as usize * IHL_TO_BYTE_FACTOR;
-    Flow {
-        proto: bytes[9],
-        src_ip: BigEndian::read_u32(&bytes[12..16]),
-        dst_ip: BigEndian::read_u32(&bytes[16..20]),
-        src_port: BigEndian::read_u16(&bytes[(port_start)..(port_start + 2)]),
-        dst_port: BigEndian::read_u16(&bytes[(port_start + 2)..(port_start + 4)]),
+pub fn ipv4_extract_flow(header: &MacHeader, bytes: &[u8]) -> Option<Flow> {
+    if header.etype() == 0x0800 {
+        let port_start = (bytes[0] & 0xf) as usize * IHL_TO_BYTE_FACTOR;
+        Some(Flow {
+            proto: bytes[9],
+            src_ip: BigEndian::read_u32(&bytes[12..16]),
+            dst_ip: BigEndian::read_u32(&bytes[16..20]),
+            src_port: BigEndian::read_u16(&bytes[(port_start)..(port_start + 2)]),
+            dst_port: BigEndian::read_u16(&bytes[(port_start + 2)..(port_start + 4)]),
+        })
+    } else {
+        None
     }
 }
 
 /// Given the MAC payload, generate a flow hash. The flow hash generated depends on the IV, so different IVs will
 /// produce different results (in cases when implementing Cuckoo hashing, etc.).
 #[inline]
-pub fn ipv4_flow_hash(bytes: &[u8], _iv: u32) -> usize {
-    flow_hash(&ipv4_extract_flow(bytes))
+pub fn ipv4_flow_hash(header: &MacHeader, bytes: &[u8], _iv: u32) -> usize {
+    if let Some(flow) = ipv4_extract_flow(header, bytes) {
+        flow_hash(&flow)
+    } else {
+        0
+    }
 }
 
 #[inline]

@@ -27,7 +27,7 @@ impl fmt::Display for MacAddress {
 pub struct MacHeader {
     pub dst: [u8; 6],
     pub src: [u8; 6],
-    pub etype: u16,
+    etype: u16,
 }
 
 impl fmt::Display for MacHeader {
@@ -83,5 +83,15 @@ impl EndOffset for MacHeader {
 impl MacHeader {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    #[inline]
+    pub fn etype(&self) -> u16 {
+        u16::from_be(self.etype)
+    }
+
+    #[inline]
+    pub fn set_etype(&mut self, etype: u16) {
+        self.etype = u16::to_be(etype)
     }
 }

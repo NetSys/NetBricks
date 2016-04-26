@@ -10,7 +10,6 @@ simd = { git = "https://github.com/huonw/simd" }
 getopts = "*"
 rand = "0.3"
 fnv = "*"
-x86 = "*"
 
 [features]
 default = []

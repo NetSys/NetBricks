@@ -20,8 +20,9 @@ use self::map_batch::MapFn;
 use self::filter_batch::FilterFn;
 use self::resize_payload::ResizeFn;
 pub use self::reset_parse::ResetParsingBatch;
-use super::io::*;
-use super::headers::*;
+use io::*;
+use headers::*;
+use scheduler::Scheduler;
 use std::any::Any;
 
 #[macro_use]
@@ -134,5 +135,11 @@ pub trait HeaderOperations: Batch + Sized {
 
     fn resize(self, resize_f: ResizeFn<Self::Header>) -> ResizePayload<Self::Header, Self> {
         ResizePayload::<Self::Header, Self>::new(self, resize_f)
+    }
+
+    fn group_by(self, groups: usize, group_f: GroupFn<Self::Header>, sched: &mut Scheduler) -> GroupBy<Self::Header, Self>
+        where Self:Sized
+    {
+        GroupBy::<Self::Header, Self>::new(self, groups, group_f, sched)
     }
 }
