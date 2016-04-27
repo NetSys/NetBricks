@@ -12,7 +12,6 @@ use std::any::Any;
 pub struct PacketBatch {
     array: Vec<*mut MBuf>,
     cnt: i32,
-    start: usize,
 }
 
 impl PacketBatch {
@@ -21,7 +20,6 @@ impl PacketBatch {
         PacketBatch {
             array: Vec::<*mut MBuf>::with_capacity(cnt as usize),
             cnt: cnt,
-            start: 0,
         }
     }
 
@@ -58,7 +56,7 @@ impl PacketBatch {
     /// Number of available mbufs.
     #[inline]
     pub fn available(&self) -> usize {
-        (self.array.len() - self.start)
+        self.array.len()
     }
 
     /// The maximum number of packets that can be allocated in this batch, just returns `self.cnt`.
@@ -107,54 +105,29 @@ impl PacketBatch {
     #[inline]
     pub fn distribute_spsc_queues(&mut self,
                                   queue: &[SpscProducer],
-                                  groups: Vec<(usize, usize)>,
-                                  free_if_not_enqueued: bool) {
-        let mut enqueued_idxes = Vec::with_capacity(self.cnt as usize);
-        for (idx, group) in groups {
-            let enqueued = queue[group].enqueue_one(self.array[idx]);
-            if enqueued {
-                enqueued_idxes.push(idx);
-            } else {
-                // Assume we cannot enqueue anymore packets, this might not be true for cross-core queues, however
-                // making this assumption gives us more of a chance that ordering can be preserved in cases where
-                // enqueing is attempted again.
-                break;
+                                  groups: &Vec<(usize, usize)>) {
+
+        let mut could_not_enqueue = Vec::with_capacity(self.array.len());
+        let input_len = groups.len();
+        let mut idx = 0;
+        for &(_, group) in groups {
+            if !queue[group].enqueue_one(self.array[idx]) {
+                could_not_enqueue.push(idx);
             }
+            idx += 1;
         }
 
-        if enqueued_idxes.len() == self.available() {
-            unsafe {
-                self.consumed_batch(enqueued_idxes.len());
-            }
-        } else {
-            let mut idx = self.start;
-            let mut move_idx = 0;
-            let mut remove_idx = 0;
-            let end = self.array.len();
-            while idx < end && remove_idx < enqueued_idxes.len() {
-                let test_idx = enqueued_idxes[remove_idx];
-                assert!(idx <= test_idx);
-                // If this is part of the preserved group then move it to its final position.
-                if idx == test_idx {
-                    // We are onto the next index to remove
-                    remove_idx += 1;
-                } else {
-                    self.array[move_idx] = self.array[idx];
-                    move_idx += 1;
-                }
-                idx += 1;
-            }
-            self.start = 0;
-            unsafe {
-                self.array.set_len(move_idx);
-                if move_idx > 0 && free_if_not_enqueued {
-                    // Free the remaining elements
-                    if let Err(_) = self.deallocate_batch() {
-                        // FIXME: Log failure!
-                    }
-                }
-            }
+        // Compact
+        idx = 0;
+        for fail in could_not_enqueue {
+            self.array[idx] = self.array[fail];
+            idx += 1
         }
+        for fail in input_len..self.array.len() {
+            self.array[idx] = self.array[fail];
+            idx += 1
+        }
+        unsafe { self.array.set_len(idx) };
     }
 
     /// This drops packet buffers and keeps things ordered. We expect that idxes is an ordered vector of indices, no
@@ -167,7 +140,7 @@ impl PacketBatch {
             return Some(0);
         }
         unsafe {
-            let mut idx_orig = self.start;
+            let mut idx_orig = 0;
             let mut idx_new = 0;
             let mut remove_idx = 0;
             let end = self.array.len();
@@ -196,7 +169,6 @@ impl PacketBatch {
             if remove_idx < idxes.len() {
                 None
             } else {
-                self.start = 0;
                 self.array.set_len(idx_new);
                 if to_free.is_empty() {
                     Some(0)
@@ -219,21 +191,23 @@ impl PacketBatch {
     // Some private utility functions.
     #[inline]
     unsafe fn packet_ptr(&mut self) -> *mut *mut MBuf {
-        self.array.as_mut_ptr().offset(self.start as isize)
+        self.array.as_mut_ptr()
     }
 
     #[inline]
     unsafe fn consumed_batch(&mut self, consumed: usize) {
-        self.start += consumed;
-        if self.start == self.array.len() {
-            self.start = 0;
-            self.array.set_len(0);
+        let mut new_idx = 0;
+        let len = self.array.len();
+        for idx in consumed..len {
+            self.array[new_idx] = self.array[idx];
+            new_idx += 1;
         }
+
+        self.array.set_len(len - consumed);
     }
 
     #[inline]
     unsafe fn add_to_batch(&mut self, added: usize) {
-        assert_eq!(self.start, 0);
         self.array.set_len(added);
     }
 
@@ -246,7 +220,6 @@ impl PacketBatch {
                 let parray = self.array.as_mut_ptr();
                 let ret = mbuf_alloc_bulk(parray, len, cnt);
                 if ret == 0 {
-                    self.start = 0;
                     self.array.set_len(cnt as usize);
                     Ok(())
                 } else {
@@ -259,11 +232,10 @@ impl PacketBatch {
     #[inline]
     fn free_packet_batch(&mut self) -> result::Result<(), ()> {
         unsafe {
-            if self.array.len() > self.start {
+            if self.array.len() > 0 {
                 let parray = self.packet_ptr();
-                let ret = mbuf_free_bulk(parray, ((self.array.len() - self.start) as i32));
+                let ret = mbuf_free_bulk(parray, (self.array.len() as i32));
                 // If free fails, I am not sure we can do much to recover this batch.
-                self.start = 0;
                 self.array.set_len(0);
                 if ret == 0 {
                     Ok(())
@@ -343,13 +315,13 @@ impl BatchIterator for PacketBatch {
     /// The starting offset for packets in the current batch.
     #[inline]
     fn start(&mut self) -> usize {
-        self.start
+        0
     }
 
     /// Payload for the next packet.
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        if self.start <= idx && idx < self.array.len() {
+        if idx < self.array.len() {
             Some((PacketDescriptor {
                 offset: 0,
                 header: self.address(idx).0,
@@ -438,9 +410,8 @@ impl Act for PacketBatch {
     #[inline]
     fn distribute_to_queues(&mut self,
                             queues: &[SpscProducer],
-                            groups: Vec<(usize, usize)>,
-                            free_if_not_enqueued: bool) {
-        self.distribute_spsc_queues(queues, groups, free_if_not_enqueued)
+                            groups: &Vec<(usize, usize)>) {
+        self.distribute_spsc_queues(queues, &groups)
     }
 }
 

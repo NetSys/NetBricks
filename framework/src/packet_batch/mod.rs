@@ -50,7 +50,9 @@ mod transform_batch;
 /// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
 /// the precise batch being processed will be determined by the scheduling policy used.
 #[inline]
-pub fn merge(batches: Vec<CompositionBatch>) -> MergeBatch {
+pub fn merge<V>(batches: Vec<V>) -> MergeBatch<V>
+    where V: Batch + BatchIterator + Act
+{
     MergeBatch::new(batches)
 }
 

@@ -39,7 +39,7 @@ impl<T, V> GroupBy<T, V>
             let mut producers = Vec::with_capacity(groups);
             let mut consumers = HashMap::with_capacity(groups);
             for i in 0..groups {
-                let (prod, consumer) = new_spsc_queue(1 << 10).unwrap();
+                let (prod, consumer) = new_spsc_queue(1 << 20).unwrap();
                 producers.push(prod);
                 consumers.insert(i, consumer);
             }
@@ -92,7 +92,8 @@ impl<T, V> Executable for GroupByProducer<T, V>
                 groups.push((index, group));
             }
             // At this time groups contains what we need to distribute, so distribute it out.
-            self.parent.distribute_to_queues(&self.producers, groups, true)
-        }
+            self.parent.distribute_to_queues(&self.producers, &groups)
+        };
+        self.parent.done();
     }
 }

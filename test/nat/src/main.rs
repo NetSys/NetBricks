@@ -43,21 +43,21 @@ fn rdtscp() -> u64 {
 }
 
 
-fn recv_thread(ports: Vec<PortQueue>, core: i32, delay_arg: u64) {
+fn recv_thread(ports: Vec<PortQueue>, core: i32) {
     init_thread(core, core);
+    let mut sched = Scheduler::new();
     println!("Receiving started");
     for port in &ports {
-        println!("Receiving port {} rxq {} txq {} on core {} delay {}",
+        println!("Receiving port {} rxq {} txq {} on core {}",
                  port.port.mac_address(),
                  port.rxq(),
                  port.txq(),
-                 core,
-                 delay_arg);
+                 core);
     }
 
     let mut pipelines: Vec<_> = ports.iter()
                                      .map(|port| {
-                                         delay(ReceiveBatch::new(port.clone()), delay_arg)
+                                          nat(ReceiveBatch::new(port.clone()), &mut sched) 
                                              .send(port.clone())
                                      })
                                      .collect();
@@ -67,7 +67,6 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, delay_arg: u64) {
     } else {
         box pipelines.pop().unwrap() as Box<Executable>
     });
-    let mut sched = Scheduler::new();
     sched.add_task(pipeline);
     sched.execute_loop();
 }
@@ -83,7 +82,6 @@ fn main() {
     opts.optmulti("v", "vdevs", "Virtual Devices to add", "PCI");
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
-    opts.optopt("d", "delay", "Delay cycles", "cycles");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
@@ -91,11 +89,6 @@ fn main() {
     if matches.opt_present("h") {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
     }
-
-    let delay_arg = matches.opt_str("d")
-                           .unwrap_or_else(|| String::from("100"))
-                           .parse()
-                           .expect("Could not parse delay");
 
     let cores_str = matches.opt_strs("c");
     let master_core = matches.opt_str("m")
@@ -167,7 +160,7 @@ fn main() {
                                         .map(|(core, ports)| {
                                             let c = core.clone();
                                             let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
-                                            std::thread::spawn(move || recv_thread(p, c, delay_arg))
+                                            std::thread::spawn(move || recv_thread(p, c))
                                         })
                                         .collect();
     let mut pkts_so_far = (0, 0);

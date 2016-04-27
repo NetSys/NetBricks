@@ -49,8 +49,7 @@ pub trait Act {
     #[inline]
     fn distribute_to_queues(&mut self,
                             queues: &[SpscProducer],
-                            groups: Vec<(usize, usize)>,
-                            free_if_not_enqueued: bool) {
-        self.parent().distribute_to_queues(queues, groups, free_if_not_enqueued)
+                            groups: &Vec<(usize, usize)>) {
+        self.parent().distribute_to_queues(queues, groups)
     }
 }

@@ -2,19 +2,22 @@ use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
-use super::CompositionBatch;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use std::cmp;
 use std::any::Any;
 use scheduler::Executable;
 
-pub struct MergeBatch {
-    parents: Vec<CompositionBatch>,
+pub struct MergeBatch<V>
+    where V: Batch + BatchIterator + Act
+{
+    parents: Vec<V>,
     which: usize,
 }
 
-impl MergeBatch {
-    pub fn new(parents: Vec<CompositionBatch>) -> MergeBatch {
+impl<V> MergeBatch<V>
+    where V: Batch + BatchIterator + Act
+{
+    pub fn new(parents: Vec<V>) -> MergeBatch<V> {
         MergeBatch {
             parents: parents,
             which: 0,
@@ -22,9 +25,13 @@ impl MergeBatch {
     }
 }
 
-impl Batch for MergeBatch {}
+impl<V> Batch for MergeBatch<V>
+    where V: Batch + BatchIterator + Act
+{}
 
-impl BatchIterator for MergeBatch {
+impl<V> BatchIterator for MergeBatch<V>
+    where V: Batch + BatchIterator + Act
+{
     #[inline]
     fn start(&mut self) -> usize {
         self.parents[self.which].start()
@@ -50,7 +57,9 @@ impl BatchIterator for MergeBatch {
 }
 
 /// Internal interface for packets.
-impl Act for MergeBatch {
+impl<V> Act for MergeBatch<V>
+    where V: Batch + BatchIterator + Act
+{
     #[inline]
     fn parent(&mut self) -> &mut Batch {
         &mut self.parents[self.which]
@@ -103,7 +112,9 @@ impl Act for MergeBatch {
     }
 }
 
-impl Executable for MergeBatch {
+impl<V> Executable for MergeBatch<V>
+    where V: Batch + BatchIterator + Act
+{
     #[inline]
     fn execute(&mut self) {
         self.act();

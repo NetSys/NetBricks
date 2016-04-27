@@ -35,10 +35,10 @@ pub struct SpscProducer {
 /// they cannot be cloned.
 pub fn new_spsc_queue(size: usize) -> Option<(SpscProducer, SpscConsumer)> {
     if (size & (size - 1)) == 0 {
-        None
-    } else {
         let q = Arc::new(SpscQueue::new(size).unwrap());
         Some((SpscProducer { queue: q.clone() }, SpscConsumer { queue: q.clone() }))
+    } else {
+        None
     }
 }
 
@@ -143,7 +143,7 @@ impl SpscQueue {
 
     pub fn dequeue_one(&self) -> Option<*mut MBuf> {
         let consumer_head = self.consumer.head.load(Ordering::Acquire);
-        let producer_tail = self.consumer.tail.load(Ordering::Acquire);
+        let producer_tail = self.producer.tail.load(Ordering::Acquire);
         let mask = self.mask;
         let available_entries = producer_tail - consumer_head;
         if available_entries == 0 {
@@ -159,7 +159,7 @@ impl SpscQueue {
 
     pub fn dequeue(&self, mbufs: &mut Vec<*mut MBuf>, cnt: usize) -> usize {
         let consumer_head = self.consumer.head.load(Ordering::Acquire);
-        let producer_tail = self.consumer.tail.load(Ordering::Acquire);
+        let producer_tail = self.producer.tail.load(Ordering::Acquire);
         let mask = self.mask;
         let slots = self.slots;
         let available_entries = producer_tail - consumer_head;
