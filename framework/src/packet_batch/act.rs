@@ -48,8 +48,8 @@ pub trait Act {
 
     #[inline]
     fn distribute_to_queues(&mut self,
-                            queues: &[SpscProducer],
-                            groups: &Vec<(usize, usize)>) {
+                            queues: &[SpscProducer<u8>],
+                            groups: &Vec<(usize, *mut u8)>) {
         self.parent().distribute_to_queues(queues, groups)
     }
 }

@@ -8,7 +8,7 @@ use std::default::Default;
 use std::any::Any;
 
 pub struct ContextBatch<T, V>
-    where T: Any + Default + Clone,
+    where T: 'static + Any + Default + Clone + Sized + Send,
           V: Batch + BatchIterator + Act
 {
     parent: V,
@@ -17,7 +17,7 @@ pub struct ContextBatch<T, V>
 }
 
 impl<T, V> ContextBatch<T, V>
-    where T: Any + Default + Clone,
+    where T: 'static + Any + Default + Clone + Sized + Send,
           V: Batch + BatchIterator + Act
 {
     pub fn new(parent: V) -> ContextBatch<T, V> {
@@ -31,13 +31,13 @@ impl<T, V> ContextBatch<T, V>
 }
 
 impl<T, V> Batch for ContextBatch<T, V>
-    where T: Any + Default + Clone,
+    where T: 'static + Any + Default + Clone + Sized + Send,
           V: Batch + BatchIterator + Act
 {
 }
 
 impl<T, V> HeaderOperations for ContextBatch<T, V>
-   where T: Any + Default + Clone,
+   where T: 'static + Any + Default + Clone + Sized + Send,
          V: Batch + BatchIterator + Act + HeaderOperations
 {
     type Header = V::Header; 
@@ -45,7 +45,7 @@ impl<T, V> HeaderOperations for ContextBatch<T, V>
 
 
 impl<T, V> Act for ContextBatch<T, V>
-    where T: Any + Default + Clone,
+    where T: 'static + Any + Default + Clone + Sized + Send,
           V: Batch + BatchIterator + Act
 {
     #[inline]
@@ -119,7 +119,7 @@ impl<T, V> Act for ContextBatch<T, V>
 }
 
 impl<T, V> BatchIterator for ContextBatch<T, V>
-    where T: Any + Default + Clone,
+    where T: 'static + Any + Default + Clone + Sized + Send,
           V: Batch + BatchIterator + Act
 {
     #[inline]

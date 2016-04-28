@@ -23,7 +23,7 @@ pub use self::reset_parse::ResetParsingBatch;
 use io::*;
 use headers::*;
 use scheduler::Scheduler;
-use std::any::Any;
+use std::any::*;
 
 #[macro_use]
 mod macros;
@@ -88,7 +88,7 @@ pub trait Batch: BatchIterator + Act {
     /// Add context (i.e., a per packet structure) that can be used during computation.
     fn context<T>(self) -> ContextBatch<T, Self>
         where Self: Sized,
-              T: Any + Default + Clone
+              T: 'static + Any + Default + Clone + Sized + Send
     {
         ContextBatch::<T, Self>::new(self)
     }
@@ -139,9 +139,12 @@ pub trait HeaderOperations: Batch + Sized {
         ResizePayload::<Self::Header, Self>::new(self, resize_f)
     }
 
-    fn group_by(self, groups: usize, group_f: GroupFn<Self::Header>, sched: &mut Scheduler) -> GroupBy<Self::Header, Self>
-        where Self:Sized
+    fn group_by<T>(self, groups: usize, group_f: GroupFn<Self::Header, T>, sched: &mut Scheduler) -> 
+        GroupBy<Self::Header, Self, T>
+        where Self:Sized,
+              T: 'static + Any + Default + Clone + Sized + Send,
     {
-        GroupBy::<Self::Header, Self>::new(self, groups, group_f, sched)
+        GroupBy::<Self::Header, Self, T>::new(self, groups, group_f, sched)
     }
 }
+pub struct NoMeta;

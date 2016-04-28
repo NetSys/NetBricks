@@ -14,26 +14,50 @@ struct QueuePlace {
     pub tail: AtomicUsize,
 }
 
+struct QueueElement<T> 
+    where T: 'static + Send + Sized {
+    pub addr: AtomicPtr<MBuf>,
+    pub metadata: AtomicPtr<T>
+}
+
+impl<T> Default for QueueElement<T>
+    where T: 'static + Send + Sized {
+    fn default() -> QueueElement<T> {
+        QueueElement {
+            addr: AtomicPtr::new(ptr::null_mut()),
+            metadata: AtomicPtr::new(ptr::null_mut()),
+        }
+    }
+}
+
 // The actual queue.
-struct SpscQueue {
-    queue: Vec<AtomicPtr<MBuf>>,
+struct SpscQueue<T> 
+    where T: 'static + Send + Sized
+{
+    queue: Vec<QueueElement<T>>,
     slots: usize,
     mask: usize,
     producer: QueuePlace,
     consumer: QueuePlace,
 }
 
-pub struct SpscConsumer {
-    queue: Arc<SpscQueue>,
+pub struct SpscConsumer<T> 
+    where T: 'static + Send + Sized
+{
+    queue: Arc<SpscQueue<T>>,
 }
 
-pub struct SpscProducer {
-    queue: Arc<SpscQueue>,
+pub struct SpscProducer<T>
+    where T: 'static + Send + Sized
+{
+    queue: Arc<SpscQueue<T>>,
 }
 
 /// Produce a producer and a consumer for a SPSC queue. The producer and consumer can be sent across a channel, however
 /// they cannot be cloned.
-pub fn new_spsc_queue(size: usize) -> Option<(SpscProducer, SpscConsumer)> {
+pub fn new_spsc_queue<T>(size: usize) -> Option<(SpscProducer<T>, SpscConsumer<T>)> 
+    where T: 'static + Send + Sized
+{
     if (size & (size - 1)) == 0 {
         let q = Arc::new(SpscQueue::new(size).unwrap());
         Some((SpscProducer { queue: q.clone() }, SpscConsumer { queue: q.clone() }))
@@ -42,36 +66,47 @@ pub fn new_spsc_queue(size: usize) -> Option<(SpscProducer, SpscConsumer)> {
     }
 }
 
-impl SpscConsumer {
+impl<T> SpscConsumer<T>
+    where T: 'static + Send + Sized 
+{
     /// Dequeue one mbuf from this queue.
-    pub fn dequeue_one(&self) -> Option<*mut MBuf> {
+    pub fn dequeue_one(&self) -> Option<(*mut MBuf, *mut T)> {
         self.queue.dequeue_one()
     }
 
     /// Dequeue several mbufs from this queue.
-    pub fn dequeue(&self, mbufs: &mut Vec<*mut MBuf>, cnt: usize) -> usize {
-        self.queue.dequeue(mbufs, cnt)
+    pub fn dequeue(&self, mbufs: &mut Vec<*mut MBuf>, metas: &mut Vec<*mut T>, cnt: usize) -> usize {
+        self.queue.dequeue(mbufs, metas, cnt)
     }
 }
 
-impl SpscProducer {
+impl<T> SpscProducer<T>
+    where T: 'static + Send + Sized
+{
     /// Enqueue one mbuf in this queue.
-    pub fn enqueue_one(&self, mbuf: *mut MBuf) -> bool {
-        self.queue.enqueue_one(mbuf)
+    pub fn enqueue_one(&self, mbuf: *mut MBuf, meta: *mut T) -> bool {
+        self.queue.enqueue_one(mbuf, meta)
     }
 
     /// Enqueue several mbufs to this queue.
-    pub fn enqueue(&self, mbufs: &mut Vec<*mut MBuf>) -> usize {
-        self.queue.enqueue(mbufs)
+    pub fn enqueue(&self, mbufs: &mut Vec<*mut MBuf>, metadata: &mut Vec<*mut T>) -> usize {
+        self.queue.enqueue(mbufs, metadata)
     }
 }
 
-impl SpscQueue {
+
+impl<T> SpscQueue<T> 
+    where T: 'static + Send + Sized
+{
+    //fn metadata_to_ptr(m: &mut Option<Box<T>>) -> *mut T {
+        //m.and_then(|b| Some(Box::into_raw(b))).unwrap_or_else(|| ptr::null_mut())
+    //}
+    
     /// Create a new SPSC queue. We require that the size of the ring be a power of two.
-    pub fn new(slots: usize) -> Option<SpscQueue> {
+    pub fn new(slots: usize) -> Option<SpscQueue<T>> {
         if (slots & (slots - 1)) == 0 {
             Some(SpscQueue {
-                queue: (0..slots).map(|_| AtomicPtr::new(ptr::null_mut())).collect(),
+                queue: (0..slots).map(|_| Default::default()).collect(),
                 slots: slots,
                 mask: slots - 1,
                 producer: Default::default(),
@@ -83,7 +118,7 @@ impl SpscQueue {
         }
     }
 
-    pub fn enqueue_one(&self, mbuf: *mut MBuf) -> bool {
+    pub fn enqueue_one(&self, mbuf: *mut MBuf, metadata: *mut T) -> bool {
         let producer_head = self.producer.head.load(Ordering::Acquire);
         let consumer_tail = self.consumer.tail.load(Ordering::Acquire);
         let free_entries = self.mask + consumer_tail - producer_head;
@@ -92,13 +127,14 @@ impl SpscQueue {
         } else {
             self.producer.head.store(producer_head + 1, Ordering::Release);
             let idx = producer_head & self.mask;
-            self.queue[idx].store(mbuf, Ordering::Release);
+            self.queue[idx].addr.store(mbuf, Ordering::Relaxed);
+            self.queue[idx].metadata.store(metadata, Ordering::Release);
             self.producer.tail.store(producer_head + 1, Ordering::Release);
             true
         }
     }
 
-    pub fn enqueue(&self, mbufs: &mut Vec<*mut MBuf>) -> usize {
+    pub fn enqueue(&self, mbufs: &mut Vec<*mut MBuf>, meta: &mut Vec<*mut T>) -> usize {
         let mask = self.mask;
         let producer_head = self.producer.head.load(Ordering::Acquire);
         let consumer_tail = self.consumer.tail.load(Ordering::Acquire);
@@ -111,28 +147,35 @@ impl SpscQueue {
             let unroll_end = n & (!0x3);
             let mut i = 0;
             while i < unroll_end {
-                self.queue[idx].store(mbufs[i], Ordering::Relaxed);
-                self.queue[idx + 1].store(mbufs[i + 1], Ordering::Relaxed);
-                self.queue[idx + 2].store(mbufs[i + 2], Ordering::Relaxed);
-                self.queue[idx + 3].store(mbufs[i + 3], Ordering::Relaxed);
+                self.queue[idx + 0].addr.store(mbufs[i], Ordering::Relaxed);
+                self.queue[idx + 1].addr.store(mbufs[i + 1], Ordering::Relaxed);
+                self.queue[idx + 2].addr.store(mbufs[i + 2], Ordering::Relaxed);
+                self.queue[idx + 3].addr.store(mbufs[i + 3], Ordering::Relaxed);
+                self.queue[idx + 0].metadata.store(meta[i], Ordering::Release);
+                self.queue[idx + 1].metadata.store(meta[i + 1], Ordering::Release);
+                self.queue[idx + 2].metadata.store(meta[i + 2], Ordering::Release);
+                self.queue[idx + 3].metadata.store(meta[i + 3], Ordering::Release);
                 idx += 4;
                 i += 4;
             }
             while i < n {
-                self.queue[idx].store(mbufs[i], Ordering::Relaxed);
+                self.queue[idx].addr.store(mbufs[i], Ordering::Relaxed);
+                self.queue[idx].metadata.store(meta[i], Ordering::Release);
                 idx += 1;
                 i += 1;
             }
         } else {
             let mut count = 0;
             while idx < slots {
-                self.queue[idx].store(mbufs[count], Ordering::Relaxed);
+                self.queue[idx].addr.store(mbufs[count], Ordering::Relaxed);
+                self.queue[idx].metadata.store(meta[count], Ordering::Release);
                 idx += 1;
                 count += 1;
             }
             idx = 0;
             while count < n {
-                self.queue[idx].store(mbufs[count], Ordering::Relaxed);
+                self.queue[idx].addr.store(mbufs[count], Ordering::Relaxed);
+                self.queue[idx].metadata.store(meta[count], Ordering::Release);
                 idx += 1;
                 count += 1;
             }
@@ -141,7 +184,7 @@ impl SpscQueue {
         n
     }
 
-    pub fn dequeue_one(&self) -> Option<*mut MBuf> {
+    pub fn dequeue_one(&self) -> Option<(*mut MBuf, *mut T)> {
         let consumer_head = self.consumer.head.load(Ordering::Acquire);
         let producer_tail = self.producer.tail.load(Ordering::Acquire);
         let mask = self.mask;
@@ -151,13 +194,14 @@ impl SpscQueue {
         } else {
             self.consumer.head.store(consumer_head + 1, Ordering::Release);
             let idx = consumer_head & mask;
-            let val = Some(self.queue[idx].load(Ordering::Acquire));
+            let val = self.queue[idx].addr.load(Ordering::Acquire);
+            let metadata_addr = self.queue[idx].metadata.load(Ordering::Acquire);
             self.consumer.tail.store(consumer_head + 1, Ordering::Release);
-            val
+            Some((val, metadata_addr))
         }
     }
 
-    pub fn dequeue(&self, mbufs: &mut Vec<*mut MBuf>, cnt: usize) -> usize {
+    pub fn dequeue(&self, mbufs: &mut Vec<*mut MBuf>, meta: &mut Vec<*mut T>, cnt: usize) -> usize {
         let consumer_head = self.consumer.head.load(Ordering::Acquire);
         let producer_tail = self.producer.tail.load(Ordering::Acquire);
         let mask = self.mask;
@@ -170,28 +214,37 @@ impl SpscQueue {
             let unroll_end = n & (!0x3);
             let mut i = 0;
             while i < unroll_end {
-                mbufs.push(self.queue[idx].load(Ordering::Relaxed));
-                mbufs.push(self.queue[idx + 1].load(Ordering::Relaxed));
-                mbufs.push(self.queue[idx + 2].load(Ordering::Relaxed));
-                mbufs.push(self.queue[idx + 3].load(Ordering::Relaxed));
+                mbufs.push(self.queue[idx + 0].addr.load(Ordering::Relaxed));
+                mbufs.push(self.queue[idx + 1].addr.load(Ordering::Relaxed));
+                mbufs.push(self.queue[idx + 2].addr.load(Ordering::Relaxed));
+                mbufs.push(self.queue[idx + 3].addr.load(Ordering::Relaxed));
+                meta.push(self.queue[idx + 0].metadata.load(Ordering::Relaxed));
+                meta.push(self.queue[idx + 1].metadata.load(Ordering::Relaxed));
+                meta.push(self.queue[idx + 2].metadata.load(Ordering::Relaxed));
+                meta.push(self.queue[idx + 3].metadata.load(Ordering::Relaxed));
                 idx += 4;
                 i += 4;
             }
             while i < n {
-                mbufs.push(self.queue[idx].load(Ordering::Relaxed));
+                mbufs.push(self.queue[idx].addr.load(Ordering::Relaxed));
+                meta.push(self.queue[idx].metadata.load(Ordering::Relaxed));
                 idx += 1;
                 i += 1;
             }
         } else {
             let mut i = 0;
             while idx < slots {
-                mbufs.push(self.queue[idx].load(Ordering::Relaxed));
+                mbufs.push(self.queue[idx].addr.load(Ordering::Relaxed));
+                meta.push(self.queue[idx].metadata.load(Ordering::Relaxed));
                 idx += 1;
                 i += 1;
             }
             idx = 0;
             while i < n {
-                mbufs.push(self.queue[idx].load(Ordering::Relaxed));
+                mbufs.push(self.queue[idx].addr.load(Ordering::Relaxed));
+                meta.push(self.queue[idx].metadata.load(Ordering::Relaxed));
+                i += 1;
+                idx += 1;
             }
         }
         self.consumer.tail.store(consumer_head + n, Ordering::Release);

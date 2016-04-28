@@ -89,29 +89,30 @@ impl PacketBatch {
     }
 
     #[inline]
-    pub fn recv_spsc_queue(&mut self, queue: &SpscConsumer) -> Result<u32> {
+    pub fn recv_spsc_queue(&mut self, queue: &SpscConsumer<u8>, meta: &mut Vec<*mut u8>) -> Result<u32> {
         match self.deallocate_batch() {
             Err(err) => Err(err),
-            Ok(_) => self.recv_spsc_internal(queue),
+            Ok(_) => self.recv_spsc_internal(queue, meta),
         }
     }
 
     #[inline]
-    fn recv_spsc_internal(&mut self, queue: &SpscConsumer) -> Result<u32> {
+    fn recv_spsc_internal(&mut self, queue: &SpscConsumer<u8>, meta: &mut Vec<*mut u8>) -> Result<u32> {
         let cnt = self.cnt as usize;
-        Ok(queue.dequeue(&mut self.array, cnt) as u32)
+        Ok(queue.dequeue(&mut self.array, meta, cnt) as u32)
     }
 
     #[inline]
     pub fn distribute_spsc_queues(&mut self,
-                                  queue: &[SpscProducer],
-                                  groups: &Vec<(usize, usize)>) {
+                                  queue: &[SpscProducer<u8>],
+                                  groups: &Vec<(usize, *mut u8)>) 
+    {
 
         let mut could_not_enqueue = Vec::with_capacity(self.array.len());
         let input_len = groups.len();
         let mut idx = 0;
-        for &(_, group) in groups {
-            if !queue[group].enqueue_one(self.array[idx]) {
+        for &(group, meta) in groups {
+            if !queue[group].enqueue_one(self.array[idx], meta) {
                 could_not_enqueue.push(idx);
             }
             idx += 1;
@@ -409,8 +410,9 @@ impl Act for PacketBatch {
 
     #[inline]
     fn distribute_to_queues(&mut self,
-                            queues: &[SpscProducer],
-                            groups: &Vec<(usize, usize)>) {
+                            queues: &[SpscProducer<u8>],
+                            groups: &Vec<(usize, *mut u8)>) 
+    {
         self.distribute_spsc_queues(queues, &groups)
     }
 }

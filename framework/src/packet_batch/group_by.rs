@@ -5,36 +5,41 @@ use super::Batch;
 use scheduler::{Executable, Scheduler};
 use super::ReceiveQueue;
 use super::iterator::*;
-use std::any::Any;
+use std::any::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::marker::PhantomData;
+use std::ptr;
 
-pub type GroupFn<T> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>) -> usize>;
-struct GroupByProducer<T, V>
+pub type GroupFn<T, S> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>) -> (usize, Option<Box<S>>)>;
+struct GroupByProducer<T, V, S>
     where T: EndOffset + 'static,
-          V: Batch + BatchIterator + Act + 'static
+          V: Batch + BatchIterator + Act + 'static,
+          S: 'static + Any + Default + Clone + Sized + Send
 {
     parent: V,
     group_ct: usize,
-    group_fn: GroupFn<T>,
-    producers: Vec<SpscProducer>,
+    group_fn: GroupFn<T, S>,
+    producers: Vec<SpscProducer<u8>>,
 }
-pub struct GroupBy<T, V>
+pub struct GroupBy<T, V, S>
     where T: EndOffset + 'static,
-          V: Batch + BatchIterator + Act + 'static
+          V: Batch + BatchIterator + Act + 'static,
+          S: 'static + Any + Default + Clone + Sized + Send
 {
     group_ct: usize,
-    consumers: HashMap<usize, SpscConsumer>,
+    consumers: HashMap<usize, SpscConsumer<u8>>,
     phantom_t: PhantomData<T>,
     phantom_v: PhantomData<V>,
+    phantom_s: PhantomData<S>,
 }
 
-impl<T, V> GroupBy<T, V>
+impl<T, V, S> GroupBy<T, V, S>
     where T: EndOffset + 'static,
-          V: Batch + BatchIterator + Act + 'static
+          V: Batch + BatchIterator + Act + 'static,
+          S: 'static + Any + Default + Clone + Sized + Send
 {
-    pub fn new(parent: V, groups: usize, group_fn: GroupFn<T>, sched: &mut Scheduler) -> GroupBy<T, V> {
+    pub fn new(parent: V, groups: usize, group_fn: GroupFn<T, S>, sched: &mut Scheduler) -> GroupBy<T, V, S> {
         let (producers, consumers) = {
             let mut producers = Vec::with_capacity(groups);
             let mut consumers = HashMap::with_capacity(groups);
@@ -45,7 +50,7 @@ impl<T, V> GroupBy<T, V>
             }
             (producers, consumers)
         };
-        sched.add_task(RefCell::new(box GroupByProducer::<T, V> {
+        sched.add_task(RefCell::new(box GroupByProducer::<T, V, S> {
             parent: parent,
             group_ct: groups,
             group_fn: group_fn,
@@ -56,6 +61,7 @@ impl<T, V> GroupBy<T, V>
             consumers: consumers,
             phantom_t: PhantomData,
             phantom_v: PhantomData,
+            phantom_s: PhantomData,
         }
     }
 
@@ -65,21 +71,22 @@ impl<T, V> GroupBy<T, V>
     }
 
     #[inline]
-    pub fn get_group(&mut self, group: usize) -> Option<ReceiveQueue> {
+    pub fn get_group(&mut self, group: usize) -> Option<ReceiveQueue<S>> {
         // FIXME: This currently loses all the parsing, we should fix it to not be the case.
         if group > self.group_ct {
             None
         } else {
             self.consumers
                 .remove(&group)
-                .and_then(|q| Some(ReceiveQueue::new(q)))
+                .and_then(|q| Some(ReceiveQueue::<S>::new(q)))
         }
     }
 }
 
-impl<T, V> Executable for GroupByProducer<T, V>
+impl<T, V, S> Executable for GroupByProducer<T, V, S>
     where T: EndOffset + 'static,
-          V: Batch + BatchIterator + Act + 'static
+          V: Batch + BatchIterator + Act + 'static,
+          S: 'static + Any + Default + Clone + Sized + Send
 {
     #[inline]
     fn execute(&mut self) {
@@ -87,9 +94,10 @@ impl<T, V> Executable for GroupByProducer<T, V>
         {
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
             let mut groups = Vec::with_capacity(self.group_ct);
-            while let Some(ParsedDescriptor { header: hdr, payload, ctx, index, .. }) = iter.next(&mut self.parent) {
-                let group = (self.group_fn)(hdr, payload, ctx);
-                groups.push((index, group));
+            while let Some(ParsedDescriptor { header: hdr, payload, ctx, .. }) = iter.next(&mut self.parent) {
+                let (group, meta) = (self.group_fn)(hdr, payload, ctx);
+                groups.push((group, meta.and_then(|m| Some(Box::into_raw(m) as *mut u8))
+                             .unwrap_or_else(|| ptr::null_mut()))) 
             }
             // At this time groups contains what we need to distribute, so distribute it out.
             self.parent.distribute_to_queues(&self.producers, &groups)
