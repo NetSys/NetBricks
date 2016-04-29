@@ -191,11 +191,9 @@ impl PacketBatch {
 
     #[inline]
     unsafe fn consumed_batch(&mut self, consumed: usize) {
-        let mut new_idx = 0;
         let len = self.array.len();
-        for idx in consumed..len {
+        for (new_idx, idx) in (consumed..len).enumerate() {
             self.array[new_idx] = self.array[idx];
-            new_idx += 1;
         }
 
         self.array.set_len(len - consumed);
@@ -227,7 +225,9 @@ impl PacketBatch {
     #[inline]
     fn free_packet_batch(&mut self) -> result::Result<(), ()> {
         unsafe {
-            if self.array.len() > 0 {
+            if self.array.is_empty() {
+                Ok(())
+            } else {
                 let parray = self.packet_ptr();
                 let ret = mbuf_free_bulk(parray, (self.array.len() as i32));
                 // If free fails, I am not sure we can do much to recover this batch.
@@ -237,8 +237,6 @@ impl PacketBatch {
                 } else {
                     Err(())
                 }
-            } else {
-                Ok(())
             }
         }
     }

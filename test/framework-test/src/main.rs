@@ -24,7 +24,7 @@ fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: MergeableStoreDP
               let src = hdr.src.clone();
               hdr.src = hdr.dst;
               hdr.dst = src;
-              monitoring_cache.update(ipv4_extract_flow(payload), 1);
+              monitoring_cache.update(ipv4_extract_flow(hdr, payload).unwrap(), 1);
           })
           .parse::<IpHeader>()
           .transform(box |hdr, _, _| {

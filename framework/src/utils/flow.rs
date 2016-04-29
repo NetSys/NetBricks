@@ -51,9 +51,8 @@ impl Flow {
 
     #[inline]
     pub fn ipv4_stamp_flow(&self, header: &MacHeader, bytes: &mut [u8]) -> bool {
-        if header.etype() == 0x0800 {
+        if header.etype() == 0x0800 && bytes[9] == self.proto {
             let port_start = (bytes[0] & 0xf) as usize * IHL_TO_BYTE_FACTOR;
-            bytes[0] = self.proto;
             BigEndian::write_u32(&mut bytes[12..16], self.src_ip);
             BigEndian::write_u32(&mut bytes[16..20], self.dst_ip);
             BigEndian::write_u16(&mut bytes[(port_start)..(port_start + 2)], self.src_port);
@@ -61,6 +60,7 @@ impl Flow {
             BigEndian::write_u16(&mut bytes[10..12], 0);
             let csum = ipcsum(bytes);
             BigEndian::write_u16(&mut bytes[10..12], csum);
+            // FIXME: l4 cksum
             true
         } else {
             false
