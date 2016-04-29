@@ -105,32 +105,26 @@ impl PacketBatch {
     #[inline]
     pub fn distribute_spsc_queues(&mut self,
                                   queue: &[SpscProducer<u8>],
-                                  groups: &Vec<(usize, *mut u8)>) 
+                                  groups: &Vec<(usize, *mut u8)>,
+                                  _: usize) 
     {
 
-        let mut could_not_enqueue = Vec::with_capacity(self.array.len());
-        let input_len = groups.len();
         let mut idx = 0;
+        let mut could_not_enqueue = Vec::with_capacity(self.array.len());
         for &(group, meta) in groups {
             if !queue[group].enqueue_one(self.array[idx], meta) {
                 could_not_enqueue.push(idx);
             }
             idx += 1;
         }
-
-        // Compact
         idx = 0;
-        for fail in could_not_enqueue {
-            self.array[idx] = self.array[fail];
-            idx += 1
-        }
-        for fail in input_len..self.array.len() {
-            self.array[idx] = self.array[fail];
-            idx += 1
+        for nen in could_not_enqueue {
+            self.array[idx] = self.array[nen];
+            idx += 1;
         }
         unsafe { self.array.set_len(idx) };
     }
-
+ 
     /// This drops packet buffers and keeps things ordered. We expect that idxes is an ordered vector of indices, no
     /// guarantees are made when this is not the case.
     #[inline]
@@ -411,9 +405,10 @@ impl Act for PacketBatch {
     #[inline]
     fn distribute_to_queues(&mut self,
                             queues: &[SpscProducer<u8>],
-                            groups: &Vec<(usize, *mut u8)>) 
+                            groups: &Vec<(usize, *mut u8)>,
+                            ngroups: usize) 
     {
-        self.distribute_spsc_queues(queues, &groups)
+        self.distribute_spsc_queues(queues, &groups, ngroups)
     }
 }
 

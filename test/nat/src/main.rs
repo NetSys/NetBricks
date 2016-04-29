@@ -17,6 +17,7 @@ use std::thread;
 use std::sync::Arc;
 use std::cell::RefCell;
 use self::nf::*;
+use std::net::Ipv4Addr;
 mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
@@ -57,7 +58,9 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32) {
 
     let mut pipelines: Vec<_> = ports.iter()
                                      .map(|port| {
-                                          nat(ReceiveBatch::new(port.clone()), &mut sched) 
+                                         nat(ReceiveBatch::new(port.clone()),
+                                             &mut sched,
+                                             &Ipv4Addr::new(10, 0, 0, 1))
                                              .send(port.clone())
                                      })
                                      .collect();

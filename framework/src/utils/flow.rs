@@ -37,6 +37,38 @@ pub fn ipv4_extract_flow(header: &MacHeader, bytes: &[u8]) -> Option<Flow> {
     }
 }
 
+impl Flow {
+    #[inline]
+    pub fn reverse_flow(&self) -> Flow {
+        Flow {
+            src_ip: self.dst_ip,
+            dst_ip: self.src_ip,
+            src_port: self.dst_port,
+            dst_port: self.src_port,
+            proto: self.proto,
+        }
+    }
+
+    #[inline]
+    pub fn ipv4_stamp_flow(&self, header: &MacHeader, bytes: &mut [u8]) -> bool {
+        if header.etype() == 0x0800 {
+            let port_start = (bytes[0] & 0xf) as usize * IHL_TO_BYTE_FACTOR;
+            bytes[0] = self.proto;
+            BigEndian::write_u32(&mut bytes[12..16], self.src_ip);
+            BigEndian::write_u32(&mut bytes[16..20], self.dst_ip);
+            BigEndian::write_u16(&mut bytes[(port_start)..(port_start + 2)], self.src_port);
+            BigEndian::write_u16(&mut bytes[(port_start + 2)..(port_start + 4)], self.dst_port);
+            BigEndian::write_u16(&mut bytes[10..12], 0);
+            let csum = ipcsum(bytes);
+            BigEndian::write_u16(&mut bytes[10..12], csum);
+            true
+        } else {
+            false
+        }
+    }
+}
+
+
 /// Given the MAC payload, generate a flow hash. The flow hash generated depends on the IV, so different IVs will
 /// produce different results (in cases when implementing Cuckoo hashing, etc.).
 #[inline]
@@ -59,6 +91,7 @@ pub fn flow_hash(flow: &Flow) -> usize {
 #[link(name = "zcsi")]
 extern "C" {
     fn crc_hash_native(to_hash: *const u8, size: u32, iv: u32) -> u32;
+    fn ipv4_cksum(payload: *const u8) -> u16;
 }
 
 /// Compute the CRC32 hash for `to_hash`. Note CRC32 is not really a great hash function, it is not particularly
@@ -78,4 +111,9 @@ pub fn crc_hash<T: Sized>(to_hash: &T, iv: u32) -> u32 {
 fn flow_as_u8(flow: &Flow) -> &[u8] {
     let size = mem::size_of::<Flow>();
     unsafe { slice::from_raw_parts(((flow as *const Flow) as *const u8), size) }
+}
+
+#[inline]
+fn ipcsum(payload: &[u8]) -> u16 {
+    unsafe { ipv4_cksum(payload.as_ptr()) }
 }
