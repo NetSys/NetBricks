@@ -121,15 +121,16 @@ impl<T> SpscQueue<T>
     pub fn enqueue_one(&self, mbuf: *mut MBuf, metadata: *mut T) -> bool {
         let producer_head = self.producer.head.load(Ordering::Acquire);
         let consumer_tail = self.consumer.tail.load(Ordering::Acquire);
-        let free_entries = self.mask + consumer_tail - producer_head;
+        let free_entries = self.mask.wrapping_add(consumer_tail).wrapping_sub(producer_head);
         if free_entries == 0 {
             false
         } else {
-            self.producer.head.store(producer_head + 1, Ordering::Release);
+            let new_head = producer_head.wrapping_add(1);
+            self.producer.head.store(new_head, Ordering::Release);
             let idx = producer_head & self.mask;
             self.queue[idx].addr.store(mbuf, Ordering::Relaxed);
             self.queue[idx].metadata.store(metadata, Ordering::Release);
-            self.producer.tail.store(producer_head + 1, Ordering::Release);
+            self.producer.tail.store(new_head, Ordering::Release);
             true
         }
     }
@@ -138,9 +139,10 @@ impl<T> SpscQueue<T>
         let mask = self.mask;
         let producer_head = self.producer.head.load(Ordering::Acquire);
         let consumer_tail = self.consumer.tail.load(Ordering::Acquire);
-        let free_entries = mask + consumer_tail - producer_head;
+        let free_entries = mask.wrapping_add(consumer_tail).wrapping_sub(producer_head);
         let n = min(free_entries, mbufs.len());
-        self.producer.head.store(producer_head + n, Ordering::Release);
+        let new_head = producer_head.wrapping_add(n);
+        self.producer.head.store(new_head, Ordering::Release);
         let mut idx = producer_head & mask;
         let slots = self.slots;
         if idx + n < slots {
@@ -180,7 +182,7 @@ impl<T> SpscQueue<T>
                 count += 1;
             }
         }
-        self.producer.tail.store(producer_head + n, Ordering::Release);
+        self.producer.tail.store(new_head, Ordering::Release);
         n
     }
 
@@ -188,15 +190,16 @@ impl<T> SpscQueue<T>
         let consumer_head = self.consumer.head.load(Ordering::Acquire);
         let producer_tail = self.producer.tail.load(Ordering::Acquire);
         let mask = self.mask;
-        let available_entries = producer_tail - consumer_head;
+        let available_entries = producer_tail.wrapping_sub(consumer_head);
         if available_entries == 0 {
             None
         } else {
-            self.consumer.head.store(consumer_head + 1, Ordering::Release);
+            let new_consumer_head = consumer_head.wrapping_add(1);
+            self.consumer.head.store(new_consumer_head, Ordering::Release);
             let idx = consumer_head & mask;
             let val = self.queue[idx].addr.load(Ordering::Acquire);
             let metadata_addr = self.queue[idx].metadata.load(Ordering::Acquire);
-            self.consumer.tail.store(consumer_head + 1, Ordering::Release);
+            self.consumer.tail.store(new_consumer_head, Ordering::Release);
             Some((val, metadata_addr))
         }
     }
@@ -206,10 +209,11 @@ impl<T> SpscQueue<T>
         let producer_tail = self.producer.tail.load(Ordering::Acquire);
         let mask = self.mask;
         let slots = self.slots;
-        let available_entries = producer_tail - consumer_head;
+        let available_entries = producer_tail.wrapping_sub(consumer_head);
         let n = min(cnt, available_entries);
         let mut idx = consumer_head & mask;
-        self.consumer.head.store(consumer_head + n, Ordering::Release);
+        let new_head = consumer_head.wrapping_add(n);
+        self.consumer.head.store(new_head, Ordering::Release);
         if idx + n < slots {
             let unroll_end = n & (!0x3);
             let mut i = 0;
@@ -247,7 +251,7 @@ impl<T> SpscQueue<T>
                 idx += 1;
             }
         }
-        self.consumer.tail.store(consumer_head + n, Ordering::Release);
+        self.consumer.tail.store(new_head, Ordering::Release);
         n
     }
 }
