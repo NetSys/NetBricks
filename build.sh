@@ -44,6 +44,22 @@ case $TASK in
 		pushd $BASE_DIR/test/delay-test
                 $BASE_DIR/cargo/target/release/cargo build --release
                 popd
+
+		pushd $BASE_DIR/test/chain-test
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
+
+		pushd $BASE_DIR/test/lpm
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
+
+		pushd $BASE_DIR/test/nat
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
+
+		pushd $BASE_DIR/test/maglev
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
 		;;
 	fmt)
 		deps
@@ -58,6 +74,22 @@ case $TASK in
 		pushd $BASE_DIR/test/delay-test
 		$BASE_DIR/cargo/target/release/cargo fmt
 		popd
+
+		pushd $BASE_DIR/test/chain-test
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
+
+		pushd $BASE_DIR/test/lpm
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
+
+		pushd $BASE_DIR/test/nat
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
+
+		pushd $BASE_DIR/test/maglev
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
 		;;
 	doc)
 		deps
@@ -87,6 +119,22 @@ case $TASK in
 		
 		pushd $BASE_DIR/test/delay-test
                 $BASE_DIR/cargo/target/release/cargo clean || true
+                popd
+
+		pushd $BASE_DIR/test/chain-test
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
+
+		pushd $BASE_DIR/test/lpm
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
+
+		pushd $BASE_DIR/test/nat
+                $BASE_DIR/cargo/target/release/cargo build --release
+                popd
+
+		pushd $BASE_DIR/test/maglev
+                $BASE_DIR/cargo/target/release/cargo build --release
                 popd
 		;;
 esac

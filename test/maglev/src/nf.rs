@@ -86,7 +86,7 @@ struct Empty;
 pub fn maglev<T: 'static + Batch>(parent: T, s: &mut Scheduler, backends: &[&str]) 
             -> CompositionBatch {
     let ct = backends.len();
-    let lut = Maglev::new(backends, 1433);
+    let lut = Maglev::new(backends, 43);
     let mut groups = parent.parse::<MacHeader>()
                     .group_by::<Empty>(ct, box move |hdr, payload, _| {
                         (lut.lookup(ipv4_flow_hash(hdr, payload, 0)), None)
