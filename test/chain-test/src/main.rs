@@ -33,20 +33,17 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, chain_len: u32) {
                  chain_len);
     }
 
-    let mut pipelines: Vec<_> = ports.iter()
+    let pipelines: Vec<_> = ports.iter()
                                      .map(|port| {
-                                         chain(ReceiveBatch::new(port.clone()), chain_len)
-                                             .send(port.clone())
+                                         box (chain(ReceiveBatch::new(port.clone()), chain_len)
+                                             .send(port.clone()))
                                      })
                                      .collect();
     println!("Running {} pipelines", pipelines.len());
-    let pipeline = RefCell::new(if pipelines.len() > 1 {
-        box merge(pipelines) as Box<Executable>
-    } else {
-        box pipelines.pop().unwrap() as Box<Executable>
-    });
     let mut sched = Scheduler::new();
-    sched.add_task(pipeline);
+    for pipeline in pipelines {
+        sched.add_task(RefCell::new(pipeline as Box<Executable>));
+    }
     sched.execute_loop();
 }
 
