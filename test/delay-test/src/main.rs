@@ -62,11 +62,6 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, delay_arg: u64) {
                                      })
                                      .collect();
     println!("Running {} pipelines", pipelines.len());
-    //let pipeline = RefCell::new(if pipelines.len() > 1 {
-        //box merge(pipelines) as Box<Executable>
-    //} else {
-        //box pipelines.pop().unwrap() as Box<Executable>
-    //});
     let mut sched = Scheduler::new();
     for pipeline in pipelines {
         sched.add_task(RefCell::new(pipeline as Box<Executable>));
