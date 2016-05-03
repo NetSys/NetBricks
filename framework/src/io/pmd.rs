@@ -106,8 +106,8 @@ impl PortQueue {
     fn send_queue(&mut self, queue: i32, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
         unsafe {
             let sent = send_pkts(self.port_id, queue, pkts, to_send);
-            let update = self.stats_tx.stats.load(Ordering::Relaxed) + sent as usize;
-            self.stats_tx.stats.store(update, Ordering::Relaxed);
+            //let update = self.stats_tx.stats.load(Ordering::Relaxed) + sent as usize;
+            //self.stats_tx.stats.store(update, Ordering::Relaxed);
             Ok(sent as u32)
         }
     }
@@ -116,8 +116,8 @@ impl PortQueue {
     fn recv_queue(&self, queue: i32, pkts: *mut *mut MBuf, to_recv: i32) -> Result<u32> {
         unsafe {
             let recv = recv_pkts(self.port_id, queue, pkts, to_recv);
-            let update = self.stats_rx.stats.load(Ordering::Relaxed) + recv as usize;
-            self.stats_rx.stats.store(update, Ordering::Relaxed);
+            //let update = self.stats_rx.stats.load(Ordering::Relaxed) + recv as usize;
+            //self.stats_rx.stats.store(update, Ordering::Relaxed);
             Ok(recv as u32)
         }
     }

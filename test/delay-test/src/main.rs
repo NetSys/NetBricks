@@ -57,18 +57,20 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, delay_arg: u64) {
 
     let mut pipelines: Vec<_> = ports.iter()
                                      .map(|port| {
-                                         delay(ReceiveBatch::new(port.clone()), delay_arg)
-                                             .send(port.clone())
+                                         box (delay(ReceiveBatch::new(port.clone()), delay_arg)
+                                             .send(port.clone()))
                                      })
                                      .collect();
     println!("Running {} pipelines", pipelines.len());
-    let pipeline = RefCell::new(if pipelines.len() > 1 {
-        box merge(pipelines) as Box<Executable>
-    } else {
-        box pipelines.pop().unwrap() as Box<Executable>
-    });
+    //let pipeline = RefCell::new(if pipelines.len() > 1 {
+        //box merge(pipelines) as Box<Executable>
+    //} else {
+        //box pipelines.pop().unwrap() as Box<Executable>
+    //});
     let mut sched = Scheduler::new();
-    sched.add_task(pipeline);
+    for pipeline in pipelines {
+        sched.add_task(RefCell::new(pipeline as Box<Executable>));
+    }
     sched.execute_loop();
 }
 
@@ -172,8 +174,8 @@ fn main() {
                                         .collect();
     let mut pkts_so_far = (0, 0);
     let mut last_printed = 0.;
-    const MAX_PRINT_INTERVAL: f64 = 1.;
-    const PRINT_DELAY: f64 = 0.5;
+    const MAX_PRINT_INTERVAL: f64 = 30.;
+    const PRINT_DELAY: f64 = 15.;
     let sleep_delay = (PRINT_DELAY / 2.) as u64;
     let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
     let sleep_time = Duration::from_millis(sleep_delay);
