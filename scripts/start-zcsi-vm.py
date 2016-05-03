@@ -3,10 +3,20 @@ import sys
 import os
 import re
 # Return a command string to start ZCSI with all DPDK cores and passed in delay
-if len(sys.argv) > 1:
-    delay = sys.argv[1]
+# if len(sys.argv) > 1:
+    # app=sys.argv[1]
+# else:
+    # app=
+# if len(sys.argv) > 1:
+    # delay = sys.argv[1]
+# else:
+    # delay = "0"
+app = sys.argv[1]
+if len(sys.argv) > 2:
+    arg = sys.argv[2]
 else:
-    delay = "0"
+    arg = "0"
+
 dpdk_home=os.environ["DPDK_HOME"]
 zcsi_home=os.environ["ZCSI_HOME"]
 status_out = subprocess.check_output([dpdk_home + "/tools/dpdk_nic_bind.py", \
@@ -33,5 +43,13 @@ for status in status_out:
                             match.group(3))
                     ports.append(port)
 ports = map(lambda p: '-c 1 -w %s'%p, ports)
-print "%s/test/delay-test/target/release/zcsi-delay -m 0 %s -d %s"%(zcsi_home, \
-        ' '.join(ports), delay)
+# print "%s/test/delay-test/target/release/zcsi-delay -m 0 %s -d %s"%(zcsi_home, \
+        # ' '.join(ports), delay)
+if app == "delay":
+    print "%s/test/delay-test/target/release/zcsi-delay -m 0 %s -d %s"%\
+            (zcsi_home, \
+            ' '.join(ports), arg)
+elif app == "chain":
+    print "%s/test/chain-test/target/release/zcsi-chain -m 0 %s -l %s"%\
+            (zcsi_home, \
+            ' '.join(ports), arg)
