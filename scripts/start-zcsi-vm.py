@@ -2,6 +2,7 @@ import subprocess
 import sys
 import os
 import re
+import multiprocessing
 # Return a command string to start ZCSI with all DPDK cores and passed in delay
 # if len(sys.argv) > 1:
     # app=sys.argv[1]
@@ -42,7 +43,8 @@ for status in status_out:
                     port = "%s:%s.%s"%(match.group(1), match.group(2), \
                             match.group(3))
                     ports.append(port)
-ports = map(lambda p: '-c 1 -w %s'%p, ports)
+core = multiprocessing.cpu_count() - 1
+ports = map(lambda p: '-c %d -w %s'%(core, p), ports)
 # print "%s/test/delay-test/target/release/zcsi-delay -m 0 %s -d %s"%(zcsi_home, \
         # ' '.join(ports), delay)
 if app == "delay":
