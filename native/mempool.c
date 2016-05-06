@@ -16,7 +16,7 @@
 #define PER_CORE 0
 
 /* Largely taken from SoftNIC (snbuf.c) */
-#define NUM_PFRAMES	(1024 - 1) // Number of pframes in the mempool
+#define NUM_PFRAMES	(2048 - 1) // Number of pframes in the mempool
 #define NUM_MEMPOOL_CACHE 32 // Size of per-core object cache.
 
 RTE_DEFINE_PER_LCORE(int, _mempool_core) = 0;
