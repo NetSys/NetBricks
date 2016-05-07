@@ -21,7 +21,7 @@ mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn recv_thread(ports: Vec<PortQueue>, core: i32, chain_len: u32) {
+fn recv_thread(ports: Vec<PortQueue>, core: i32, chain_len: u32, cycles: bool) {
     init_thread(core, core);
     println!("Receiving started");
     for port in &ports {
@@ -44,7 +44,12 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, chain_len: u32) {
     for pipeline in pipelines {
         sched.add_task(RefCell::new(pipeline as Box<Executable>));
     }
-    sched.execute_loop();
+    if !cycles {
+        sched.execute_loop();
+    } else {
+        let pfx = format!("{} ", core);
+        sched.execute_loop_timed(&pfx[..], 10000);
+    }
 }
 
 fn main() {
@@ -59,6 +64,7 @@ fn main() {
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
     opts.optopt("l", "chain", "Chain length", "length");
+    opts.optflag("", "cpp", "Measure cycles per packet");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
@@ -94,6 +100,7 @@ fn main() {
     }
 
     let primary = !matches.opt_present("secondary");
+    let measure_cycles = matches.opt_present("cpp");
 
     let cores_for_port = if primary {
         extract_cores_for_port(&matches.opt_strs("w"), &cores)
@@ -142,7 +149,7 @@ fn main() {
                                         .map(|(core, ports)| {
                                             let c = core.clone();
                                             let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
-                                            std::thread::spawn(move || recv_thread(p, c, chain_len))
+                                            std::thread::spawn(move || recv_thread(p, c, chain_len, measure_cycles))
                                         })
                                         .collect();
     let mut pkts_so_far = (0, 0);

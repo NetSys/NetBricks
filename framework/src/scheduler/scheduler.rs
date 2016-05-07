@@ -1,3 +1,4 @@
+extern crate time;
 use super::Executable;
 use std::cell::RefCell;
 /// A very simple round-robin scheduler. This should really be more of a DRR scheduler.
@@ -38,15 +39,31 @@ impl Scheduler {
 
     /// Run the scheduling loop.
     // TODO: Add a variable to stop the scheduler (for whatever reason).
+    #[inline]
     pub fn execute_loop(&mut self) {
         if !self.run_q.is_empty() {
             loop {self.execute_internal()}
         }
     }
 
+    #[inline]
     pub fn execute_one(&mut self) {
         if !self.run_q.is_empty() {
             self.execute_internal()
+        }
+    }
+
+    #[inline]
+    pub fn execute_loop_timed(&mut self, pfx: &str, batch: usize) {
+        if !self.run_q.is_empty() {
+            loop {
+                let start = time::precise_time_ns();
+                for _ in 0..batch {
+                    self.execute_internal()
+                }
+                let end = time::precise_time_ns();
+                println!("{} Time for {} batches was {}", pfx, batch, end - start);
+            }
         }
     }
 }

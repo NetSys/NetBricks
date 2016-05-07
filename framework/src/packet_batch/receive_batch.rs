@@ -1,3 +1,4 @@
+extern crate time;
 use io::PortQueue;
 use io::Result;
 use super::act::Act;
@@ -11,6 +12,7 @@ pub struct ReceiveBatch {
     parent: PacketBatch,
     port: PortQueue,
     pub received: u64,
+    batch: u64,
 }
 
 impl ReceiveBatch {
@@ -19,6 +21,7 @@ impl ReceiveBatch {
             parent: parent,
             port: port,
             received: 0,
+            batch: 0,
         }
     }
 
@@ -27,6 +30,7 @@ impl ReceiveBatch {
             parent: PacketBatch::new(32),
             port: port,
             received: 0,
+            batch: 0,
         }
 
     }
@@ -77,6 +81,14 @@ impl Act for ReceiveBatch {
             .recv(&mut self.port)
             .and_then(|x| {
                 self.received += x as u64;
+                if x > 0 {
+                    self.batch += 1;
+                    if self.batch > 100000 {
+                        let time = time::precise_time_ns();
+                        println!("rx {} {} {}", self.port, self.batch, time);
+                        self.batch = 0;
+                    }
+                }
                 Ok(x)
             })
             .expect("Receive failed");

@@ -1,3 +1,4 @@
+extern crate time;
 use io::PortQueue;
 use io::Result;
 use super::act::Act;
@@ -14,6 +15,7 @@ pub struct SendBatch<V>
     port: PortQueue,
     parent: V,
     pub sent: u64,
+    batch: u64,
 }
 
 impl<V> SendBatch<V>
@@ -24,6 +26,7 @@ impl<V> SendBatch<V>
             port: port,
             sent: 0,
             parent: parent,
+            batch: 0,
         }
     }
 }
@@ -75,6 +78,14 @@ impl<V> Act for SendBatch<V>
             .send_q(&mut self.port)
             .and_then(|x| {
                 self.sent += x as u64;
+                if x > 0 {
+                    self.batch += 1;
+                    if self.batch > 100000 {
+                        let time = time::precise_time_ns();
+                        println!("tx {} {} {}", self.port, self.batch, time);
+                        self.batch = 0;
+                    }
+                }
                 Ok(x)
             })
             .expect("Send failed");

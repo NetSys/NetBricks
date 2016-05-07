@@ -2,6 +2,7 @@ use super::mbuf::MBuf;
 use super::interface::Result;
 use super::interface::ZCSIError;
 use super::super::headers::MacAddress;
+use std::fmt;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -72,6 +73,12 @@ pub struct PortQueue {
     txq: i32,
     rxq: i32,
     _pad1: [u64; 4]
+}
+
+impl fmt::Display for PortQueue {
+    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
+        write!(f, "port {} txq {} rxq {}", self.port_id, self.txq, self.rxq) 
+    }
 }
 
 impl Drop for PmdPort {
