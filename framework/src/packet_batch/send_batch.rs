@@ -79,8 +79,8 @@ impl<V> Act for SendBatch<V>
             .and_then(|x| {
                 self.sent += x as u64;
                 if x > 0 {
-                    self.batch += 1;
-                    if self.batch > 100000 {
+                    self.batch += x as u64;
+                    if self.batch > 3_200_000 {
                         let time = time::precise_time_ns();
                         println!("tx {} {} {}", self.port, self.batch, time);
                         self.batch = 0;
