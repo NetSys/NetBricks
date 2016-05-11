@@ -6,7 +6,7 @@ use term::color::{Color, BLACK, RED, GREEN, YELLOW};
 use term::{self, Terminal, TerminfoTerminal, color, Attr};
 
 use self::AdequateTerminal::{NoColor, Colored};
-use self::Verbosity::{Verbose, Normal, Quiet};
+use self::Verbosity::{Verbose, Quiet};
 use self::ColorConfig::{Auto, Always, Never};
 
 use util::errors::CargoResult;
@@ -100,26 +100,14 @@ impl MultiShell {
     }
 
     pub fn warn<T: fmt::Display>(&mut self, message: T) -> CargoResult<()> {
-        self.err().say_status("warning:", message, YELLOW, false)
-    }
-
-    pub fn set_verbosity(&mut self, verbose: bool, quiet: bool) -> CargoResult<()> {
-        self.verbosity = match (verbose, quiet) {
-            (true, true) => bail!("cannot set both --verbose and --quiet"),
-            (true, false) => Verbose,
-            (false, true) => Quiet,
-            (false, false) => Normal
-        };
-        Ok(())
-    }
-
-    /// shortcut for commands that don't have both --verbose and --quiet
-    pub fn set_verbose(&mut self, verbose: bool) {
-        if verbose {
-            self.verbosity = Verbose;
-        } else {
-            self.verbosity = Normal;
+        match self.verbosity {
+            Quiet => Ok(()),
+            _ => self.err().say_status("warning:", message, YELLOW, false),
         }
+    }
+
+    pub fn set_verbosity(&mut self, verbosity: Verbosity) {
+        self.verbosity = verbosity;
     }
 
     pub fn set_color_config(&mut self, color: Option<&str>) -> CargoResult<()> {

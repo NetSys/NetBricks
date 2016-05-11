@@ -9,10 +9,13 @@ extern crate toml;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path,PathBuf};
 
+use cargo::core::shell::Verbosity;
 use cargo::execute_main_without_stdin;
-use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult, ChainError};
+use cargo::util::ChainError;
+use cargo::util::{self, CliResult, lev_distance, Config, human, CargoResult};
+use cargo::util::process_builder::process;
 
 #[derive(RustcDecodable)]
 pub struct Flags {
@@ -21,6 +24,7 @@ pub struct Flags {
     flag_verbose: Option<bool>,
     flag_quiet: Option<bool>,
     flag_color: Option<String>,
+    flag_explain: Option<String>,
     arg_command: String,
     arg_args: Vec<String>,
 }
@@ -36,6 +40,7 @@ Options:
     -h, --help          Display this message
     -V, --version       Print version info and exit
     --list              List installed commands
+    --explain CODE      Run `rustc --explain CODE`
     -v, --verbose       Use verbose output
     -q, --quiet         No output printed to stdout
     --color WHEN        Coloring: auto, always, never
@@ -127,12 +132,18 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
         return Ok(None)
     }
 
+    if let Some(ref code) = flags.flag_explain {
+        try!(process(config.rustc()).arg("--explain").arg(code).exec()
+                                    .map_err(human));
+        return Ok(None)
+    }
+
     let args = match &flags.arg_command[..] {
         // For the commands `cargo` and `cargo help`, re-execute ourselves as
         // `cargo -h` so we can go through the normal process of printing the
         // help message.
         "" | "help" if flags.arg_args.is_empty() => {
-            config.shell().set_verbose(true);
+            config.shell().set_verbosity(Verbosity::Verbose);
             let args = &["cargo".to_string(), "-h".to_string()];
             let r = cargo::call_main_without_stdin(execute, config, USAGE, args,
                                                    false);
@@ -160,7 +171,7 @@ fn execute(flags: Flags, config: &Config) -> CliResult<Option<()>> {
 
     macro_rules! cmd{
         ($name:ident) => (if args[1] == stringify!($name).replace("_", "-") {
-            config.shell().set_verbose(true);
+            config.shell().set_verbosity(Verbosity::Verbose);
             let r = cargo::call_main_without_stdin($name::execute, config,
                                                    $name::USAGE,
                                                    &args,
@@ -193,10 +204,9 @@ fn execute_subcommand(config: &Config,
     let path = search_directories(config)
                     .iter()
                     .map(|dir| dir.join(&command_exe))
-                    .filter_map(|dir| fs::metadata(&dir).ok().map(|m| (dir, m)))
-                    .find(|&(_, ref meta)| is_executable(meta));
+                    .find(|file| is_executable(file));
     let command = match path {
-        Some((command, _)) => command,
+        Some(command) => command,
         None => {
             return Err(human(match find_closest(config, cmd) {
                 Some(closest) => format!("no such subcommand\n\n\t\
@@ -231,11 +241,9 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
             if !filename.starts_with(prefix) || !filename.ends_with(suffix) {
                 continue
             }
-            if let Ok(meta) = entry.metadata() {
-                if is_executable(&meta) {
-                    let end = filename.len() - suffix.len();
-                    commands.insert(filename[prefix.len()..end].to_string());
-                }
+            if is_executable(entry.path()) {
+                let end = filename.len() - suffix.len();
+                commands.insert(filename[prefix.len()..end].to_string());
             }
         }
     }
@@ -248,13 +256,15 @@ fn list_commands(config: &Config) -> BTreeSet<String> {
 }
 
 #[cfg(unix)]
-fn is_executable(metadata: &fs::Metadata) -> bool {
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
     use std::os::unix::prelude::*;
-    metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+    fs::metadata(path).map(|metadata| {
+        metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+    }).unwrap_or(false)
 }
 #[cfg(windows)]
-fn is_executable(metadata: &fs::Metadata) -> bool {
-    metadata.is_file()
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    fs::metadata(path).map(|metadata| metadata.is_file()).unwrap_or(false)
 }
 
 fn search_directories(config: &Config) -> Vec<PathBuf> {
