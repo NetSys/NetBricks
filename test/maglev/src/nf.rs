@@ -86,10 +86,13 @@ struct Empty;
 pub fn maglev<T: 'static + Batch>(parent: T, s: &mut Scheduler, backends: &[&str]) 
             -> CompositionBatch {
     let ct = backends.len();
-    let lut = Maglev::new(backends, 43);
+    let lut = Maglev::new(backends, 65537);
+    let mut cache = HashMap::<usize, usize, FnvHash>::with_hasher(Default::default());
     let mut groups = parent.parse::<MacHeader>()
                     .group_by::<Empty>(ct, box move |hdr, payload, _| {
-                        (lut.lookup(ipv4_flow_hash(hdr, payload, 0)), None)
+                        let hash = ipv4_flow_hash(hdr, payload, 0);
+                        let out = cache.entry(hash).or_insert_with(|| {lut.lookup(hash)});
+                        (*out, None)
                     }, s);
     let pipeline = merge((0..ct).map(|i| groups.get_group(i).unwrap()).collect());
     pipeline.compose()
