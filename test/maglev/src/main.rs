@@ -169,8 +169,8 @@ fn main() {
                                         .collect();
     let mut pkts_so_far = (0, 0);
     let mut last_printed = 0.;
-    const MAX_PRINT_INTERVAL: f64 = 1.;
-    const PRINT_DELAY: f64 = 0.5;
+    const MAX_PRINT_INTERVAL: f64 = 120.;
+    const PRINT_DELAY: f64 = 60.;
     let sleep_delay = (PRINT_DELAY / 2.) as u64;
     let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
     let sleep_time = Duration::from_millis(sleep_delay);

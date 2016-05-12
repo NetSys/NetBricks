@@ -5,9 +5,9 @@ use e2d2::packet_batch::*;
 pub fn chain_nf<T: 'static + Batch>(parent: T) -> CompositionBatch {
     parent.parse::<MacHeader>()
           .parse::<IpHeader>()
-          .parse::<UdpHeader>()
-          .transform(box move |_, p, _| {
-              p[0] += 1;
+          .transform(box move |h, _, _| {
+              let ttl = h.ttl();
+              h.set_ttl(ttl + 1);
           }).compose()
 }
 

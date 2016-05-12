@@ -30,8 +30,8 @@ extern "C" {
 }
 
 // Make this into an input parameter
-const NUM_RXD: i32 = 256;
-const NUM_TXD: i32 = 256;
+const NUM_RXD: i32 = 128;
+const NUM_TXD: i32 = 128;
 
 
 struct PmdStats {
