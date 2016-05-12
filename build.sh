@@ -38,7 +38,7 @@ case $TASK in
 		popd
 
 		pushd $BASE_DIR/test/framework-test
-		$BASE_DIR/cargo/target/release/cargo build --release
+		$BASE_DIR/cargo/target/release/cargo build --release --verbose
 		popd
 		
 		pushd $BASE_DIR/test/delay-test
@@ -76,19 +76,19 @@ case $TASK in
 		popd
 
 		pushd $BASE_DIR/test/chain-test
-                $BASE_DIR/cargo/target/release/cargo build --release
+                $BASE_DIR/cargo/target/release/cargo fmt
                 popd
 
 		pushd $BASE_DIR/test/lpm
-                $BASE_DIR/cargo/target/release/cargo build --release
+                $BASE_DIR/cargo/target/release/cargo fmt
                 popd
 
 		pushd $BASE_DIR/test/nat
-                $BASE_DIR/cargo/target/release/cargo build --release
+                $BASE_DIR/cargo/target/release/cargo fmt
                 popd
 
 		pushd $BASE_DIR/test/maglev
-                $BASE_DIR/cargo/target/release/cargo build --release
+                $BASE_DIR/cargo/target/release/cargo fmt
                 popd
 		;;
 	doc)
