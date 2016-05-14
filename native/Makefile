@@ -33,6 +33,7 @@ SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 HEADERS = $(wildcard include/*.h)
 PROD = libzcsi.so
+PROD_STATIC = libzcsi.a
 
 DEPS = .make.dep
 
@@ -49,23 +50,26 @@ else
 CORES ?= $(shell nproc || echo 1)
 MAKEFLAGS += -j $(CORES)
 
-.PHONY: all clean tags cscope
+.PHONY: all clean tags cscope all-static
 
 all: $(DEPS) $(PROD)
+
+all-static: $(DEPS) $(PROD_STATIC)
 	
 $(DEPS): $(SRCS) $(HEADERS)
 	@echo $(RTE_SDK) $(DPDK_INC_DIR)
 	@$(CC) $(CFLAGS) -MM $(SRCS) | sed 's|\(.*\)\.o: \(.*\)\.c|\2.o: \2.c|' > $(DEPS);
 
+$(PROD_STATIC): $(OBJS)
+	ar rcs $(PROD_STATIC) $(OBJS)
+
 $(PROD): $(OBJS)
-	#ar rcs $(PROD) $(OBJS)
-	#echo $(LDFLAGS)
 	$(CC) -shared  $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
 
 -include $(DEPS)
 
 clean:
-	rm -f $(DEPS) $(PROD) *.o
+	rm -f $(DEPS) $(PROD) $(PROD_STATIC) *.o
 
 tags:
 	@ctags -R *

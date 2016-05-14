@@ -26,6 +26,8 @@ fi
 
 cp "${BASE_DIR}/common_linuxapp-${DPDK_VER}" "${DPDK_RESULT}/config/common_linuxapp"
 export RTE_TARGET=x86_64-native-linuxapp-gcc
-make config -C "${DPDK_RESULT}" T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-g3 -Wno-error=maybe-uninitialized"
+FLAGS="-g3 -Wno-error=maybe-uninitialized -fPIC"
+make config -C "${DPDK_RESULT}" T=x86_64-native-linuxapp-gcc \
+	EXTRA_CFLAGS="$FLAGS"
 PROCS="$(nproc)"
-make -j $PROCS -C "${DPDK_RESULT}"
+make -j $PROCS -C "${DPDK_RESULT}" EXTRA_CFLAGS="$FLAGS"
