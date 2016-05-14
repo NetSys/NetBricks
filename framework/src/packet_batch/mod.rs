@@ -139,10 +139,13 @@ pub trait HeaderOperations: Batch + Sized {
         ResizePayload::<Self::Header, Self>::new(self, resize_f)
     }
 
-    fn group_by<T>(self, groups: usize, group_f: GroupFn<Self::Header, T>, sched: &mut Scheduler) -> 
-        GroupBy<Self::Header, Self, T>
-        where Self:Sized,
-              T: 'static + Any + Default + Clone + Sized + Send,
+    fn group_by<T>(self,
+                   groups: usize,
+                   group_f: GroupFn<Self::Header, T>,
+                   sched: &mut Scheduler)
+                   -> GroupBy<Self::Header, Self, T>
+        where Self: Sized,
+              T: 'static + Any + Default + Clone + Sized + Send
     {
         GroupBy::<Self::Header, Self, T>::new(self, groups, group_f, sched)
     }

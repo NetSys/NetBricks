@@ -8,7 +8,8 @@ pub fn chain_nf<T: 'static + Batch>(parent: T) -> CompositionBatch {
           .transform(box move |h, _, _| {
               let ttl = h.ttl();
               h.set_ttl(ttl + 1);
-          }).compose()
+          })
+          .compose()
 }
 
 #[inline]

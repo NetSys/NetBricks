@@ -37,10 +37,10 @@ impl<T, V> Batch for ContextBatch<T, V>
 }
 
 impl<T, V> HeaderOperations for ContextBatch<T, V>
-   where T: 'static + Any + Default + Clone + Sized + Send,
-         V: Batch + BatchIterator + Act + HeaderOperations
+    where T: 'static + Any + Default + Clone + Sized + Send,
+          V: Batch + BatchIterator + Act + HeaderOperations
 {
-    type Header = V::Header; 
+    type Header = V::Header;
 }
 
 

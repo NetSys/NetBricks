@@ -57,10 +57,7 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32) {
     }
 
     let mut pipelines: Vec<_> = ports.iter()
-                                     .map(|port| {
-                                         lpm(ReceiveBatch::new(port.clone()), &mut sched)
-                                             .send(port.clone())
-                                     })
+                                     .map(|port| lpm(ReceiveBatch::new(port.clone()), &mut sched).send(port.clone()))
                                      .collect();
     println!("Running {} pipelines", pipelines.len());
     let pipeline = RefCell::new(if pipelines.len() > 1 {

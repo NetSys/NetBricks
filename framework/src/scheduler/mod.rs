@@ -6,7 +6,9 @@ pub trait Executable {
     fn execute(&mut self);
 }
 
-impl<F> Executable for F where F: FnMut() {
+impl<F> Executable for F
+    where F: FnMut()
+{
     fn execute(&mut self) {
         (*self)()
     }

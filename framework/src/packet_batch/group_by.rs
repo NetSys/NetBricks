@@ -57,7 +57,7 @@ impl<T, V, S> GroupBy<T, V, S>
             capacity: capacity,
             group_ct: groups,
             group_fn: group_fn,
-            producers:producers,
+            producers: producers,
         }));
         GroupBy {
             group_ct: groups,
@@ -99,8 +99,9 @@ impl<T, V, S> Executable for GroupByProducer<T, V, S>
             let mut groups = Vec::with_capacity(self.capacity);
             while let Some(ParsedDescriptor { header: hdr, payload, ctx, .. }) = iter.next(&mut self.parent) {
                 let (group, meta) = (self.group_fn)(hdr, payload, ctx);
-                groups.push((group, meta.and_then(|m| Some(Box::into_raw(m) as *mut u8))
-                             .unwrap_or_else(|| ptr::null_mut()))) 
+                groups.push((group,
+                             meta.and_then(|m| Some(Box::into_raw(m) as *mut u8))
+                                 .unwrap_or_else(|| ptr::null_mut())))
             }
             // At this time groups contains what we need to distribute, so distribute it out.
             self.parent.distribute_to_queues(&self.producers, &groups, self.group_ct)

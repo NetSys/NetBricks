@@ -34,11 +34,10 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, chain_len: u32) {
     }
 
     let pipelines: Vec<_> = ports.iter()
-                                     .map(|port| {
-                                         box (chain(ReceiveBatch::new(port.clone()), chain_len)
-                                             .send(port.clone()))
-                                     })
-                                     .collect();
+                                 .map(|port| {
+                                     box (chain(ReceiveBatch::new(port.clone()), chain_len).send(port.clone()))
+                                 })
+                                 .collect();
     println!("Running {} pipelines", pipelines.len());
     let mut sched = Scheduler::new();
     for pipeline in pipelines {

@@ -103,11 +103,7 @@ impl PacketBatch {
     }
 
     #[inline]
-    pub fn distribute_spsc_queues(&mut self,
-                                  queue: &[SpscProducer<u8>],
-                                  groups: &Vec<(usize, *mut u8)>,
-                                  _: usize) 
-    {
+    pub fn distribute_spsc_queues(&mut self, queue: &[SpscProducer<u8>], groups: &Vec<(usize, *mut u8)>, _: usize) {
 
         let mut idx = 0;
         let mut could_not_enqueue = Vec::with_capacity(self.array.len());
@@ -124,7 +120,7 @@ impl PacketBatch {
         }
         unsafe { self.array.set_len(idx) };
     }
- 
+
     /// This drops packet buffers and keeps things ordered. We expect that idxes is an ordered vector of indices, no
     /// guarantees are made when this is not the case.
     #[inline]
@@ -401,11 +397,7 @@ impl Act for PacketBatch {
     }
 
     #[inline]
-    fn distribute_to_queues(&mut self,
-                            queues: &[SpscProducer<u8>],
-                            groups: &Vec<(usize, *mut u8)>,
-                            ngroups: usize) 
-    {
+    fn distribute_to_queues(&mut self, queues: &[SpscProducer<u8>], groups: &Vec<(usize, *mut u8)>, ngroups: usize) {
         self.distribute_spsc_queues(queues, &groups, ngroups)
     }
 }

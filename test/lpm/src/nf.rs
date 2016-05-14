@@ -13,7 +13,7 @@ pub struct IPLookup {
     tbl24: Vec<u16>,
     tbl_long: Vec<u16>,
     current_tbl_long: usize,
-    raw_entries: Vec<HashMap<u32, u16, FnvHash>>
+    raw_entries: Vec<HashMap<u32, u16, FnvHash>>,
 }
 
 const TBL24_SIZE: usize = ((1 << 24) + 1);
@@ -27,7 +27,7 @@ impl Default for IPLookup {
             tbl24: (0..TBL24_SIZE).map(|_| 0).collect(),
             tbl_long: (0..TBL24_SIZE).map(|_| 0).collect(),
             current_tbl_long: 0,
-            raw_entries: (0..RAW_SIZE).map(|_| Default::default()).collect()
+            raw_entries: (0..RAW_SIZE).map(|_| Default::default()).collect(),
         }
     }
 }
@@ -37,7 +37,7 @@ impl IPLookup {
         Default::default()
     }
 
-    pub fn insert_ipv4(&mut self, ip: &Ipv4Addr, len: usize,  gate: u16) {
+    pub fn insert_ipv4(&mut self, ip: &Ipv4Addr, len: usize, gate: u16) {
         let ip_u32 = u32::from(*ip);
         self.insert(ip_u32, len, gate);
     }
@@ -105,12 +105,13 @@ pub fn lpm<T: 'static + Batch>(parent: T, s: &mut Scheduler) -> CompositionBatch
     lpm_table.insert_ipv4(&Ipv4Addr::new(192, 0, 0, 0), 8, 2);
     lpm_table.construct_table();
     let mut groups = parent.parse::<MacHeader>()
-                         .parse::<IpHeader>()
-                         .group_by::<Empty>(3, box move |hdr, _, _| {
-                                (lpm_table.lookup_entry(hdr.src()) as usize, None)
-                         }, s);
-    let pipeline = merge(vec![groups.get_group(0).unwrap(), 
-                              groups.get_group(1).unwrap(), 
-                              groups.get_group(2).unwrap()]).compose(); 
+                           .parse::<IpHeader>()
+                           .group_by::<Empty>(3,
+                                              box move |hdr, _, _| (lpm_table.lookup_entry(hdr.src()) as usize, None),
+                                              s);
+    let pipeline = merge(vec![groups.get_group(0).unwrap(),
+                              groups.get_group(1).unwrap(),
+                              groups.get_group(2).unwrap()])
+                       .compose();
     pipeline
 }

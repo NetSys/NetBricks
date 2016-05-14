@@ -25,9 +25,7 @@ impl<V> MergeBatch<V>
     }
 }
 
-impl<V> Batch for MergeBatch<V>
-    where V: Batch + BatchIterator + Act
-{}
+impl<V> Batch for MergeBatch<V> where V: Batch + BatchIterator + Act {}
 
 impl<V> BatchIterator for MergeBatch<V>
     where V: Batch + BatchIterator + Act
@@ -77,7 +75,7 @@ impl<V> Act for MergeBatch<V>
     #[inline]
     fn done(&mut self) {
         self.parents[self.which].done();
-        //self.which = (self.which + 1) % self.parents.len();
+        // self.which = (self.which + 1) % self.parents.len();
         let next = self.which + 1;
         if next == self.parents.len() {
             self.which = 0

@@ -14,14 +14,16 @@ struct QueuePlace {
     pub tail: AtomicUsize,
 }
 
-struct QueueElement<T> 
-    where T: 'static + Send + Sized {
+struct QueueElement<T>
+    where T: 'static + Send + Sized
+{
     pub addr: AtomicPtr<MBuf>,
-    pub metadata: AtomicPtr<T>
+    pub metadata: AtomicPtr<T>,
 }
 
 impl<T> Default for QueueElement<T>
-    where T: 'static + Send + Sized {
+    where T: 'static + Send + Sized
+{
     fn default() -> QueueElement<T> {
         QueueElement {
             addr: AtomicPtr::new(ptr::null_mut()),
@@ -31,7 +33,7 @@ impl<T> Default for QueueElement<T>
 }
 
 // The actual queue.
-struct SpscQueue<T> 
+struct SpscQueue<T>
     where T: 'static + Send + Sized
 {
     queue: Vec<QueueElement<T>>,
@@ -41,7 +43,7 @@ struct SpscQueue<T>
     consumer: QueuePlace,
 }
 
-pub struct SpscConsumer<T> 
+pub struct SpscConsumer<T>
     where T: 'static + Send + Sized
 {
     queue: Arc<SpscQueue<T>>,
@@ -55,7 +57,7 @@ pub struct SpscProducer<T>
 
 /// Produce a producer and a consumer for a SPSC queue. The producer and consumer can be sent across a channel, however
 /// they cannot be cloned.
-pub fn new_spsc_queue<T>(size: usize) -> Option<(SpscProducer<T>, SpscConsumer<T>)> 
+pub fn new_spsc_queue<T>(size: usize) -> Option<(SpscProducer<T>, SpscConsumer<T>)>
     where T: 'static + Send + Sized
 {
     if (size & (size - 1)) == 0 {
@@ -67,7 +69,7 @@ pub fn new_spsc_queue<T>(size: usize) -> Option<(SpscProducer<T>, SpscConsumer<T
 }
 
 impl<T> SpscConsumer<T>
-    where T: 'static + Send + Sized 
+    where T: 'static + Send + Sized
 {
     /// Dequeue one mbuf from this queue.
     pub fn dequeue_one(&self) -> Option<(*mut MBuf, *mut T)> {
@@ -95,13 +97,13 @@ impl<T> SpscProducer<T>
 }
 
 
-impl<T> SpscQueue<T> 
+impl<T> SpscQueue<T>
     where T: 'static + Send + Sized
 {
-    //fn metadata_to_ptr(m: &mut Option<Box<T>>) -> *mut T {
-        //m.and_then(|b| Some(Box::into_raw(b))).unwrap_or_else(|| ptr::null_mut())
-    //}
-    
+    // fn metadata_to_ptr(m: &mut Option<Box<T>>) -> *mut T {
+    // m.and_then(|b| Some(Box::into_raw(b))).unwrap_or_else(|| ptr::null_mut())
+    // }
+
     /// Create a new SPSC queue. We require that the size of the ring be a power of two.
     pub fn new(slots: usize) -> Option<SpscQueue<T>> {
         if (slots & (slots - 1)) == 0 {

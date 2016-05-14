@@ -8,6 +8,7 @@ fn cpuid() {
              :
              : "rax rbx rcx rdx");
     }
+}
 
 #[inline]
 fn rdtsc_unsafe() -> u64 {
@@ -25,7 +26,7 @@ fn rdtsc_unsafe() -> u64 {
 
 #[inline]
 fn rdtscp_unsafe() -> u64 {
-    // Doing the equivalent of a rdtscp manually, for some reason rdtscp is causing a  
+    // Doing the equivalent of a rdtscp manually, for some reason rdtscp is causing a
     let high: u32;
     let low: u32;
     unsafe {

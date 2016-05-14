@@ -18,10 +18,9 @@ pub struct ReceiveQueue<S>
     raw: Vec<*mut u8>,
     pub received: u64,
     phantom_s: PhantomData<S>,
-
 }
 
-impl<S> ReceiveQueue<S> 
+impl<S> ReceiveQueue<S>
     where S: 'static + Any + Default + Clone + Sized + Send
 {
     pub fn new_with_parent(parent: PacketBatch, queue: SpscConsumer<u8>) -> ReceiveQueue<S> {
@@ -49,9 +48,7 @@ impl<S> ReceiveQueue<S>
     }
 }
 
-impl<S> Batch for ReceiveQueue<S>
-    where S: 'static + Any + Default + Clone + Sized + Send
-{}
+impl<S> Batch for ReceiveQueue<S> where S: 'static + Any + Default + Clone + Sized + Send {}
 
 impl<S> BatchIterator for ReceiveQueue<S>
     where S: 'static + Any + Default + Clone + Sized + Send
@@ -64,18 +61,16 @@ impl<S> BatchIterator for ReceiveQueue<S>
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_payload(idx) {
-            Some((p, _, i)) => 
-                Some((p, self.meta.get_mut(idx).and_then(|x| Some(x as &mut Any)), i)),
-            None => None
+            Some((p, _, i)) => Some((p, self.meta.get_mut(idx).and_then(|x| Some(x as &mut Any)), i)),
+            None => None,
         }
     }
 
     #[inline]
     unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_base_payload(idx) {
-            Some((p, _, i)) => 
-                Some((p, self.meta.get_mut(idx).and_then(|x| Some(x as &mut Any)), i)),
-            None => None
+            Some((p, _, i)) => Some((p, self.meta.get_mut(idx).and_then(|x| Some(x as &mut Any)), i)),
+            None => None,
         }
     }
 
@@ -85,9 +80,8 @@ impl<S> BatchIterator for ReceiveQueue<S>
                                   pop: i32)
                                   -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
         match self.parent.next_payload_popped(idx, pop) { 
-            Some((p, _, i)) => 
-                Some((p, self.meta.get_mut(idx).and_then(|x| Some(x as &mut Any)), i)),
-            None => None
+            Some((p, _, i)) => Some((p, self.meta.get_mut(idx).and_then(|x| Some(x as &mut Any)), i)),
+            None => None,
         }
     }
 }
