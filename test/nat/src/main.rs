@@ -1,5 +1,4 @@
 #![feature(box_syntax)]
-#![feature(asm)]
 extern crate e2d2;
 extern crate fnv;
 extern crate time;
@@ -21,28 +20,6 @@ use std::net::Ipv4Addr;
 mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
-
-#[allow(dead_code)]
-#[inline]
-fn rdtscp_unsafe() -> u64 {
-    unsafe {
-        let low: u32;
-        let high: u32;
-        asm!("rdtscp"
-             : "={eax}" (low), "={edx}" (high)
-             :
-             : "{rcx} {rdx} {rax}"
-             : "volatile");
-        ((high as u64) << 32) | (low as u64)
-    }
-}
-
-#[allow(dead_code)]
-#[inline]
-fn rdtscp() -> u64 {
-    rdtscp_unsafe()
-}
-
 
 fn recv_thread(ports: Vec<PortQueue>, core: i32) {
     init_thread(core, core);

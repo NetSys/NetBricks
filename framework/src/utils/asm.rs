@@ -1,5 +1,5 @@
 #[inline]
-fn cpuid() {
+pub fn cpuid() {
     unsafe {
         asm!("movl $$0x2, %eax":::"eax");
         asm!("movl $$0x0, %ecx":::"ecx");
@@ -11,7 +11,7 @@ fn cpuid() {
 }
 
 #[inline]
-fn rdtsc_unsafe() -> u64 {
+pub fn rdtsc_unsafe() -> u64 {
     unsafe {
         let low: u32;
         let high: u32;
@@ -25,7 +25,7 @@ fn rdtsc_unsafe() -> u64 {
 }
 
 #[inline]
-fn rdtscp_unsafe() -> u64 {
+pub fn rdtscp_unsafe() -> u64 {
     // Doing the equivalent of a rdtscp manually, for some reason rdtscp is causing a
     let high: u32;
     let low: u32;

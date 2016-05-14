@@ -18,14 +18,16 @@ else
 endif
 
 LDFLAGS += -L$(DPDK_LIB_DIR)
-LIBS += -ldpdk -Wl,-rpath=$(DPDK_LIB_DIR)
+LIBS += -Wl,--whole-archive -ldpdk -Wl,--no-whole-archive -Wl,-rpath=$(DPDK_LIB_DIR)
+#LIBS += -ldpdk -Wl,-rpath=$(DPDK_LIB_DIR)
 LIBS += -lm -lpthread -ldl #-lpcap
 
 # change fpic to fPIC if something fails
-CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=native -Wno-unused-function -Wno-unused-but-set-variable \
+CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=native \
+	 -Wno-unused-function -Wno-unused-but-set-variable \
 	 -I$(DPDK_INC_DIR) -Iinclude/\
 	 -D_GNU_SOURCE \
-	 -fpic
+	 -fPIC
 
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
@@ -56,7 +58,8 @@ $(DEPS): $(SRCS) $(HEADERS)
 	@$(CC) $(CFLAGS) -MM $(SRCS) | sed 's|\(.*\)\.o: \(.*\)\.c|\2.o: \2.c|' > $(DEPS);
 
 $(PROD): $(OBJS)
-	echo $(LDFLAGS)
+	#ar rcs $(PROD) $(OBJS)
+	#echo $(LDFLAGS)
 	$(CC) -shared  $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
 
 -include $(DEPS)

@@ -1,5 +1,4 @@
 #![feature(box_syntax)]
-#![feature(asm)]
 extern crate e2d2;
 extern crate fnv;
 extern crate time;
