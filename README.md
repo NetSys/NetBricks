@@ -1,19 +1,12 @@
-This needs a nightly rust and a modified Cargo (available 
-[here](https://github.com/apanda/cargo)). The Cargo modifications mostly enable 
-the use of SIMD in Rust. These are now already included in the repository.
+The build is entirely self contained, needing nothing.
 
 To build
 --------
 
--   If building on a Debian machine, you need to undo some of the craziness wrought by Debian maintainers. In particular
-    libcurl by default will not correctly allow Cargo to check server identity. To solve this install the `libgnutls30 libgnutls-openssl-dev libcurl4-gnutls-dev`
--   Install Rust nightly. Make sure the `RUST_HOME` environment variable points to some directory where Rust will be
-    installed. Also ensure that `${RUST_HOME}/bin` is in your path.
-    ```curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- --channel=nightly --disable-sudo --prefix=$RUST_HOME --verbose --date=2016-04-13```
-    For now use the nightly from 2016-04-13, the one on the 14th seems to have
-    trouble when using LTO and debug together.
--   Run `./build.sh`. This will download and build DPDK, the framework and examples. 
--   To build documentation run `./build.sh doc`
+- Run `./build.sh deps`. This will take a while initially as it downloads and
+  builds all dependencies.
+
+- Run `./build.sh` to build the project as a whole.
 
 To run
 ------
