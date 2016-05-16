@@ -11,6 +11,7 @@
 #include <rte_eal.h>
 
 #include "mempool.h"
+#define NUM_PFRAMES	(2048 - 1) // Number of pframes in the mempool
 
 /* Taken from SoftNIC (dpdk.c) */
 /* Get NUMA count */
@@ -152,7 +153,7 @@ int init_secondary(const char* name, int nlen, int core,
 }
 
 int init_system_whitelisted(const char* name, int nlen, int core, 
-		char *whitelist[], int wlcount) {
+		char *whitelist[], int wlcount, unsigned int mempool_size) {
 	int ret = 0;
 	if (name == NULL || nlen >= MAX_NAME_LEN) {
 		return -EINVAL;
@@ -167,14 +168,14 @@ int init_system_whitelisted(const char* name, int nlen, int core,
 		return ret;
 
 	}
-	return init_mempool(core);
+	return init_mempool(core, mempool_size);
 }
 
 /* Call this from the main thread on ZCSI to initialize things. This initializes
  * the master thread. */
 int init_system(char* name, int nlen, int core)
 {
-	return init_system_whitelisted(name, nlen, core, NULL, 0);
+	return init_system_whitelisted(name, nlen, core, NULL, 0, NUM_PFRAMES);
 }
 
 
