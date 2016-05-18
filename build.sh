@@ -45,7 +45,7 @@ deps () {
 	fi
 
 	if [ ! -e ${UNWIND_RESULT} ]; then
-		llvm
+		libunwind
 	else
 		echo "libunwind found, not building"
 	fi
