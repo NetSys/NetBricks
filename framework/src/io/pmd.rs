@@ -269,17 +269,34 @@ impl PmdPort {
         PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, false, false, false)
     }
 
-    pub fn new_mq_port(port: i32, rxqs: i32, txqs: i32, rx_cores: &[i32], tx_cores: &[i32]) -> Result<Arc<PmdPort>> {
+    pub fn new_mq_port_with_descriptors(port: i32,
+                                        rxqs: i32,
+                                        txqs: i32,
+                                        rx_cores: &[i32],
+                                        tx_cores: &[i32],
+                                        rxd: i32,
+                                        txd: i32)
+                                        -> Result<Arc<PmdPort>> {
         PmdPort::new(port,
                      rxqs,
                      txqs,
                      &rx_cores[..],
                      &tx_cores[..],
-                     NUM_RXD,
-                     NUM_TXD,
+                     rxd,
+                     txd,
                      false,
                      false,
                      false)
+    }
+
+    pub fn new_mq_port(port: i32, rxqs: i32, txqs: i32, rx_cores: &[i32], tx_cores: &[i32]) -> Result<Arc<PmdPort>> {
+        PmdPort::new_mq_port_with_descriptors(port,
+                                              rxqs,
+                                              txqs,
+                                              &rx_cores[..],
+                                              &tx_cores[..],
+                                              NUM_RXD,
+                                              NUM_TXD)
     }
 
     /// Create a new port that can talk to BESS.
