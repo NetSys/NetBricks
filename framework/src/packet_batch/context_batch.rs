@@ -79,7 +79,7 @@ impl<T, V> Act for ContextBatch<T, V>
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &Vec<usize>) -> Option<usize> {
         // Need to adjust data
         let mut idx_orig = self.parent.start();
         let mut idx_new = 0;

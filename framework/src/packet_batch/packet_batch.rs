@@ -12,6 +12,8 @@ use std::any::Any;
 pub struct PacketBatch {
     array: Vec<*mut MBuf>,
     cnt: i32,
+    scratch: Vec<*mut MBuf>,
+    scratch_idxes: Vec<usize>,
 }
 
 // *mut MBuf is not send by default.
@@ -23,6 +25,8 @@ impl PacketBatch {
         PacketBatch {
             array: Vec::<*mut MBuf>::with_capacity(cnt as usize),
             cnt: cnt,
+            scratch: Vec::<*mut MBuf>::with_capacity(cnt as usize),
+            scratch_idxes: Vec::with_capacity(cnt as usize),
         }
     }
 
@@ -109,26 +113,25 @@ impl PacketBatch {
     pub fn distribute_spsc_queues(&mut self, queue: &[SpscProducer<u8>], groups: &Vec<(usize, *mut u8)>, _: usize) {
 
         let mut idx = 0;
-        let mut could_not_enqueue = Vec::with_capacity(self.array.len());
         for &(group, meta) in groups {
             if !queue[group].enqueue_one(self.array[idx], meta) {
-                could_not_enqueue.push(idx);
+                self.scratch_idxes.push(idx);
             }
             idx += 1;
         }
         idx = 0;
-        for nen in could_not_enqueue {
-            self.array[idx] = self.array[nen];
+        for nen in &self.scratch_idxes {
+            self.array[idx] = self.array[*nen];
             idx += 1;
         }
         unsafe { self.array.set_len(idx) };
+        self.scratch_idxes.clear();
     }
 
     /// This drops packet buffers and keeps things ordered. We expect that idxes is an ordered vector of indices, no
     /// guarantees are made when this is not the case.
     #[inline]
-    fn drop_packets_stable(&mut self, idxes: Vec<usize>) -> Option<usize> {
-        let mut to_free = Vec::<*mut MBuf>::with_capacity(idxes.len());
+    fn drop_packets_stable(&mut self, idxes: &Vec<usize>) -> Option<usize> {
         // Short circuit when we don't have to do this work.
         if idxes.is_empty() {
             return Some(0);
@@ -144,10 +147,10 @@ impl PacketBatch {
                 let test_idx: usize = idxes[remove_idx];
                 assert!(idx_orig <= test_idx);
                 if idx_orig == test_idx {
-                    to_free.push(self.array[idx_orig]);
+                    self.scratch.push(self.array[idx_orig]);
                     remove_idx += 1;
                 } else {
-                    self.array.swap(idx_orig, idx_new);
+                    self.array[idx_new] = self.array[idx_orig];
                     idx_new += 1;
                 }
                 idx_orig += 1;
@@ -164,14 +167,15 @@ impl PacketBatch {
                 None
             } else {
                 self.array.set_len(idx_new);
-                if to_free.is_empty() {
+                if self.scratch.is_empty() {
                     Some(0)
                 } else {
                     // Now free the dropped packets
-                    let len = to_free.len();
-                    // No need to offset here since to_free is tight.
-                    let array_ptr = to_free.as_mut_ptr();
+                    let len = self.scratch.len();
+                    // No need to offset here since self.scratch is tight.
+                    let array_ptr = self.scratch.as_mut_ptr();
                     let ret = mbuf_free_bulk(array_ptr, (len as i32));
+                    self.scratch.clear();
                     if ret == 0 {
                         Some(len)
                     } else {
@@ -385,7 +389,7 @@ impl Act for PacketBatch {
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &Vec<usize>) -> Option<usize> {
         self.drop_packets_stable(idxes)
     }
 

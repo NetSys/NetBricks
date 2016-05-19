@@ -59,7 +59,7 @@ impl<T, V> Act for MapBatch<T, V>
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &Vec<usize>) -> Option<usize> {
         self.parent.drop_packets(idxes)
     }
 

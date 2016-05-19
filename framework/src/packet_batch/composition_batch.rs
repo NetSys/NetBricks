@@ -76,7 +76,7 @@ impl Act for CompositionBatch {
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &Vec<usize>) -> Option<usize> {
         self.parent.drop_packets(idxes)
     }
 

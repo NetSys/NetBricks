@@ -16,6 +16,7 @@ pub struct FilterBatch<T, V>
     parent: V,
     filter: FilterFn<T>,
     capacity: usize,
+    remove: Vec<usize>,
 }
 
 impl<T, V> FilterBatch<T, V>
@@ -29,6 +30,7 @@ impl<T, V> FilterBatch<T, V>
             parent: parent,
             filter: filter,
             capacity: capacity,
+            remove: Vec::with_capacity(capacity),
         }
     }
 }
@@ -51,20 +53,18 @@ impl<T, V> Act for FilterBatch<T, V>
     #[inline]
     fn act(&mut self) {
         self.parent.act();
-        let mut remove = Vec::<usize>::with_capacity(self.capacity);
-        {
-            // let ref mut f = self.filter;
-            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some(ParsedDescriptor { index: idx, header: head, payload, ctx, .. }) =
-                      iter.next(&mut self.parent) {
-                if (self.filter)(head, payload, ctx) {
-                    remove.push(idx)
-                }
+        // let ref mut f = self.filter;
+        let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+        while let Some(ParsedDescriptor { index: idx, header: head, payload, ctx, .. }) =
+                  iter.next(&mut self.parent) {
+            if (self.filter)(head, payload, ctx) {
+                self.remove.push(idx)
             }
         }
-        if !remove.is_empty() {
-            self.parent.drop_packets(remove).expect("Filtering was performed incorrectly");
+        if !self.remove.is_empty() {
+            self.parent.drop_packets(&self.remove).expect("Filtering was performed incorrectly");
         }
+        self.remove.clear();
     }
 
     #[inline]
@@ -79,11 +79,11 @@ impl<T, V> Act for FilterBatch<T, V>
 
     #[inline]
     fn capacity(&self) -> i32 {
-        self.parent.capacity()
+        self.capacity as i32
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &Vec<usize>) -> Option<usize> {
         self.parent.drop_packets(idxes)
     }
 

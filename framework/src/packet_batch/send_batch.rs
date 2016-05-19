@@ -92,7 +92,7 @@ impl<V> Act for SendBatch<V>
     }
 
     #[inline]
-    fn drop_packets(&mut self, _: Vec<usize>) -> Option<usize> {
+    fn drop_packets(&mut self, _: &Vec<usize>) -> Option<usize> {
         panic!("Cannot drop packets from a sent batch")
     }
 

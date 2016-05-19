@@ -95,7 +95,7 @@ impl<V> Act for MergeBatch<V>
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: Vec<usize>) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &Vec<usize>) -> Option<usize> {
         self.parents[self.which].drop_packets(idxes)
     }
 
