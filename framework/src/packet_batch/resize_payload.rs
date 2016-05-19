@@ -18,6 +18,7 @@ pub struct ResizePayload<T, V>
     parent: V,
     resize_fn: ResizeFn<T>,
     capacity: usize,
+    idxes_sizes: Vec<(usize, isize)>,
 }
 
 impl<T, V> ResizePayload<T, V>
@@ -31,6 +32,7 @@ impl<T, V> ResizePayload<T, V>
             parent: parent,
             resize_fn: resize_fn,
             capacity: capacity,
+            idxes_sizes: Vec::with_capacity(capacity),
         }
     }
 }
@@ -53,18 +55,15 @@ impl<T, V> Act for ResizePayload<T, V>
     #[inline]
     fn act(&mut self) {
         self.parent.act();
-        let mut idxes_sizes = Vec::<(usize, isize)>::with_capacity(self.capacity);
-        {
-            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some(ParsedDescriptor { index: idx, header: head, payload, ctx, .. }) =
-                      iter.next(&mut self.parent) {
-                let new_size = (self.resize_fn)(head, payload, ctx);
-                if new_size != 0 {
-                    idxes_sizes.push((idx, new_size))
-                }
+        let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+        while let Some(ParsedDescriptor { index: idx, header: head, payload, ctx, .. }) =
+                  iter.next(&mut self.parent) {
+            let new_size = (self.resize_fn)(head, payload, ctx);
+            if new_size != 0 {
+                self.idxes_sizes.push((idx, new_size))
             }
         }
-        for (idx, size) in idxes_sizes {
+        for &(idx, size) in &self.idxes_sizes {
             // FIXME: Error handling, this currently just panics, but it should do something different. Maybe
             // take a failure handler or drop the packet instead of panicing?
             match self.parent.adjust_payload_size(idx, size) {
@@ -72,6 +71,8 @@ impl<T, V> Act for ResizePayload<T, V>
                 None => panic!("Resize failed {}", idx),
             }
         }
+
+        self.idxes_sizes.clear();
     }
 
     #[inline]
@@ -86,7 +87,7 @@ impl<T, V> Act for ResizePayload<T, V>
 
     #[inline]
     fn capacity(&self) -> i32 {
-        self.parent.capacity()
+        self.capacity as i32
     }
 
     #[inline]

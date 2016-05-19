@@ -19,11 +19,12 @@ struct GroupByProducer<T, V, S>
           S: 'static + Any + Default + Clone + Sized + Send
 {
     parent: V,
-    capacity: usize,
     group_ct: usize,
     group_fn: GroupFn<T, S>,
     producers: Vec<SpscProducer<u8>>,
+    groups: Vec<(usize, *mut u8)>,
 }
+
 pub struct GroupBy<T, V, S>
     where T: EndOffset + 'static,
           V: Batch + BatchIterator + Act + 'static,
@@ -55,10 +56,10 @@ impl<T, V, S> GroupBy<T, V, S>
         };
         sched.add_task(RefCell::new(box GroupByProducer::<T, V, S> {
             parent: parent,
-            capacity: capacity,
             group_ct: groups,
             group_fn: group_fn,
             producers: producers,
+            groups: Vec::with_capacity(capacity),
         }));
         GroupBy {
             group_ct: groups,
@@ -97,15 +98,15 @@ impl<T, V, S> Executable for GroupByProducer<T, V, S>
         self.parent.act(); // Let the parent get some packets.
         {
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            let mut groups = Vec::with_capacity(self.capacity);
             while let Some(ParsedDescriptor { header: hdr, payload, ctx, .. }) = iter.next(&mut self.parent) {
                 let (group, meta) = (self.group_fn)(hdr, payload, ctx);
-                groups.push((group,
+                self.groups.push((group,
                              meta.and_then(|m| Some(Box::into_raw(m) as *mut u8))
                                  .unwrap_or_else(|| ptr::null_mut())))
             }
             // At this time groups contains what we need to distribute, so distribute it out.
-            self.parent.distribute_to_queues(&self.producers, &groups, self.group_ct)
+            self.parent.distribute_to_queues(&self.producers, &self.groups, self.group_ct);
+            self.groups.clear();
         };
         self.parent.done();
     }
