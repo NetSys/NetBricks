@@ -14,6 +14,9 @@ pub struct PacketBatch {
     cnt: i32,
 }
 
+// *mut MBuf is not send by default.
+unsafe impl Send for PacketBatch {}
+
 impl PacketBatch {
     /// Create a new PacketBatch capable of holding up to `cnt` packets.
     pub fn new(cnt: i32) -> PacketBatch {

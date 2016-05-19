@@ -7,7 +7,7 @@ use super::Batch;
 use super::HeaderOperations;
 use std::any::Any;
 
-pub type TransformFn<T> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>)>;
+pub type TransformFn<T> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>) + Send>;
 
 pub struct TransformBatch<T, V>
     where T: EndOffset,

@@ -19,6 +19,8 @@ pub use self::group_by::*;
 use self::map_batch::MapFn;
 use self::filter_batch::FilterFn;
 use self::resize_payload::ResizeFn;
+use self::transform_batch::TransformFn;
+
 pub use self::reset_parse::ResetParsingBatch;
 use io::*;
 use headers::*;
@@ -57,8 +59,9 @@ pub fn merge<V>(batches: Vec<V>) -> MergeBatch<V>
 }
 
 /// Public trait implemented by every packet batch type. This trait should be used as a constraint for any functions or
-/// places where a Batch type is required.
-pub trait Batch: BatchIterator + Act {
+/// places where a Batch type is required. We declare batches as sendable, they cannot be copied but we allow it to be
+/// sent to another thread.
+pub trait Batch: BatchIterator + Act + Send {
     /// Parse the payload as header of type.
     fn parse<T: EndOffset>(self) -> ParsedBatch<T, Self>
         where Self: Sized
@@ -99,7 +102,7 @@ pub trait HeaderOperations: Batch + Sized {
     type Header: EndOffset;
     /// Transform a header field.
     fn transform(self,
-                 transformer: Box<FnMut(&mut Self::Header, &mut [u8], Option<&mut Any>)>)
+                 transformer: TransformFn<Self::Header>)
                  -> TransformBatch<Self::Header, Self> {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }

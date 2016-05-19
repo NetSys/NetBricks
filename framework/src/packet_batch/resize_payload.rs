@@ -9,7 +9,7 @@ use std::any::Any;
 
 /// Takes in the header, payload and context, and returns the difference between the current packet size and desired
 /// packet size.
-pub type ResizeFn<T> = Box<FnMut(&mut T, &[u8], Option<&mut Any>) -> isize>;
+pub type ResizeFn<T> = Box<FnMut(&mut T, &[u8], Option<&mut Any>) -> isize + Send>;
 
 pub struct ResizePayload<T, V>
     where T: EndOffset,

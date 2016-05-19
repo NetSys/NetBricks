@@ -11,7 +11,8 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::ptr;
 
-pub type GroupFn<T, S> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>) -> (usize, Option<Box<S>>)>;
+pub type GroupFn<T, S> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>) -> (usize, Option<Box<S>>) + Send>;
+
 struct GroupByProducer<T, V, S>
     where T: EndOffset + 'static,
           V: Batch + BatchIterator + Act + 'static,

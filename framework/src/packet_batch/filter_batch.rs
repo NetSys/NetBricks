@@ -7,7 +7,7 @@ use headers::EndOffset;
 use io::Result;
 use std::any::Any;
 
-pub type FilterFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>) -> bool>;
+pub type FilterFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>) -> bool + Send>;
 
 pub struct FilterBatch<T, V>
     where T: EndOffset,

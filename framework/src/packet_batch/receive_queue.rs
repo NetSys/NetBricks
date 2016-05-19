@@ -20,6 +20,12 @@ pub struct ReceiveQueue<S>
     phantom_s: PhantomData<S>,
 }
 
+// *mut u8 is not send by default.
+unsafe impl<S> Send for ReceiveQueue<S> 
+    where S: 'static + Any + Default + Clone + Sized + Send
+{
+}
+
 impl<S> ReceiveQueue<S>
     where S: 'static + Any + Default + Clone + Sized + Send
 {

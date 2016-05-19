@@ -7,7 +7,7 @@ use super::Batch;
 use super::HeaderOperations;
 use std::any::Any;
 
-pub type MapFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>)>;
+pub type MapFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>) + Send>;
 
 pub struct MapBatch<T, V>
     where T: EndOffset,
