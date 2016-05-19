@@ -98,8 +98,8 @@ cargo () {
 			$CARGO_HOME/src/rust-installer
 	fi
 	pushd $CARGO_HOME
-	./configure --prefix=$HOME/e2d2/3rdparty/tools \
-		--local-rust-root=$HOME/e2d2/3rdparty/tools
+	./configure --prefix=${TOOLS_BASE} \
+		--local-rust-root=${TOOLS_BASE}
 	make -j
 	make install
 	popd
