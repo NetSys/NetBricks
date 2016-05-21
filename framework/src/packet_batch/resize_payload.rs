@@ -56,8 +56,7 @@ impl<T, V> Act for ResizePayload<T, V>
     fn act(&mut self) {
         self.parent.act();
         let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-        while let Some(ParsedDescriptor { index: idx, header: head, payload, ctx, .. }) =
-                  iter.next(&mut self.parent) {
+        while let Some(ParsedDescriptor { index: idx, header: head, payload, ctx, .. }) = iter.next(&mut self.parent) {
             let new_size = (self.resize_fn)(head, payload, ctx);
             if new_size != 0 {
                 self.idxes_sizes.push((idx, new_size))

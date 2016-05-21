@@ -101,9 +101,7 @@ pub trait Batch: BatchIterator + Act + Send {
 pub trait HeaderOperations: Batch + Sized {
     type Header: EndOffset;
     /// Transform a header field.
-    fn transform(self,
-                 transformer: TransformFn<Self::Header>)
-                 -> TransformBatch<Self::Header, Self> {
+    fn transform(self, transformer: TransformFn<Self::Header>) -> TransformBatch<Self::Header, Self> {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }
 

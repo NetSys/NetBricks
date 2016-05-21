@@ -26,7 +26,8 @@ static struct rte_mempool *pframe_pool[RTE_MAX_LCORE];
 /*Needed for bulk allocation */
 struct rte_mbuf mbuf_template[RTE_MAX_LCORE];
 static int mempool_initialized[RTE_MAX_LCORE]; 
-static unsigned int mempool_size;
+static unsigned int core_mempool_size;
+static unsigned int core_mempool_cache_size;
 #else 
 /* Creating one pool per NUMA node. */
 static struct rte_mempool *pframe_pool[RTE_MAX_NUMA_NODES];
@@ -62,8 +63,8 @@ int init_mempool_core(int core)
 	sprintf(name, "pframe%d", core);
 	sid = rte_lcore_to_socket_id(core);
 	pframe_pool[core] = rte_pktmbuf_pool_create(name,
-			mempool_size,
-			NUM_MEMPOOL_CACHE,
+			core_mempool_size,
+			core_mempool_cache_size,
 			0,
 			RTE_MBUF_DEFAULT_BUF_SIZE,
 			sid);
@@ -94,20 +95,24 @@ struct rte_mempool *get_mempool_for_core(int coreid) {
 	return get_pframe_pool(coreid, rte_lcore_to_socket_id(coreid));
 }
 
-static int init_mempool_socket(int sid, unsigned int mempool_size)
+static int init_mempool_socket(int sid, 
+		unsigned int mempool_size, 
+		unsigned int mcache_size)
 {
 	char name[256];
 	sprintf(name, "pframe%d", sid);
 	pframe_pool[sid] = rte_pktmbuf_pool_create(name,
 			mempool_size,
-			NUM_MEMPOOL_CACHE,
+			mcache_size,
 			0,
 			RTE_MBUF_DEFAULT_BUF_SIZE,
 			sid);
 	return pframe_pool[sid] != NULL;
 }
 
-int init_mempool(int master_core, unsigned int mempool_size)
+int init_mempool(int master_core, 
+		unsigned int mempool_size, 
+		unsigned int mcache_size)
 {
 #if (!PER_CORE)
 	int initialized[RTE_MAX_NUMA_NODES];
@@ -121,7 +126,8 @@ int init_mempool(int master_core, unsigned int mempool_size)
 		int sid = rte_lcore_to_socket_id(i);
 		if (!initialized[sid]) {
 			struct rte_mbuf *mbuf;
-			if (!init_mempool_socket(sid, mempool_size)) {
+			if (!init_mempool_socket(sid, mempool_size, 
+						mcache_size)) {
 				goto fail;
 			}
 			/* Initialize mbuf template */
@@ -138,7 +144,8 @@ fail:
 	return -ENOMEM;
 #else
 	
-	mempool_size = mempool_size;
+	core_mempool_size = mempool_size;
+	core_mempool_cache_size = mcache_size;
 	memset(mempool_initialized, 0, sizeof(int) * RTE_MAX_LCORE);
 	return init_mempool_core(master_core);
 #endif

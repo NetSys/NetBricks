@@ -55,8 +55,7 @@ impl<T, V> Act for FilterBatch<T, V>
         self.parent.act();
         // let ref mut f = self.filter;
         let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-        while let Some(ParsedDescriptor { index: idx, header: head, payload, ctx, .. }) =
-                  iter.next(&mut self.parent) {
+        while let Some(ParsedDescriptor { index: idx, header: head, payload, ctx, .. }) = iter.next(&mut self.parent) {
             if (self.filter)(head, payload, ctx) {
                 self.remove.push(idx)
             }
