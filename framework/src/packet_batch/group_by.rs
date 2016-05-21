@@ -7,7 +7,6 @@ use super::ReceiveQueue;
 use super::iterator::*;
 use std::any::*;
 use std::collections::HashMap;
-use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::ptr;
 
@@ -54,13 +53,13 @@ impl<T, V, S> GroupBy<T, V, S>
             }
             (producers, consumers)
         };
-        sched.add_task(RefCell::new(box GroupByProducer::<T, V, S> {
+        sched.add_task(GroupByProducer::<T, V, S> {
             parent: parent,
             group_ct: groups,
             group_fn: group_fn,
             producers: producers,
             groups: Vec::with_capacity(capacity),
-        }));
+        });
         GroupBy {
             group_ct: groups,
             consumers: consumers,

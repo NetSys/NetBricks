@@ -14,9 +14,7 @@ use std::env;
 use std::time::Duration;
 use std::thread;
 use std::sync::Arc;
-use std::cell::RefCell;
 use self::nf::*;
-use std::net::Ipv4Addr;
 mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
@@ -37,12 +35,11 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32) {
                                      .map(|port| lpm(ReceiveBatch::new(port.clone()), &mut sched).send(port.clone()))
                                      .collect();
     println!("Running {} pipelines", pipelines.len());
-    let pipeline = RefCell::new(if pipelines.len() > 1 {
-        box merge(pipelines) as Box<Executable>
+    if pipelines.len() > 1 {
+        sched.add_task(merge(pipelines))
     } else {
-        box pipelines.pop().unwrap() as Box<Executable>
-    });
-    sched.add_task(pipeline);
+        sched.add_task(pipelines.pop().unwrap())
+    };
     sched.execute_loop();
 }
 

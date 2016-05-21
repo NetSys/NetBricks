@@ -1,9 +1,8 @@
 use super::Executable;
-use std::cell::RefCell;
 /// A very simple round-robin scheduler. This should really be more of a DRR scheduler.
 pub struct Scheduler {
     /// The set of runnable items. Note we currently don't have a blocked queue.
-    run_q: Vec<RefCell<Box<Executable>>>,
+    run_q: Vec<Box<Executable>>,
     /// Next task to run.
     next_task: usize,
 }
@@ -19,15 +18,16 @@ impl Scheduler {
     }
 
     /// Add a task to the current scheduler.
-    pub fn add_task(&mut self, task: RefCell<Box<Executable>>) {
-        self.run_q.push(task)
+    pub fn add_task<T: Executable + 'static>(&mut self, task: T) {
+        self.run_q.push(box task)
     }
 
     #[inline]
     fn execute_internal(&mut self) {
-        let mut task = self.run_q[self.next_task].borrow_mut();
+        let len = self.run_q.len();
+        let ref mut task = &mut self.run_q[self.next_task];
         let next = self.next_task + 1;
-        if next == self.run_q.len() {
+        if next == len {
             self.next_task = 0;
         } else {
             self.next_task = next

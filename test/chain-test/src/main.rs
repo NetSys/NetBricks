@@ -14,7 +14,6 @@ use std::env;
 use std::time::Duration;
 use std::thread;
 use std::sync::Arc;
-use std::cell::RefCell;
 use self::nf::*;
 mod nf;
 
@@ -34,13 +33,13 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, chain_len: u32) {
 
     let pipelines: Vec<_> = ports.iter()
                                  .map(|port| {
-                                     box (chain(ReceiveBatch::new(port.clone()), chain_len).send(port.clone()))
+                                     chain(ReceiveBatch::new(port.clone()), chain_len).send(port.clone())
                                  })
                                  .collect();
     println!("Running {} pipelines", pipelines.len());
     let mut sched = Scheduler::new();
     for pipeline in pipelines {
-        sched.add_task(RefCell::new(pipeline as Box<Executable>));
+        sched.add_task(pipeline);
     }
     sched.execute_loop();
 }

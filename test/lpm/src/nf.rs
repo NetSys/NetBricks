@@ -1,6 +1,5 @@
 use e2d2::headers::*;
 use e2d2::packet_batch::*;
-use e2d2::utils::*;
 use e2d2::scheduler::*;
 use fnv::FnvHasher;
 use std::net::Ipv4Addr;
