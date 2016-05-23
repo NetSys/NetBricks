@@ -6,18 +6,50 @@ use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
 use std::any::Any;
+use std::marker::PhantomData;
 
-pub type MapFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>) + Send>;
+// pub trait MapFn<T>: FnMut(&T, &[u8], Option<&mut Any>) + Send {
+// }
+
+// impl<F, T> MapFn<T> for F
+// where F: FnMut(&T, &[u8], Option<&mut Any>) + Send,
+// T: EndOffset {
+// }
 
 pub struct MapBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     parent: V,
-    transformer: MapFn<T>,
+    transformer: Box<FnMut(&T, &[u8], Option<&mut Any>) + Send>,
+    phantom_t: PhantomData<T>,
 }
 
-batch!{MapBatch, [parent: V, transformer: MapFn<T>], []}
+impl<T, V> MapBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
+{
+    pub fn new<Op: FnMut(&T, &[u8], Option<&mut Any>) + Send + 'static>(parent: V, transformer: Op) -> MapBatch<T, V> {
+        MapBatch {
+            parent: parent,
+            transformer: box transformer,
+            phantom_t: PhantomData,
+        }
+    }
+}
+
+impl<T, V> Batch for MapBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
+{
+}
+
+impl<T, V> HeaderOperations for MapBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
+{
+    type Header = T;
+}
 
 impl<T, V> Act for MapBatch<T, V>
     where T: EndOffset,

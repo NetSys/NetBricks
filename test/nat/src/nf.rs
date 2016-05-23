@@ -26,7 +26,7 @@ pub fn nat<T: 'static + Batch>(parent: T, _s: &mut Scheduler, nat_ip: &Ipv4Addr)
     const MIN_PORT: u16 = 1024;
     const MAX_PORT: u16 = 65535;
     let pipeline = parent.parse::<MacHeader>()
-                         .transform(box move |hdr, payload, _| {
+                         .transform(move |hdr, payload, _| {
                              if let Some(flow) = ipv4_extract_flow(hdr, payload) {
                                  let found = match port_hash.get(&flow) {
                                      Some(s) => {

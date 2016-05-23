@@ -6,18 +6,44 @@ use super::act::Act;
 use super::Batch;
 use super::HeaderOperations;
 use std::any::Any;
-
-pub type TransformFn<T> = Box<FnMut(&mut T, &mut [u8], Option<&mut Any>) + Send>;
+use std::marker::PhantomData;
 
 pub struct TransformBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
     parent: V,
-    transformer: TransformFn<T>,
+    transformer: Box<FnMut(&mut T, &mut [u8], Option<&mut Any>) + Send>,
+    phantom_t: PhantomData<T>,
 }
 
-batch!{TransformBatch, [parent: V, transformer: TransformFn<T>], []}
+impl<T, V> TransformBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
+{
+    pub fn new<Op: FnMut(&mut T, &mut [u8], Option<&mut Any>) + Send + 'static>(parent: V,
+                                                                                transformer: Op)
+                                                                                -> TransformBatch<T, V> {
+        TransformBatch {
+            parent: parent,
+            transformer: box transformer,
+            phantom_t: PhantomData,
+        }
+    }
+}
+
+impl<T, V> Batch for TransformBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
+{
+}
+
+impl<T, V> HeaderOperations for TransformBatch<T, V>
+    where T: EndOffset,
+          V: Batch + BatchIterator + Act
+{
+    type Header = T;
+}
 
 impl<T, V> Act for TransformBatch<T, V>
     where T: EndOffset,

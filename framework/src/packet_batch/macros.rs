@@ -79,8 +79,8 @@ macro_rules! act {
         }
 
         #[inline]
-        fn distribute_to_queues(&mut self, queues: &[SpscProducer<u8>], 
-                                groups: &Vec<(usize, *mut u8)>, 
+        fn distribute_to_queues(&mut self, queues: &[SpscProducer<u8>],
+                                groups: &Vec<(usize, *mut u8)>,
                                 ngroups: usize) {
             self.parent.distribute_to_queues(queues, groups, ngroups)
         }

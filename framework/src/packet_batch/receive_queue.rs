@@ -82,7 +82,7 @@ impl<S> BatchIterator for ReceiveQueue<S>
                                   idx: usize,
                                   pop: i32)
                                   -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        match self.parent.next_payload_popped(idx, pop) { 
+        match self.parent.next_payload_popped(idx, pop) {
             Some((p, _, i)) => Some((p, self.meta.get_mut(idx).and_then(|x| Some(x as &mut Any)), i)),
             None => None,
         }

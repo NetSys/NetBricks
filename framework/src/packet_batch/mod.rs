@@ -16,10 +16,8 @@ pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
 pub use self::group_by::*;
 
-use self::map_batch::MapFn;
 use self::filter_batch::FilterFn;
 use self::resize_payload::ResizeFn;
-use self::transform_batch::TransformFn;
 
 pub use self::reset_parse::ResetParsingBatch;
 use io::*;
@@ -101,13 +99,18 @@ pub trait Batch: BatchIterator + Act + Send {
 pub trait HeaderOperations: Batch + Sized {
     type Header: EndOffset;
     /// Transform a header field.
-    fn transform(self, transformer: TransformFn<Self::Header>) -> TransformBatch<Self::Header, Self> {
+    fn transform<Op: FnMut(&mut Self::Header, &mut [u8], Option<&mut Any>) + Send + 'static>
+        (self,
+         transformer: Op)
+         -> TransformBatch<Self::Header, Self> {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }
 
     /// Map over a set of header fields. Map and transform primarily differ in map being immutable. Immutability
     /// provides some optimization opportunities not otherwise available.
-    fn map(self, transformer: MapFn<Self::Header>) -> MapBatch<Self::Header, Self> {
+    fn map<Op: FnMut(&Self::Header, &[u8], Option<&mut Any>) + Send + 'static>(self,
+                                                                               transformer: Op)
+                                                                               -> MapBatch<Self::Header, Self> {
         MapBatch::<Self::Header, Self>::new(self, transformer)
     }
 

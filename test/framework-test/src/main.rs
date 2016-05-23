@@ -14,12 +14,13 @@ use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 use std::thread;
+use std::any::Any;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
 fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: MergeableStoreDP<isize>) -> CompositionBatch {
     parent.parse::<MacHeader>()
-          .transform(box move |hdr, payload, _| {
+          .transform(move |hdr: &mut MacHeader, payload: &mut [u8], _: Option<&mut Any>| {
               // No one else should be writing to this, so I think relaxed is safe here.
               let src = hdr.src.clone();
               hdr.src = hdr.dst;
@@ -27,7 +28,7 @@ fn monitor<T: 'static + Batch>(parent: T, mut monitoring_cache: MergeableStoreDP
               monitoring_cache.update(ipv4_extract_flow(hdr, payload).unwrap(), 1);
           })
           .parse::<IpHeader>()
-          .transform(box |hdr, _, _| {
+          .transform(|hdr: &mut IpHeader, _: &mut [u8], _: Option<&mut Any>| {
               let ttl = hdr.ttl();
               hdr.set_ttl(ttl + 1)
           })
