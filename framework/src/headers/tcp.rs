@@ -39,14 +39,23 @@ macro_rules! write_or_return {
 
 impl fmt::Display for TcpHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write_or_return!(f, "tcp flags ");
-        self.fmt_flags(f)
-        // write!(f,
-        // "src_port: {} dst_port: {} len: {} checksum: {}",
-        // self.src_port(),
-        // self.dst_port(),
-        // self.length(),
-        // self.checksum())
+        write_or_return!(f,
+                         "tcp src_port {} dst_port {} seq {} ack {} data_offset {} flags ",
+                         self.src_port(),
+                         self.dst_port(),
+                         self.seq_num(),
+                         self.ack_num(),
+                         self.data_offset());
+        let ret = self.fmt_flags(f);
+        if ret.is_err() {
+            return ret;
+        }
+        write!(f,
+               "cwnd {} csum {} urgent {}",
+               self.window_size(),
+               self.checksum(),
+               self.urgent())
+
     }
 }
 
@@ -289,15 +298,33 @@ impl TcpHeader {
 
     pub fn fmt_flags(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write_or_return!(f, "| ");
-        if self.ns_flag() { write_or_return!(f, "NS ")};
-        if self.cwr_flag() { write_or_return!(f, "CWR ") };
-        if self.ece_flag() { write_or_return!(f, "ECE ") };
-        if self.urg_flag() { write_or_return!(f, "URG ") };
-        if self.ack_flag() { write_or_return!(f, "ACK ") };
-        if self.psh_flag() { write_or_return!(f, "PHS ") };
-        if self.rst_flag() { write_or_return!(f, "RST ") };
-        if self.syn_flag() { write_or_return!(f, "SYN ") };
-        if self.fin_flag() { write_or_return!(f, "FIN ") };
+        if self.ns_flag() {
+            write_or_return!(f, "NS ")
+        };
+        if self.cwr_flag() {
+            write_or_return!(f, "CWR ")
+        };
+        if self.ece_flag() {
+            write_or_return!(f, "ECE ")
+        };
+        if self.urg_flag() {
+            write_or_return!(f, "URG ")
+        };
+        if self.ack_flag() {
+            write_or_return!(f, "ACK ")
+        };
+        if self.psh_flag() {
+            write_or_return!(f, "PHS ")
+        };
+        if self.rst_flag() {
+            write_or_return!(f, "RST ")
+        };
+        if self.syn_flag() {
+            write_or_return!(f, "SYN ")
+        };
+        if self.fin_flag() {
+            write_or_return!(f, "FIN ")
+        };
         write!(f, "|")
     }
     // END FLAGS
@@ -315,15 +342,15 @@ impl TcpHeader {
     pub fn checksum(&self) -> u16 {
         u16::from_be(self.csum)
     }
-    
+
     // FIXME: Validate checksum
-    
+
     pub fn set_checksum(&mut self, csum: u16) {
         self.csum = u16::to_be(csum)
     }
 
     // FIXME: Recompute checksum
-    
+
     /// Urgent pointer
     pub fn urgent(&self) -> u16 {
         u16::from_be(self.urgent)
