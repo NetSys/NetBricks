@@ -2,9 +2,11 @@ pub use self::null_header::*;
 pub use self::mac::*;
 pub use self::ip::*;
 pub use self::udp::*;
+pub use self::tcp::*;
 mod mac;
 mod ip;
 mod udp;
+mod tcp;
 mod null_header;
 
 /// A trait implemented by all headers, used for reading them from a mbuf.
