@@ -62,18 +62,17 @@ impl fmt::Display for TcpHeader {
 impl EndOffset for TcpHeader {
     #[inline]
     fn offset(&self) -> usize {
-        8 // 8 bytes
+        (self.data_offset() * 4) as usize
     }
 
     #[inline]
     fn size() -> usize {
-        8
+        20
     }
 
     #[inline]
-    fn payload_size(&self, _: usize) -> usize {
-        0
-        // self.length() as usize - self.offset()
+    fn payload_size(&self, frame_size: usize) -> usize {
+        frame_size - self.offset()
     }
 }
 

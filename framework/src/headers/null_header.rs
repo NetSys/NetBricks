@@ -1,7 +1,7 @@
 use super::EndOffset;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[repr(C, packed)]
 pub struct NullHeader;
 
