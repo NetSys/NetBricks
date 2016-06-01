@@ -10,7 +10,7 @@ mod tcp;
 mod null_header;
 
 /// A trait implemented by all headers, used for reading them from a mbuf.
-pub trait EndOffset : Send {
+pub trait EndOffset: Send {
     /// Offset returns the number of bytes to skip to get to the next header.
     fn offset(&self) -> usize;
 
