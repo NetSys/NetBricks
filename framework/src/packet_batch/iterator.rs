@@ -1,4 +1,5 @@
 use super::packet_batch::cast_from_u8;
+use io::MBuf;
 use std::marker::PhantomData;
 use headers::EndOffset;
 use std::any::Any;
@@ -14,6 +15,8 @@ pub struct PacketDescriptor {
     pub payload: *mut u8,
     /// Payload size, useful for making bounded vectors into the packet.
     pub payload_size: usize,
+    /// A reference to the original packet.
+    pub packet: *mut MBuf,
 }
 
 /// An interface implemented by all batches for iterating through the set of packets in a batch.
@@ -93,7 +96,7 @@ impl<T> PayloadEnumerator<T>
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_payload(original_idx) };
         match item {
-            Some((PacketDescriptor { offset, header: haddr, payload, payload_size }, ctx, next_idx)) => {
+            Some((PacketDescriptor { offset, header: haddr, payload, payload_size, .. }, ctx, next_idx)) => {
                 let header = cast_from_u8::<T>(haddr);
                 // println!("Payload size is {}", payload_size);
                 // This is safe (assuming our size accounting has been correct so far).
