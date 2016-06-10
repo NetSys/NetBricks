@@ -206,5 +206,19 @@ int find_port_with_pci_address(const char* pci) {
     return (int)port_id;
 }
 
+/* Attach a device with a given name (useful when attaching virtual devices). Returns either the port number of the
+   device or an error if not found. */
+int attach_pmd_device(const char* devname) {
+	uint8_t port = 0;
+	int error = rte_eth_dev_attach(devname, &port);
+
+	if (error != 0) {
+		// Could not attach
+		return -ENODEV;
+	}
+	return (int)port;
+
+}
+
 /* FIXME: Add function to modify RSS hash function using
  * rte_eth_dev_rss_hash_update */

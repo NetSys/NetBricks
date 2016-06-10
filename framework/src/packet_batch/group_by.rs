@@ -101,7 +101,7 @@ impl<T, V, S> Executable for GroupByProducer<T, V, S>
                 let (group, meta) = (self.group_fn)(hdr, payload, ctx);
                 self.groups.push((group,
                                   meta.and_then(|m| Some(Box::into_raw(m) as *mut u8))
-                                      .unwrap_or_else(|| ptr::null_mut())))
+                    .unwrap_or_else(|| ptr::null_mut())))
             }
             // At this time groups contains what we need to distribute, so distribute it out.
             self.parent.distribute_to_queues(&self.producers, &self.groups, self.group_ct);
