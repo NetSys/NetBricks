@@ -6,7 +6,7 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 EXT_BASE="$BASE_DIR/3rdparty"
 TOOLS_BASE="$BASE_DIR/3rdparty/tools"
 DOWNLOAD_DIR="${BASE_DIR}/3rdparty/downloads"
-SCRIPTS_DIR="${BASE_DIR}/scripts"
+SCRIPTS_DIR="${EXT_BASE}/scripts"
 BIN_DIR="${TOOLS_BASE}/bin"
 if [ ! -e $DOWNLOAD_DIR ]; then
 	mkdir -p ${DOWNLOAD_DIR}
@@ -24,7 +24,7 @@ MUSL_DOWNLOAD_PATH="${DOWNLOAD_DIR}/musl.tar.gz"
 MUSL_RESULT="${EXT_BASE}/musl"
 MUSL_TEST="${TOOLS_BASE}/lib/libc.a"
 
-RUST_TEST="${TOOLS_BASE}/bin/rustc"
+RUST_TEST="${TOOLS_BASE}/bin/rustc.sh"
 RUST_DOWNLOAD_PATH="${EXT_BASE}/rust"
 
 LLVM_DOWNLOAD_PATH="${DOWNLOAD_DIR}/llvm.tar.gz"
@@ -94,6 +94,13 @@ dpdk () {
 }
 
 cargo () {
+	if [ ! -e $CARGO_HOME ]; then
+		git clone https://github.com/apanda/cargo $CARGO_HOME
+	else
+		pushd $CARGO_HOME
+		git pull
+		popd
+	fi
 	# Build cargo
 	if [ ! -e $CARGO_HOME/src/rust-installer/gen-installer.sh ]; then
 		git clone https://github.com/rust-lang/rust-installer.git \
