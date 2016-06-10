@@ -92,6 +92,13 @@ dpdk () {
 }
 
 cargo () {
+	if [ ! -e $CARGO_HOME ]; then
+		git clone https://github.com/apanda/cargo $CARGO_HOME
+	else
+		pushd $CARGO_HOME
+		git pull
+		popd
+	fi
 	# Build cargo
 	if [ ! -e $CARGO_HOME/src/rust-installer/gen-installer.sh ]; then
 		git clone https://github.com/rust-lang/rust-installer.git \
