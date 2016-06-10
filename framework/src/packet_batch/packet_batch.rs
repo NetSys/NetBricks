@@ -323,6 +323,7 @@ impl BatchIterator for PacketBatch {
                 header: self.address(idx).0,
                 payload: self.payload(idx).0,
                 payload_size: self.payload(idx).1,
+                packet: self.array[idx],
             },
                   None,
                   idx + 1))
