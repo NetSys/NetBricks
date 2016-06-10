@@ -56,7 +56,6 @@ pub struct PmdPort {
     txqs: i32,
     stats_rx: Vec<Arc<PmdStats>>,
     stats_tx: Vec<Arc<PmdStats>>,
-    _pad: [u64; 4],
 }
 
 #[derive(Clone)]
@@ -64,14 +63,14 @@ pub struct PmdPort {
 pub struct PortQueue {
     // The Arc cost here should not affect anything, since we are really not doing anything to make it go in and out of
     // scope.
-    _pad0: i32,
     pub port: Arc<PmdPort>,
     stats_rx: Arc<PmdStats>,
     stats_tx: Arc<PmdStats>,
     port_id: i32,
     txq: i32,
     rxq: i32,
-    _pad1: [u64; 4],
+    _pad0: i32,
+    _pad1: [u64; 3],
 }
 
 impl Drop for PmdPort {
@@ -106,8 +105,8 @@ impl PortQueue {
     fn send_queue(&mut self, queue: i32, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
         unsafe {
             let sent = send_pkts(self.port_id, queue, pkts, to_send);
-            // let update = self.stats_tx.stats.load(Ordering::Relaxed) + sent as usize;
-            // self.stats_tx.stats.store(update, Ordering::Relaxed);
+            let update = self.stats_tx.stats.load(Ordering::Relaxed) + sent as usize;
+            self.stats_tx.stats.store(update, Ordering::Relaxed);
             Ok(sent as u32)
         }
     }
@@ -116,8 +115,8 @@ impl PortQueue {
     fn recv_queue(&self, queue: i32, pkts: *mut *mut MBuf, to_recv: i32) -> Result<u32> {
         unsafe {
             let recv = recv_pkts(self.port_id, queue, pkts, to_recv);
-            // let update = self.stats_rx.stats.load(Ordering::Relaxed) + recv as usize;
-            // self.stats_rx.stats.store(update, Ordering::Relaxed);
+            let update = self.stats_rx.stats.load(Ordering::Relaxed) + recv as usize;
+            self.stats_rx.stats.store(update, Ordering::Relaxed);
             Ok(recv as u32)
         }
     }
@@ -228,7 +227,6 @@ impl PmdPort {
                     should_close: true,
                     stats_rx: (0..rxqs).map(|_| Arc::new(PmdStats::new())).collect(),
                     stats_tx: (0..txqs).map(|_| Arc::new(PmdStats::new())).collect(),
-                    _pad: Default::default(),
                 }))
             } else {
                 Err(ZCSIError::FailedToInitializePort)
@@ -316,7 +314,6 @@ impl PmdPort {
                 should_close: false,
                 stats_rx: vec![Arc::new(PmdStats::new())],
                 stats_tx: vec![Arc::new(PmdStats::new())],
-                _pad: Default::default(),
             }))
         } else {
             Err(ZCSIError::FailedToInitializePort)
@@ -337,7 +334,6 @@ impl PmdPort {
                         should_close: false,
                         stats_rx: vec![Arc::new(PmdStats::new())],
                         stats_tx: vec![Arc::new(PmdStats::new())],
-                        _pad: Default::default(),
                     }))
                 } else {
                     Err(ZCSIError::FailedToInitializePort)
@@ -369,7 +365,6 @@ impl PmdPort {
             should_close: false,
             stats_rx: vec![Arc::new(PmdStats::new())],
             stats_tx: vec![Arc::new(PmdStats::new())],
-            _pad: Default::default(),
         }))
     }
 
