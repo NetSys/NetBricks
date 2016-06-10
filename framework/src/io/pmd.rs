@@ -27,6 +27,7 @@ extern "C" {
     fn init_bess_eth_ring(ifname: *const u8, core: i32) -> i32;
     fn init_ovs_eth_ring(iface: i32, core: i32) -> i32;
     fn find_port_with_pci_address(pciaddr: *const u8) -> i32;
+    fn attach_pmd_device(dev: *const u8) -> i32;
 }
 
 // Make this into an input parameter
@@ -343,12 +344,22 @@ impl PmdPort {
         }
     }
 
+    fn new_dpdk_vport(spec: &str, core: i32) -> Result<Arc<PmdPort>> {
+        let port = unsafe { attach_pmd_device(spec.as_ptr()) };
+        if port >= 0 {
+            PmdPort::new_simple_port(port, core)
+        } else {
+            Err(ZCSIError::FailedToInitializePort)
+        }
+    }
+
     pub fn new_vdev(name: &str, core: i32) -> Result<Arc<PmdPort>> {
         let parts: Vec<_> = name.split(':').collect();
         if parts.len() == 2 {
             match parts[0] {
                 "bess" => PmdPort::new_bess_port(parts[1], core),
                 "ovs" => PmdPort::new_ovs_port(parts[1], core),
+                "dpdk" => PmdPort::new_dpdk_vport(parts[1], core),
                 _ => Err(ZCSIError::BadVdev),
             }
         } else {
