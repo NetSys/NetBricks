@@ -146,7 +146,7 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreDP<T> {
         }
     }
 
-    /// Approximate length of the table. 
+    /// Approximate length of the table.
     pub fn len(&mut self) -> usize {
         self.len
     }

@@ -40,7 +40,8 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
         let parent_payload = self.parent.next_payload(idx);
         match parent_payload {
             Some((PacketDescriptor { offset: prev_offset, payload: packet, payload_size: size, packet: pkt, .. },
-                  arg, idx)) => {
+                  arg,
+                  idx)) => {
                 let pkt_as_t = cast_from_u8::<T>(packet);
                 let offset = T::offset(pkt_as_t);
                 // Under no circumstances should we allow an incorrectly reported payload size to cause problems.

@@ -1,6 +1,6 @@
 [build]
-rustc="3rdparty/tools/bin/rustc"
-rustdoc="3rdparty/tools/rustdoc"
+rustc="3rdparty/tools/bin/rustc.sh"
+rustdoc="3rdparty/tools/rustdoc.sh"
 
 [term]
 color = 'auto'

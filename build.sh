@@ -6,6 +6,8 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 EXT_BASE="$BASE_DIR/3rdparty"
 TOOLS_BASE="$BASE_DIR/3rdparty/tools"
 DOWNLOAD_DIR="${BASE_DIR}/3rdparty/downloads"
+SCRIPTS_DIR="${BASE_DIR}/scripts"
+BIN_DIR="${TOOLS_BASE}/bin"
 if [ ! -e $DOWNLOAD_DIR ]; then
 	mkdir -p ${DOWNLOAD_DIR}
 fi
@@ -153,6 +155,7 @@ rust () {
 	popd
 	make -j -C ${RUST_DOWNLOAD_PATH}
 	make -j -C ${RUST_DOWNLOAD_PATH} install
+	cp ${SCRIPTS_DIR}/rust*.sh ${BIN_DIR}/
 }
 
 if [ $# -ge 1 ]; then
