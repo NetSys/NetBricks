@@ -88,6 +88,7 @@ pub enum ZCSIError {
     FailedToInitializePort,
     BadQueue,
     CannotSend,
+    BadDev,
     BadVdev,
     BadTxQueue,
     BadRxQueue,
