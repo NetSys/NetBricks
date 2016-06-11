@@ -15,6 +15,7 @@ use std::env;
 use std::time::Duration;
 use std::thread;
 use std::any::Any;
+use std::sync::Arc;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
@@ -58,9 +59,11 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
     let mut opts = Options::new();
-    opts.optmulti("w", "whitelist", "Whitelist PCI", "PCI");
-    opts.optmulti("c", "core", "Core to use", "core");
     opts.optflag("h", "help", "print this help menu");
+    opts.optflag("", "secondary", "run as a secondary process");
+    opts.optopt("n", "name", "name to use for the current process", "name");
+    opts.optmulti("p", "port", "Port to use", "[type:]id");
+    opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -69,63 +72,64 @@ fn main() {
     if matches.opt_present("h") {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
     }
+
     let cores_str = matches.opt_strs("c");
     let master_core = matches.opt_str("m")
                              .unwrap_or_else(|| String::from("0"))
                              .parse()
                              .expect("Could not parse master core spec");
     println!("Using master core {}", master_core);
+    let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
 
-    let whitelisted = matches.opt_strs("w");
-    if cores_str.len() > whitelisted.len() {
-        println!("More cores than ports");
-        std::process::exit(1);
-    }
     let cores: Vec<i32> = cores_str.iter()
                                    .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
                                    .collect();
-    for (core, wl) in cores.iter().zip(whitelisted.iter()) {
-        println!("Going to use core {} for wl {}", core, wl);
-    }
-    let mut core_map = HashMap::<i32, Vec<i32>>::with_capacity(cores.len());
-    for (core, port) in cores.iter().zip(0..whitelisted.len()) {
-        {
-            match core_map.get(&core) {
-                Some(_) => core_map.get_mut(&core).expect("Incorrect logic").push(port as i32),
-                None => {
-                    core_map.insert(core.clone(), vec![port as i32]);
-                    ()
-                }
-            }
+
+
+    fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
+        let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
+        for (port, core) in ports.iter().zip(cores.iter()) {
+            cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
         }
+        cores_for_port
     }
 
-    init_system_wl(&format!("recv{}", cores_str.join("")),
-                   master_core,
-                   &whitelisted);
-    let ports_by_core: HashMap<_, _> = core_map.iter()
-                                               .map(|(core, ports)| {
-                                                   let c = core.clone();
-                                                   let recv_ports: Vec<_> =
-                                                       ports.iter()
-                                                            .map(|p| {
-                                                                PmdPort::new_mq_port(p.clone() as i32, 1, 1, &[c], &[c])
-                                                                    .expect("Could not initialize port")
-                                                            })
-                                                            .collect();
-                                                   (c, recv_ports)
-                                               })
-                                               .collect();
+    let primary = !matches.opt_present("secondary");
+
+    let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
+
+    if primary {
+        init_system_wl(&name, master_core, &[]);
+    } else {
+        init_system_secondary(&name, master_core, &[]);
+    }
+
+    let ports_to_activate: Vec<_> = cores_for_port.keys().collect();
+
+    let mut queues_by_core = HashMap::<i32, Vec<_>>::with_capacity(cores.len());
+    let mut ports = Vec::<Arc<PmdPort>>::with_capacity(ports_to_activate.len());
+    for port in &ports_to_activate {
+        let cores = cores_for_port.get(*port).unwrap();
+        let queues = cores.len() as i32;
+        let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
+                               .expect("Could not initialize port");
+        for (idx, core) in cores.iter().enumerate() {
+            let queue = idx as i32;
+            queues_by_core.entry(*core)
+                          .or_insert(vec![])
+                          .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
+        }
+        ports.push(pmd_port);
+    }
+
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
     let mut consumer = MergeableStoreCP::new();
-    let _thread: Vec<_> = ports_by_core.iter()
+    let _thread: Vec<_> = queues_by_core.iter()
                                        .map(|(core, ports)| {
                                            let c = core.clone();
                                            let mon = consumer.dp_store();
-                                           let p: Vec<_> = ports.iter()
-                                                                .map(|p| PmdPort::new_queue_pair(p, 0, 0).unwrap())
-                                                                .collect();
+                                           let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
                                            std::thread::spawn(move || recv_thread(p, c, mon))
                                        })
                                        .collect();
@@ -137,13 +141,16 @@ fn main() {
         consumer.sync();
         let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
         if now - start > 1.0 {
-            let pkts = ports_by_core.values()
-                                    .map(|pvec| {
-                                        pvec.iter()
-                                            .map(|p| p.stats(0))
-                                            .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp))
-                                    })
-                                    .fold((0, 0), |(r, t), (rp, tp)| (r + rp, t + tp));
+            let mut rx = 0;
+            let mut tx = 0;
+            for port in &ports {
+                for q in 0..port.rxqs() {
+                    let (rp, tp) = port.stats(q);
+                    rx += rp;
+                    tx += tp;
+                }
+            }
+            let pkts = (rx, tx);
             println!("{:.2} OVERALL RX {:.2} TX {:.2} FLOWS {}",
                      now - start,
                      (pkts.0 - pkts_so_far.0) as f64 / (now - start),
