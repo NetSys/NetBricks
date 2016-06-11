@@ -56,6 +56,33 @@ int get_pmd_ports(struct rte_eth_dev_info* info, int len) {
     return num_entries;
 }
 
+int get_rte_eth_dev_info(int dev, struct rte_eth_dev_info* info) {
+	if (dev >= rte_eth_dev_count()) {
+		return -ENODEV;
+	} else {
+		rte_eth_dev_info_get(dev, info);
+		return 0;
+	}
+}
+
+int max_rxqs(int dev) {
+	struct rte_eth_dev_info info;
+	if (get_rte_eth_dev_info(dev, &info) != 0) {
+		return -ENODEV;
+	} else {
+		return info.max_rx_queues;
+	}
+}
+
+int max_txqs(int dev) {
+	struct rte_eth_dev_info info;
+	if (get_rte_eth_dev_info(dev, &info) != 0) {
+		return -ENODEV;
+	} else {
+		return info.max_tx_queues;
+	}
+}
+
 void enumerate_pmd_ports() {
     int num_dpdk_ports = rte_eth_dev_count();
     int i;

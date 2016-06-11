@@ -4,6 +4,7 @@ use super::interface::ZCSIError;
 use super::super::headers::MacAddress;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::cmp::min;
 
 // External DPDK calls
 #[link(name = "zcsi")]
@@ -28,6 +29,9 @@ extern "C" {
     fn init_ovs_eth_ring(iface: i32, core: i32) -> i32;
     fn find_port_with_pci_address(pciaddr: *const u8) -> i32;
     fn attach_pmd_device(dev: *const u8) -> i32;
+    // FIXME: Generic PMD info
+    fn max_rxqs(port: i32) -> i32;
+    fn max_txqs(port: i32) -> i32;
 }
 
 // Make this into an input parameter
@@ -190,27 +194,31 @@ impl PmdPort {
     }
 
     /// Create a PMD port with a given number of RX and TXQs.
-    pub fn new(port: i32,
-               rxqs: i32,
-               txqs: i32,
-               rx_cores: &[i32],
-               tx_cores: &[i32],
-               nrxd: i32,
-               ntxd: i32,
-               loopback: bool,
-               tso: bool,
-               csumoffload: bool)
-               -> Result<Arc<PmdPort>> {
+    fn init_dpdk_port (port: i32,
+                      rxqs: i32,
+                      txqs: i32,
+                      rx_cores: &[i32],
+                      tx_cores: &[i32],
+                      nrxd: i32,
+                      ntxd: i32,
+                      loopback: bool,
+                      tso: bool,
+                      csumoffload: bool)
+                      -> Result<Arc<PmdPort>> {
 
         let loopbackv = i32_from_bool(loopback);
         let tsov = i32_from_bool(tso);
         let csumoffloadv = i32_from_bool(csumoffload);
+        let max_txqs = unsafe { max_txqs(port) };
+        let max_rxqs = unsafe { max_rxqs(port) };
+        let actual_rxqs = min(max_rxqs, rxqs);
+        let actual_txqs = min(max_txqs, txqs);
 
-        if ((txqs as usize) == tx_cores.len()) && ((rxqs as usize) == rx_cores.len()) {
+        if ((actual_txqs as usize) <= tx_cores.len()) && ((actual_rxqs as usize) <= rx_cores.len()) {
             let ret = unsafe {
                 init_pmd_port(port,
-                              rxqs,
-                              txqs,
+                              actual_rxqs,
+                              actual_txqs,
                               rx_cores.as_ptr(),
                               tx_cores.as_ptr(),
                               nrxd,
@@ -223,8 +231,8 @@ impl PmdPort {
                 Ok(Arc::new(PmdPort {
                     connected: true,
                     port: port,
-                    rxqs: rxqs,
-                    txqs: txqs,
+                    rxqs: actual_rxqs,
+                    txqs: actual_txqs,
                     should_close: true,
                     stats_rx: (0..rxqs).map(|_| Arc::new(PmdStats::new())).collect(),
                     stats_tx: (0..txqs).map(|_| Arc::new(PmdStats::new())).collect(),
@@ -235,67 +243,6 @@ impl PmdPort {
         } else {
             Err(ZCSIError::FailedToInitializePort)
         }
-    }
-
-    pub fn new_with_one_queue(port: i32,
-                              rxcore: i32,
-                              txcore: i32,
-                              nrxd: i32,
-                              ntxd: i32,
-                              loopback: bool,
-                              tso: bool,
-                              csumoffload: bool)
-                              -> Result<Arc<PmdPort>> {
-        let rx_cores = vec![rxcore];
-        let tx_cores = vec![txcore];
-        PmdPort::new(port,
-                     1,
-                     1,
-                     &rx_cores[..],
-                     &tx_cores[..],
-                     nrxd,
-                     ntxd,
-                     loopback,
-                     tso,
-                     csumoffload)
-    }
-
-    pub fn new_loopback_port(port: i32, core: i32) -> Result<Arc<PmdPort>> {
-        PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, true, false, false)
-    }
-
-    pub fn new_simple_port(port: i32, core: i32) -> Result<Arc<PmdPort>> {
-        PmdPort::new_with_one_queue(port, core, core, NUM_RXD, NUM_TXD, false, false, false)
-    }
-
-    pub fn new_mq_port_with_descriptors(port: i32,
-                                        rxqs: i32,
-                                        txqs: i32,
-                                        rx_cores: &[i32],
-                                        tx_cores: &[i32],
-                                        rxd: i32,
-                                        txd: i32)
-                                        -> Result<Arc<PmdPort>> {
-        PmdPort::new(port,
-                     rxqs,
-                     txqs,
-                     &rx_cores[..],
-                     &tx_cores[..],
-                     rxd,
-                     txd,
-                     false,
-                     false,
-                     false)
-    }
-
-    pub fn new_mq_port(port: i32, rxqs: i32, txqs: i32, rx_cores: &[i32], tx_cores: &[i32]) -> Result<Arc<PmdPort>> {
-        PmdPort::new_mq_port_with_descriptors(port,
-                                              rxqs,
-                                              txqs,
-                                              &rx_cores[..],
-                                              &tx_cores[..],
-                                              NUM_RXD,
-                                              NUM_TXD)
     }
 
     /// Create a new port that can talk to BESS.
@@ -344,31 +291,27 @@ impl PmdPort {
         }
     }
 
-    fn new_dpdk_vport(spec: &str, core: i32) -> Result<Arc<PmdPort>> {
+    fn new_dpdk_port(spec: &str,
+                    rxqs: i32,
+                    txqs: i32,
+                    rx_cores: &[i32],
+                    tx_cores: &[i32],
+                    nrxd: i32,
+                    ntxd: i32,
+                    loopback: bool,
+                    tso: bool,
+                    csumoffload: bool)
+                    -> Result<Arc<PmdPort>> {
         let port = unsafe { attach_pmd_device(spec.as_ptr()) };
         if port >= 0 {
             println!("Going to try and use port {}", port);
-            PmdPort::new_simple_port(port, core)
+            PmdPort::init_dpdk_port(port, rxqs, txqs, rx_cores, tx_cores, nrxd, ntxd, loopback, tso, csumoffload)
         } else {
             Err(ZCSIError::FailedToInitializePort)
         }
     }
 
-    pub fn new_vdev(name: &str, core: i32) -> Result<Arc<PmdPort>> {
-        let parts: Vec<_> = name.split(':').collect();
-        if parts.len() == 2 {
-            match parts[0] {
-                "bess" => PmdPort::new_bess_port(parts[1], core),
-                "ovs" => PmdPort::new_ovs_port(parts[1], core),
-                "dpdk" => PmdPort::new_dpdk_vport(parts[1], core),
-                _ => Err(ZCSIError::BadVdev),
-            }
-        } else {
-            Err(ZCSIError::BadVdev)
-        }
-    }
-
-    pub fn null_port() -> Result<Arc<PmdPort>> {
+    fn null_port() -> Result<Arc<PmdPort>> {
         Ok(Arc::new(PmdPort {
             connected: false,
             port: 0,
@@ -378,6 +321,54 @@ impl PmdPort {
             stats_rx: vec![Arc::new(PmdStats::new())],
             stats_tx: vec![Arc::new(PmdStats::new())],
         }))
+    }
+
+    pub fn new_port_with_queues_descriptors_offloads(name: &str,
+                        rxqs: i32,
+                        txqs: i32,
+                        rx_cores: &[i32],
+                        tx_cores: &[i32],
+                        nrxd: i32,
+                        ntxd: i32,
+                        loopback: bool,
+                        tso: bool,
+                        csumoffload: bool)
+                       -> Result<Arc<PmdPort>> {
+        let parts: Vec<_> = name.splitn(2, ':').collect();
+        if parts.len() == 2 {
+            match parts[0] {
+                "bess" => PmdPort::new_bess_port(parts[1], rx_cores[0]),
+                "ovs" => PmdPort::new_ovs_port(parts[1], rx_cores[0]),
+                "dpdk" => PmdPort::new_dpdk_port(parts[1], rxqs, txqs, rx_cores, tx_cores,
+                                                 nrxd, ntxd, loopback, tso, csumoffload),
+                "null" => PmdPort::null_port(),
+                _ => Err(ZCSIError::BadDev),
+            }
+        } else {
+            PmdPort::new_dpdk_port(name, rxqs, txqs, rx_cores, tx_cores,
+                                                 nrxd, ntxd, loopback, tso, csumoffload)
+        }
+    }
+
+    pub fn new_with_queues(name: &str,
+                           rxqs: i32,
+                           txqs: i32,
+                           rx_cores: &[i32],
+                           tx_cores:&[i32])
+                           -> Result<Arc<PmdPort>> {
+        PmdPort::new_port_with_queues_descriptors_offloads(name, rxqs, txqs, rx_cores, tx_cores,
+                                                           NUM_RXD, NUM_TXD, false, false, false)
+    }
+
+    pub fn new_with_cores(name: &str, rx_core: i32, tx_core: i32) -> Result<Arc<PmdPort>> {
+        let rx_vec = vec![rx_core];
+        let tx_vec = vec![tx_core];
+        PmdPort::new_with_queues(name, 1, 1, &rx_vec[..], &tx_vec[..])
+
+    }
+
+    pub fn new(name: &str, core: i32) -> Result<Arc<PmdPort>> {
+        PmdPort::new_with_cores(name, core, core)
     }
 
     #[inline]
