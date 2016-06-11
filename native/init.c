@@ -88,11 +88,9 @@ static int init_eal(char* name, int secondary, int core, char* whitelist[], int 
     rte_argv[rte_argc++] = "-c";
     rte_argv[rte_argc++] = opt_lcore_bitmap;
     /* Otherwise assume everything is white listed */
-    if (wl_count > 0) {
-        for (int i = 0; i < wl_count; i++) {
-            rte_argv[rte_argc++] = "-w";
-            rte_argv[rte_argc++] = whitelist[i];
-        }
+    for (int i = 0; i < wl_count; i++) {
+        rte_argv[rte_argc++] = "-w";
+        rte_argv[rte_argc++] = whitelist[i];
     }
     for (int i = 0; i < vdev_count; i++) {
         rte_argv[rte_argc++] = "--vdev";
