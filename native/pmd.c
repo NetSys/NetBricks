@@ -217,7 +217,6 @@ int attach_pmd_device(const char* devname) {
 		return -ENODEV;
 	}
 	return (int)port;
-
 }
 
 /* FIXME: Add function to modify RSS hash function using
