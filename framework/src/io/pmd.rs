@@ -347,6 +347,7 @@ impl PmdPort {
     fn new_dpdk_vport(spec: &str, core: i32) -> Result<Arc<PmdPort>> {
         let port = unsafe { attach_pmd_device(spec.as_ptr()) };
         if port >= 0 {
+            println!("Going to try and use port {}", port);
             PmdPort::new_simple_port(port, core)
         } else {
             Err(ZCSIError::FailedToInitializePort)

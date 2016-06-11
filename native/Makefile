@@ -20,7 +20,7 @@ endif
 LDFLAGS += -L$(DPDK_LIB_DIR)
 LIBS += -Wl,--whole-archive -ldpdk -Wl,--no-whole-archive -Wl,-rpath=$(DPDK_LIB_DIR)
 #LIBS += -ldpdk -Wl,-rpath=$(DPDK_LIB_DIR)
-LIBS += -lm -lpthread -ldl #-lpcap
+LIBS += -lm -lpthread -ldl -lpcap
 
 # change fpic to fPIC if something fails
 CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=native \

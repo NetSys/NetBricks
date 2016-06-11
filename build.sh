@@ -90,7 +90,6 @@ clean_deps() {
 dpdk () {
 	$BASE_DIR/3rdparty/get-dpdk.sh ${DOWNLOAD_DIR}
 	proc="$(nproc)"
-	make -j $proc -C $BASE_DIR/native
 }
 
 cargo () {
@@ -177,6 +176,9 @@ case $TASK in
 		;;
 	build)
 		deps
+
+		make -j $proc -C $BASE_DIR/native
+
 		pushd $BASE_DIR/framework
 		${CARGO} build --release
 		popd
