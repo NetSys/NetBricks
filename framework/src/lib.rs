@@ -12,6 +12,9 @@ extern crate libc;
 extern crate byteorder;
 extern crate fnv;
 extern crate twox_hash;
+extern crate regex;
+#[macro_use]
+extern crate lazy_static;
 pub mod headers;
 pub mod io;
 pub mod scheduler;

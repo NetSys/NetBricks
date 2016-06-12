@@ -13,6 +13,8 @@ byteorder = "*"
 clippy = { version = "*", optional = true }
 fnv = "*"
 twox-hash = "*"
+regex = "*"
+lazy_static = "*"
 
 [profile.release]
 opt-level = 3
