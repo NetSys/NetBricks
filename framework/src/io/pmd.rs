@@ -5,6 +5,9 @@ use super::super::headers::MacAddress;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::cmp::min;
+use regex::Regex;
+use std::ffi::CString;
+use std::os::raw::c_char;
 
 // External DPDK calls
 #[link(name = "zcsi")]
@@ -28,7 +31,7 @@ extern "C" {
     fn init_bess_eth_ring(ifname: *const u8, core: i32) -> i32;
     fn init_ovs_eth_ring(iface: i32, core: i32) -> i32;
     fn find_port_with_pci_address(pciaddr: *const u8) -> i32;
-    fn attach_pmd_device(dev: *const u8) -> i32;
+    fn attach_pmd_device(dev: *const c_char) -> i32;
     // FIXME: Generic PMD info
     fn max_rxqs(port: i32) -> i32;
     fn max_txqs(port: i32) -> i32;
@@ -302,7 +305,8 @@ impl PmdPort {
                     tso: bool,
                     csumoffload: bool)
                     -> Result<Arc<PmdPort>> {
-        let port = unsafe { attach_pmd_device(spec.as_ptr()) };
+        let cannonical_spec = PmdPort::cannonicalize_pci(spec);
+        let port = unsafe { attach_pmd_device((cannonical_spec[..]).as_ptr()) };
         if port >= 0 {
             println!("Going to try and use port {}", port);
             PmdPort::init_dpdk_port(port, rxqs, txqs, rx_cores, tx_cores, nrxd, ntxd, loopback, tso, csumoffload)
@@ -335,18 +339,14 @@ impl PmdPort {
                         csumoffload: bool)
                        -> Result<Arc<PmdPort>> {
         let parts: Vec<_> = name.splitn(2, ':').collect();
-        if parts.len() == 2 {
-            match parts[0] {
-                "bess" => PmdPort::new_bess_port(parts[1], rx_cores[0]),
-                "ovs" => PmdPort::new_ovs_port(parts[1], rx_cores[0]),
-                "dpdk" => PmdPort::new_dpdk_port(parts[1], rxqs, txqs, rx_cores, tx_cores,
-                                                 nrxd, ntxd, loopback, tso, csumoffload),
-                "null" => PmdPort::null_port(),
-                _ => Err(ZCSIError::BadDev),
-            }
-        } else {
-            PmdPort::new_dpdk_port(name, rxqs, txqs, rx_cores, tx_cores,
-                                                 nrxd, ntxd, loopback, tso, csumoffload)
+        match parts[0] {
+            "bess" => PmdPort::new_bess_port(parts[1], rx_cores[0]),
+            "ovs" => PmdPort::new_ovs_port(parts[1], rx_cores[0]),
+            "dpdk" => PmdPort::new_dpdk_port(parts[1], rxqs, txqs, rx_cores, tx_cores,
+                                             nrxd, ntxd, loopback, tso, csumoffload),
+            "null" => PmdPort::null_port(),
+            _ => PmdPort::new_dpdk_port(name, rxqs, txqs, rx_cores, tx_cores,
+                                             nrxd, ntxd, loopback, tso, csumoffload),
         }
     }
 
@@ -369,6 +369,17 @@ impl PmdPort {
 
     pub fn new(name: &str, core: i32) -> Result<Arc<PmdPort>> {
         PmdPort::new_with_cores(name, core, core)
+    }
+
+    fn cannonicalize_pci(pci: &str) -> CString {
+        lazy_static! {
+            static ref PCI_RE: Regex = Regex::new(r"^\d{2}:\d{2}\.\d$").unwrap();
+        }
+        if PCI_RE.is_match(pci) {
+            CString::new(format!("0000:{}", pci)).unwrap()
+        } else {
+            CString::new(String::from(pci)).unwrap()
+        }
     }
 
     #[inline]

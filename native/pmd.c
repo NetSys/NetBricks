@@ -237,6 +237,7 @@ int find_port_with_pci_address(const char* pci) {
    device or an error if not found. */
 int attach_pmd_device(const char* devname) {
 	uint8_t port = 0;
+	printf("Devname: \"%s\"\n", devname);
 	int error = rte_eth_dev_attach(devname, &port);
 
 	if (error != 0) {
