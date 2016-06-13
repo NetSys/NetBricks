@@ -93,7 +93,7 @@ fn main() {
         let whitelisted: Vec<_> = cores_for_port.keys().map(|p| p.clone()).collect();
         init_system_wl(&name, master_core, &whitelisted[..]);
     } else {
-        init_system_secondary(&name, master_core, &[]);
+        init_system_secondary(&name, master_core);
     }
 
     let ports_to_activate: Vec<_> = cores_for_port.keys().collect();

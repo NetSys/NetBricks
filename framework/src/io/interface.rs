@@ -1,18 +1,25 @@
 use std::result;
+use std::ffi::CString;
 mod dpdk {
+    use std::os::raw::c_char;
     #[link(name = "zcsi")]
     extern "C" {
-        pub fn init_system(name: *const u8, nlen: i32, core: i32) -> i32;
-        pub fn init_system_whitelisted(name: *const u8,
+        pub fn init_system(name: *const c_char, nlen: i32, core: i32) -> i32;
+        pub fn init_system_whitelisted(name: *const c_char,
                                        nlen: i32,
                                        core: i32,
-                                       whitelist: *mut *const u8,
+                                       whitelist: *mut *const c_char,
                                        wlcount: i32,
                                        pool_size: u32,
                                        cache_size: u32)
                                        -> i32;
         pub fn init_thread(tid: i32, core: i32);
-        pub fn init_secondary(name: *const u8, nlen: i32, core: i32, vdevs: *mut *const u8, vdev_count: i32) -> i32;
+        pub fn init_secondary(name: *const c_char, 
+                              nlen: i32, 
+                              core: i32, 
+                              vdevs: *mut *const c_char, 
+                              vdev_count: i32)
+                              -> i32;
     }
 }
 
@@ -20,8 +27,9 @@ mod dpdk {
 /// Calling this function is somewhat slow.
 /// # Failures: If a call to this function fails, DPDK will panic and kill the entire application.
 pub fn init_system(name: &str, core: i32) {
+    let name_cstr = CString::new(name).unwrap();
     unsafe {
-        let ret = dpdk::init_system(name.as_ptr(), name.len() as i32, core);
+        let ret = dpdk::init_system(name_cstr.as_ptr(), name.len() as i32, core);
         if ret != 0 {
             panic!("Could not initialize the system errno {}", ret)
         }
@@ -30,12 +38,11 @@ pub fn init_system(name: &str, core: i32) {
 
 /// Initialize the system, whitelisting some set of NICs and allocating mempool of given size.
 pub fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_size: u32, cache_size: u32) {
-    let mut whitelist = Vec::<*const u8>::with_capacity(pci.len());
-    for dev in pci {
-        whitelist.push(dev.as_ptr());
-    }
+    let name_cstr = CString::new(name).unwrap();
+    let pci_cstr: Vec<_> = pci.iter().map(|p| CString::new(&p[..]).unwrap()).collect();
+    let mut whitelist: Vec<_> = pci_cstr.iter().map(|p| p.as_ptr()).collect();
     unsafe {
-        let ret = dpdk::init_system_whitelisted(name.as_ptr(),
+        let ret = dpdk::init_system_whitelisted(name_cstr.as_ptr(),
                                                 name.len() as i32,
                                                 core,
                                                 whitelist.as_mut_ptr(),
@@ -57,17 +64,15 @@ pub fn init_system_wl(name: &str, core: i32, pci: &[String]) {
 }
 
 /// Initialize the system as a DPDK secondary process with a set of VDEVs. User must specify mempool name to use.
-pub fn init_system_secondary(name: &str, core: i32, vdevs: &[String]) {
-    let mut vdev_list = Vec::<*const u8>::with_capacity(vdevs.len());
-    for dev in vdevs {
-        vdev_list.push(dev.as_ptr());
-    }
+pub fn init_system_secondary(name: &str, core: i32) {
+    let name_cstr = CString::new(name).unwrap();
+    let mut vdev_list = vec![];
     unsafe {
-        let ret = dpdk::init_secondary(name.as_ptr(),
+        let ret = dpdk::init_secondary(name_cstr.as_ptr(),
                                        name.len() as i32,
                                        core,
                                        vdev_list.as_mut_ptr(),
-                                       vdevs.len() as i32);
+                                       0);
         if ret != 0 {
             panic!("Could not initialize secondary process errno {}", ret)
         }
