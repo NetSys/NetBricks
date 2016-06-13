@@ -28,9 +28,9 @@ extern "C" {
     fn send_pkts(port: i32, qid: i32, pkts: *mut *mut MBuf, len: i32) -> i32;
     fn num_pmd_ports() -> i32;
     fn rte_eth_macaddr_get(port: i32, address: *mut MacAddress);
-    fn init_bess_eth_ring(ifname: *const u8, core: i32) -> i32;
+    fn init_bess_eth_ring(ifname: *const c_char, core: i32) -> i32;
     fn init_ovs_eth_ring(iface: i32, core: i32) -> i32;
-    fn find_port_with_pci_address(pciaddr: *const u8) -> i32;
+    fn find_port_with_pci_address(pciaddr: *const c_char) -> i32;
     fn attach_pmd_device(dev: *const c_char) -> i32;
     // FIXME: Generic PMD info
     fn max_rxqs(port: i32) -> i32;
@@ -154,7 +154,8 @@ impl PmdPort {
     }
 
     pub fn find_port_id(pcie: &str) -> i32 {
-        unsafe { find_port_with_pci_address(pcie.as_ptr()) }
+        let pcie_cstr = CString::new(pcie).unwrap();
+        unsafe { find_port_with_pci_address(pcie_cstr.as_ptr()) }
     }
 
     pub fn rxqs(&self) -> i32 {
@@ -250,10 +251,11 @@ impl PmdPort {
 
     /// Create a new port that can talk to BESS.
     fn new_bess_port(name: &str, core: i32) -> Result<Arc<PmdPort>> {
+        let ifname = CString::new(name).unwrap();
         // This call returns the port number
         let port = unsafe {
             // This bit should not be required, but is an unfortunate problem with DPDK today.
-            init_bess_eth_ring(name.as_ptr(), core)
+            init_bess_eth_ring(ifname.as_ptr(), core)
         };
         // FIXME: Can we really not close?
         if port >= 0 {
