@@ -100,10 +100,6 @@ impl<T> SpscProducer<T>
 impl<T> SpscQueue<T>
     where T: 'static + Send + Sized
 {
-    // fn metadata_to_ptr(m: &mut Option<Box<T>>) -> *mut T {
-    // m.and_then(|b| Some(Box::into_raw(b))).unwrap_or_else(|| ptr::null_mut())
-    // }
-
     /// Create a new SPSC queue. We require that the size of the ring be a power of two.
     pub fn new(slots: usize) -> Option<SpscQueue<T>> {
         if (slots & (slots - 1)) == 0 {
@@ -115,7 +111,6 @@ impl<T> SpscQueue<T>
                 consumer: Default::default(),
             })
         } else {
-            // Ring size must be a power of 2
             None
         }
     }

@@ -1,11 +1,24 @@
 use std::cmp::*;
 use std::io::Write;
+
+enum Result {
+    Completed,
+    Inserted,
+    Failed,
+}
+
+struct InsertResult {
+    pub result: Result,
+    pub length: usize,
+}
+
 #[derive(Default)]
 struct Segment {
     pub available: bool,
     pub length: usize,
 
 }
+
 struct WindowInternal {
     pub data: Vec<u8>,
     pub seq: usize,
@@ -60,22 +73,23 @@ impl WindowInternal {
     }
 
     #[inline]
-    pub fn insert_at_seq(&mut self, seq: usize, data: &[u8]) -> usize {
+    pub fn insert_at_seq(&mut self, seq: usize, data: &[u8]) -> InsertResult {
         match self.compute_offset(seq) {
             Some(offset) => {
                 let len = min(self.data.len() - offset, data.len());
                 let idx = offset;
                 self.recvd[idx].length += (&mut self.data[offset..]).write(data).unwrap();
                 self.recvd[idx].available = true;
-                
                 // Check if complete at head.
                 let len = self.roll_up_adjacent(0);
                 if len == self.size {
                     self.complete = true; // Marked as complete
+                    InsertResult {result: Result::Completed, length: len}
+                } else {
+                    InsertResult {result: Result::Inserted, length: len}
                 }
-                len
             },
-            None => 0
+            None => InsertResult{result: Result::Failed, length: 0}
         }
     }
 }
