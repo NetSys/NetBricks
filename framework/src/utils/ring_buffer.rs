@@ -112,8 +112,8 @@ impl RingBuffer {
     /// despite using a circular ring buffer.
     #[inline]
     fn slice_at_offset<'a>(&'a self, offset: usize, len: usize) -> &'a [u8] {
-        if offset + len >= self.size {
-            panic!("index out of range");
+        if len >= self.size {
+            panic!("slice beyond buffer length");
         }
         unsafe {
             let begin = self.buf.offset(offset as isize);
@@ -124,8 +124,8 @@ impl RingBuffer {
     /// Produce a mutable slice.
     #[inline]
     fn mut_slice_at_offset<'a>(&'a self, offset: usize, len: usize) -> &'a mut [u8] {
-        if offset + len >= self.size {
-            panic!("index out of range");
+        if len >= self.size {
+            panic!("slice beyond buffer length");
         }
         unsafe {
             let begin = self.buf.offset(offset as isize);
