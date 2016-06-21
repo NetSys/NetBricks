@@ -171,6 +171,22 @@ impl RingBuffer {
         self.unsafe_mut_slice_at_offset(offset, write).write(&data[0..write]).unwrap()
     }
 
+    /// Write at an offset from the tail, useful when dealing with out-of-order data. Note, the caller is responsible
+    /// for progressing the tail sufficiently (using `increment_tail`) when gaps are filled.
+    #[inline]
+    pub fn write_at_offset_from_tail(&mut self, offset: usize, data: &[u8]) -> usize {
+        let available = self.mask.wrapping_add(self.head).wrapping_sub(self.tail);
+        if available < offset {
+            0 // The offset lies beyond where we can safely write.
+        } else {
+            let offset_tail = self.tail.wrapping_add(offset);
+            let available_at_offset = self.mask.wrapping_add(self.head).wrapping_sub(offset_tail);
+            let write = min(data.len(), available_at_offset);
+            let index = offset_tail & self.mask;
+            self.unsafe_mut_slice_at_offset(index, write).write(&data[0..write]).unwrap()
+        }
+    }
+
     /// Read from the buffer, incrementing the read head by `increment` bytes. Returns bytes read.
     #[inline]
     pub fn read_from_head_with_increment(&mut self, mut data: &mut [u8], increment: usize) -> usize {
