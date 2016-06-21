@@ -1,4 +1,5 @@
 use utils::RingBuffer;
+use std::cmp::max;
 
 #[allow(dead_code)]
 enum InsertionResult {
@@ -15,14 +16,16 @@ enum State {
 #[allow(dead_code)]
 #[derive(Default)]
 struct Segment {
+    pub prev: isize,
     pub valid: bool,
     pub begin: usize,
     pub length: usize,
+    pub next: isize,
 }
 
 impl Segment {
     pub fn new(begin: usize, length: usize) -> Segment {
-        Segment { valid: false, begin: begin, length: length}
+        Segment { prev: -1, next: -1, valid: false, begin: begin, length: length}
     }
 
     #[inline]
@@ -34,6 +37,114 @@ impl Segment {
     pub fn reset(&mut self, length: usize) {
         self.valid = false;
         self.length = length;
+        self.prev = -1;
+        self.next = -1;
+    }
+}
+
+#[allow(dead_code)]
+struct SegmentList {
+    storage: Vec<Segment>,
+    available: Vec<isize>,
+    head: isize,
+    tail: isize,
+}
+
+impl SegmentList {
+    pub fn new(length: usize) -> SegmentList {
+        SegmentList {
+            storage: (0..(length as isize)).map(|_| Segment::new(0, 0)).collect(),
+            available: (0..(length as isize)).collect(),
+            head: -1,
+            tail: -1,
+        }
+    }
+
+    #[inline]
+    pub fn head<'a>(&'a self) -> Option<&'a Segment> {
+        if self.head == -1 {
+            None
+        } else {
+            Some(&self.storage[self.head as usize])
+        }
+    }
+
+    #[inline]
+    pub fn tail<'a>(&'a self) -> Option<&'a Segment> {
+        if self.tail == -1 {
+            None
+        } else {
+            Some(&self.storage[self.tail as usize])
+        }
+    }
+
+    #[inline]
+    pub fn remove_head(&mut self) {
+        if self.head != -1 {
+            self.head = self.storage[self.head as usize].next;
+        }
+    }
+
+    #[inline]
+    pub fn remove_tail(&mut self) {
+        if self.tail != -1 {
+            self.tail = self.storage[self.tail as usize].prev;
+        }
+    }
+
+    #[inline]
+    fn insert_before_node(&mut self, next: isize, begin: usize, len: usize) -> isize {
+        let idx = if let Some(nidx) = self.available.pop() {
+            nidx
+        } else {
+            self.storage.push(Segment::new(0, 0));
+            self.storage.len() as isize
+        };
+        self.storage[idx as usize].begin = begin;
+        self.storage[idx as usize].length = len;
+        self.storage[idx as usize].valid = true;
+        self.storage[idx as usize].next = next;
+        if next != -1 {
+            let prev = self.storage[next as usize].prev;
+            self.storage[idx as usize].prev = prev;
+            self.storage[next as usize].prev = idx;
+            if prev != -1 {
+                self.storage[prev as usize].next = idx;
+            }
+        } else {
+            self.storage[idx as usize].prev = -1;
+        }
+        idx
+    }
+
+    #[inline]
+    pub fn insert_segment<'a>(&'a mut self, begin: usize, len: usize) -> Option<&'a Segment>{
+        let mut idx = self.head;
+        if idx == -1 { // Special case the first insertion.
+            idx = self.insert_before_node(-1, begin, len);
+            self.head = idx;
+            self.tail = idx;
+            return Some(&self.storage[idx as usize])
+        } else {
+            let end = begin + len;
+            while idx != -1 {
+                let segment_end = self.storage[idx as usize].begin + self.storage[idx as usize].length;
+                if segment_end == begin { // We can just add to the current segment.
+                    self.storage[idx as usize].length += len;
+                    return Some(&self.storage[idx as usize])
+                } else if self.storage[idx as usize].begin > end { // We are on to segments that are further down, insert
+                    let idx = self.insert_before_node(idx, begin, len);
+                    return Some(&self.storage[idx as usize])
+                } else if self.storage[idx as usize].begin <= begin { // Overlapping segment
+                    let new_end = max(segment_end, end);
+                    self.storage[idx as usize].length = new_end - self.storage[idx as usize].begin;
+                    return Some(&self.storage[idx as usize]);
+                }
+            }
+            // Nothing matched, so let us insert at the tail.
+            None
+
+        }
     }
 }
 
@@ -45,7 +156,6 @@ struct ReorderedData {
     pub state: State,
     pub head_seq: usize,
     pub tail_seq: usize,
-    pub segments: Vec<Segment>,
 }
 
 const PAGE_SIZE: usize = 4096; // Page size in bytes, not using huge pages here.
@@ -84,7 +194,6 @@ impl ReorderedData {
                 head_seq: 0,
                 tail_seq: 0,
                 // Use less space than this if possible.
-                segments: (0..page_aligned_size).map(|b| Segment::new(b, 1)).collect(),
             })
         }
     }
@@ -95,7 +204,7 @@ impl ReorderedData {
             written += self.data.write_at_tail(data);
             while self.data.available() >= self.window_size {
                 // Notify (thus potentially draining the buffer
-            } 
+            }
         }
         self.tail_seq += written;
         InsertionResult::Inserted { length: self.data.available() }
