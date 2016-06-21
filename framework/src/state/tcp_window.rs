@@ -1,12 +1,13 @@
-use std::cmp::*;
 use std::io::Write;
 
+#[allow(dead_code)]
 enum Result {
     Completed,
     Inserted,
     Failed,
 }
 
+#[allow(dead_code)]
 struct InsertResult {
     pub result: Result,
     pub length: usize,
@@ -19,6 +20,7 @@ struct Segment {
 
 }
 
+#[allow(dead_code)]
 struct WindowInternal {
     pub data: Vec<u8>,
     pub seq: usize,
@@ -27,6 +29,7 @@ struct WindowInternal {
     pub size: usize,
 }
 
+#[allow(dead_code)]
 impl WindowInternal {
     pub fn new(size: usize) -> WindowInternal {
         WindowInternal {
@@ -76,7 +79,7 @@ impl WindowInternal {
     pub fn insert_at_seq(&mut self, seq: usize, data: &[u8]) -> InsertResult {
         match self.compute_offset(seq) {
             Some(offset) => {
-                let len = min(self.data.len() - offset, data.len());
+                //let len = min(self.data.len() - offset, data.len());
                 let idx = offset;
                 self.recvd[idx].length += (&mut self.data[offset..]).write(data).unwrap();
                 self.recvd[idx].available = true;

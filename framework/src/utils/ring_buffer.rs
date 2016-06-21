@@ -44,7 +44,7 @@ impl RingBuffer {
 
         // First get a big enough chunk of virtual memory. Fortunately for us this does not actually commit any physical
         // pages. We allocate twice as much memory so as to mirror the ring buffer.
-        let mut address = mmap(ptr::null_mut(),
+        let address = mmap(ptr::null_mut(),
                                alloc_bytes,
                                libc::PROT_NONE,
                                libc::MAP_ANONYMOUS | 
@@ -57,7 +57,7 @@ impl RingBuffer {
 
         // munmap so we can use the memory for shm.
         let merror = munmap(address, alloc_bytes);
-        if alloc_bytes < 0 {
+        if merror < 0 {
             panic!("Could not unmap address range")
         };
 
