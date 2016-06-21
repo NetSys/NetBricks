@@ -254,7 +254,7 @@ case $TASK in
 		;;
 	dist_clean) 
 		clean_deps
-		;&
+		;;
 	clean)
 		pushd $BASE_DIR/framework
 		${CARGO} clean || true

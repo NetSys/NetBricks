@@ -198,7 +198,7 @@ impl PmdPort {
     }
 
     /// Create a PMD port with a given number of RX and TXQs.
-    fn init_dpdk_port (port: i32,
+    fn init_dpdk_port(port: i32,
                       rxqs: i32,
                       txqs: i32,
                       rx_cores: &[i32],
@@ -297,21 +297,30 @@ impl PmdPort {
     }
 
     fn new_dpdk_port(spec: &str,
-                    rxqs: i32,
-                    txqs: i32,
-                    rx_cores: &[i32],
-                    tx_cores: &[i32],
-                    nrxd: i32,
-                    ntxd: i32,
-                    loopback: bool,
-                    tso: bool,
-                    csumoffload: bool)
-                    -> Result<Arc<PmdPort>> {
+                     rxqs: i32,
+                     txqs: i32,
+                     rx_cores: &[i32],
+                     tx_cores: &[i32],
+                     nrxd: i32,
+                     ntxd: i32,
+                     loopback: bool,
+                     tso: bool,
+                     csumoffload: bool)
+                     -> Result<Arc<PmdPort>> {
         let cannonical_spec = PmdPort::cannonicalize_pci(spec);
         let port = unsafe { attach_pmd_device((cannonical_spec[..]).as_ptr()) };
         if port >= 0 {
             println!("Going to try and use port {}", port);
-            PmdPort::init_dpdk_port(port, rxqs, txqs, rx_cores, tx_cores, nrxd, ntxd, loopback, tso, csumoffload)
+            PmdPort::init_dpdk_port(port,
+                                    rxqs,
+                                    txqs,
+                                    rx_cores,
+                                    tx_cores,
+                                    nrxd,
+                                    ntxd,
+                                    loopback,
+                                    tso,
+                                    csumoffload)
         } else {
             Err(ZCSIError::FailedToInitializePort)
         }
@@ -330,25 +339,45 @@ impl PmdPort {
     }
 
     pub fn new_port_with_queues_descriptors_offloads(name: &str,
-                        rxqs: i32,
-                        txqs: i32,
-                        rx_cores: &[i32],
-                        tx_cores: &[i32],
-                        nrxd: i32,
-                        ntxd: i32,
-                        loopback: bool,
-                        tso: bool,
-                        csumoffload: bool)
-                       -> Result<Arc<PmdPort>> {
+                                                     rxqs: i32,
+                                                     txqs: i32,
+                                                     rx_cores: &[i32],
+                                                     tx_cores: &[i32],
+                                                     nrxd: i32,
+                                                     ntxd: i32,
+                                                     loopback: bool,
+                                                     tso: bool,
+                                                     csumoffload: bool)
+                                                     -> Result<Arc<PmdPort>> {
         let parts: Vec<_> = name.splitn(2, ':').collect();
         match parts[0] {
             "bess" => PmdPort::new_bess_port(parts[1], rx_cores[0]),
             "ovs" => PmdPort::new_ovs_port(parts[1], rx_cores[0]),
-            "dpdk" => PmdPort::new_dpdk_port(parts[1], rxqs, txqs, rx_cores, tx_cores,
-                                             nrxd, ntxd, loopback, tso, csumoffload),
+            "dpdk" => {
+                PmdPort::new_dpdk_port(parts[1],
+                                       rxqs,
+                                       txqs,
+                                       rx_cores,
+                                       tx_cores,
+                                       nrxd,
+                                       ntxd,
+                                       loopback,
+                                       tso,
+                                       csumoffload)
+            }
             "null" => PmdPort::null_port(),
-            _ => PmdPort::new_dpdk_port(name, rxqs, txqs, rx_cores, tx_cores,
-                                             nrxd, ntxd, loopback, tso, csumoffload),
+            _ => {
+                PmdPort::new_dpdk_port(name,
+                                       rxqs,
+                                       txqs,
+                                       rx_cores,
+                                       tx_cores,
+                                       nrxd,
+                                       ntxd,
+                                       loopback,
+                                       tso,
+                                       csumoffload)
+            }
         }
     }
 
@@ -356,10 +385,18 @@ impl PmdPort {
                            rxqs: i32,
                            txqs: i32,
                            rx_cores: &[i32],
-                           tx_cores:&[i32])
+                           tx_cores: &[i32])
                            -> Result<Arc<PmdPort>> {
-        PmdPort::new_port_with_queues_descriptors_offloads(name, rxqs, txqs, rx_cores, tx_cores,
-                                                           NUM_RXD, NUM_TXD, false, false, false)
+        PmdPort::new_port_with_queues_descriptors_offloads(name,
+                                                           rxqs,
+                                                           txqs,
+                                                           rx_cores,
+                                                           tx_cores,
+                                                           NUM_RXD,
+                                                           NUM_TXD,
+                                                           false,
+                                                           false,
+                                                           false)
     }
 
     pub fn new_with_cores(name: &str, rx_core: i32, tx_core: i32) -> Result<Arc<PmdPort>> {

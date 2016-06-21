@@ -14,10 +14,10 @@ mod dpdk {
                                        cache_size: u32)
                                        -> i32;
         pub fn init_thread(tid: i32, core: i32);
-        pub fn init_secondary(name: *const c_char, 
-                              nlen: i32, 
-                              core: i32, 
-                              vdevs: *mut *const c_char, 
+        pub fn init_secondary(name: *const c_char,
+                              nlen: i32,
+                              core: i32,
+                              vdevs: *mut *const c_char,
                               vdev_count: i32)
                               -> i32;
     }

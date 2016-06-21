@@ -17,7 +17,6 @@ struct InsertResult {
 struct Segment {
     pub available: bool,
     pub length: usize,
-
 }
 
 #[allow(dead_code)]
@@ -37,7 +36,7 @@ impl WindowInternal {
             seq: 0,
             recvd: (0..size).map(|_| Default::default()).collect(),
             size: size,
-            complete:false,
+            complete: false,
         }
     }
 
@@ -64,7 +63,7 @@ impl WindowInternal {
     }
 
     #[inline]
-    fn roll_up_adjacent(&mut self, idx: usize) -> usize{
+    fn roll_up_adjacent(&mut self, idx: usize) -> usize {
         // Combine all adjacent data segments.
         let mut len = self.recvd[idx].length;
         let max_len = self.size - idx;
@@ -79,7 +78,7 @@ impl WindowInternal {
     pub fn insert_at_seq(&mut self, seq: usize, data: &[u8]) -> InsertResult {
         match self.compute_offset(seq) {
             Some(offset) => {
-                //let len = min(self.data.len() - offset, data.len());
+                // let len = min(self.data.len() - offset, data.len());
                 let idx = offset;
                 self.recvd[idx].length += (&mut self.data[offset..]).write(data).unwrap();
                 self.recvd[idx].available = true;
@@ -87,12 +86,23 @@ impl WindowInternal {
                 let len = self.roll_up_adjacent(0);
                 if len == self.size {
                     self.complete = true; // Marked as complete
-                    InsertResult {result: Result::Completed, length: len}
+                    InsertResult {
+                        result: Result::Completed,
+                        length: len,
+                    }
                 } else {
-                    InsertResult {result: Result::Inserted, length: len}
+                    InsertResult {
+                        result: Result::Inserted,
+                        length: len,
+                    }
                 }
-            },
-            None => InsertResult{result: Result::Failed, length: 0}
+            }
+            None => {
+                InsertResult {
+                    result: Result::Failed,
+                    length: 0,
+                }
+            }
         }
     }
 }
