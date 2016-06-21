@@ -1,8 +1,10 @@
-use libc::{c_void, mmap, munmap, shmat, shmctl, shmdt, shmget};
+use libc::{c_void, mmap, shmat, shmctl, shmdt, shmget, perror};
 use libc;
+use std::ffi::CString;
 use std::ptr;
 use std::slice;
 use std::io::Write;
+use std::io::Error;
 use std::cmp::min;
 
 /// A ring buffer which can be used to insert and read ordered data.
@@ -54,11 +56,7 @@ impl RingBuffer {
             panic!("Could not map address range")
         };
 
-        // munmap so we can use the memory for shm.
-        let merror = munmap(address, alloc_bytes);
-        if merror < 0 {
-            panic!("Could not unmap address range")
-        };
+        assert!((address as usize) % 4096 == 0);
 
         // Create a shm segment. Note: 0 is IPC_PRIVATE from shmget(2) based on `x86_64-linux-gnu/bits/ipc.h` in the
         // Linux source tree.
@@ -71,14 +69,21 @@ impl RingBuffer {
         let bottom = (address as *mut u8).offset(bytes as isize) as *mut libc::c_void;
 
         // Map the shared memory segment to the top half of the memory area.
-        let shm_top = shmat(shm_id, address, 0);
+        let shm_top = shmat(shm_id, address, libc::SHM_REMAP);
         if shm_top != address {
+            println!("shmat failed, supplied address {} got address {} {}", shm_top as isize, address as isize, Error::last_os_error());
+            let err_string = CString::new("shmat failed").unwrap();
+            perror(err_string.as_ptr());
+            println!("shmat failed, got address {} supplied address {}", shm_top as isize, address as isize);
             panic!("shmat failed")
         };
 
         // Map to the bottom half.
-        let shm_bot = shmat(shm_id, bottom, 0);
+        let shm_bot = shmat(shm_id, bottom, libc::SHM_REMAP);
         if shm_bot != bottom {
+            println!("shmat failed, supplied address {} got address {} {}", shm_top as isize, address as isize, Error::last_os_error());
+            let err_string = CString::new("shmat failed").unwrap();
+            perror(err_string.as_ptr());
             panic!("shmat failed")
         };
 

@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
 build = "build.rs"
 
+[lib]
+doctest = false
+
 [dependencies]
 libc = ">= 0.2.4"
 time = ">=0.1.0"
