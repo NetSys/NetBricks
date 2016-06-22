@@ -21,11 +21,12 @@ struct Segment {
     pub begin: usize,
     pub length: usize,
     pub next: isize,
+    pub idx: isize,
 }
 
 impl Segment {
-    pub fn new(begin: usize, length: usize) -> Segment {
-        Segment { prev: -1, next: -1, valid: false, begin: begin, length: length}
+    pub fn new(idx: isize, begin: usize, length: usize) -> Segment {
+        Segment { idx: idx, prev: -1, next: -1, valid: false, begin: begin, length: length}
     }
 
     #[inline]
@@ -53,7 +54,7 @@ struct SegmentList {
 impl SegmentList {
     pub fn new(length: usize) -> SegmentList {
         SegmentList {
-            storage: (0..(length as isize)).map(|_| Segment::new(0, 0)).collect(),
+            storage: (0..(length as isize)).map(|i| Segment::new(i, 0, 0)).collect(),
             available: (0..(length as isize)).collect(),
             head: -1,
             tail: -1,
@@ -93,13 +94,18 @@ impl SegmentList {
     }
 
     #[inline]
-    fn insert_before_node(&mut self, next: isize, begin: usize, len: usize) -> isize {
-        let idx = if let Some(nidx) = self.available.pop() {
+    fn find_available_node(&mut self) -> isize {
+        if let Some(nidx) = self.available.pop() {
             nidx
         } else {
-            self.storage.push(Segment::new(0, 0));
-            self.storage.len() as isize
-        };
+            let idx = self.storage.len() as isize;
+            self.storage.push(Segment::new(idx, 0, 0));
+            idx
+        }
+    }
+    #[inline]
+    fn insert_before_node(&mut self, next: isize, begin: usize, len: usize) -> isize {
+        let idx = self.find_available_node();     
         self.storage[idx as usize].begin = begin;
         self.storage[idx as usize].length = len;
         self.storage[idx as usize].valid = true;
@@ -116,15 +122,29 @@ impl SegmentList {
         }
         idx
     }
+    
+    #[inline]
+    fn insert_at_tail(&mut self, begin: usize, len: usize) -> isize {
+        let idx = self.find_available_node();
+        let idx_u = idx as usize;
+        self.storage[idx_u].begin = begin;
+        self.storage[idx_u].length = len;
+        self.storage[idx_u].valid = true;
+        self.storage[idx_u].next = -1;
+        self.storage[idx_u].prev = self.tail;
+        self.storage[self.tail as usize].next = idx;
+        self.tail = idx;
+        idx
+    }
 
     #[inline]
-    pub fn insert_segment<'a>(&'a mut self, begin: usize, len: usize) -> Option<&'a Segment>{
+    pub fn insert_segment<'a>(&'a mut self, begin: usize, len: usize) -> Option<&'a Segment> {
         let mut idx = self.head;
         if idx == -1 { // Special case the first insertion.
             idx = self.insert_before_node(-1, begin, len);
             self.head = idx;
             self.tail = idx;
-            return Some(&self.storage[idx as usize])
+            Some(&self.storage[idx as usize])
         } else {
             let end = begin + len;
             while idx != -1 {
@@ -133,8 +153,8 @@ impl SegmentList {
                     self.storage[idx as usize].length += len;
                     return Some(&self.storage[idx as usize])
                 } else if self.storage[idx as usize].begin > end { // We are on to segments that are further down, insert
-                    let idx = self.insert_before_node(idx, begin, len);
-                    return Some(&self.storage[idx as usize])
+                    let nidx = self.insert_before_node(idx, begin, len);
+                    return Some(&self.storage[nidx as usize])
                 } else if self.storage[idx as usize].begin <= begin { // Overlapping segment
                     let new_end = max(segment_end, end);
                     self.storage[idx as usize].length = new_end - self.storage[idx as usize].begin;
@@ -142,9 +162,17 @@ impl SegmentList {
                 }
             }
             // Nothing matched, so let us insert at the tail.
-            None
-
+            idx = self.insert_at_tail(begin, len);
+            Some(&self.storage[idx as usize])
         }
+    }
+    
+    pub fn is_head(&self, seg: &Segment) -> bool {
+        self.head == seg.idx
+    }
+
+    pub fn is_tail(&self, seg: &Segment) -> bool {
+        self.tail == seg.idx
     }
 }
 
