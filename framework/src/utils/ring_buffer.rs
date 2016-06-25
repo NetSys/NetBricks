@@ -225,4 +225,10 @@ impl RingBuffer {
     pub fn increment_tail(&mut self, increment_by: usize) {
         self.tail = self.tail.wrapping_add(increment_by);
     }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.head = 0;
+        self.tail = 0;
+    }
 }

@@ -1,20 +1,17 @@
 use utils::RingBuffer;
 use std::cmp::max;
 
-#[allow(dead_code)]
-enum InsertionResult {
-    Inserted,
-    OutOfMemory {length: usize},
+pub enum InsertionResult {
+    Inserted { written: usize, available: usize },
+    OutOfMemory { written: usize, available: usize },
 }
 
-#[allow(dead_code)]
 enum State {
     Closed,
     Connected,
     ConnectedOutOfOrder,
 }
 
-#[allow(dead_code)]
 #[derive(Default)]
 struct Segment {
     pub prev: isize,
@@ -44,7 +41,6 @@ impl Segment {
     }
 }
 
-#[allow(dead_code)]
 struct SegmentList {
     storage: Vec<Segment>,
     available: Vec<isize>,
@@ -148,34 +144,31 @@ impl SegmentList {
     }
 
     #[inline]
-    pub fn insert_segment<'a>(&'a mut self, begin: usize, len: usize) -> Option<&'a Segment> {
+    pub fn insert_segment(&mut self, begin: usize, len: usize) -> Option<isize> {
         let mut idx = self.head;
         if idx == -1 { // Special case the first insertion.
             idx = self.insert_before_node(-1, begin, len);
             self.head = idx;
             self.tail = idx;
-            Some(&self.storage[idx as usize])
+            Some(idx)
         } else {
             let end = begin + len;
             while idx != -1 {
                 let segment_end = self.storage[idx as usize].begin + self.storage[idx as usize].length;
                 if segment_end == begin { // We can just add to the current segment.
                     self.storage[idx as usize].length += len;
-                    //return Some(&self.storage[idx as usize])
                 } else if self.storage[idx as usize].begin > end { // We are on to segments that are further down, insert
                     idx = self.insert_before_node(idx, begin, len);
-                    //return Some(&self.storage[nidx as usize])
                 } else if self.storage[idx as usize].begin <= begin { // Overlapping segment
                     let new_end = max(segment_end, end);
                     self.storage[idx as usize].length = new_end - self.storage[idx as usize].begin;
-                    //return Some(&self.storage[idx as usize]);
                 }
             }
 
             if idx == -1 {
                 // Nothing matched, so let us insert at the tail.
                 idx = self.insert_at_tail(begin, len);
-                Some(&self.storage[idx as usize])
+                Some(idx)
             } else {
                 // Check if we should/can merge. This only checks subsequent segments (since the prior ones should
                 // already have been checked).
@@ -197,17 +190,17 @@ impl SegmentList {
 
                     }
                 }
-                Some(&self.storage[idx as usize])
+                Some(idx)
             }
         }
     }
 
-    pub fn is_head(&self, seg: &Segment) -> bool {
-        self.head == seg.idx
+    pub fn is_head(&self, seg: isize) -> bool {
+        self.head == seg
     }
 
-    pub fn is_tail(&self, seg: &Segment) -> bool {
-        self.tail == seg.idx
+    pub fn is_tail(&self, seg: isize) -> bool {
+        self.tail == seg
     }
 
     pub fn consume_head_data(&mut self, seq: usize, consumed: usize) -> bool {
@@ -223,22 +216,40 @@ impl SegmentList {
             true
         }
     }
+
+    pub fn clear(&mut self) {
+        let mut idx = self.head;
+        while idx != -1 {
+            let next = self.storage[idx as usize].next;
+            self.remove_node(idx);
+            idx = next;
+        }
+        self.head = -1;
+        self.tail = -1;
+    }
+
+    pub fn empty(&self) -> bool {
+        self.head == -1
+    }
+
+    #[inline]
+    pub fn get_segment<'a>(&'a self, idx: isize) -> &'a Segment {
+        &self.storage[idx as usize]
+    }
 }
 
-#[allow(dead_code)]
-struct ReorderedData {
-    pub data: RingBuffer,
-    pub segment_list: SegmentList,
-    pub buffer_size: usize,
-    pub window_size: usize,
-    pub state: State,
-    pub head_seq: usize,
-    pub tail_seq: usize,
+pub struct ReorderedData {
+    data: RingBuffer,
+    segment_list: SegmentList,
+    buffer_size: usize,
+    window_size: usize,
+    state: State,
+    head_seq: usize,
+    tail_seq: usize,
 }
 
 const PAGE_SIZE: usize = 4096; // Page size in bytes, not using huge pages here.
 
-#[allow(dead_code)]
 impl ReorderedData {
     #[inline]
     fn round_to_pages(buffer_size: usize) -> usize {
@@ -285,16 +296,16 @@ impl ReorderedData {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.state = State::Closed;
+        self.segment_list.clear();
+        self.data.clear();
+    }
+
     fn fast_path_insert(&mut self, data: &[u8]) -> InsertionResult {
-        let mut written = 0;
-        while written < data.len() {
-            written += self.data.write_at_tail(&data[written..]);
-            while self.data.available() >= self.window_size {
-                // Notify (thus potentially draining the buffer
-            }
-        }
+        let written = self.data.write_at_tail(data);
         self.tail_seq += written;
-        InsertionResult::Inserted
+        InsertionResult::Inserted { written: written, available: self.available() }
     }
 
     fn slow_path_insert(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
@@ -304,7 +315,7 @@ impl ReorderedData {
             let begin = self.tail_seq - seq;
             self.fast_path_insert(&data[begin..])
         } else if end > self.tail_seq { // All the data overlaps.
-            InsertionResult::Inserted
+            InsertionResult::Inserted { written: data.len(), available: self.available() }
         } else { // We are about to insert out of order data.
             // Change state to indicate we have out of order data; this means we need to do additional processing when
             // receiving data.
@@ -317,34 +328,31 @@ impl ReorderedData {
     }
 
     fn out_of_order_insert(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
+        // FIXME: Transition back to Connected
         if self.tail_seq == seq { // Writing at tail
-            let mut written = 0;
-            while written < data.len() {
-                // Write some data
-                written += self.data.write_at_tail(&data[written..]);
+            // Write some data
+            let mut written = self.data.write_at_tail(data);
+            {
                 // Insert into segment list.
                 let segment = self.segment_list.insert_segment(self.tail_seq, written).unwrap();
                 // Since we are writing to the beginning, this must always be the head.
-                //assert!(self.segment_list.is_head(segment));
+                assert!(self.segment_list.is_head(segment));
                 // Compute the end of the segment, this might in fact be larger than size
-                let seg_end = segment.begin + segment.length;
+                let seg = self.segment_list.get_segment(segment);
+                let seg_end = seg.begin + seg.length;
                 // Integrity test.
                 assert!(seg_end >= self.tail_seq);
                 // We need to know the increment.
                 let incr = seg_end - self.tail_seq;
+
                 // If we have overlapped into data we received before, just drop the overlapping data.
                 if written < incr {
                     written = incr;
                 }
-
                 self.tail_seq = seg_end; // Advance tail_seq
                 self.data.increment_tail(incr); // Increment tail for the ring buffer.
-
-                while self.data.available() >= self.window_size {
-                    // self.consume_head_data(...)
-                }
             }
-            InsertionResult::Inserted
+            InsertionResult::Inserted { written: written, available: self.available() }
         } else if self.tail_seq >= seq {
             let offset = self.tail_seq - seq;
             let remaining = data.len() - offset;
@@ -352,15 +360,15 @@ impl ReorderedData {
                 let tail_seq = self.tail_seq;
                 self.out_of_order_insert(tail_seq, &data[offset..])
             } else {
-                InsertionResult::Inserted
+                InsertionResult::Inserted { written: data.len(), available: self.available() }
             }
         } else { // self.tail_seq < seq
             let offset = seq - self.tail_seq;
             let written = self.data.write_at_offset_from_tail(offset, data);
             if written == data.len() {
-                InsertionResult::Inserted
+                InsertionResult::Inserted { written: data.len(), available: self.available() }
             } else {
-                InsertionResult::OutOfMemory {length: written}
+                InsertionResult::OutOfMemory { written: data.len(), available: self.available() } 
             }
         }
     }
