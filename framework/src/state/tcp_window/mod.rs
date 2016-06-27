@@ -1,2 +1,2 @@
-#[allow(dead_code)]
 mod internal;
+pub use self::internal::*;
