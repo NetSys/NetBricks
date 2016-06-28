@@ -1,7 +1,6 @@
 extern crate e2d2;
 use e2d2::state::*;
 use std::str;
-use std::slice;
 
 /// Check rounding up to number of pages.
 #[test]
@@ -199,5 +198,38 @@ fn check_reset() {
         assert!(available == 4096 - 1);
     } else {
         panic!("No OOM?");
+    }
+}
+
+/// Check that reading after writing allows us to write infinitely
+#[test]
+fn check_read_after_write() {
+    let mut r0 = ReorderedBuffer::new(4096);
+    let mut base_seq = 255;
+    let iters = 128000;
+    let data = "testtest";
+    
+    if let InsertionResult::Inserted { written, .. } = r0.seq(base_seq, data.as_bytes()) {
+        assert!(written == data.len(), "Could not write during seq");
+        base_seq = base_seq.wrapping_add(written);
+    } else {
+        panic!("Could not seq");
+    }
+
+    let mut read_buf : Vec<_> = (0..data.len()).map(|_| 0).collect();
+
+    for i in 0..iters {
+        if let InsertionResult::Inserted { written, .. } = r0.add_data(base_seq, data.as_bytes()) {
+            assert!(written == data.len());
+            base_seq = base_seq.wrapping_add(written);
+        } else {
+            panic!("Could not write code, iter {} seq {}", i, base_seq);
+        }
+
+        let available_before_read = r0.available();
+
+        let read = r0.read_data(&mut read_buf[..]);
+
+        assert!(available_before_read == r0.available() + read, "Available bytes not adjusted by the right amount");
     }
 }
