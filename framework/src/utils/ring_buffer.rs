@@ -172,12 +172,12 @@ impl RingBuffer {
         let available = self.mask.wrapping_add(self.head).wrapping_sub(self.tail);
         let write = min(data.len(), available);
         let offset = self.tail & self.mask;
-        self.increment_tail(write);
+        self.seek_tail(write);
         self.unsafe_mut_slice_at_offset(offset, write).write(&data[0..write]).unwrap()
     }
 
     /// Write at an offset from the tail, useful when dealing with out-of-order data. Note, the caller is responsible
-    /// for progressing the tail sufficiently (using `increment_tail`) when gaps are filled.
+    /// for progressing the tail sufficiently (using `seek_tail`) when gaps are filled.
     #[inline]
     pub fn write_at_offset_from_tail(&mut self, offset: usize, data: &[u8]) -> usize {
         let available = self.mask.wrapping_add(self.head).wrapping_sub(self.tail);
@@ -192,13 +192,24 @@ impl RingBuffer {
         }
     }
 
+    /// Data available to be read.
+    #[inline]
+    pub fn available(&self) -> usize {
+        self.tail.wrapping_sub(self.head)
+    }
+
+
+    #[inline]
+    fn read_offset(&self) -> usize {
+        self.head & self.mask
+    }
+
     /// Read from the buffer, incrementing the read head by `increment` bytes. Returns bytes read.
     #[inline]
     pub fn read_from_head_with_increment(&mut self, mut data: &mut [u8], increment: usize) -> usize {
-        let available = self.tail.wrapping_sub(self.head);
-        let to_read = min(available, data.len());
-        let offset = self.head & self.mask;
-        self.head.wrapping_add(min(increment, to_read));
+        let offset = self.read_offset();
+        let to_read = min(self.available(), data.len());
+        self.head = self.head.wrapping_add(min(increment, to_read));
         (&mut data[0..to_read]).write(self.unsafe_slice_at_offset(offset, to_read)).unwrap()
     }
 
@@ -209,20 +220,32 @@ impl RingBuffer {
         self.read_from_head_with_increment(data, len)
     }
 
+    /// Peek data from the read head. Note, that this slice is only valid until the next `read` or `write` operation.
+    #[inline]
+    pub fn peek_from_head(&self, len: usize) -> &[u8] {
+        let offset = self.read_offset();
+        let to_read = min(len, self.available());
+        self.unsafe_slice_at_offset(offset, to_read)
+    }
+
+    /// Add
+    #[inline]
+    pub fn seek_head(&mut self, seek: usize) {
+        let available = self.available();
+        assert!(available >= seek);
+        self.head = self.head.wrapping_add(seek);
+    }
+
     /// Length of the ring buffer.
     #[inline]
     pub fn len(&self) -> usize {
         self.size
     }
 
-    /// Data available to be read.
+    /// In cases with out-of-order data this allows the write head (and hence the amount of available data) to be
+    /// progressed without writing anything.
     #[inline]
-    pub fn available(&self) -> usize {
-        self.tail.wrapping_sub(self.head)
-    }
-
-    #[inline]
-    pub fn increment_tail(&mut self, increment_by: usize) {
+    pub fn seek_tail(&mut self, increment_by: usize) {
         self.tail = self.tail.wrapping_add(increment_by);
     }
 

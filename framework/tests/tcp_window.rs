@@ -117,6 +117,7 @@ fn check_oom() {
     }
 }
 
+/// Check that reseting `ReorderedBuffer` works as expected.
 #[test]
 fn check_reset() {
     let mut r0 = ReorderedBuffer::new(4096);

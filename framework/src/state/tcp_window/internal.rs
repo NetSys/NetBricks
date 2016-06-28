@@ -329,7 +329,7 @@ impl ReorderedBuffer {
                     written = incr;
                 }
                 self.tail_seq = seg_end; // Advance tail_seq
-                self.data.increment_tail(incr); // Increment tail for the ring buffer.
+                self.data.seek_tail(incr); // Increment tail for the ring buffer.
             }
             InsertionResult::Inserted { written: written, available: self.available() }
         } else if self.tail_seq >= seq {
