@@ -210,8 +210,8 @@ impl SegmentList {
     }
 
     #[inline]
-    pub fn empty(&self) -> bool {
-        self.head == -1
+    pub fn one_segment(&self) -> bool {
+        self.head == -1 || self.storage[self.head as usize].next == -1 
     }
 }
 
@@ -337,6 +337,12 @@ impl ReorderedBuffer {
                 }
                 self.tail_seq = seg_end; // Advance tail_seq
                 self.data.seek_tail(incr); // Increment tail for the ring buffer.
+
+            }
+            if self.segment_list.one_segment() { // We only have one segment left, so now is a good time to switch
+                                                 // back to fast path.
+                self.segment_list.clear();
+                self.state = State::Connected;
             }
             InsertionResult::Inserted { written: written, available: self.available() }
         } else if self.tail_seq >= seq {
