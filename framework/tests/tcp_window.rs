@@ -1,39 +1,41 @@
 extern crate e2d2;
 use e2d2::state::*;
 
-// Check rounding
+/// Check rounding up to number of pages.
 #[test]
 fn round_pages_test() {
-    assert!(ReorderedData::round_to_pages(1) == 4096);
-    assert!(ReorderedData::round_to_pages(0) == 0);
-    assert!(ReorderedData::round_to_pages(8) == 4096);
-    assert!(ReorderedData::round_to_pages(512) == 4096);
-    assert!(ReorderedData::round_to_pages(4096) == 4096);
-    assert!(ReorderedData::round_to_pages(4097) == 8192);
+    assert!(ReorderedBuffer::round_to_pages(1) == 4096);
+    assert!(ReorderedBuffer::round_to_pages(0) == 0);
+    assert!(ReorderedBuffer::round_to_pages(8) == 4096);
+    assert!(ReorderedBuffer::round_to_pages(512) == 4096);
+    assert!(ReorderedBuffer::round_to_pages(4096) == 4096);
+    assert!(ReorderedBuffer::round_to_pages(4097) == 8192);
 }
 
+/// Test rounding up to power of 2.
 #[test]
 fn round_to_power_of_2_test() {
-    assert!(ReorderedData::round_to_power_of_2(0) == 0);
-    assert!(ReorderedData::round_to_power_of_2(1) == 1);
-    assert!(ReorderedData::round_to_power_of_2(2) == 2);
-    assert!(ReorderedData::round_to_power_of_2(3) == 4);
-    assert!(ReorderedData::round_to_power_of_2(4) == 4);
-    assert!(ReorderedData::round_to_power_of_2(5) == 8);
+    assert!(ReorderedBuffer::round_to_power_of_2(0) == 0);
+    assert!(ReorderedBuffer::round_to_power_of_2(1) == 1);
+    assert!(ReorderedBuffer::round_to_power_of_2(2) == 2);
+    assert!(ReorderedBuffer::round_to_power_of_2(3) == 4);
+    assert!(ReorderedBuffer::round_to_power_of_2(4) == 4);
+    assert!(ReorderedBuffer::round_to_power_of_2(5) == 8);
 }
 
-// Check that creation proceeds without a hitch
+/// Check that creation proceeds without a hitch.
 #[test]
 fn creation_test() {
-    let ro = ReorderedData::new(65536);
-    drop(ro);
-    let ro2 = ReorderedData::new(128);
-    drop(ro2);
+    for i in 128..131072 {
+        let ro = ReorderedBuffer::new(i);
+        drop(ro);
+    }
 }
 
+/// Check that in order insertion works correctly.
 #[test]
 fn in_order_insertion() {
-    let mut ro = ReorderedData::new(65536);
+    let mut ro = ReorderedBuffer::new(65536);
     let data0 = "food";
     let base_seq = 1232;
     if let InsertionResult::Inserted{ written, available } = ro.seq(base_seq, data0.as_bytes()) {
@@ -52,9 +54,10 @@ fn in_order_insertion() {
     }
 }
 
+/// Check that out of order insertion works correctly.
 #[test]
 fn out_of_order_insertion() {
-    let mut ro = ReorderedData::new(65536);
+    let mut ro = ReorderedBuffer::new(65536);
     let data0 = "food";
     let base_seq = 1232;
     if let InsertionResult::Inserted{ written, available } = ro.seq(base_seq, data0.as_bytes()) {
@@ -80,20 +83,24 @@ fn out_of_order_insertion() {
     } else {
         panic!("Writing data1 failed");
     }
+}
 
-    drop(ro);
-
-    let mut r1 = ReorderedData::new(4096);
+/// Check that things OOM correctly when out of memory.
+#[test]
+fn check_oom() {
+    let mut r0 = ReorderedBuffer::new(4096);
+    let base_seq = 32;
+    let data0 = "food";
 
     let iters = (4096 / data0.len()) - 1;
-    if let InsertionResult::Inserted { written, .. } = r1.seq(base_seq, data0.as_bytes()) {
+    if let InsertionResult::Inserted { written, .. } = r0.seq(base_seq, data0.as_bytes()) {
         assert!(written == data0.len());
     } else {
         panic!("Could not write");
     }
 
     for i in 1..iters {
-        if let InsertionResult::Inserted{ written, .. } = r1.add_data(base_seq + (i * data0.len()),
+        if let InsertionResult::Inserted{ written, .. } = r0.add_data(base_seq + (i * data0.len()),
                                                                              data0.as_bytes()) {
             assert!(written == data0.len());
         } else {
@@ -101,7 +108,64 @@ fn out_of_order_insertion() {
         }
     }
 
-    if let InsertionResult::OutOfMemory{ written, available } = r1.add_data(base_seq + (iters * data0.len()),
+    if let InsertionResult::OutOfMemory{ written, available } = r0.add_data(base_seq + (iters * data0.len()),
+                                                                            data0.as_bytes()) {
+        assert!(written != data0.len());
+        assert!(available == 4096 - 1);
+    } else {
+        panic!("No OOM?");
+    }
+}
+
+#[test]
+fn check_reset() {
+    let mut r0 = ReorderedBuffer::new(4096);
+    let base_seq = 155;
+    let data0 = "food";
+
+    let iters = (4096 / data0.len()) - 1;
+    if let InsertionResult::Inserted { written, .. } = r0.seq(base_seq, data0.as_bytes()) {
+        assert!(written == data0.len());
+    } else {
+        panic!("Could not write");
+    }
+
+    for i in 1..iters {
+        if let InsertionResult::Inserted{ written, .. } = r0.add_data(base_seq + (i * data0.len()),
+                                                                             data0.as_bytes()) {
+            assert!(written == data0.len());
+        } else {
+            panic!("Could not write");
+        }
+    }
+
+    if let InsertionResult::OutOfMemory{ written, available } = r0.add_data(base_seq + (iters * data0.len()),
+                                                                            data0.as_bytes()) {
+        assert!(written != data0.len());
+        assert!(available == 4096 - 1);
+    } else {
+        panic!("No OOM?");
+    }
+
+    r0.reset();
+    let base_seq = 72;
+
+    if let InsertionResult::Inserted { written, .. } = r0.seq(base_seq, data0.as_bytes()) {
+        assert!(written == data0.len());
+    } else {
+        panic!("Could not write");
+    }
+
+    for i in 1..iters {
+        if let InsertionResult::Inserted{ written, .. } = r0.add_data(base_seq + (i * data0.len()),
+                                                                             data0.as_bytes()) {
+            assert!(written == data0.len());
+        } else {
+            panic!("Could not write");
+        }
+    }
+
+    if let InsertionResult::OutOfMemory{ written, available } = r0.add_data(base_seq + (iters * data0.len()),
                                                                             data0.as_bytes()) {
         assert!(written != data0.len());
         assert!(available == 4096 - 1);

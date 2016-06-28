@@ -1,8 +1,11 @@
 use utils::RingBuffer;
 use std::cmp::max;
 
+/// Results from inserting into `ReorderedBuffer`
 pub enum InsertionResult {
+    /// Successfully inserted all the data (`written` should always be the same as the length of the input).
     Inserted { written: usize, available: usize },
+    /// Inserted some of the data (recorded in `written`) but the buffer is out of space.
     OutOfMemory { written: usize, available: usize },
 }
 
@@ -12,10 +15,10 @@ enum State {
     ConnectedOutOfOrder,
 }
 
+/// Structure to record unordered data.
 #[derive(Default)]
 struct Segment {
     pub prev: isize,
-    pub valid: bool,
     pub begin: usize,
     pub length: usize,
     pub next: isize,
@@ -24,10 +27,12 @@ struct Segment {
 
 impl Segment {
     pub fn new(idx: isize, begin: usize, length: usize) -> Segment {
-        Segment { idx: idx, prev: -1, next: -1, valid: false, begin: begin, length: length }
+        Segment { idx: idx, prev: -1, next: -1,  begin: begin, length: length }
     }
 }
 
+/// A linked list of segments, this tries to avoid allocations whenever possible. In steady state (regardless of bad
+/// choices made by the developer) there should be no allocations.
 struct SegmentList {
     storage: Vec<Segment>,
     available: Vec<isize>,
@@ -36,6 +41,7 @@ struct SegmentList {
 }
 
 impl SegmentList {
+    /// Create a segement list expecting that we will need no more than `length` segments.
     pub fn new(length: usize) -> SegmentList {
         SegmentList {
             storage: (0..(length as isize)).map(|i| Segment::new(i, 0, 0)).collect(),
@@ -45,12 +51,13 @@ impl SegmentList {
         }
     }
 
+    /// Remove a node.
     fn remove_node(&mut self, node: isize) {
-        self.storage[node as usize].valid = false;
         self.storage[node as usize].length = 0;
         self.available.push(node);
     }
 
+    /// Find an empty node that we can insert into the list.
     #[inline]
     fn find_available_node(&mut self) -> isize {
         if let Some(nidx) = self.available.pop() {
@@ -61,12 +68,13 @@ impl SegmentList {
             idx
         }
     }
+
+    /// Insert a node before `next`.
     #[inline]
     fn insert_before_node(&mut self, next: isize, begin: usize, len: usize) -> isize {
         let idx = self.find_available_node();
         self.storage[idx as usize].begin = begin;
         self.storage[idx as usize].length = len;
-        self.storage[idx as usize].valid = true;
         self.storage[idx as usize].next = next;
         if next != -1 {
             let prev = self.storage[next as usize].prev;
@@ -81,13 +89,13 @@ impl SegmentList {
         idx
     }
 
+    /// Insert a node at the tail of the list.
     #[inline]
     fn insert_at_tail(&mut self, begin: usize, len: usize) -> isize {
         let idx = self.find_available_node();
         let idx_u = idx as usize;
         self.storage[idx_u].begin = begin;
         self.storage[idx_u].length = len;
-        self.storage[idx_u].valid = true;
         self.storage[idx_u].next = -1;
         self.storage[idx_u].prev = self.tail;
         self.storage[self.tail as usize].next = idx;
@@ -95,6 +103,7 @@ impl SegmentList {
         idx
     }
 
+    /// Insert a segment.
     #[inline]
     pub fn insert_segment(&mut self, begin: usize, len: usize) -> Option<isize> {
         let mut idx = self.head;
@@ -152,10 +161,12 @@ impl SegmentList {
         }
     }
 
+    /// Is `seg` the head of the list.
     pub fn is_head(&self, seg: isize) -> bool {
         self.head == seg
     }
 
+    /// Remove the head of the list.
     #[inline]
     fn remove_head(&mut self) {
         let head = self.head;
@@ -163,11 +174,14 @@ impl SegmentList {
         self.remove_node(head);
     }
 
+    /// Consume some amount of data from the beginning.
     pub fn consume_head_data(&mut self, seq: usize, consumed: usize) -> bool {
         let idx = self.head as usize;
+        // This is just an integrity check.
         if self.storage[idx].begin != seq {
             false
         } else {
+            // Note we do not need to look beyond the head since we always merge segments.
             self.storage[idx].begin += consumed;
             self.storage[idx].length -= consumed;
             if self.storage[idx].length == 0 {
@@ -177,6 +191,7 @@ impl SegmentList {
         }
     }
 
+    /// Clear the list.
     pub fn clear(&mut self) {
         let mut idx = self.head;
         while idx != -1 {
@@ -188,13 +203,14 @@ impl SegmentList {
         self.tail = -1;
     }
 
+    /// Get a particular segment.
     #[inline]
     pub fn get_segment<'a>(&'a self, idx: isize) -> &'a Segment {
         &self.storage[idx as usize]
     }
 }
 
-pub struct ReorderedData {
+pub struct ReorderedBuffer {
     data: RingBuffer,
     segment_list: SegmentList,
     buffer_size: usize,
@@ -205,7 +221,7 @@ pub struct ReorderedData {
 
 const PAGE_SIZE: usize = 4096; // Page size in bytes, not using huge pages here.
 
-impl ReorderedData {
+impl ReorderedBuffer {
     // This is pub for testing, probably just move it out to utils
     #[inline]
     pub fn round_to_pages(buffer_size: usize) -> usize {
@@ -236,14 +252,14 @@ impl ReorderedData {
         self.data.available()
     }
 
-    pub fn new(buffer_size: usize) -> ReorderedData {
-        ReorderedData::new_with_segments(buffer_size, buffer_size / 64)
+    pub fn new(buffer_size: usize) -> ReorderedBuffer {
+        ReorderedBuffer::new_with_segments(buffer_size, buffer_size / 64)
     }
 
-    pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> ReorderedData {
-        let page_aligned_size = ReorderedData::round_to_pages(buffer_size);
-        let pages = ReorderedData::round_to_power_of_2(page_aligned_size / PAGE_SIZE);
-        ReorderedData {
+    pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> ReorderedBuffer {
+        let page_aligned_size = ReorderedBuffer::round_to_pages(buffer_size);
+        let pages = ReorderedBuffer::round_to_power_of_2(page_aligned_size / PAGE_SIZE);
+        ReorderedBuffer {
             data: RingBuffer::new(pages).unwrap(),
             buffer_size: page_aligned_size,
             state: State::Closed,
