@@ -75,6 +75,8 @@ clean_deps() {
     echo "Remove Rust"
     make -C ${RUST_DOWNLOAD_PATH} uninstall
     make -C ${RUST_DOWNLOAD_PATH} clean
+    rm -rf ${RUST_DOWNLOAD_PATH}
+    rm ${BIN_DIR}/rust*.sh
 
     echo "Remove libunwind"
     rm ${TOOLS_BASE}/lib/libunwind.a
