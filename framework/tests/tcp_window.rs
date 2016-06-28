@@ -100,6 +100,16 @@ fn out_of_order_insertion() {
     } else {
         panic!("Writing data1 failed");
     }
+
+    let read_buf_len = ro.available();
+    let mut read_buffer: Vec<_> = (0..read_buf_len).map(|_| 0).collect();
+    let read = ro.read_data(&mut read_buffer[..]);
+    assert!(read == read_buf_len, "Read less than what is available");
+    assert!(ro.available() == 0, "Read everything but data is still available");
+    let read = str::from_utf8(&read_buffer[..read]).unwrap();
+    assert!(read == format!("{}{}{}", data0, data1, data2),
+            "Read does not match expected, read: {}, expected: {}",
+            read, format!("{}{}{}", data0, data1, data2));
 }
 
 /// Check that things OOM correctly when out of memory.
