@@ -228,11 +228,12 @@ impl RingBuffer {
         self.unsafe_slice_at_offset(offset, to_read)
     }
 
-    /// Add
+    /// Seek the read head by `seek` bytes (without actually reading any data). `seek` must be less-than-or-equal to the
+    /// number of available bytes.
     #[inline]
     pub fn seek_head(&mut self, seek: usize) {
         let available = self.available();
-        assert!(available >= seek);
+        assert!(available >= seek, "Seek beyond available bytes.");
         self.head = self.head.wrapping_add(seek);
     }
 
