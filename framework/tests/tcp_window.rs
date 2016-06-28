@@ -111,6 +111,56 @@ fn out_of_order_insertion() {
             read, format!("{}{}{}", data0, data1, data2));
 }
 
+/// Check that things work fine once state is changed.
+#[test]
+fn check_state_change() {
+    let mut ro = ReorderedBuffer::new(65536);
+    let data0 = "food";
+    let base_seq = 1232;
+    if let InsertionResult::Inserted{ written, available } = ro.seq(base_seq, data0.as_bytes()) {
+        assert!(written == data0.len());
+        assert!(available == data0.len());
+    } else {
+        panic!("Seq failed");
+    }
+
+    let data1 = ": hamburger";
+    let data2 = " american";
+    let data3 = " (w/fries)";
+    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq + data0.len() + data1.len(),
+                                                                         data2.as_bytes()) {
+        assert!(written == data2.len());
+        assert!(available == data0.len());
+    } else {
+        panic!("Writing data2 failed");
+    }
+
+    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq + data0.len(), data1.as_bytes()) {
+        assert!(written == data1.len());
+        assert!(available == data0.len() + data1.len() + data2.len());
+    } else {
+        panic!("Writing data1 failed");
+    }
+
+    if let InsertionResult::Inserted { written, available } =
+        ro.add_data(base_seq + data0.len() + data1.len() + data2.len(),
+                    data3.as_bytes()) {
+        assert!(written == data3.len());
+        assert!(available == data0.len() + data1.len() + data2.len() + data3.len());
+    } else {
+        panic!("Writing data3 failed");
+    }
+    let read_buf_len = ro.available();
+    let mut read_buffer: Vec<_> = (0..read_buf_len).map(|_| 0).collect();
+    let read = ro.read_data(&mut read_buffer[..]);
+    assert!(read == read_buf_len, "Read less than what is available");
+    assert!(ro.available() == 0, "Read everything but data is still available");
+    let read = str::from_utf8(&read_buffer[..read]).unwrap();
+    assert!(read == format!("{}{}{}{}", data0, data1, data2, data3),
+            "Read does not match expected, read: {}, expected: {}",
+            read, format!("{}{}{}{}", data0, data1, data2, data3));
+}
+
 /// Check that things OOM correctly when out of memory.
 #[test]
 fn check_oom() {
