@@ -25,9 +25,9 @@ fn round_to_power_of_2_test() {
 // Check that creation proceeds without a hitch
 #[test]
 fn creation_test() {
-    let ro = ReorderedData::new(65536, 1024);
+    let ro = ReorderedData::new(65536);
     drop(ro);
-    let ro2 = ReorderedData::new(128, 10);
+    let ro2 = ReorderedData::new(128);
     drop(ro2);
 }
 

@@ -156,6 +156,13 @@ impl SegmentList {
         self.head == seg
     }
 
+    #[inline]
+    fn remove_head(&mut self) {
+        let head = self.head;
+        self.head = self.storage[head as usize].next;
+        self.remove_node(head);
+    }
+
     pub fn consume_head_data(&mut self, seq: usize, consumed: usize) -> bool {
         let idx = self.head as usize;
         if self.storage[idx].begin != seq {
@@ -236,15 +243,14 @@ impl ReorderedData {
     pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> ReorderedData {
         let page_aligned_size = ReorderedData::round_to_pages(buffer_size);
         let pages = ReorderedData::round_to_power_of_2(page_aligned_size / PAGE_SIZE);
-        Some(ReorderedData {
+        ReorderedData {
             data: RingBuffer::new(pages).unwrap(),
             buffer_size: page_aligned_size,
-            window_size: window_size,
             state: State::Closed,
             head_seq: 0,
             tail_seq: 0,
             segment_list: SegmentList::new(segment_size), // Assuming we don't receive small chunks.
-        })
+        }
     }
 
     pub fn reset(&mut self) {
