@@ -112,7 +112,7 @@ fn main() {
         let cores = cores_for_port.get(*port).unwrap();
         let queues = cores.len() as i32;
         let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
-                               .expect("Could not initialize port");
+                           .expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
             queues_by_core.entry(*core)
@@ -126,13 +126,13 @@ fn main() {
     const _CHANNEL_SIZE: usize = 256;
     let mut consumer = MergeableStoreCP::new();
     let _thread: Vec<_> = queues_by_core.iter()
-                                       .map(|(core, ports)| {
-                                           let c = core.clone();
-                                           let mon = consumer.dp_store();
-                                           let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
-                                           std::thread::spawn(move || recv_thread(p, c, mon))
-                                       })
-                                       .collect();
+                                        .map(|(core, ports)| {
+                                            let c = core.clone();
+                                            let mon = consumer.dp_store();
+                                            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
+                                            std::thread::spawn(move || recv_thread(p, c, mon))
+                                        })
+                                        .collect();
     let mut pkts_so_far = (0, 0);
     let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
     let sleep_time = Duration::from_millis(500);

@@ -100,7 +100,7 @@ fn main() {
         let cores = cores_for_port.get(*port).unwrap();
         let queues = cores.len() as i32;
         let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
-                               .expect("Could not initialize port");
+                           .expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
             queues_by_core.entry(*core)

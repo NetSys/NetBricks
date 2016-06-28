@@ -1,4 +1,4 @@
-use libc::{c_void, mmap, shmat, shmctl, shmdt, shmget, perror};
+use libc::{c_void, mmap, perror, shmat, shmctl, shmdt, shmget};
 use libc;
 use std::ffi::CString;
 use std::ptr;
@@ -71,17 +71,25 @@ impl RingBuffer {
         // Map the shared memory segment to the top half of the memory area.
         let shm_top = shmat(shm_id, address, libc::SHM_REMAP);
         if shm_top != address {
-            println!("shmat failed, supplied address {} got address {} {}", shm_top as isize, address as isize, Error::last_os_error());
+            println!("shmat failed, supplied address {} got address {} {}",
+                     shm_top as isize,
+                     address as isize,
+                     Error::last_os_error());
             let err_string = CString::new("shmat failed").unwrap();
             perror(err_string.as_ptr());
-            println!("shmat failed, got address {} supplied address {}", shm_top as isize, address as isize);
+            println!("shmat failed, got address {} supplied address {}",
+                     shm_top as isize,
+                     address as isize);
             panic!("shmat failed")
         };
 
         // Map to the bottom half.
         let shm_bot = shmat(shm_id, bottom, libc::SHM_REMAP);
         if shm_bot != bottom {
-            println!("shmat failed, supplied address {} got address {} {}", shm_top as isize, address as isize, Error::last_os_error());
+            println!("shmat failed, supplied address {} got address {} {}",
+                     shm_top as isize,
+                     address as isize,
+                     Error::last_os_error());
             let err_string = CString::new("shmat failed").unwrap();
             perror(err_string.as_ptr());
             panic!("shmat failed")

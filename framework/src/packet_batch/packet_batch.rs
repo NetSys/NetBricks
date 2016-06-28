@@ -371,10 +371,10 @@ impl Act for PacketBatch {
         while self.available() > 0 {
             unsafe {
                 match port.send(self.packet_ptr(), self.available() as i32)
-                    .and_then(|sent| {
-                        self.consumed_batch(sent as usize);
-                        Ok(sent)
-                    }) {
+                          .and_then(|sent| {
+                              self.consumed_batch(sent as usize);
+                              Ok(sent)
+                          }) {
                     Ok(sent) => total_sent += sent,
                     e => return e,
                 }
