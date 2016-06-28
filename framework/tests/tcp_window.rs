@@ -1,5 +1,7 @@
 extern crate e2d2;
 use e2d2::state::*;
+use std::str;
+use std::slice;
 
 /// Check rounding up to number of pages.
 #[test]
@@ -58,6 +60,15 @@ fn in_order_insertion() {
     } else {
         panic!("Writing data1 failed");
     }
+
+    let read_buf_len = data0.len() + data1.len() + 1;
+    let mut read_buffer: Vec<_> = (0..read_buf_len).map(|_| 0).collect();
+    let read = ro.read_data(&mut read_buffer[..]);
+    assert!(read == data0.len() + data1.len(), "Read less than expected, read: {}, expected: {}",
+            read, data0.len() + data1.len());
+    let read_str = str::from_utf8(&read_buffer[..read]).unwrap();
+    assert!(read_str == format!("{}{}", data0, data1),
+            "Read does not match expected, read: {}, expected: {}", read_str, format!("{}{}", data0, data1));
 }
 
 /// Check that out of order insertion works correctly.
