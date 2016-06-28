@@ -45,46 +45,10 @@ impl SegmentList {
         }
     }
 
-    //#[inline]
-    //pub fn head<'a>(&'a self) -> Option<&'a Segment> {
-        //if self.head == -1 {
-            //None
-        //} else {
-            //Some(&self.storage[self.head as usize])
-        //}
-    //}
-
-    //#[inline]
-    //pub fn tail<'a>(&'a self) -> Option<&'a Segment> {
-        //if self.tail == -1 {
-            //None
-        //} else {
-            //Some(&self.storage[self.tail as usize])
-        //}
-    //}
-
     fn remove_node(&mut self, node: isize) {
         self.storage[node as usize].valid = false;
         self.storage[node as usize].length = 0;
         self.available.push(node);
-    }
-
-    #[inline]
-    pub fn remove_head(&mut self) {
-        if self.head != -1 {
-            let head = self.head;
-            self.head = self.storage[self.head as usize].next;
-            self.remove_node(head);
-        }
-    }
-
-    #[inline]
-    pub fn remove_tail(&mut self) {
-        if self.tail != -1 {
-            let tail = self.tail;
-            self.tail = self.storage[self.tail as usize].prev;
-            self.remove_node(tail);
-        }
     }
 
     #[inline]
@@ -192,10 +156,6 @@ impl SegmentList {
         self.head == seg
     }
 
-    pub fn is_tail(&self, seg: isize) -> bool {
-        self.tail == seg
-    }
-
     pub fn consume_head_data(&mut self, seq: usize, consumed: usize) -> bool {
         let idx = self.head as usize;
         if self.storage[idx].begin != seq {
@@ -221,10 +181,6 @@ impl SegmentList {
         self.tail = -1;
     }
 
-    pub fn empty(&self) -> bool {
-        self.head == -1
-    }
-
     #[inline]
     pub fn get_segment<'a>(&'a self, idx: isize) -> &'a Segment {
         &self.storage[idx as usize]
@@ -235,7 +191,6 @@ pub struct ReorderedData {
     data: RingBuffer,
     segment_list: SegmentList,
     buffer_size: usize,
-    window_size: usize,
     state: State,
     head_seq: usize,
     tail_seq: usize,
@@ -264,32 +219,32 @@ impl ReorderedData {
         size
     }
 
+    #[inline]
+    pub fn buffer_size(&self) -> usize {
+        self.buffer_size
+    }
 
     #[inline]
     pub fn available(&self) -> usize {
         self.data.available()
     }
 
-    pub fn new(buffer_size: usize, window_size: usize) -> Option<ReorderedData> {
-        ReorderedData::new_with_segments(buffer_size, window_size, buffer_size / 64)
+    pub fn new(buffer_size: usize) -> ReorderedData {
+        ReorderedData::new_with_segments(buffer_size, buffer_size / 64)
     }
 
-    pub fn new_with_segments(buffer_size: usize, window_size: usize, segment_size: usize) -> Option<ReorderedData> {
-        if window_size >= buffer_size {
-            None
-        } else {
-            let page_aligned_size = ReorderedData::round_to_pages(buffer_size);
-            let pages = ReorderedData::round_to_power_of_2(page_aligned_size / PAGE_SIZE);
-            Some(ReorderedData {
-                data: RingBuffer::new(pages).unwrap(),
-                buffer_size: page_aligned_size,
-                window_size: window_size,
-                state: State::Closed,
-                head_seq: 0,
-                tail_seq: 0,
-                segment_list: SegmentList::new(segment_size), // Assuming we don't receive small chunks.
-            })
-        }
+    pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> ReorderedData {
+        let page_aligned_size = ReorderedData::round_to_pages(buffer_size);
+        let pages = ReorderedData::round_to_power_of_2(page_aligned_size / PAGE_SIZE);
+        Some(ReorderedData {
+            data: RingBuffer::new(pages).unwrap(),
+            buffer_size: page_aligned_size,
+            window_size: window_size,
+            state: State::Closed,
+            head_seq: 0,
+            tail_seq: 0,
+            segment_list: SegmentList::new(segment_size), // Assuming we don't receive small chunks.
+        })
     }
 
     pub fn reset(&mut self) {

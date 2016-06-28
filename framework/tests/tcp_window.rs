@@ -33,7 +33,7 @@ fn creation_test() {
 
 #[test]
 fn in_order_insertion() {
-    let mut ro = ReorderedData::new(65536, 1024).unwrap();
+    let mut ro = ReorderedData::new(65536);
     let data0 = "food";
     let base_seq = 1232;
     if let InsertionResult::Inserted{ written, available } = ro.seq(base_seq, data0.as_bytes()) {
@@ -54,7 +54,7 @@ fn in_order_insertion() {
 
 #[test]
 fn out_of_order_insertion() {
-    let mut ro = ReorderedData::new(65536, 1024).unwrap();
+    let mut ro = ReorderedData::new(65536);
     let data0 = "food";
     let base_seq = 1232;
     if let InsertionResult::Inserted{ written, available } = ro.seq(base_seq, data0.as_bytes()) {
@@ -83,7 +83,7 @@ fn out_of_order_insertion() {
 
     drop(ro);
 
-    let mut r1 = ReorderedData::new(4096, 20).unwrap();
+    let mut r1 = ReorderedData::new(4096);
 
     let iters = (4096 / data0.len()) - 1;
     if let InsertionResult::Inserted { written, .. } = r1.seq(base_seq, data0.as_bytes()) {
