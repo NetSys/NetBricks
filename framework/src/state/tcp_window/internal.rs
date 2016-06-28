@@ -208,8 +208,15 @@ impl SegmentList {
     pub fn get_segment<'a>(&'a self, idx: isize) -> &'a Segment {
         &self.storage[idx as usize]
     }
+
+    #[inline]
+    pub fn empty(&self) -> bool {
+        self.head == -1
+    }
 }
 
+/// A structure for storing data that might be received out of order. This allows data to be inserted in any order, but
+/// then allows ordered read from data.
 pub struct ReorderedBuffer {
     data: RingBuffer,
     segment_list: SegmentList,
@@ -287,7 +294,7 @@ impl ReorderedBuffer {
 
     fn slow_path_insert(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
         let end = seq + data.len();
- 
+
         if self.tail_seq > seq && end > self.tail_seq { // Some of the data overlaps with stuff we have received before.
             let begin = self.tail_seq - seq;
             self.fast_path_insert(&data[begin..])
@@ -351,7 +358,7 @@ impl ReorderedBuffer {
             if written == data.len() {
                 InsertionResult::Inserted { written: written, available: self.available() }
             } else {
-                InsertionResult::OutOfMemory { written: written, available: self.available() } 
+                InsertionResult::OutOfMemory { written: written, available: self.available() }
             }
         }
     }
@@ -378,6 +385,29 @@ impl ReorderedBuffer {
             State::Closed => {
                 panic!("Unexpected data");
             }
+        }
+    }
+
+    #[inline]
+    fn read_data_common(&mut self, mut data: &mut [u8]) -> usize {
+        let read = self.data.read_from_head(data);
+        self.head_seq = self.head_seq.wrapping_add(read);
+        read
+    }
+
+    /// Read data from the buffer. The amount of data read is limited by the amount of in-order-data available at the
+    /// moment.
+    pub fn read_data(&mut self, mut data: &mut [u8]) -> usize {
+        match self.state {
+            State::Connected => self.read_data_common(data),
+            State::ConnectedOutOfOrder => {
+                let seq = self.head_seq;
+                let read = self.read_data_common(data);
+                // Record this in the segment list.
+                self.segment_list.consume_head_data(seq, read);
+                read
+            },
+            State::Closed => 0
         }
     }
 }
