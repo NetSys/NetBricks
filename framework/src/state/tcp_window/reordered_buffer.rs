@@ -324,7 +324,7 @@ impl ReorderedBuffer {
         } else if end < self.tail_seq {
             // All the data overlaps.
             InsertionResult::Inserted {
-                written: data.len(),
+                written: 0,
                 available: self.available(),
             }
         } else {

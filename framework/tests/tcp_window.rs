@@ -2,7 +2,7 @@ extern crate e2d2;
 use e2d2::state::*;
 use std::str;
 
-/// Check rounding up to number of pages.
+/// Test rounding up to number of pages.
 #[test]
 fn round_pages_test() {
     assert!(ReorderedBuffer::round_to_pages(1) == 4096, "Rounding up 1 byte did not result in PAGE_SIZE");
@@ -28,7 +28,7 @@ fn round_to_power_of_2_test() {
     assert!(ReorderedBuffer::round_to_power_of_2(5) == 8, "Rounding to power of 2 failed, expected 8");
 }
 
-/// Check that creation proceeds without a hitch.
+/// Test that creation proceeds without a hitch.
 #[test]
 fn creation_test() {
     for i in 128..131072 {
@@ -37,9 +37,9 @@ fn creation_test() {
     }
 }
 
-/// Check that in order insertion works correctly.
+/// Test that in order insertion works correctly.
 #[test]
-fn in_order_insertion() {
+fn test_in_order_insertion() {
     let mut ro = ReorderedBuffer::new(65536);
     let data0 = "food";
     let base_seq = 1232;
@@ -70,9 +70,9 @@ fn in_order_insertion() {
             "Read does not match expected, read: {}, expected: {}", read_str, format!("{}{}", data0, data1));
 }
 
-/// Check that out of order insertion works correctly.
+/// Test that out of order insertion works correctly.
 #[test]
-fn out_of_order_insertion() {
+fn test_out_of_order_insertion() {
     let mut ro = ReorderedBuffer::new(65536);
     let data0 = "food";
     let base_seq = 1232;
@@ -111,9 +111,9 @@ fn out_of_order_insertion() {
             read, format!("{}{}{}", data0, data1, data2));
 }
 
-/// Check that things work fine once state is changed.
+/// Test that things work fine once state is changed.
 #[test]
-fn check_state_change() {
+fn test_state_change() {
     let mut ro = ReorderedBuffer::new(65536);
     let data0 = "food";
     let base_seq = 1232;
@@ -161,9 +161,9 @@ fn check_state_change() {
             read, format!("{}{}{}{}", data0, data1, data2, data3));
 }
 
-/// Check that things OOM correctly when out of memory.
+/// Test that things OOM correctly when out of memory.
 #[test]
-fn check_oom() {
+fn test_oom() {
     let mut r0 = ReorderedBuffer::new(4096);
     let base_seq = 32;
     let data0 = "food";
@@ -193,9 +193,9 @@ fn check_oom() {
     }
 }
 
-/// Check that reseting `ReorderedBuffer` works as expected.
+/// Test that reseting `ReorderedBuffer` works as expected.
 #[test]
-fn check_reset() {
+fn test_reset() {
     let mut r0 = ReorderedBuffer::new(4096);
     let base_seq = 155;
     let data0 = "food";
@@ -251,12 +251,12 @@ fn check_reset() {
     }
 }
 
-/// Check that reading after writing allows us to write infinitely
+/// Test that reading after writing allows us to write infinitely
 #[test]
-fn check_read_after_write() {
+fn test_read_after_write() {
     let mut r0 = ReorderedBuffer::new(4096);
     let mut base_seq = 255;
-    let iters = 128000;
+    let iters = 5000;
     let data = "testtest";
     
     if let InsertionResult::Inserted { written, .. } = r0.seq(base_seq, data.as_bytes()) {
@@ -273,7 +273,7 @@ fn check_read_after_write() {
             assert!(written == data.len());
             base_seq = base_seq.wrapping_add(written);
         } else {
-            panic!("Could not write code, iter {} seq {}", i, base_seq);
+            panic!("Could not write data, iter {} seq {}", i, base_seq);
         }
 
         let available_before_read = r0.available();
@@ -281,5 +281,39 @@ fn check_read_after_write() {
         let read = r0.read_data(&mut read_buf[..]);
 
         assert!(available_before_read == r0.available() + read, "Available bytes not adjusted by the right amount");
+    }
+}
+
+/// Test that overlapping writes work correctly.
+#[test]
+fn test_overlapping_write() {
+    let mut r0 = ReorderedBuffer::new(4096);
+    let base_seq = 289;
+    
+    let data0 = "hello wo";
+    let data1 = " world";
+
+    if let InsertionResult::Inserted { written, .. } = r0.seq(base_seq, data0.as_bytes()) {
+        assert!(written == data0.len());
+    } else {
+        panic!("Could not write data");
+    }
+
+    if let InsertionResult::Inserted { written, .. } = r0.add_data(base_seq + "hello".len(), data1.as_bytes()) {
+        assert!(written == "rld".len(), "Overlapping write returns inconsistent result, expected {} got {}",
+                "rld".len(), written);
+    } else {
+        panic!("Could not write data");
+    }
+
+    let mut read_buf : Vec<_> = (0..r0.available()).map(|_| 0).collect();
+    let read = r0.read_data(&mut read_buf[..]);
+    let read_str = str::from_utf8(&read_buf[..read]).unwrap();
+    assert!(read_str == "hello world", "Read value {} expected {}", read_str, "hello world");
+
+    if let InsertionResult::InsertionResult { written, .. } = r0.add_data(base_seq, data0.as_bytes()) {
+        assert!(written == 0, "Wrote even though packet is from the past");
+    } else {
+        panic!("Could not write data");
     }
 }
