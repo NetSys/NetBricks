@@ -267,7 +267,7 @@ fn test_reset() {
 #[test]
 fn test_read_after_write() {
     let mut r0 = ReorderedBuffer::new(4096);
-    let mut base_seq = 255;
+    let mut base_seq = (1 << 32) - 30;
     let iters = 5000;
     let data = "testtest";
     
