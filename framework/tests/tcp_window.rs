@@ -8,7 +8,7 @@ use std::u32;
 fn round_pages_test() {
     assert!(ReorderedBuffer::round_to_pages(1) == 4096, "Rounding up 1 byte did not result in PAGE_SIZE");
     assert!(ReorderedBuffer::round_to_pages(0) == 0, "Rounding up 0 bytes did not result in 0");
-    assert!(ReorderedBuffer::round_to_pages(8) == 4096, "Rounding up failure, expected 4096, got {}", 
+    assert!(ReorderedBuffer::round_to_pages(8) == 4096, "Rounding up failure, expected 4096, got {}",
             ReorderedBuffer::round_to_pages(8));
     assert!(ReorderedBuffer::round_to_pages(512) == 4096, "Rounding up failure, expected 4096, got {}",
             ReorderedBuffer::round_to_pages(512));
@@ -54,7 +54,7 @@ fn test_in_order_insertion() {
     }
 
     let data1 = ": hamburger";
-    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq.wrapping_add(data0.len() as u32), 
+    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq.wrapping_add(data0.len() as u32),
                                                                          data1.as_bytes()) {
         assert!(written == data1.len());
         assert!(available == data0.len() + data1.len(), "Incorrect data available: Expected {} got {}",
@@ -97,7 +97,7 @@ fn test_out_of_order_insertion() {
         panic!("Writing data2 failed");
     }
 
-    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq.wrapping_add(data0.len() as u32), 
+    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq.wrapping_add(data0.len() as u32),
                                                                          data1.as_bytes()) {
         assert!(written == data1.len(), "Unexpected write, expected {} got {}", data1.len(), written);
         assert!(available == data0.len() + data1.len() + data2.len());
@@ -271,7 +271,7 @@ fn test_read_after_write() {
     let mut base_seq = u32::MAX - 30;
     let iters = 5000;
     let data = "testtest";
-    
+
     if let InsertionResult::Inserted { written, .. } = r0.seq(base_seq, data.as_bytes()) {
         assert!(written == data.len(), "Could not write during seq");
         base_seq = base_seq.wrapping_add(written as u32);
@@ -302,7 +302,7 @@ fn test_read_after_write() {
 fn test_overlapping_write() {
     let mut r0 = ReorderedBuffer::new(4096);
     let base_seq = 289;
-    
+
     let data0 = "hello wo";
     let data1 = " world";
 
@@ -312,7 +312,7 @@ fn test_overlapping_write() {
         panic!("Could not write data");
     }
 
-    if let InsertionResult::Inserted { written, .. } = r0.add_data(base_seq + ("hello".len() as u32), 
+    if let InsertionResult::Inserted { written, .. } = r0.add_data(base_seq + ("hello".len() as u32),
                                                                    data1.as_bytes()) {
         assert!(written == "rld".len(), "Overlapping write returns inconsistent result, expected {} got {}",
                 "rld".len(), written);
