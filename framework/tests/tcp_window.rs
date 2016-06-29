@@ -311,7 +311,7 @@ fn test_overlapping_write() {
     let read_str = str::from_utf8(&read_buf[..read]).unwrap();
     assert!(read_str == "hello world", "Read value {} expected {}", read_str, "hello world");
 
-    if let InsertionResult::InsertionResult { written, .. } = r0.add_data(base_seq, data0.as_bytes()) {
+    if let InsertionResult::Inserted { written, .. } = r0.add_data(base_seq, data0.as_bytes()) {
         assert!(written == 0, "Wrote even though packet is from the past");
     } else {
         panic!("Could not write data");

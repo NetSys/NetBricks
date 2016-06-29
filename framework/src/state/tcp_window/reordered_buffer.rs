@@ -265,20 +265,25 @@ impl ReorderedBuffer {
         size
     }
 
+    /// Return the size (the maximum amount of data) this buffer can hold.
     #[inline]
     pub fn buffer_size(&self) -> usize {
         self.buffer_size
     }
 
+    /// Report how much data is available.
     #[inline]
     pub fn available(&self) -> usize {
         self.data.available()
     }
 
+    /// Create a new buffer with space for `buffer_size` bytes.
     pub fn new(buffer_size: usize) -> ReorderedBuffer {
         ReorderedBuffer::new_with_segments(buffer_size, buffer_size / 64)
     }
 
+    /// Create a new buffer with space for `buffer_size` bytes and a segment list with `segment_size` elements. The
+    /// later should be adjusted to reflect the expected number of out of order segments at a time.
     pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> ReorderedBuffer {
         let page_aligned_size = ReorderedBuffer::round_to_pages(buffer_size);
         let pages = ReorderedBuffer::round_to_power_of_2(page_aligned_size / PAGE_SIZE);
@@ -292,10 +297,60 @@ impl ReorderedBuffer {
         }
     }
 
+
+    /// Reset buffer state.
     pub fn reset(&mut self) {
         self.state = State::Closed;
         self.segment_list.clear();
         self.data.clear();
+    }
+
+    /// Set the current sequence number for the buffer.
+    pub fn seq(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
+        match self.state {
+            State::Closed => {
+                self.state = State::Connected;
+                self.head_seq = seq;
+                self.tail_seq = seq;
+                self.fast_path_insert(data)
+            },
+            _ => panic!("Cannot seq a buffer that has already been sequed")
+        }
+    }
+
+    /// Add data at a give sequence number.
+    pub fn add_data(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
+        match self.state {
+            State::Connected => {
+                if seq == self.tail_seq {
+                    // Fast path
+                    self.fast_path_insert(data)
+                } else {
+                    // Slow path
+                    self.slow_path_insert(seq, data)
+                }
+            }
+            State::ConnectedOutOfOrder => self.out_of_order_insert(seq, data),
+            State::Closed => {
+                panic!("Unexpected data");
+            }
+        }
+    }
+
+    /// Read data from the buffer. The amount of data read is limited by the amount of in-order-data available at the
+    /// moment.
+    pub fn read_data(&mut self, mut data: &mut [u8]) -> usize {
+        match self.state {
+            State::Connected => self.read_data_common(data),
+            State::ConnectedOutOfOrder => {
+                let seq = self.head_seq;
+                let read = self.read_data_common(data);
+                // Record this in the segment list.
+                self.segment_list.consume_head_data(seq, read);
+                read
+            }
+            State::Closed => 0,
+        }
     }
 
     fn fast_path_insert(&mut self, data: &[u8]) -> InsertionResult {
@@ -412,51 +467,10 @@ impl ReorderedBuffer {
         }
     }
 
-    pub fn seq(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
-        self.state = State::Connected;
-        self.head_seq = seq;
-        self.tail_seq = seq;
-        self.fast_path_insert(data)
-    }
-
-    pub fn add_data(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
-        match self.state {
-            State::Connected => {
-                if seq == self.tail_seq {
-                    // Fast path
-                    self.fast_path_insert(data)
-                } else {
-                    // Slow path
-                    self.slow_path_insert(seq, data)
-                }
-            }
-            State::ConnectedOutOfOrder => self.out_of_order_insert(seq, data),
-            State::Closed => {
-                panic!("Unexpected data");
-            }
-        }
-    }
-
     #[inline]
     fn read_data_common(&mut self, mut data: &mut [u8]) -> usize {
         let read = self.data.read_from_head(data);
         self.head_seq = self.head_seq.wrapping_add(read);
         read
-    }
-
-    /// Read data from the buffer. The amount of data read is limited by the amount of in-order-data available at the
-    /// moment.
-    pub fn read_data(&mut self, mut data: &mut [u8]) -> usize {
-        match self.state {
-            State::Connected => self.read_data_common(data),
-            State::ConnectedOutOfOrder => {
-                let seq = self.head_seq;
-                let read = self.read_data_common(data);
-                // Record this in the segment list.
-                self.segment_list.consume_head_data(seq, read);
-                read
-            }
-            State::Closed => 0,
-        }
     }
 }
