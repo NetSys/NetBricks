@@ -110,7 +110,7 @@ impl SegmentList {
         let idx = self.find_available_node();
         self.storage[idx as usize].seq = seq;
         self.storage[idx as usize].length = len;
-        
+
         self.storage[idx as usize].prev = prev;
 
         self.storage[idx as usize].next = self.storage[prev as usize].next;
@@ -145,8 +145,8 @@ impl SegmentList {
             let end = self.storage[idx as usize].seq.wrapping_add(self.storage[idx as usize].length as u32);
             if end >= self.storage[next as usize].seq {
                 // We have at least some overlap, and should merge.
-                let merge_len = self.storage[next as usize]. length as usize -
-                    (end - self.storage[next as usize].seq) as usize;
+                let merge_len = self.storage[next as usize].length as usize -
+                                (end - self.storage[next as usize].seq) as usize;
                 let new_len = merge_len as usize + self.storage[idx as usize].length as usize;
                 if new_len <= u16::MAX as usize {
                     self.storage[idx as usize].length = new_len as u16;
@@ -185,13 +185,18 @@ impl SegmentList {
             self.tail = idx;
             Some(idx)
         } else {
-            let end =  seq.wrapping_add(len as u32);
+            let end = seq.wrapping_add(len as u32);
             while idx != -1 {
                 let seg_seq = self.storage[idx as usize].seq;
                 let seg_len = self.storage[idx as usize].length;
                 let seg_end = seg_seq.wrapping_add(seg_len as u32);
-                println!("Considering segment: seq {} end {} seg_seq {} seg_end {} head {} idx {}", seq, end, seg_seq,
-                                                                              seg_end, self.head, idx);
+                println!("Considering segment: seq {} end {} seg_seq {} seg_end {} head {} idx {}",
+                         seq,
+                         end,
+                         seg_seq,
+                         seg_end,
+                         self.head,
+                         idx);
                 if seg_end == seq {
                     println!("Adjusting segment");
                     // We can just add to the current segment.
@@ -261,7 +266,7 @@ impl SegmentList {
         if self.storage[idx].seq != seq {
             false
         } else {
-            // No loops are necessary since we always 
+            // No loops are necessary since we always
             let consume = min(consumed, self.storage[idx].length);
             self.storage[idx].seq = self.storage[idx].seq.wrapping_add(consume as u32);
             self.storage[idx].length -= consume;
@@ -380,8 +385,8 @@ impl ReorderedBuffer {
                 self.head_seq = seq;
                 self.tail_seq = seq;
                 self.fast_path_insert(data)
-            },
-            _ => panic!("Cannot seq a buffer that has already been sequed")
+            }
+            _ => panic!("Cannot seq a buffer that has already been sequed"),
         }
     }
 
