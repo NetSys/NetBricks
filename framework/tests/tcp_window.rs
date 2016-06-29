@@ -53,9 +53,11 @@ fn test_in_order_insertion() {
     }
 
     let data1 = ": hamburger";
-    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq + data0.len(), data1.as_bytes()) {
+    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq.wrapping_add(data0.len() as u32), 
+                                                                         data1.as_bytes()) {
         assert!(written == data1.len());
-        assert!(available == data0.len() + data1.len());
+        assert!(available == data0.len() + data1.len(), "Incorrect data available: Expected {} got {}",
+                data0.len() + data1.len(), available);
     } else {
         panic!("Writing data1 failed");
     }
@@ -85,7 +87,8 @@ fn test_out_of_order_insertion() {
 
     let data1 = ": hamburger";
     let data2 = " american";
-    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq + data0.len() + data1.len(),
+    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq.wrapping_add(data0.len() as u32).
+                                                                         wrapping_add(data1.len() as u32),
                                                                          data2.as_bytes()) {
         assert!(written == data2.len());
         assert!(available == data0.len());
@@ -93,8 +96,9 @@ fn test_out_of_order_insertion() {
         panic!("Writing data2 failed");
     }
 
-    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq + data0.len(), data1.as_bytes()) {
-        assert!(written == data1.len());
+    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq.wrapping_add(data0.len() as u32), 
+                                                                         data1.as_bytes()) {
+        assert!(written == data1.len(), "Unexpected write, expected {} got {}", data1.len(), written);
         assert!(available == data0.len() + data1.len() + data2.len());
     } else {
         panic!("Writing data1 failed");
@@ -127,23 +131,27 @@ fn test_state_change() {
     let data1 = ": hamburger";
     let data2 = " american";
     let data3 = " (w/fries)";
-    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq + data0.len() + data1.len(),
+    let data2_seq = base_seq.wrapping_add(data0.len() as u32).wrapping_add(data1.len() as u32);
+    if let InsertionResult::Inserted{ written, available } = ro.add_data(data2_seq,
                                                                          data2.as_bytes()) {
         assert!(written == data2.len());
-        assert!(available == data0.len());
+        assert!(available == data0.len(), "Incorrect data available, expected {} found {} (seq {}, base {})",
+                data0.len(), available, data2_seq, base_seq);
     } else {
         panic!("Writing data2 failed");
     }
 
-    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq + data0.len(), data1.as_bytes()) {
-        assert!(written == data1.len());
+    if let InsertionResult::Inserted{ written, available } = ro.add_data(base_seq.wrapping_add(data0.len() as u32),
+                                                                         data1.as_bytes()) {
+        assert!(written == data1.len(), "Unexpected write, expected {} got {}", data1.len(), written);
         assert!(available == data0.len() + data1.len() + data2.len());
     } else {
         panic!("Writing data1 failed");
     }
 
     if let InsertionResult::Inserted { written, available } =
-        ro.add_data(base_seq + data0.len() + data1.len() + data2.len(),
+        ro.add_data(base_seq.wrapping_add(data0.len() as u32).wrapping_add(data1.len() as u32)
+                                                      .wrapping_add(data2.len() as u32),
                     data3.as_bytes()) {
         assert!(written == data3.len());
         assert!(available == data0.len() + data1.len() + data2.len() + data3.len());
@@ -166,6 +174,7 @@ fn test_state_change() {
 fn test_oom() {
     let mut r0 = ReorderedBuffer::new(4096);
     let base_seq = 32;
+    let mut seq = base_seq;
     let data0 = "food";
 
     let iters = (4096 / data0.len()) - 1;
@@ -175,16 +184,16 @@ fn test_oom() {
         panic!("Could not write");
     }
 
-    for i in 1..iters {
-        if let InsertionResult::Inserted{ written, .. } = r0.add_data(base_seq + (i * data0.len()),
-                                                                             data0.as_bytes()) {
+    for _ in 1..iters {
+        seq = seq.wrapping_add(data0.len() as u32);
+        if let InsertionResult::Inserted{ written, .. } = r0.add_data(seq, data0.as_bytes()) {
             assert!(written == data0.len());
         } else {
             panic!("Could not write");
         }
     }
-
-    if let InsertionResult::OutOfMemory{ written, available } = r0.add_data(base_seq + (iters * data0.len()),
+    seq = seq.wrapping_add(data0.len() as u32);
+    if let InsertionResult::OutOfMemory{ written, available } = r0.add_data(seq,
                                                                             data0.as_bytes()) {
         assert!(written != data0.len());
         assert!(available == 4096 - 1);
@@ -198,6 +207,7 @@ fn test_oom() {
 fn test_reset() {
     let mut r0 = ReorderedBuffer::new(4096);
     let base_seq = 155;
+    let mut seq = base_seq;
     let data0 = "food";
 
     let iters = (4096 / data0.len()) - 1;
@@ -207,17 +217,17 @@ fn test_reset() {
         panic!("Could not write");
     }
 
-    for i in 1..iters {
-        if let InsertionResult::Inserted{ written, .. } = r0.add_data(base_seq + (i * data0.len()),
-                                                                             data0.as_bytes()) {
+    for _ in 1..iters {
+        seq = seq.wrapping_add(data0.len() as u32);
+        if let InsertionResult::Inserted{ written, .. } = r0.add_data(seq, data0.as_bytes()) {
             assert!(written == data0.len());
         } else {
             panic!("Could not write");
         }
     }
 
-    if let InsertionResult::OutOfMemory{ written, available } = r0.add_data(base_seq + (iters * data0.len()),
-                                                                            data0.as_bytes()) {
+    seq = seq.wrapping_add(data0.len() as u32);
+    if let InsertionResult::OutOfMemory{ written, available } = r0.add_data(seq, data0.as_bytes()) {
         assert!(written != data0.len());
         assert!(available == 4096 - 1);
     } else {
@@ -226,6 +236,7 @@ fn test_reset() {
 
     r0.reset();
     let base_seq = 72;
+    let mut seq = base_seq;
 
     if let InsertionResult::Inserted { written, .. } = r0.seq(base_seq, data0.as_bytes()) {
         assert!(written == data0.len());
@@ -233,22 +244,23 @@ fn test_reset() {
         panic!("Could not write");
     }
 
-    for i in 1..iters {
-        if let InsertionResult::Inserted{ written, .. } = r0.add_data(base_seq + (i * data0.len()),
-                                                                             data0.as_bytes()) {
+    for _ in 1..iters {
+        seq = seq.wrapping_add(data0.len() as u32);
+        if let InsertionResult::Inserted{ written, .. } = r0.add_data(seq, data0.as_bytes()) {
             assert!(written == data0.len());
         } else {
             panic!("Could not write");
         }
     }
 
-    if let InsertionResult::OutOfMemory{ written, available } = r0.add_data(base_seq + (iters * data0.len()),
-                                                                            data0.as_bytes()) {
+    seq = seq.wrapping_add(data0.len() as u32);
+    if let InsertionResult::OutOfMemory{ written, available } = r0.add_data(seq, data0.as_bytes()) {
         assert!(written != data0.len());
         assert!(available == 4096 - 1);
     } else {
         panic!("No OOM?");
     }
+
 }
 
 /// Test that reading after writing allows us to write infinitely
@@ -261,7 +273,7 @@ fn test_read_after_write() {
     
     if let InsertionResult::Inserted { written, .. } = r0.seq(base_seq, data.as_bytes()) {
         assert!(written == data.len(), "Could not write during seq");
-        base_seq = base_seq.wrapping_add(written);
+        base_seq = base_seq.wrapping_add(written as u32);
     } else {
         panic!("Could not seq");
     }
@@ -271,7 +283,7 @@ fn test_read_after_write() {
     for i in 0..iters {
         if let InsertionResult::Inserted { written, .. } = r0.add_data(base_seq, data.as_bytes()) {
             assert!(written == data.len());
-            base_seq = base_seq.wrapping_add(written);
+            base_seq = base_seq.wrapping_add(written as u32);
         } else {
             panic!("Could not write data, iter {} seq {}", i, base_seq);
         }
@@ -299,7 +311,8 @@ fn test_overlapping_write() {
         panic!("Could not write data");
     }
 
-    if let InsertionResult::Inserted { written, .. } = r0.add_data(base_seq + "hello".len(), data1.as_bytes()) {
+    if let InsertionResult::Inserted { written, .. } = r0.add_data(base_seq + ("hello".len() as u32), 
+                                                                   data1.as_bytes()) {
         assert!(written == "rld".len(), "Overlapping write returns inconsistent result, expected {} got {}",
                 "rld".len(), written);
     } else {

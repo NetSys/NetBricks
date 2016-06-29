@@ -1,5 +1,6 @@
 use utils::RingBuffer;
-use std::cmp::max;
+use std::cmp::{max, min};
+use std::u16;
 
 /// Results from inserting into `ReorderedBuffer`
 pub enum InsertionResult {
@@ -25,19 +26,19 @@ enum State {
 #[derive(Default)]
 struct Segment {
     pub prev: isize,
-    pub begin: usize,
-    pub length: usize,
+    pub seq: u32,
+    pub length: u16,
     pub next: isize,
     pub idx: isize,
 }
 
 impl Segment {
-    pub fn new(idx: isize, begin: usize, length: usize) -> Segment {
+    pub fn new(idx: isize, seq: u32, length: u16) -> Segment {
         Segment {
             idx: idx,
             prev: -1,
             next: -1,
-            begin: begin,
+            seq: seq,
             length: length,
         }
     }
@@ -83,9 +84,9 @@ impl SegmentList {
 
     /// Insert a node before `next`.
     #[inline]
-    fn insert_before_node(&mut self, next: isize, begin: usize, len: usize) -> isize {
+    fn insert_before_node(&mut self, next: isize, seq: u32, len: u16) -> isize {
         let idx = self.find_available_node();
-        self.storage[idx as usize].begin = begin;
+        self.storage[idx as usize].seq = seq;
         self.storage[idx as usize].length = len;
         self.storage[idx as usize].next = next;
         if next != -1 {
@@ -94,6 +95,8 @@ impl SegmentList {
             self.storage[next as usize].prev = idx;
             if prev != -1 {
                 self.storage[prev as usize].next = idx;
+            } else {
+                self.head = idx; // No prev => this is head.
             }
         } else {
             self.storage[idx as usize].prev = -1;
@@ -101,12 +104,30 @@ impl SegmentList {
         idx
     }
 
+    /// Insert a node after `prev`.
+    #[inline]
+    fn insert_after_node(&mut self, prev: isize, seq: u32, len: u16) -> isize {
+        let idx = self.find_available_node();
+        self.storage[idx as usize].seq = seq;
+        self.storage[idx as usize].length = len;
+        
+        self.storage[idx as usize].prev = prev;
+
+        self.storage[idx as usize].next = self.storage[prev as usize].next;
+        self.storage[prev as usize].next = idx;
+
+        if self.storage[idx as usize].next == -1 {
+            self.tail = idx;
+        }
+        idx
+    }
+
     /// Insert a node at the tail of the list.
     #[inline]
-    fn insert_at_tail(&mut self, begin: usize, len: usize) -> isize {
+    fn insert_at_tail(&mut self, seq: u32, len: u16) -> isize {
         let idx = self.find_available_node();
         let idx_u = idx as usize;
-        self.storage[idx_u].begin = begin;
+        self.storage[idx_u].seq = seq;
         self.storage[idx_u].length = len;
         self.storage[idx_u].next = -1;
         self.storage[idx_u].prev = self.tail;
@@ -115,32 +136,94 @@ impl SegmentList {
         idx
     }
 
+    #[inline]
+    fn merge_at_idx(&mut self, idx: isize) {
+        // Check if we should/can merge. This only checks subsequent segments (since the prior ones should
+        // already have been checked).
+        let mut next = self.storage[idx as usize].next;
+        while next != -1 {
+            let end = self.storage[idx as usize].seq.wrapping_add(self.storage[idx as usize].length as u32);
+            if end >= self.storage[next as usize].seq {
+                // We have at least some overlap, and should merge.
+                let merge_len = self.storage[next as usize]. length as usize -
+                    (end - self.storage[next as usize].seq) as usize;
+                let new_len = merge_len as usize + self.storage[idx as usize].length as usize;
+                if new_len <= u16::MAX as usize {
+                    self.storage[idx as usize].length = new_len as u16;
+                    let to_free = next;
+                    next = self.storage[to_free as usize].next;
+                    self.storage[idx as usize].next = next;
+                    if next != -1 {
+                        self.storage[next as usize].prev = idx;
+                    }
+                    self.remove_node(to_free);
+                } else {
+                    let max_len = u16::MAX - self.storage[idx as usize].length;
+                    // Add to previous segment
+                    self.storage[idx as usize].length += max_len;
+                    // Remove from next.
+                    self.storage[next as usize].length -= max_len;
+                    // Update seq
+                    self.storage[next as usize].seq = self.storage[next as usize].seq.wrapping_add(max_len as u32);
+                    // No more merges are possible so exit this loop.
+                    break;
+                }
+            }
+        }
+    }
+
     /// Insert a segment.
     #[inline]
-    pub fn insert_segment(&mut self, begin: usize, len: usize) -> Option<isize> {
+    pub fn insert_segment(&mut self, seq: u32, len: u16) -> Option<isize> {
         let mut idx = self.head;
+        println!("Insert segment for seq {} len {}", seq, len);
         if idx == -1 {
+            println!("Inserting head");
             // Special case the first insertion.
-            idx = self.insert_before_node(-1, begin, len);
+            idx = self.insert_before_node(-1, seq, len);
             self.head = idx;
             self.tail = idx;
             Some(idx)
         } else {
-            let end = begin + len;
+            let end =  seq.wrapping_add(len as u32);
             while idx != -1 {
-                let segment_end = self.storage[idx as usize].begin + self.storage[idx as usize].length;
-                if segment_end == begin {
+                let seg_seq = self.storage[idx as usize].seq;
+                let seg_len = self.storage[idx as usize].length;
+                let seg_end = seg_seq.wrapping_add(seg_len as u32);
+                println!("Considering segment: seq {} end {} seg_seq {} seg_end {} head {} idx {}", seq, end, seg_seq,
+                                                                              seg_end, self.head, idx);
+                if seg_end == seq {
+                    println!("Adjusting segment");
                     // We can just add to the current segment.
-                    self.storage[idx as usize].length += len;
+                    // We do not let lengths exceed 2^16 - 1.
+                    let new_len = seg_len as usize + len as usize;
+                    if new_len <= u16::MAX as usize {
+                        println!("No overflow, upping len to {}", new_len);
+                        // No overflow.
+                        self.storage[idx as usize].length = new_len as u16;
+                    } else {
+                        println!("OVERFLOW adding another segment");
+                        // Overflow.
+                        // Compute how much can be safely added.
+                        // We can only add bytes to get to u16::MAX.
+                        let max_len = u16::MAX - self.storage[idx as usize].length;
+                        // Add this much to the old segment.
+                        self.storage[idx as usize].length += max_len;
+                        let seq_new = seq.wrapping_add(max_len as u32);
+                        let len_new = len - max_len;
+                        self.insert_after_node(idx, seq_new, len_new);
+                    }
                     break;
-                } else if self.storage[idx as usize].begin >= end {
+                } else if seg_seq >= end {
+                    println!("Adding before");
                     // We are on to segments that are further down, insert
-                    idx = self.insert_before_node(idx, begin, len);
+                    idx = self.insert_before_node(idx, seq, len);
                     break;
-                } else if self.storage[idx as usize].begin <= begin {
+                } else if self.storage[idx as usize].seq <= seq {
+                    println!("Overlapping");
                     // Overlapping segment
-                    let new_end = max(segment_end, end);
-                    self.storage[idx as usize].length = new_end - self.storage[idx as usize].begin;
+                    let new_end = max(seg_end, end);
+                    self.storage[idx as usize].length = (new_end - self.storage[idx as usize].seq) as u16;
                     break;
                 } else {
                     idx = self.storage[idx as usize].next;
@@ -149,29 +232,10 @@ impl SegmentList {
 
             if idx == -1 {
                 // Nothing matched, so let us insert at the tail.
-                idx = self.insert_at_tail(begin, len);
+                idx = self.insert_at_tail(seq, len);
                 Some(idx)
             } else {
-                // Check if we should/can merge. This only checks subsequent segments (since the prior ones should
-                // already have been checked).
-                let mut next = self.storage[idx as usize].next;
-                while next != -1 {
-                    let end = self.storage[idx as usize].begin + self.storage[idx as usize].length;
-                    if end <= self.storage[next as usize].begin {
-                        // We should merge.
-                        // Figure out how much of the next segment is non-overlapping
-                        let merge_len = (end - self.storage[next as usize].begin) + self.storage[next as usize].length;
-                        let to_free = next;
-                        // Fix up pointers and length
-                        self.storage[idx as usize].length += merge_len;
-                        next = self.storage[to_free as usize].next;
-                        self.storage[idx as usize].next = next;
-                        self.storage[next as usize].prev = idx;
-                        // Free the node
-                        self.remove_node(to_free);
-
-                    }
-                }
+                self.merge_at_idx(idx);
                 Some(idx)
             }
         }
@@ -191,19 +255,22 @@ impl SegmentList {
     }
 
     /// Consume some amount of data from the beginning.
-    pub fn consume_head_data(&mut self, seq: usize, consumed: usize) -> bool {
+    pub fn consume_head_data(&mut self, seq: u32, consumed: u16) -> bool {
         let idx = self.head as usize;
         // This is just an integrity check.
-        if self.storage[idx].begin != seq {
+        if self.storage[idx].seq != seq {
             false
         } else {
-            // Note we do not need to look beyond the head since we always merge segments.
-            self.storage[idx].begin += consumed;
-            self.storage[idx].length -= consumed;
+            // No loops are necessary since we always 
+            let consume = min(consumed, self.storage[idx].length);
+            self.storage[idx].seq = self.storage[idx].seq.wrapping_add(consume as u32);
+            self.storage[idx].length -= consume;
             if self.storage[idx].length == 0 {
                 self.remove_head();
+            } else {
+                self.merge_at_idx(idx as isize);
             }
-            true
+            consume == consumed
         }
     }
 
@@ -238,8 +305,8 @@ pub struct ReorderedBuffer {
     segment_list: SegmentList,
     buffer_size: usize,
     state: State,
-    head_seq: usize,
-    tail_seq: usize,
+    head_seq: u32,
+    tail_seq: u32,
 }
 
 const PAGE_SIZE: usize = 4096; // Page size in bytes, not using huge pages here.
@@ -306,7 +373,7 @@ impl ReorderedBuffer {
     }
 
     /// Set the current sequence number for the buffer.
-    pub fn seq(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
+    pub fn seq(&mut self, seq: u32, data: &[u8]) -> InsertionResult {
         match self.state {
             State::Closed => {
                 self.state = State::Connected;
@@ -319,7 +386,7 @@ impl ReorderedBuffer {
     }
 
     /// Add data at a give sequence number.
-    pub fn add_data(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
+    pub fn add_data(&mut self, seq: u32, data: &[u8]) -> InsertionResult {
         match self.state {
             State::Connected => {
                 if seq == self.tail_seq {
@@ -346,7 +413,7 @@ impl ReorderedBuffer {
                 let seq = self.head_seq;
                 let read = self.read_data_common(data);
                 // Record this in the segment list.
-                self.segment_list.consume_head_data(seq, read);
+                self.segment_list.consume_head_data(seq, read as u16);
                 read
             }
             State::Closed => 0,
@@ -355,7 +422,7 @@ impl ReorderedBuffer {
 
     fn fast_path_insert(&mut self, data: &[u8]) -> InsertionResult {
         let written = self.data.write_at_tail(data);
-        self.tail_seq += written;
+        self.tail_seq = self.tail_seq.wrapping_add(written as u32);
         if written == data.len() {
             InsertionResult::Inserted {
                 written: written,
@@ -369,12 +436,24 @@ impl ReorderedBuffer {
         }
     }
 
-    fn slow_path_insert(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
-        let end = seq + data.len();
+    #[inline]
+    fn add_head_to_seg_list(&mut self) {
+        let mut to_insert = self.data.available();
+        let mut seq = self.head_seq;
+        while to_insert > 0 {
+            let insert = min(u16::MAX as usize, to_insert) as u16;
+            self.segment_list.insert_segment(seq, insert);
+            seq = seq.wrapping_add(insert as u32);
+            to_insert -= insert as usize;
+        }
+    }
+
+    fn slow_path_insert(&mut self, seq: u32, data: &[u8]) -> InsertionResult {
+        let end = seq.wrapping_add(data.len() as u32);
 
         if self.tail_seq > seq && end > self.tail_seq {
             // Some of the data overlaps with stuff we have received before.
-            let begin = self.tail_seq - seq;
+            let begin = (self.tail_seq - seq) as usize;
             self.fast_path_insert(&data[begin..])
         } else if end < self.tail_seq {
             // All the data overlaps.
@@ -388,71 +467,70 @@ impl ReorderedBuffer {
             // receiving data.
             self.state = State::ConnectedOutOfOrder;
             // Insert current in-order data into the segment list.
-            self.segment_list.insert_segment(self.head_seq, self.data.available());
+            self.add_head_to_seg_list();
             // Call out-of-order insertion.
             self.out_of_order_insert(seq, data)
         }
     }
 
-    fn out_of_order_insert(&mut self, seq: usize, data: &[u8]) -> InsertionResult {
-        // FIXME: Transition back to Connected
+    fn out_of_order_insert(&mut self, seq: u32, data: &[u8]) -> InsertionResult {
         if self.tail_seq == seq {
             // Writing at tail
             // Write some data
             let mut written = self.data.write_at_tail(data);
             // Advance tail_seq based on written data (since write_at_tail already did that).
-            self.tail_seq += written;
+            self.tail_seq = self.tail_seq.wrapping_add(written as u32);
             {
                 // Insert into segment list.
-                let segment = self.segment_list.insert_segment(seq, written).unwrap();
+                let segment = self.segment_list.insert_segment(seq, written as u16).unwrap();
                 // Since we are writing to the beginning, this must always be the head.
                 assert!(self.segment_list.is_head(segment));
                 // Compute the end of the segment, this might in fact be larger than size
                 let seg = self.segment_list.get_segment(segment);
-                let seg_end = seg.begin + seg.length;
-                // Integrity test.
-                assert!(seg_end >= self.tail_seq);
+                let seg_end = seg.seq.wrapping_add(seg.length as u32);
                 // We need to know the increment.
-                let incr = seg_end - self.tail_seq;
+                let incr = seg_end.wrapping_sub(self.tail_seq);
 
                 // If we have overlapped into data we received before, just drop the overlapping data.
-                if written < incr {
-                    written = incr;
+                if (written as u32) < incr {
+                    written = incr as usize;
                 }
                 self.tail_seq = seg_end; // Advance tail_seq
-                self.data.seek_tail(incr); // Increment tail for the ring buffer.
+                self.data.seek_tail(incr as usize); // Increment tail for the ring buffer.
 
             }
+
             if self.segment_list.one_segment() {
                 // We only have one segment left, so now is a good time to switch
                 // back to fast path.
                 self.segment_list.clear();
                 self.state = State::Connected;
             }
+
             InsertionResult::Inserted {
                 written: written,
                 available: self.available(),
             }
         } else if self.tail_seq >= seq {
-            let offset = self.tail_seq - seq;
+            let offset = (self.tail_seq - seq) as usize;
             let remaining = data.len() - offset;
             if remaining > 0 {
                 let tail_seq = self.tail_seq;
                 self.out_of_order_insert(tail_seq, &data[offset..])
             } else {
                 InsertionResult::Inserted {
-                    written: data.len(),
+                    written: 0,
                     available: self.available(),
                 }
             }
         } else {
             // self.tail_seq < seq
             // Compute offset from tail where this should be written
-            let offset = seq - self.tail_seq;
+            let offset = (seq - self.tail_seq) as usize;
             // Write stuff
             let written = self.data.write_at_offset_from_tail(offset, data);
             // Insert segment at the right place
-            self.segment_list.insert_segment(seq, written);
+            self.segment_list.insert_segment(seq, written as u16);
             if written == data.len() {
                 InsertionResult::Inserted {
                     written: written,
@@ -470,7 +548,7 @@ impl ReorderedBuffer {
     #[inline]
     fn read_data_common(&mut self, mut data: &mut [u8]) -> usize {
         let read = self.data.read_from_head(data);
-        self.head_seq = self.head_seq.wrapping_add(read);
+        self.head_seq = self.head_seq.wrapping_add(read as u32);
         read
     }
 }
