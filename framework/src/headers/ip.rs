@@ -3,6 +3,7 @@ use std::fmt;
 use std::net::Ipv4Addr;
 use std::convert::From;
 use std::default::Default;
+use headers::MacHeader;
 
 /// IP header using SSE
 #[derive(Debug, Default)]
@@ -34,6 +35,7 @@ impl fmt::Display for IpHeader {
 
 
 impl EndOffset for IpHeader {
+    type PreviousHeader = MacHeader; 
     #[inline]
     fn offset(&self) -> usize {
         if cfg!(feature = "performance") {
@@ -52,6 +54,11 @@ impl EndOffset for IpHeader {
     #[inline]
     fn payload_size(&self, _: usize) -> usize {
         (self.length() as usize) - self.offset()
+    }
+
+    #[inline]
+    fn check_correct(&self, prev: &MacHeader) -> bool {
+        true
     }
 }
 

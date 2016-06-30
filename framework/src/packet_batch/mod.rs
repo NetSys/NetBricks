@@ -61,7 +61,7 @@ pub fn merge<V>(batches: Vec<V>) -> MergeBatch<V>
 /// sent to another thread.
 pub trait Batch: BatchIterator + Act + Send {
     /// Parse the payload as header of type.
-    fn parse<T: EndOffset>(self) -> ParsedBatch<T, Self>
+    default fn parse<T: EndOffset<PreviousHeader = NullHeader>>(self) -> ParsedBatch<T, Self>
         where Self: Sized
     {
         ParsedBatch::<T, Self>::new(self)
@@ -98,6 +98,13 @@ pub trait Batch: BatchIterator + Act + Send {
 /// Public interface implemented by packet batches which manipulate headers.
 pub trait HeaderOperations: Batch + Sized {
     type Header: EndOffset;
+    fn parse<T: EndOffset<PreviousHeader = Header>>(self) -> ParsedBatch<T, Self>
+        where Self: Sized
+    {
+        ParsedBatch::<T, Self>::new(self)
+    }
+
+
     /// Transform a header field.
     fn transform<Op: FnMut(&mut Self::Header, &mut [u8], Option<&mut Any>) + Send + 'static>
         (self,

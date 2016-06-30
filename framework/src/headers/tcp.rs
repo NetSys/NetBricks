@@ -1,6 +1,7 @@
 use super::EndOffset;
 use std::fmt;
 use std::default::Default;
+use headers::IpHeader;
 
 #[derive(Debug, Default)]
 #[repr(C, packed)]
@@ -60,6 +61,8 @@ impl fmt::Display for TcpHeader {
 }
 
 impl EndOffset for TcpHeader {
+    type PreviousHeader = IpHeader; 
+
     #[inline]
     fn offset(&self) -> usize {
         (self.data_offset() * 4) as usize
@@ -73,6 +76,11 @@ impl EndOffset for TcpHeader {
     #[inline]
     fn payload_size(&self, frame_size: usize) -> usize {
         frame_size - self.offset()
+    }
+
+    #[inline]
+    fn check_correct(&self, prev: &IpHeader) -> bool {
+        true
     }
 }
 
