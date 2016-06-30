@@ -176,9 +176,9 @@ impl SegmentList {
     #[inline]
     pub fn insert_segment(&mut self, seq: u32, len: u16) -> Option<isize> {
         let mut idx = self.head;
-        println!("Insert segment for seq {} len {}", seq, len);
+        //println!("Insert segment for seq {} len {}", seq, len);
         if idx == -1 {
-            println!("Inserting head");
+            //println!("Inserting head");
             // Special case the first insertion.
             idx = self.insert_before_node(-1, seq, len);
             self.head = idx;
@@ -190,24 +190,24 @@ impl SegmentList {
                 let seg_seq = self.storage[idx as usize].seq;
                 let seg_len = self.storage[idx as usize].length;
                 let seg_end = seg_seq.wrapping_add(seg_len as u32);
-                println!("Considering segment: seq {} end {} seg_seq {} seg_end {} head {} idx {}",
-                         seq,
-                         end,
-                         seg_seq,
-                         seg_end,
-                         self.head,
-                         idx);
+                //println!("Considering segment: seq {} end {} seg_seq {} seg_end {} head {} idx {}",
+                         //seq,
+                         //end,
+                         //seg_seq,
+                         //seg_end,
+                         //self.head,
+                         //idx);
                 if seg_end == seq {
-                    println!("Adjusting segment");
+                    //println!("Adjusting segment");
                     // We can just add to the current segment.
                     // We do not let lengths exceed 2^16 - 1.
                     let new_len = seg_len as usize + len as usize;
                     if new_len <= u16::MAX as usize {
-                        println!("No overflow, upping len to {}", new_len);
+                        //println!("No overflow, upping len to {}", new_len);
                         // No overflow.
                         self.storage[idx as usize].length = new_len as u16;
                     } else {
-                        println!("OVERFLOW adding another segment");
+                        //println!("OVERFLOW adding another segment");
                         // Overflow.
                         // Compute how much can be safely added.
                         // We can only add bytes to get to u16::MAX.
@@ -220,12 +220,12 @@ impl SegmentList {
                     }
                     break;
                 } else if seg_seq >= end {
-                    println!("Adding before");
+                    //println!("Adding before");
                     // We are on to segments that are further down, insert
                     idx = self.insert_before_node(idx, seq, len);
                     break;
                 } else if self.storage[idx as usize].seq <= seq {
-                    println!("Overlapping");
+                    //println!("Overlapping");
                     // Overlapping segment
                     let new_end = max(seg_end, end);
                     self.storage[idx as usize].length = (new_end - self.storage[idx as usize].seq) as u16;
