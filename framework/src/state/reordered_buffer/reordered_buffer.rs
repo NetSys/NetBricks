@@ -1,4 +1,4 @@
-use utils::RingBuffer;
+use state::RingBuffer;
 use std::cmp::{max, min};
 use std::u16;
 
