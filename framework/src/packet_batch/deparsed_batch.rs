@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 use super::act::Act;
 use super::Batch;
-use super::HeaderOperations;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use io::PortQueue;
 use headers::EndOffset;

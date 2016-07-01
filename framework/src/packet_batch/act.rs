@@ -1,11 +1,10 @@
 use io::PortQueue;
 use io::Result;
-use super::Batch;
 use utils::SpscProducer;
 pub trait Act {
-    fn parent(&mut self) -> &mut Batch;
+    fn parent(&mut self) -> &mut Act;
 
-    fn parent_immutable(&self) -> &Batch;
+    fn parent_immutable(&self) -> &Act;
 
     /// Actually perform whatever needs to be done by this processing node.
     #[inline]

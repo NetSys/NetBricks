@@ -57,7 +57,7 @@ impl EndOffset for IpHeader {
     }
 
     #[inline]
-    fn check_correct(&self, prev: &MacHeader) -> bool {
+    fn check_correct(&self, _prev: &MacHeader) -> bool {
         true
     }
 }

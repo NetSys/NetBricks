@@ -5,6 +5,7 @@ use super::act::Act;
 use super::Batch;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use std::any::Any;
+use headers::NullHeader;
 
 /// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
 /// receiving packets from DPDK, allocations, etc. As a result many of the actions implemented in other types of batches
@@ -349,12 +350,12 @@ impl BatchIterator for PacketBatch {
 /// Internal interface for packets.
 impl Act for PacketBatch {
     #[inline]
-    fn parent(&mut self) -> &mut Batch {
+    fn parent(&mut self) -> &mut Act {
         self
     }
 
     #[inline]
-    fn parent_immutable(&self) -> &Batch {
+    fn parent_immutable(&self) -> &Act {
         self
     }
 
@@ -410,7 +411,10 @@ impl Act for PacketBatch {
     }
 }
 
-impl Batch for PacketBatch {}
+impl Batch for PacketBatch 
+{
+    type Header = NullHeader;
+}
 
 impl Drop for PacketBatch {
     fn drop(&mut self) {

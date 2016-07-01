@@ -23,5 +23,5 @@ pub trait EndOffset: Send {
     /// explicit length field.
     fn payload_size(&self, hint: usize) -> usize;
 
-    fn check_correct(&self, prev: &PreviousHeader) -> bool;
+    fn check_correct(&self, prev: &Self::PreviousHeader) -> bool;
 }

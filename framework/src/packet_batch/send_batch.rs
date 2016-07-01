@@ -5,6 +5,7 @@ use super::Batch;
 use super::iterator::*;
 use std::any::Any;
 use scheduler::Executable;
+use headers::NullHeader;
 
 // FIXME: Should we be handling multiple queues and ports here?
 // FIXME: Should this really even be a batch?
@@ -28,7 +29,10 @@ impl<V> SendBatch<V>
     }
 }
 
-impl<V> Batch for SendBatch<V> where V: Batch + BatchIterator + Act {}
+impl<V> Batch for SendBatch<V> where V: Batch + BatchIterator + Act 
+{
+    type Header = NullHeader;
+}
 
 impl<V> BatchIterator for SendBatch<V>
     where V: Batch + BatchIterator + Act
@@ -59,12 +63,12 @@ impl<V> Act for SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn parent(&mut self) -> &mut Batch {
+    fn parent(&mut self) -> &mut Act {
         &mut self.parent
     }
 
     #[inline]
-    fn parent_immutable(&self) -> &Batch {
+    fn parent_immutable(&self) -> &Act {
         &self.parent
     }
     #[inline]

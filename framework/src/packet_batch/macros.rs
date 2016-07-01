@@ -19,10 +19,6 @@ macro_rules! batch_no_new {
     ($name : ident) => {
         impl<T, V> Batch for $name<T, V>
             where T: EndOffset,
-            V:Batch + BatchIterator + Act {}
-
-        impl<T, V> HeaderOperations for $name<T, V>
-            where T: EndOffset,
             V:Batch + BatchIterator + Act {
             type Header = T;
         }
@@ -35,12 +31,12 @@ macro_rules! batch_no_new {
 macro_rules! act {
     () => {
         #[inline]
-        fn parent(&mut self) -> &mut Batch{
+        fn parent(&mut self) -> &mut Act {
             &mut self.parent
         }
 
         #[inline]
-        fn parent_immutable(&self) -> &Batch {
+        fn parent_immutable(&self) -> &Act {
             &self.parent
         }
         #[inline]

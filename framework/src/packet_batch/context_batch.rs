@@ -2,7 +2,6 @@ use io::PortQueue;
 use io::Result;
 use super::act::Act;
 use super::Batch;
-use super::HeaderOperations;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use std::default::Default;
 use std::any::Any;
@@ -34,27 +33,20 @@ impl<T, V> Batch for ContextBatch<T, V>
     where T: 'static + Any + Default + Clone + Sized + Send,
           V: Batch + BatchIterator + Act
 {
-}
-
-impl<T, V> HeaderOperations for ContextBatch<T, V>
-    where T: 'static + Any + Default + Clone + Sized + Send,
-          V: Batch + BatchIterator + Act + HeaderOperations
-{
     type Header = V::Header;
 }
-
 
 impl<T, V> Act for ContextBatch<T, V>
     where T: 'static + Any + Default + Clone + Sized + Send,
           V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn parent(&mut self) -> &mut Batch {
+    fn parent(&mut self) -> &mut Act {
         &mut self.parent
     }
 
     #[inline]
-    fn parent_immutable(&self) -> &Batch {
+    fn parent_immutable(&self) -> &Act {
         &self.parent
     }
     #[inline]

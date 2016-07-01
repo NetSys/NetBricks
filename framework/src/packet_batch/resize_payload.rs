@@ -1,7 +1,6 @@
 use super::iterator::*;
 use super::act::Act;
 use super::Batch;
-use super::HeaderOperations;
 use io::PortQueue;
 use headers::EndOffset;
 use io::Result;
@@ -44,12 +43,12 @@ impl<T, V> Act for ResizePayload<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn parent(&mut self) -> &mut Batch {
+    fn parent(&mut self) -> &mut Act {
         &mut self.parent
     }
 
     #[inline]
-    fn parent_immutable(&self) -> &Batch {
+    fn parent_immutable(&self) -> &Act {
         &self.parent
     }
     #[inline]

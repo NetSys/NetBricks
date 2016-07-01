@@ -5,6 +5,7 @@ use super::Batch;
 use super::iterator::*;
 use std::any::Any;
 use utils::SpscProducer;
+use headers::NullHeader;
 
 // FIXME: Reconsider this choice some day
 /// This is really the same thing as composition except that by accepting a template it is somewhat faster (since we
@@ -24,7 +25,10 @@ impl<V> ResetParsingBatch<V>
     }
 }
 
-impl<V> Batch for ResetParsingBatch<V> where V: Batch + BatchIterator + Act {}
+impl<V> Batch for ResetParsingBatch<V> where V: Batch + BatchIterator + Act 
+{
+    type Header = NullHeader;
+}
 
 impl<V> BatchIterator for ResetParsingBatch<V>
     where V: Batch + BatchIterator + Act

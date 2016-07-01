@@ -1,6 +1,7 @@
 use super::EndOffset;
 use std::fmt;
 use std::default::Default;
+use headers::IpHeader;
 
 /// UDP header using SSE
 // #[repr(C, packed)]
@@ -42,7 +43,7 @@ impl EndOffset for UdpHeader {
     }
 
     #[inline]
-    fn check_correct(&self, prev: &IpHeader) -> bool {
+    fn check_correct(&self, _prev: &IpHeader) -> bool {
         true
     }
 }

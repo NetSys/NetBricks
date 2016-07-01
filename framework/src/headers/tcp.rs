@@ -79,7 +79,7 @@ impl EndOffset for TcpHeader {
     }
 
     #[inline]
-    fn check_correct(&self, prev: &IpHeader) -> bool {
+    fn check_correct(&self, _prev: &IpHeader) -> bool {
         true
     }
 }

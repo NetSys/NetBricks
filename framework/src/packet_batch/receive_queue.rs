@@ -7,6 +7,7 @@ use super::iterator::*;
 use std::any::Any;
 use utils::SpscConsumer;
 use std::marker::PhantomData;
+use headers::NullHeader;
 
 // FIXME: Should we be handling multiple queues and ports here?
 pub struct ReceiveQueue<S>
@@ -51,7 +52,10 @@ impl<S> ReceiveQueue<S>
     }
 }
 
-impl<S> Batch for ReceiveQueue<S> where S: 'static + Any + Default + Clone + Sized + Send {}
+impl<S> Batch for ReceiveQueue<S> where S: 'static + Any + Default + Clone + Sized + Send 
+{
+    type Header = NullHeader;
+}
 
 impl<S> BatchIterator for ReceiveQueue<S>
     where S: 'static + Any + Default + Clone + Sized + Send
@@ -94,12 +98,12 @@ impl<S> Act for ReceiveQueue<S>
     where S: 'static + Any + Default + Clone + Sized + Send
 {
     #[inline]
-    fn parent(&mut self) -> &mut Batch {
+    fn parent(&mut self) -> &mut Act {
         &mut self.parent
     }
 
     #[inline]
-    fn parent_immutable(&self) -> &Batch {
+    fn parent_immutable(&self) -> &Act {
         &self.parent
     }
 

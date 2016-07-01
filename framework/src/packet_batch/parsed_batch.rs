@@ -4,7 +4,6 @@ use io::Result;
 use std::marker::PhantomData;
 use super::act::Act;
 use super::Batch;
-use super::HeaderOperations;
 use super::iterator::*;
 use super::packet_batch::cast_from_u8;
 use std::any::Any;

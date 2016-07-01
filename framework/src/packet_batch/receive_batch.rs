@@ -5,6 +5,7 @@ use super::Batch;
 use super::packet_batch::PacketBatch;
 use super::iterator::*;
 use std::any::Any;
+use headers::NullHeader;
 
 // FIXME: Should we be handling multiple queues and ports here?
 pub struct ReceiveBatch {
@@ -32,7 +33,10 @@ impl ReceiveBatch {
     }
 }
 
-impl Batch for ReceiveBatch {}
+impl Batch for ReceiveBatch
+{
+    type Header = NullHeader;
+}
 
 impl BatchIterator for ReceiveBatch {
     #[inline]
@@ -62,12 +66,12 @@ impl BatchIterator for ReceiveBatch {
 /// Internal interface for packets.
 impl Act for ReceiveBatch {
     #[inline]
-    fn parent(&mut self) -> &mut Batch {
+    fn parent(&mut self) -> &mut Act {
         &mut self.parent
     }
 
     #[inline]
-    fn parent_immutable(&self) -> &Batch {
+    fn parent_immutable(&self) -> &Act {
         &self.parent
     }
     #[inline]

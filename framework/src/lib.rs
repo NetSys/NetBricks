@@ -3,6 +3,7 @@
 #![feature(log_syntax)]
 #![feature(box_syntax)]
 #![feature(type_macros)]
+#![feature(specialization)]
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 // Need this since PMD port construction triggers too many arguments.
 #![cfg_attr(feature = "dev", allow(too_many_arguments))]

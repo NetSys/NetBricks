@@ -6,6 +6,7 @@ use super::iterator::{BatchIterator, PacketDescriptor};
 use std::cmp;
 use std::any::Any;
 use scheduler::Executable;
+use headers::NullHeader;
 
 pub struct MergeBatch<V>
     where V: Batch + BatchIterator + Act
@@ -25,7 +26,10 @@ impl<V> MergeBatch<V>
     }
 }
 
-impl<V> Batch for MergeBatch<V> where V: Batch + BatchIterator + Act {}
+impl<V> Batch for MergeBatch<V> where V: Batch + BatchIterator + Act 
+{
+    type Header = NullHeader;
+}
 
 impl<V> BatchIterator for MergeBatch<V>
     where V: Batch + BatchIterator + Act
@@ -59,12 +63,12 @@ impl<V> Act for MergeBatch<V>
     where V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn parent(&mut self) -> &mut Batch {
+    fn parent(&mut self) -> &mut Act {
         &mut self.parents[self.which]
     }
 
     #[inline]
-    fn parent_immutable(&self) -> &Batch {
+    fn parent_immutable(&self) -> &Act {
         &self.parents[self.which]
     }
     #[inline]

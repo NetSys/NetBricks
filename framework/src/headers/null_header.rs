@@ -28,7 +28,7 @@ impl EndOffset for NullHeader {
     }
 
     #[inline]
-    fn check_correct(&self, prev: &NullHeader) -> bool {
+    fn check_correct(&self, _ : &NullHeader) -> bool {
         true
     }
 }

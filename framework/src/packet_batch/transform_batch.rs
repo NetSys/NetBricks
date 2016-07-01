@@ -4,7 +4,6 @@ use io::Result;
 use super::iterator::*;
 use super::act::Act;
 use super::Batch;
-use super::HeaderOperations;
 use std::any::Any;
 use std::marker::PhantomData;
 
@@ -36,12 +35,6 @@ impl<T, V> Batch for TransformBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator + Act
 {
-}
-
-impl<T, V> HeaderOperations for TransformBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
-{
     type Header = T;
 }
 
@@ -50,12 +43,12 @@ impl<T, V> Act for TransformBatch<T, V>
           V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn parent(&mut self) -> &mut Batch {
+    fn parent(&mut self) -> &mut Act {
         &mut self.parent
     }
 
     #[inline]
-    fn parent_immutable(&self) -> &Batch {
+    fn parent_immutable(&self) -> &Act {
         &self.parent
     }
 

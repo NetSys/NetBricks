@@ -60,8 +60,16 @@ pub fn merge<V>(batches: Vec<V>) -> MergeBatch<V>
 /// places where a Batch type is required. We declare batches as sendable, they cannot be copied but we allow it to be
 /// sent to another thread.
 pub trait Batch: BatchIterator + Act + Send {
+    type Header: EndOffset;
+
+    fn as_act(&self) -> &Act 
+        where Self:Sized
+    {
+        self as &Act
+    }
+
     /// Parse the payload as header of type.
-    default fn parse<T: EndOffset<PreviousHeader = NullHeader>>(self) -> ParsedBatch<T, Self>
+    fn parse<T: EndOffset<PreviousHeader = Self::Header>>(self) -> ParsedBatch<T, Self>
         where Self: Sized
     {
         ParsedBatch::<T, Self>::new(self)
@@ -80,7 +88,7 @@ pub trait Batch: BatchIterator + Act + Send {
     /// # Warning
     /// This causes some performance degradation: operations called through composition batches rely on indirect calls
     /// which affect throughput.
-    fn compose(self) -> CompositionBatch
+    fn compose(self) -> CompositionBatch<Self::Header>
         where Self: Sized + 'static
     {
         CompositionBatch::new(box self)
@@ -93,23 +101,14 @@ pub trait Batch: BatchIterator + Act + Send {
     {
         ContextBatch::<T, Self>::new(self)
     }
-}
-
-/// Public interface implemented by packet batches which manipulate headers.
-pub trait HeaderOperations: Batch + Sized {
-    type Header: EndOffset;
-    fn parse<T: EndOffset<PreviousHeader = Header>>(self) -> ParsedBatch<T, Self>
-        where Self: Sized
-    {
-        ParsedBatch::<T, Self>::new(self)
-    }
-
 
     /// Transform a header field.
     fn transform<Op: FnMut(&mut Self::Header, &mut [u8], Option<&mut Any>) + Send + 'static>
         (self,
          transformer: Op)
-         -> TransformBatch<Self::Header, Self> {
+         -> TransformBatch<Self::Header, Self>
+         where Self: Sized
+    {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }
 
@@ -117,17 +116,23 @@ pub trait HeaderOperations: Batch + Sized {
     /// provides some optimization opportunities not otherwise available.
     fn map<Op: FnMut(&Self::Header, &[u8], Option<&mut Any>) + Send + 'static>(self,
                                                                                transformer: Op)
-                                                                               -> MapBatch<Self::Header, Self> {
+                                                                               -> MapBatch<Self::Header, Self>
+        where Self: Sized
+    {
         MapBatch::<Self::Header, Self>::new(self, transformer)
     }
 
     /// Rewrite the entire header.
-    fn replace(self, template: Self::Header) -> ReplaceBatch<Self::Header, Self> {
+    fn replace(self, template: Self::Header) -> ReplaceBatch<Self::Header, Self>
+        where Self: Sized,
+    {
         ReplaceBatch::<Self::Header, Self>::new(self, template)
     }
 
     /// Filter out packets, any packets for which `filter_f` returns false are dropped from the batch.
-    fn filter(self, filter_f: FilterFn<Self::Header>) -> FilterBatch<Self::Header, Self> {
+    fn filter(self, filter_f: FilterFn<Self::Header>) -> FilterBatch<Self::Header, Self>
+        where Self: Sized
+    {
         FilterBatch::<Self::Header, Self>::new(self, filter_f)
     }
 
@@ -146,7 +151,9 @@ pub trait HeaderOperations: Batch + Sized {
         DeparsedBatch::<T, Self>::new(self)
     }
 
-    fn resize(self, resize_f: ResizeFn<Self::Header>) -> ResizePayload<Self::Header, Self> {
+    fn resize(self, resize_f: ResizeFn<Self::Header>) -> ResizePayload<Self::Header, Self>
+        where Self:Sized
+    {
         ResizePayload::<Self::Header, Self>::new(self, resize_f)
     }
 

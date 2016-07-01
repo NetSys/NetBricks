@@ -5,23 +5,33 @@ use io::PortQueue;
 use io::Result;
 use std::any::Any;
 use scheduler::Executable;
+use headers::EndOffset;
+use headers::NullHeader;
 
 /// `CompositionBatch` allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
 /// can treat packets as originating from the NF itself.
-pub struct CompositionBatch {
-    parent: Box<Batch>,
+pub struct CompositionBatch<T: EndOffset> {
+    parent: Box<Batch<Header = T>>,
 }
 
-impl CompositionBatch {
-    pub fn new(parent: Box<Batch>) -> CompositionBatch {
+impl<T> CompositionBatch<T> 
+    where T: EndOffset
+{
+    pub fn new(parent: Box<Batch<Header = T>>) -> CompositionBatch<T> {
         CompositionBatch { parent: parent }
 
     }
 }
 
-impl Batch for CompositionBatch {}
+impl<T> Batch for CompositionBatch<T> 
+    where T: EndOffset
+{
+    type Header = NullHeader;
+}
 
-impl BatchIterator for CompositionBatch {
+impl<T> BatchIterator for CompositionBatch<T>
+    where T: EndOffset
+{
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
@@ -44,15 +54,17 @@ impl BatchIterator for CompositionBatch {
 }
 
 /// Internal interface for packets.
-impl Act for CompositionBatch {
+impl<T> Act for CompositionBatch<T> 
+    where T: EndOffset
+{
     #[inline]
-    fn parent(&mut self) -> &mut Batch {
-        &mut *self.parent
+    fn parent(&mut self) -> &mut Act {
+        panic!("Cannot use parent to work through CompositionBatch")
     }
 
     #[inline]
-    fn parent_immutable(&self) -> &Batch {
-        &*self.parent
+    fn parent_immutable(&self) -> &Act {
+        panic!("Cannot use parent to work through CompositionBatch")
     }
 
     #[inline]
@@ -91,7 +103,9 @@ impl Act for CompositionBatch {
     }
 }
 
-impl Executable for CompositionBatch {
+impl<T> Executable for CompositionBatch<T>
+    where T: EndOffset
+{
     #[inline]
     fn execute(&mut self) {
         self.act();
