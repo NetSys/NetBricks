@@ -35,6 +35,10 @@ rust_build_static() {
     if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
         git clone https://github.com/rust-lang/rust.git \
             ${RUST_DOWNLOAD_PATH}
+    else
+        pushd ${RUST_DOWNLOAD_PATH}
+        git pull
+        popd
     fi
     pushd ${RUST_DOWNLOAD_PATH}
     ./configure --target=x86_64-unknown-linux-musl \
@@ -237,6 +241,9 @@ case $TASK in
         pushd $BASE_DIR/framework
         ${CARGO} test --release
         popd
+        ;;
+    update_rust)
+        rust
         ;;
     fmt)
         deps

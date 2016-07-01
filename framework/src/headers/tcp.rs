@@ -350,13 +350,11 @@ impl TcpHeader {
         u16::from_be(self.csum)
     }
 
-    // FIXME: Validate checksum
+    // FIXME: Validate checksum and update checksum
 
     pub fn set_checksum(&mut self, csum: u16) {
         self.csum = u16::to_be(csum)
     }
-
-    // FIXME: Recompute checksum
 
     /// Urgent pointer
     pub fn urgent(&self) -> u16 {
