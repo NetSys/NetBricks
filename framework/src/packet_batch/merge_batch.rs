@@ -26,7 +26,8 @@ impl<V> MergeBatch<V>
     }
 }
 
-impl<V> Batch for MergeBatch<V> where V: Batch + BatchIterator + Act 
+impl<V> Batch for MergeBatch<V>
+    where V: Batch + BatchIterator + Act
 {
     type Header = NullHeader;
 }

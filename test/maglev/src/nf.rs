@@ -82,8 +82,10 @@ impl Maglev {
 
 #[derive(Default, Clone)]
 struct Empty;
-pub fn maglev<T: 'static + Batch<Header=NullHeader>>(parent: T, s: &mut Scheduler, backends: &[&str]) ->
-        CompositionBatch<NullHeader> {
+pub fn maglev<T: 'static + Batch<Header = NullHeader>>(parent: T,
+                                                       s: &mut Scheduler,
+                                                       backends: &[&str])
+                                                       -> CompositionBatch<NullHeader> {
     let ct = backends.len();
     let lut = Maglev::new(backends, 65537);
     let mut cache = HashMap::<usize, usize, FnvHash>::with_hasher(Default::default());

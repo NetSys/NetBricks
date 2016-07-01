@@ -57,7 +57,7 @@ const HDR_SIZE_802_1Q: usize = HDR_SIZE + 4;
 const HDR_SIZE_802_1AD: usize = HDR_SIZE_802_1Q + 4;
 
 impl EndOffset for MacHeader {
-    type PreviousHeader = NullHeader; 
+    type PreviousHeader = NullHeader;
     #[inline]
     fn offset(&self) -> usize {
         if cfg!(feature = "performance") {
@@ -82,7 +82,7 @@ impl EndOffset for MacHeader {
     }
 
     #[inline]
-    fn check_correct(&self, _ : &NullHeader) -> bool {
+    fn check_correct(&self, _: &NullHeader) -> bool {
         true
     }
 }

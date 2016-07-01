@@ -61,7 +61,7 @@ impl fmt::Display for TcpHeader {
 }
 
 impl EndOffset for TcpHeader {
-    type PreviousHeader = IpHeader; 
+    type PreviousHeader = IpHeader;
 
     #[inline]
     fn offset(&self) -> usize {

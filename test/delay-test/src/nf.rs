@@ -22,7 +22,9 @@ fn delay_loop(delay: u64) {
     }
 }
 
-pub fn delay<T: 'static + Batch<Header=NullHeader>>(parent: T, delay: u64) -> TransformBatch<MacHeader, ParsedBatch<MacHeader, T>> {
+pub fn delay<T: 'static + Batch<Header = NullHeader>>(parent: T,
+                                                      delay: u64)
+                                                      -> TransformBatch<MacHeader, ParsedBatch<MacHeader, T>> {
     parent.parse::<MacHeader>()
           .transform(move |hdr: &mut MacHeader, _: &mut [u8], _: Option<&mut Any>| {
               let src = hdr.src.clone();

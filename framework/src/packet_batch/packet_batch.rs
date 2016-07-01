@@ -411,8 +411,7 @@ impl Act for PacketBatch {
     }
 }
 
-impl Batch for PacketBatch 
-{
+impl Batch for PacketBatch {
     type Header = NullHeader;
 }
 

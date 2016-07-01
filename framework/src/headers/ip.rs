@@ -35,7 +35,7 @@ impl fmt::Display for IpHeader {
 
 
 impl EndOffset for IpHeader {
-    type PreviousHeader = MacHeader; 
+    type PreviousHeader = MacHeader;
     #[inline]
     fn offset(&self) -> usize {
         if cfg!(feature = "performance") {

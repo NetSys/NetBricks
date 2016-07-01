@@ -25,7 +25,8 @@ impl<V> ResetParsingBatch<V>
     }
 }
 
-impl<V> Batch for ResetParsingBatch<V> where V: Batch + BatchIterator + Act 
+impl<V> Batch for ResetParsingBatch<V>
+    where V: Batch + BatchIterator + Act
 {
     type Header = NullHeader;
 }

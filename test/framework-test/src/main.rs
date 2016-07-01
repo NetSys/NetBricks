@@ -19,8 +19,9 @@ use std::sync::Arc;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn monitor<T: 'static + Batch<Header=NullHeader>>(parent: T, mut monitoring_cache: MergeableStoreDP<isize>) -> 
-        CompositionBatch<IpHeader> {
+fn monitor<T: 'static + Batch<Header = NullHeader>>(parent: T,
+                                                    mut monitoring_cache: MergeableStoreDP<isize>)
+                                                    -> CompositionBatch<IpHeader> {
     parent.parse::<MacHeader>()
           .transform(move |hdr: &mut MacHeader, payload: &mut [u8], _: Option<&mut Any>| {
               // No one else should be writing to this, so I think relaxed is safe here.

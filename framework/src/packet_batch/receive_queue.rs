@@ -52,7 +52,8 @@ impl<S> ReceiveQueue<S>
     }
 }
 
-impl<S> Batch for ReceiveQueue<S> where S: 'static + Any + Default + Clone + Sized + Send 
+impl<S> Batch for ReceiveQueue<S>
+    where S: 'static + Any + Default + Clone + Sized + Send
 {
     type Header = NullHeader;
 }

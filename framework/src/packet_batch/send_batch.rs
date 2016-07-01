@@ -29,7 +29,8 @@ impl<V> SendBatch<V>
     }
 }
 
-impl<V> Batch for SendBatch<V> where V: Batch + BatchIterator + Act 
+impl<V> Batch for SendBatch<V>
+    where V: Batch + BatchIterator + Act
 {
     type Header = NullHeader;
 }

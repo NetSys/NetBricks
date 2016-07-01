@@ -33,8 +33,7 @@ impl ReceiveBatch {
     }
 }
 
-impl Batch for ReceiveBatch
-{
+impl Batch for ReceiveBatch {
     type Header = NullHeader;
 }
 

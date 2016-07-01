@@ -12,7 +12,7 @@ impl fmt::Display for NullHeader {
 }
 
 impl EndOffset for NullHeader {
-    type PreviousHeader = NullHeader; 
+    type PreviousHeader = NullHeader;
 
     #[inline]
     fn offset(&self) -> usize {
@@ -28,7 +28,7 @@ impl EndOffset for NullHeader {
     }
 
     #[inline]
-    fn check_correct(&self, _ : &NullHeader) -> bool {
+    fn check_correct(&self, _: &NullHeader) -> bool {
         true
     }
 }

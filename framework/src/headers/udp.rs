@@ -26,7 +26,7 @@ impl fmt::Display for UdpHeader {
 }
 
 impl EndOffset for UdpHeader {
-    type PreviousHeader = IpHeader; 
+    type PreviousHeader = IpHeader;
     #[inline]
     fn offset(&self) -> usize {
         8 // 8 bytes

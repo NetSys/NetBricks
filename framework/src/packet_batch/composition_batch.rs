@@ -14,7 +14,7 @@ pub struct CompositionBatch<T: EndOffset> {
     parent: Box<Batch<Header = T>>,
 }
 
-impl<T> CompositionBatch<T> 
+impl<T> CompositionBatch<T>
     where T: EndOffset
 {
     pub fn new(parent: Box<Batch<Header = T>>) -> CompositionBatch<T> {
@@ -23,7 +23,7 @@ impl<T> CompositionBatch<T>
     }
 }
 
-impl<T> Batch for CompositionBatch<T> 
+impl<T> Batch for CompositionBatch<T>
     where T: EndOffset
 {
     type Header = NullHeader;
@@ -54,7 +54,7 @@ impl<T> BatchIterator for CompositionBatch<T>
 }
 
 /// Internal interface for packets.
-impl<T> Act for CompositionBatch<T> 
+impl<T> Act for CompositionBatch<T>
     where T: EndOffset
 {
     #[inline]

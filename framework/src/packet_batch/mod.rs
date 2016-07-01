@@ -62,8 +62,8 @@ pub fn merge<V>(batches: Vec<V>) -> MergeBatch<V>
 pub trait Batch: BatchIterator + Act + Send {
     type Header: EndOffset;
 
-    fn as_act(&self) -> &Act 
-        where Self:Sized
+    fn as_act(&self) -> &Act
+        where Self: Sized
     {
         self as &Act
     }
@@ -107,7 +107,7 @@ pub trait Batch: BatchIterator + Act + Send {
         (self,
          transformer: Op)
          -> TransformBatch<Self::Header, Self>
-         where Self: Sized
+        where Self: Sized
     {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }
@@ -124,7 +124,7 @@ pub trait Batch: BatchIterator + Act + Send {
 
     /// Rewrite the entire header.
     fn replace(self, template: Self::Header) -> ReplaceBatch<Self::Header, Self>
-        where Self: Sized,
+        where Self: Sized
     {
         ReplaceBatch::<Self::Header, Self>::new(self, template)
     }
@@ -152,7 +152,7 @@ pub trait Batch: BatchIterator + Act + Send {
     }
 
     fn resize(self, resize_f: ResizeFn<Self::Header>) -> ResizePayload<Self::Header, Self>
-        where Self:Sized
+        where Self: Sized
     {
         ResizePayload::<Self::Header, Self>::new(self, resize_f)
     }
