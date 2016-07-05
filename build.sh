@@ -75,6 +75,15 @@ rust () {
     fi
     cp ${SCRIPTS_DIR}/rust*.sh ${BIN_DIR}/
 }
+
+toggle_symbols () {
+    if [ ! -z ${NETBRICKS_SYMBOLS} ]; then
+        find ${BASE_DIR}/test -name Cargo.toml -exec sed -i 's/debug = false/debug = true/g' {} \;
+    else
+        find ${BASE_DIR}/test -name Cargo.toml -exec sed -i 's/debug = true/debug = false/g' {} \;
+    fi
+}
+
 UNWIND_BUILD="${TOOLS_BASE}"/libunwind
 
 deps () {
@@ -181,8 +190,17 @@ case $TASK in
     deps)
         deps
         ;;
+    enable_symbols)
+        export NETBRICKS_SYMBOLS=1
+        toggle_symbols
+        ;;
+    disable_symbols)
+        unset NETBRICKS_SYMBOLS || true
+        toggle_symbols
+        ;;
     build)
         deps
+        toggle_symbols
 
         make -j $proc -C $BASE_DIR/native
 
