@@ -14,8 +14,8 @@ fi
 if [ ! -e ${TOOLS_BASE} ]; then
     mkdir -p ${TOOLS_BASE}
 fi
-
-DPDK="$BASE_DIR/3rdparty/dpdk/build/lib/libdpdk.a"
+DPDK_HOME="${BASE_DIR}/3rdparty/dpdk"
+DPDK="${DPDK_HOME}/build/lib/libdpdk.a"
 
 CARGO="${TOOLS_BASE}/bin/cargo"
 CARGO_HOME="${TOOLS_BASE}/cargo"
@@ -24,22 +24,29 @@ MUSL_DOWNLOAD_PATH="${DOWNLOAD_DIR}/musl.tar.gz"
 MUSL_RESULT="${EXT_BASE}/musl"
 MUSL_TEST="${TOOLS_BASE}/lib/libc.a"
 
-RUST_TEST="${TOOLS_BASE}/bin/rustc.sh"
+RUST_TEST="${TOOLS_BASE}/bin/rustc"
 RUST_DOWNLOAD_PATH="${EXT_BASE}/rust"
 
 LLVM_DOWNLOAD_PATH="${DOWNLOAD_DIR}/llvm.tar.gz"
 LLVM_RESULT="${EXT_BASE}/llvm"
 UNWIND_RESULT="${TOOLS_BASE}/lib/libunwind.a"
-UNWIND_BUILD="${TOOLS_BASE}"/libunwind
 
-deps () {
-    # Build DPDK
-    if [ ! -e $DPDK ]; then
-        dpdk
-    else
-        echo "DPDK found not building"
+rust_build_static() {
+    if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
+        git clone https://github.com/rust-lang/rust.git \
+            ${RUST_DOWNLOAD_PATH}
     fi
+    pushd ${RUST_DOWNLOAD_PATH}
+    ./configure --target=x86_64-unknown-linux-musl \
+        --musl-root=${TOOLS_BASE} --prefix=${TOOLS_BASE} \
+        --enable-optimize --disable-valgrind \
+        --disable-docs
+    popd
+    make -j -C ${RUST_DOWNLOAD_PATH}
+    make -j -C ${RUST_DOWNLOAD_PATH} install
+}
 
+rust_static() {
     if [ ! -e ${MUSL_TEST} ]; then
         musl
     else
@@ -53,10 +60,32 @@ deps () {
     fi
 
     if [ ! -e ${RUST_TEST} ]; then
-        rust
+        rust_build_static
     else
         echo "Rust found not building"
     fi
+}
+
+rust () {
+    if [ ! -z ${RUST_STATIC} ]; then
+        rust_static
+    fi
+    if [ ! -d ${BIN_DIR} ]; then
+        mkdir -p ${BIN_DIR}
+    fi
+    cp ${SCRIPTS_DIR}/rust*.sh ${BIN_DIR}/
+}
+UNWIND_BUILD="${TOOLS_BASE}"/libunwind
+
+deps () {
+    # Build DPDK
+    if [ ! -e $DPDK ]; then
+        dpdk
+    else
+        echo "DPDK found not building"
+    fi
+
+    rust
 
     if [ ! -e $CARGO ]; then
         cargo
@@ -67,26 +96,13 @@ deps () {
 
 clean_deps() {
     echo "Cleaning dependencies"
-    echo "Clean Cargo"
-    make -C ${CARGO_HOME} clean
-    echo "Clean native"
-    make -C $BASE_DIR/native clean || true
-
-    echo "Remove Rust"
-    make -C ${RUST_DOWNLOAD_PATH} uninstall
-    make -C ${RUST_DOWNLOAD_PATH} clean
-    rm -rf ${RUST_DOWNLOAD_PATH}
-    rm ${BIN_DIR}/rust*.sh
-
-    echo "Remove libunwind"
-    rm ${TOOLS_BASE}/lib/libunwind.a
-    rm -rf ${UNWIND_BUILD}
-
-    echo "Remove DPDK"
-    rm $BASE_DIR/3rdparty/dpdk.tar.gz || true
-    rm -rf $BASE_DIR/3rdparty/dpdk || true
-
-    echo "Cleaned deps"
+    rm -rf ${BIN_DIR} || true
+    rm -rf ${DOWNLOAD_DIR} || true
+    rm -rf ${TOOLS_BASE} || true
+    rm -rf ${LLVM_RESULT} || true
+    rm -rf ${MUSL_RESULT} || true
+    rm -rf ${DPDK_HOME} || true 
+    echo "Cleaned DEPS"
 }
 
 dpdk () {
@@ -108,8 +124,13 @@ cargo () {
             $CARGO_HOME/src/rust-installer
     fi
     pushd $CARGO_HOME
-    ./configure --prefix=${TOOLS_BASE} \
-        --local-rust-root=${TOOLS_BASE}
+    if [ ! -z ${RUST_STATIC} ]; then
+        echo "Rust static is ${RUST_STATIC}, building with that"
+        ./configure --prefix=${TOOLS_BASE} \
+            --local-rust-root=${TOOLS_BASE}
+    else
+        ./configure --prefix=${TOOLS_BASE}
+    fi
     make -j
     make install
     popd
@@ -148,22 +169,6 @@ libunwind () {
     mkdir -p ${TOOLS_BASE}/lib
     cp lib/libunwind.a ${TOOLS_BASE}/lib
     popd
-}
-
-rust () {
-    if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
-        git clone https://github.com/rust-lang/rust.git \
-            ${RUST_DOWNLOAD_PATH}
-    fi
-    pushd ${RUST_DOWNLOAD_PATH}
-    ./configure --target=x86_64-unknown-linux-musl \
-        --musl-root=${TOOLS_BASE} --prefix=${TOOLS_BASE} \
-        --enable-optimize --disable-valgrind \
-        --disable-docs
-    popd
-    make -j -C ${RUST_DOWNLOAD_PATH}
-    make -j -C ${RUST_DOWNLOAD_PATH} install
-    cp ${SCRIPTS_DIR}/rust*.sh ${BIN_DIR}/
 }
 
 if [ $# -ge 1 ]; then
@@ -295,10 +300,13 @@ case $TASK in
     *)
         echo "./build.sh <Command>
         Where command is one of
+        deps: Build dependencies
         build: Build the project
         doc: Run rustdoc and produce documentation
         fmt: Run rustfmt to format text prettily.
         lint: Run clippy to lint the project
+        clean: Remove all built files
+        dist_clean: Remove all support files
         "
         ;;
 esac

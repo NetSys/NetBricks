@@ -23,7 +23,7 @@ lazy_static = "*"
 opt-level = 3
 lto = true
 rpath = true
-debug = true
+debug = false # We turn debug symbols off because of a bug
 debug-assertions = false
 
 [features]
