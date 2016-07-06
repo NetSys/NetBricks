@@ -88,6 +88,38 @@ toggle_symbols () {
     fi
 }
 
+clean () {
+    pushd $BASE_DIR/framework
+    ${CARGO} clean || true
+    popd
+
+    pushd $BASE_DIR/test/framework-test
+    ${CARGO} clean || true
+    popd
+
+    pushd $BASE_DIR/test/delay-test
+            ${CARGO} clean || true
+            popd
+
+    pushd $BASE_DIR/test/chain-test
+            ${CARGO} clean || true
+            popd
+
+    pushd $BASE_DIR/test/lpm
+            ${CARGO} clean || true
+            popd
+
+    pushd $BASE_DIR/test/nat
+            ${CARGO} clean || true
+            popd
+
+    pushd $BASE_DIR/test/maglev
+            ${CARGO} clean || true
+            popd
+
+    make clean -C ${BASE_DIR}/native 
+}
+
 UNWIND_BUILD="${TOOLS_BASE}"/libunwind
 
 deps () {
@@ -236,6 +268,12 @@ case $TASK in
                 ${CARGO} build --release
                 popd
         ;;
+    build_container)
+        clean
+        clean_deps
+        sudo docker build -f container/dynamic/Dockerfile -t netbricks:latest ${BASE_DIR}
+        echo "Done building container as netbricks:latest"
+        ;;
     test)
         deps
         pushd $BASE_DIR/framework
@@ -291,36 +329,11 @@ case $TASK in
         popd
         ;;
     dist_clean)
+        clean
         clean_deps
         ;;
     clean)
-        pushd $BASE_DIR/framework
-        ${CARGO} clean || true
-        popd
-
-        pushd $BASE_DIR/test/framework-test
-        ${CARGO} clean || true
-        popd
-
-        pushd $BASE_DIR/test/delay-test
-                ${CARGO} clean || true
-                popd
-
-        pushd $BASE_DIR/test/chain-test
-                ${CARGO} clean || true
-                popd
-
-        pushd $BASE_DIR/test/lpm
-                ${CARGO} clean || true
-                popd
-
-        pushd $BASE_DIR/test/nat
-                ${CARGO} clean || true
-                popd
-
-        pushd $BASE_DIR/test/maglev
-                ${CARGO} clean || true
-                popd
+        clean
         ;;
     *)
         echo "./build.sh <Command>
