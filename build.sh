@@ -51,6 +51,7 @@ rust_build_static() {
 }
 
 rust_static() {
+    echo "Running rust_static"
     if [ ! -e ${MUSL_TEST} ]; then
         musl
     else
@@ -71,6 +72,7 @@ rust_static() {
 }
 
 rust () {
+    echo "Building rust"
     if [ ! -z ${RUST_STATIC} ]; then
         rust_static
     fi
