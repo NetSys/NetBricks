@@ -1,10 +1,10 @@
+use common::*;
 use std::marker::PhantomData;
 use super::act::Act;
 use super::Batch;
 use super::iterator::{BatchIterator, PacketDescriptor};
-use io::PortQueue;
+use interface::PortQueue;
 use headers::EndOffset;
-use io::Result;
 use std::any::Any;
 use utils::SpscProducer;
 

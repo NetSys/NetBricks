@@ -1,8 +1,8 @@
+use common::*;
 use super::act::Act;
 use super::Batch;
 use super::iterator::{BatchIterator, PacketDescriptor};
-use io::PortQueue;
-use io::Result;
+use interface::PortQueue;
 use std::any::Any;
 use scheduler::Executable;
 use headers::EndOffset;

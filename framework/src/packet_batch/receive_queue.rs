@@ -1,5 +1,5 @@
-use io::PortQueue;
-use io::Result;
+use common::*;
+use interface::PortQueue;
 use super::act::Act;
 use super::Batch;
 use super::packet_batch::PacketBatch;

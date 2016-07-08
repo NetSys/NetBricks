@@ -20,7 +20,7 @@ use self::filter_batch::FilterFn;
 use self::resize_payload::ResizeFn;
 
 pub use self::reset_parse::ResetParsingBatch;
-use io::*;
+use interface::*;
 use headers::*;
 use scheduler::Scheduler;
 use std::any::*;

@@ -1,6 +1,6 @@
-use io::PortQueue;
+use common::*;
+use interface::PortQueue;
 use headers::EndOffset;
-use io::Result;
 use super::iterator::*;
 use super::act::Act;
 use super::Batch;

@@ -1,6 +1,6 @@
-use io::PortQueue;
-use io::Result;
+use interface::PortQueue;
 use utils::SpscProducer;
+use common::*;
 pub trait Act {
     fn parent(&mut self) -> &mut Act;
 

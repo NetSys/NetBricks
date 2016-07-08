@@ -1,9 +1,9 @@
+use common::*;
 use super::iterator::*;
 use super::act::Act;
 use super::Batch;
-use io::PortQueue;
+use interface::PortQueue;
 use headers::EndOffset;
-use io::Result;
 use std::any::Any;
 
 pub type FilterFn<T> = Box<FnMut(&T, &[u8], Option<&mut Any>) -> bool + Send>;
