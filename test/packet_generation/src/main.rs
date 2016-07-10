@@ -98,6 +98,8 @@ fn main() {
 
     loop {
         let _pkt = new_packet().unwrap().push_header(&mac).unwrap().push_header(&ip).unwrap();
+        assert!(_pkt.refcnt() == 1);
+        //println!("Refcnt {}", _pkt.refcnt());
     }
 
     //const _BATCH: usize = 1 << 10;

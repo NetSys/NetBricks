@@ -7,6 +7,8 @@ use std::default::Default;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
+// FIXME: This needs to be cleaned up to change how metadata is passed, etc.
+
 #[derive(Default)]
 struct QueuePlace {
     // FIXME: Actually don't need separate head and tail for the SPSC case.

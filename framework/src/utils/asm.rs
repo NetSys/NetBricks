@@ -39,3 +39,10 @@ pub fn rdtscp_unsafe() -> u64 {
         ret
     }
 }
+
+#[inline]
+pub fn pause() {
+    unsafe {
+        asm!("pause"::::"volatile");
+    }
+}

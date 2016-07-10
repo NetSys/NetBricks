@@ -98,6 +98,7 @@ impl PacketBatch {
         }
     }
 
+    // FIXME: Delete spsc specialization
     #[inline]
     pub fn recv_spsc_queue(&mut self, queue: &SpscConsumer<u8>, meta: &mut Vec<*mut u8>) -> Result<u32> {
         match self.deallocate_batch() {
@@ -110,6 +111,24 @@ impl PacketBatch {
     fn recv_spsc_internal(&mut self, queue: &SpscConsumer<u8>, meta: &mut Vec<*mut u8>) -> Result<u32> {
         let cnt = self.cnt as usize;
         Ok(queue.dequeue(&mut self.array, meta, cnt) as u32)
+    }
+
+    #[inline]
+    pub fn recv_queue<T: ReceivableQueue>(&mut self, queue: &T) -> Result<u32> {
+        match self.deallocate_batch() {
+            Err(err) => Err(err),
+            Ok(_) => self.recv_queue_internal(queue),
+        }
+    }
+
+    #[inline]
+    fn recv_queue_internal<T: ReceivableQueue>(&mut self, queue: &T) -> Result<u32> {
+        unsafe {
+            self.array.set_len(self.cnt as usize); // Try getting as many mbufs as possible.
+            let received = queue.receive_batch(&mut self.array);
+            self.add_to_batch(received); // Record how many we received
+            Ok(received as u32)
+        }
     }
 
     #[inline]
@@ -374,10 +393,10 @@ impl Act for PacketBatch {
         while self.available() > 0 {
             unsafe {
                 match port.send(self.packet_ptr(), self.available() as i32)
-                          .and_then(|sent| {
-                              self.consumed_batch(sent as usize);
-                              Ok(sent)
-                          }) {
+                    .and_then(|sent| {
+                        self.consumed_batch(sent as usize);
+                        Ok(sent)
+                    }) {
                     Ok(sent) => total_sent += sent,
                     e => return e,
                 }

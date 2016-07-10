@@ -1,32 +1,33 @@
 extern crate e2d2;
 use e2d2::state::*;
+use e2d2::utils::*;
 use std::str;
 use std::u32;
 
 /// Test rounding up to number of pages.
 #[test]
 fn round_pages_test() {
-    assert!(ReorderedBuffer::round_to_pages(1) == 4096, "Rounding up 1 byte did not result in PAGE_SIZE");
-    assert!(ReorderedBuffer::round_to_pages(0) == 0, "Rounding up 0 bytes did not result in 0");
-    assert!(ReorderedBuffer::round_to_pages(8) == 4096, "Rounding up failure, expected 4096, got {}",
-            ReorderedBuffer::round_to_pages(8));
-    assert!(ReorderedBuffer::round_to_pages(512) == 4096, "Rounding up failure, expected 4096, got {}",
-            ReorderedBuffer::round_to_pages(512));
-    assert!(ReorderedBuffer::round_to_pages(4096) == 4096, "Rounding up exactly 1 page failed, expected 4096, got {}",
-                    ReorderedBuffer::round_to_pages(4096));
-    assert!(ReorderedBuffer::round_to_pages(4097) == 8192, "Rounding up > 1 page failed, expected 8192, got {}",
-                    ReorderedBuffer::round_to_pages(4097));
+    assert!(round_to_pages(1) == 4096, "Rounding up 1 byte did not result in PAGE_SIZE");
+    assert!(round_to_pages(0) == 0, "Rounding up 0 bytes did not result in 0");
+    assert!(round_to_pages(8) == 4096, "Rounding up failure, expected 4096, got {}",
+            round_to_pages(8));
+    assert!(round_to_pages(512) == 4096, "Rounding up failure, expected 4096, got {}",
+            round_to_pages(512));
+    assert!(round_to_pages(4096) == 4096, "Rounding up exactly 1 page failed, expected 4096, got {}",
+                    round_to_pages(4096));
+    assert!(round_to_pages(4097) == 8192, "Rounding up > 1 page failed, expected 8192, got {}",
+                    round_to_pages(4097));
 }
 
 /// Test rounding up to power of 2.
 #[test]
 fn round_to_power_of_2_test() {
-    assert!(ReorderedBuffer::round_to_power_of_2(0) == 0, "Rounding to power of 2 failed, expected 0");
-    assert!(ReorderedBuffer::round_to_power_of_2(1) == 1, "Rounding to power of 2 failed, expected 1");
-    assert!(ReorderedBuffer::round_to_power_of_2(2) == 2, "Rounding to power of 2 failed, expected 2");
-    assert!(ReorderedBuffer::round_to_power_of_2(3) == 4, "Rounding to power of 2 failed, expected 4");
-    assert!(ReorderedBuffer::round_to_power_of_2(4) == 4, "Rounding to power of 2 failed, expected 4");
-    assert!(ReorderedBuffer::round_to_power_of_2(5) == 8, "Rounding to power of 2 failed, expected 8");
+    assert!(round_to_power_of_2(0) == 0, "Rounding to power of 2 failed, expected 0");
+    assert!(round_to_power_of_2(1) == 1, "Rounding to power of 2 failed, expected 1");
+    assert!(round_to_power_of_2(2) == 2, "Rounding to power of 2 failed, expected 2");
+    assert!(round_to_power_of_2(3) == 4, "Rounding to power of 2 failed, expected 4");
+    assert!(round_to_power_of_2(4) == 4, "Rounding to power of 2 failed, expected 4");
+    assert!(round_to_power_of_2(5) == 8, "Rounding to power of 2 failed, expected 8");
 }
 
 /// Test that creation proceeds without a hitch.

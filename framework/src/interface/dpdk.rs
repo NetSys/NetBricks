@@ -5,13 +5,13 @@ mod native {
     extern "C" {
         pub fn init_system(name: *const c_char, nlen: i32, core: i32) -> i32;
         pub fn init_system_whitelisted(name: *const c_char,
-                                   nlen: i32,
-                                   core: i32,
-                                   whitelist: *mut *const c_char,
-                                   wlcount: i32,
-                                   pool_size: u32,
-                                   cache_size: u32)
-                                   -> i32;
+                                       nlen: i32,
+                                       core: i32,
+                                       whitelist: *mut *const c_char,
+                                       wlcount: i32,
+                                       pool_size: u32,
+                                       cache_size: u32)
+                                       -> i32;
         pub fn init_thread(tid: i32, core: i32);
         pub fn init_secondary(name: *const c_char,
                               nlen: i32,
@@ -42,12 +42,12 @@ pub fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_s
     let mut whitelist: Vec<_> = pci_cstr.iter().map(|p| p.as_ptr()).collect();
     unsafe {
         let ret = native::init_system_whitelisted(name_cstr.as_ptr(),
-                                                name.len() as i32,
-                                                core,
-                                                whitelist.as_mut_ptr(),
-                                                pci.len() as i32,
-                                                pool_size,
-                                                cache_size);
+                                                  name.len() as i32,
+                                                  core,
+                                                  whitelist.as_mut_ptr(),
+                                                  pci.len() as i32,
+                                                  pool_size,
+                                                  cache_size);
         if ret != 0 {
             panic!("Could not initialize the system errno {}", ret)
         }
@@ -68,10 +68,10 @@ pub fn init_system_secondary(name: &str, core: i32) {
     let mut vdev_list = vec![];
     unsafe {
         let ret = native::init_secondary(name_cstr.as_ptr(),
-                                       name.len() as i32,
-                                       core,
-                                       vdev_list.as_mut_ptr(),
-                                       0);
+                                         name.len() as i32,
+                                         core,
+                                         vdev_list.as_mut_ptr(),
+                                         0);
         if ret != 0 {
             panic!("Could not initialize secondary process errno {}", ret)
         }

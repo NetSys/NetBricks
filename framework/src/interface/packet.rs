@@ -10,49 +10,62 @@ extern "C" {
     fn mbuf_free(buf: *mut MBuf);
 }
 
-/// A packet is a safe wrapper around mbufs.
+/// A packet is a safe wrapper around mbufs, that can be allocated and manipulated.
+/// We associate a header type with a packet to allow safe insertion of headers.
 pub struct Packet<T: EndOffset> {
     mbuf: *mut MBuf,
-    free_mbuf: bool,
     offset: usize,
     _phantom_t: PhantomData<T>,
 }
 
-pub trait PacketFromMbuf {
-    fn from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
-        Packet { mbuf: mbuf, free_mbuf: false, offset: offset, _phantom_t: PhantomData }
-    }
+fn reference_mbuf(mbuf: *mut MBuf) {
+    unsafe { (*mbuf).reference() };
 }
 
-impl<T:EndOffset> Drop for Packet<T> {
-    fn drop(&mut self) {
-        if self.free_mbuf {
-            unsafe { mbuf_free(self.mbuf) };
-            self.mbuf = ptr::null_mut();
-            self.free_mbuf = false;
+/// All the iterators should switch to returning this type, it makes much more sense.
+pub trait PacketFromMbuf {
+    fn from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
+        // Need to up the refcnt, so that things don't drop.
+        reference_mbuf(mbuf);
+        Packet {
+            mbuf: mbuf,
+            offset: offset,
+            _phantom_t: PhantomData,
         }
     }
 }
 
-impl<T:EndOffset> PacketFromMbuf for Packet<T> {}
+impl<T: EndOffset> Drop for Packet<T> {
+    fn drop(&mut self) {
+        if !self.mbuf.is_null() {
+            unsafe { mbuf_free(self.mbuf) };
+        }
+    }
+}
+
+impl<T: EndOffset> PacketFromMbuf for Packet<T> {}
 
 /// Allocate a new packet.
 pub fn new_packet() -> Option<Packet<NullHeader>> {
     unsafe {
+        // This sets refcnt = 1
         let mbuf = mbuf_alloc();
         if mbuf.is_null() {
             None
         } else {
-            Some(Packet { mbuf: mbuf, free_mbuf: true, offset: 0, _phantom_t: PhantomData })
+            Some(Packet {
+                mbuf: mbuf,
+                offset: 0,
+                _phantom_t: PhantomData,
+            })
         }
     }
 }
 
-impl<T:EndOffset> Packet<T> {
-
+impl<T: EndOffset> Packet<T> {
     #[inline]
     fn data(&self) -> *mut u8 {
-        unsafe { (*self.mbuf).data_address(self.offset)  }
+        unsafe { (*self.mbuf).data_address(self.offset) }
     }
 
     #[inline]
@@ -65,7 +78,7 @@ impl<T:EndOffset> Packet<T> {
         self.data_len() - self.offset
     }
 
-    pub fn push_header<T2: EndOffset<PreviousHeader=T>>(self, header: &T2) -> Option<Packet<T2>> {
+    pub fn push_header<T2: EndOffset<PreviousHeader = T>>(mut self, header: &T2) -> Option<Packet<T2>> {
         unsafe {
             let len = self.data_len();
             let size = header.offset();
@@ -82,11 +95,12 @@ impl<T:EndOffset> Packet<T> {
                     self.data() as *mut T2
                 };
                 ptr::copy_nonoverlapping(header, dst, 1);
+                let mbuf = self.mbuf;
+                self.mbuf = ptr::null_mut(); // We null this out here because drop is more expensive than this.
                 Some(Packet {
-                        mbuf: self.mbuf,
-                        free_mbuf: self.free_mbuf,
-                        offset: self.offset + size,
-                        _phantom_t: PhantomData
+                    mbuf: mbuf,
+                    offset: self.offset + size,
+                    _phantom_t: PhantomData,
                 })
             } else {
                 None
@@ -114,16 +128,12 @@ impl<T:EndOffset> Packet<T> {
 
     #[inline]
     pub fn increase_payload_size(&mut self, increase_by: usize) -> usize {
-        unsafe {
-            (*self.mbuf).add_data_end(increase_by)
-        }
+        unsafe { (*self.mbuf).add_data_end(increase_by) }
     }
 
     #[inline]
     pub fn trim_payload_size(&mut self, trim_by: usize) -> usize {
-        unsafe {
-            (*self.mbuf).remove_data_end(trim_by)
-        }
+        unsafe { (*self.mbuf).remove_data_end(trim_by) }
     }
 
     #[inline]
@@ -146,5 +156,21 @@ impl<T:EndOffset> Packet<T> {
             should_copy
         }
     }
-}
 
+    #[inline]
+    pub fn refcnt(&self) -> u16 {
+        unsafe { (*self.mbuf).refcnt() }
+    }
+
+    /// Get the mbuf reference by this packet.
+    ///
+    /// # Safety
+    /// The reference held by this Packet is nulled out as a result of this code. The callee is responsible for
+    /// appropriately freeing this mbuf from here-on out.
+    #[inline]
+    pub unsafe fn get_mbuf(&mut self) -> *mut MBuf {
+        let mbuf = self.mbuf;
+        self.mbuf = ptr::null_mut();
+        mbuf
+    }
+}

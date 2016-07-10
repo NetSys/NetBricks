@@ -1,6 +1,7 @@
 use state::RingBuffer;
 use std::cmp::{max, min};
 use std::u16;
+use utils::*;
 
 /// Results from inserting into `ReorderedBuffer`
 pub enum InsertionResult {
@@ -176,9 +177,7 @@ impl SegmentList {
     #[inline]
     pub fn insert_segment(&mut self, seq: u32, len: u16) -> Option<isize> {
         let mut idx = self.head;
-        // println!("Insert segment for seq {} len {}", seq, len);
         if idx == -1 {
-            // println!("Inserting head");
             // Special case the first insertion.
             idx = self.insert_before_node(-1, seq, len);
             self.head = idx;
@@ -190,13 +189,6 @@ impl SegmentList {
                 let seg_seq = self.storage[idx as usize].seq;
                 let seg_len = self.storage[idx as usize].length;
                 let seg_end = seg_seq.wrapping_add(seg_len as u32);
-                // println!("Considering segment: seq {} end {} seg_seq {} seg_end {} head {} idx {}",
-                // seq,
-                // end,
-                // seg_seq,
-                // seg_end,
-                // self.head,
-                // idx);
                 if seg_end == seq {
                     // println!("Adjusting segment");
                     // We can just add to the current segment.
@@ -314,29 +306,8 @@ pub struct ReorderedBuffer {
     tail_seq: u32,
 }
 
-const PAGE_SIZE: usize = 4096; // Page size in bytes, not using huge pages here.
 
 impl ReorderedBuffer {
-    // This is pub for testing, probably just move it out to utils
-    #[inline]
-    pub fn round_to_pages(buffer_size: usize) -> usize {
-        (buffer_size + (PAGE_SIZE - 1)) & !(PAGE_SIZE - 1)
-    }
-
-    // This is pub for testing, probably just move it out to utils
-    #[inline]
-    pub fn round_to_power_of_2(mut size: usize) -> usize {
-        size = size.wrapping_sub(1);
-        size |= size >> 1;
-        size |= size >> 2;
-        size |= size >> 4;
-        size |= size >> 8;
-        size |= size >> 16;
-        size |= size >> 32;
-        size = size.wrapping_add(1);
-        size
-    }
-
     /// Return the size (the maximum amount of data) this buffer can hold.
     #[inline]
     pub fn buffer_size(&self) -> usize {
@@ -357,8 +328,8 @@ impl ReorderedBuffer {
     /// Create a new buffer with space for `buffer_size` bytes and a segment list with `segment_size` elements. The
     /// later should be adjusted to reflect the expected number of out of order segments at a time.
     pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> ReorderedBuffer {
-        let page_aligned_size = ReorderedBuffer::round_to_pages(buffer_size);
-        let pages = ReorderedBuffer::round_to_power_of_2(page_aligned_size / PAGE_SIZE);
+        let page_aligned_size = round_to_pages(buffer_size);
+        let pages = round_to_power_of_2(page_aligned_size / PAGE_SIZE);
         ReorderedBuffer {
             data: RingBuffer::new(pages).unwrap(),
             buffer_size: page_aligned_size,

@@ -11,6 +11,7 @@ pub use self::merge_batch::MergeBatch;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::receive_batch::ReceiveBatch;
 pub use self::receive_queue::ReceiveQueue;
+pub use self::receive_queue_general::ReceiveQueueGen;
 pub use self::resize_payload::ResizePayload;
 pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
@@ -46,6 +47,7 @@ mod reset_parse;
 mod resize_payload;
 mod send_batch;
 mod transform_batch;
+mod receive_queue_general;
 
 /// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
 /// the precise batch being processed will be determined by the scheduling policy used.

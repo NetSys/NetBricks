@@ -109,4 +109,14 @@ impl MBuf {
             len
         }
     }
+
+    #[inline]
+    pub fn refcnt(&self) -> u16 {
+        self.refcnt
+    }
+
+    #[inline]
+    pub fn reference(&mut self) {
+        self.refcnt += 1;
+    }
 }
