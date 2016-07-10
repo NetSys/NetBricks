@@ -6,11 +6,11 @@ extern crate time;
 extern crate simd;
 extern crate getopts;
 extern crate rand;
-use e2d2::headers::*;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
 use e2d2::packet_batch::*;
 use e2d2::scheduler::*;
+use e2d2::utils::*;
 use getopts::Options;
 use std::convert::From;
 use std::collections::HashMap;
@@ -18,8 +18,33 @@ use std::env;
 use std::time::Duration;
 use std::thread;
 use std::sync::Arc;
-use std::net::Ipv4Addr;
-use std::str::FromStr;
+mod nf;
+use self::nf::*;
+
+const CONVERSION_FACTOR: f64 = 1000000000.;
+
+fn recv_thread(ports: Vec<PortQueue>, core: i32) {
+    init_thread(core, core);
+    if ports.len() > 1 {
+        panic!("Currently this pipeline cannot handle more than one port per pipeline");
+    }
+    println!("Sending started");
+    for port in &ports {
+        println!("Sending port {} rxq {} txq {} on core {}",
+                 port.port.mac_address(),
+                 port.rxq(),
+                 port.txq(),
+                 core);
+    }
+    
+    let (producer, consumer) = new_mpsc_queue_pair();
+    let mut sched = Scheduler::new();
+    let pipeline = consumer.send(ports[0].clone());
+    let creator = PacketCreator::new(producer);
+    sched.add_task(creator);
+    sched.add_task(pipeline);
+    sched.execute_loop();
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -87,62 +112,48 @@ fn main() {
         }
         ports.push(pmd_port);
     }
-    let mut mac = MacHeader::new();
-    mac.dst = [0x68, 0x05, 0xca, 0x00, 0x00, 0xac];
-    mac.src = [0x68, 0x05, 0xca, 0x00, 0x00, 0x01];
-    mac.set_etype(0x0800);
-    let mut ip = IpHeader::new();
-    ip.set_src(u32::from(Ipv4Addr::from_str("10.0.0.1").unwrap()));
-    ip.set_dst(u32::from(Ipv4Addr::from_str("10.0.0.1").unwrap()));
-    ip.set_ttl(128);
-
-    loop {
-        let _pkt = new_packet().unwrap().push_header(&mac).unwrap().push_header(&ip).unwrap();
-        assert!(_pkt.refcnt() == 1);
-        //println!("Refcnt {}", _pkt.refcnt());
-    }
 
     //const _BATCH: usize = 1 << 10;
     //const _CHANNEL_SIZE: usize = 256;
-    //let _thread: Vec<_> = queues_by_core.iter()
-                                        //.map(|(core, ports)| {
-                                            //let c = core.clone();
-                                            //let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
-                                            //std::thread::spawn(move || recv_thread(p, c, delay_arg))
-                                        //})
-                                        //.collect();
-    //let mut pkts_so_far = (0, 0);
-    //let mut last_printed = 0.;
-    //const MAX_PRINT_INTERVAL: f64 = 30.;
-    //const PRINT_DELAY: f64 = 15.;
-    //let sleep_delay = (PRINT_DELAY / 2.) as u64;
-    //let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-    //let sleep_time = Duration::from_millis(sleep_delay);
-    //println!("0 OVERALL RX 0.00 TX 0.00 CYCLE_PER_DELAY 0 0 0");
-    //loop {
-        //thread::sleep(sleep_time); // Sleep for a bit
-        //let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-        //if now - start > PRINT_DELAY {
-            //let mut rx = 0;
-            //let mut tx = 0;
-            //for port in &ports {
-                //for q in 0..port.rxqs() {
-                    //let (rp, tp) = port.stats(q);
-                    //rx += rp;
-                    //tx += tp;
-                //}
-            //}
-            //let pkts = (rx, tx);
-            //let rx_pkts = pkts.0 - pkts_so_far.0;
-            //if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
-                //println!("{:.2} OVERALL RX {:.2} TX {:.2}",
-                         //now - start,
-                         //rx_pkts as f64 / (now - start),
-                         //(pkts.1 - pkts_so_far.1) as f64 / (now - start));
-                //last_printed = now;
-                //start = now;
-                //pkts_so_far = pkts;
-            //}
-        //}
-    //}
+    let _thread: Vec<_> = queues_by_core.iter()
+                                        .map(|(core, ports)| {
+                                            let c = core.clone();
+                                            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
+                                            std::thread::spawn(move || recv_thread(p, c))
+                                        })
+                                        .collect();
+    let mut pkts_so_far = (0, 0);
+    let mut last_printed = 0.;
+    const MAX_PRINT_INTERVAL: f64 = 30.;
+    const PRINT_DELAY: f64 = 15.;
+    let sleep_delay = (PRINT_DELAY / 2.) as u64;
+    let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
+    let sleep_time = Duration::from_millis(sleep_delay);
+    println!("0 OVERALL RX 0.00 TX 0.00 CYCLE_PER_DELAY 0 0 0");
+    loop {
+        thread::sleep(sleep_time); // Sleep for a bit
+        let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
+        if now - start > PRINT_DELAY {
+            let mut rx = 0;
+            let mut tx = 0;
+            for port in &ports {
+                for q in 0..port.rxqs() {
+                    let (rp, tp) = port.stats(q);
+                    rx += rp;
+                    tx += tp;
+                }
+            }
+            let pkts = (rx, tx);
+            let rx_pkts = pkts.0 - pkts_so_far.0;
+            if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
+                println!("{:.2} OVERALL RX {:.2} TX {:.2}",
+                         now - start,
+                         rx_pkts as f64 / (now - start),
+                         (pkts.1 - pkts_so_far.1) as f64 / (now - start));
+                last_printed = now;
+                start = now;
+                pkts_so_far = pkts;
+            }
+        }
+    }
 }

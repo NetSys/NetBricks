@@ -152,10 +152,10 @@ impl MpscQueue {
         if dequeue > 0 {
             let consumer_next = consumer_head.wrapping_add(dequeue);
             // Reserve what we are going to dequeue.
-            self.consumer.head.store(consumer_next, Ordering::AcqRel);
+            self.consumer.head.store(consumer_next, Ordering::Release);
             self.dequeue_mbufs(consumer_head, dequeue, mbufs);
             // Commit that we have dequeued.
-            self.consumer.tail.store(consumer_next, Ordering::AcqRel);
+            self.consumer.tail.store(consumer_next, Ordering::Release);
         }
         dequeue
     }
