@@ -10,7 +10,7 @@ use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
 use e2d2::packet_batch::*;
 use e2d2::scheduler::*;
-use e2d2::utils::*;
+use e2d2::queues::*;
 use getopts::Options;
 use std::convert::From;
 use std::collections::HashMap;

@@ -2,6 +2,7 @@ use common::*;
 use interface::*;
 use io::*;
 use utils::*;
+use queues::*;
 use std::result;
 use super::act::Act;
 use super::Batch;

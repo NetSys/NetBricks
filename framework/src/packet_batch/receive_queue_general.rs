@@ -1,6 +1,6 @@
 /// FIXME: This should replace receive queue eventually.
 use common::*;
-use utils::ReceivableQueue;
+use queues::ReceivableQueue;
 use interface::PortQueue;
 use super::act::Act;
 use super::Batch;

@@ -2,7 +2,7 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 use e2d2::headers::*;
 use e2d2::interface::*;
-use e2d2::utils::*;
+use e2d2::queues::*;
 use e2d2::scheduler::*;
 
 pub struct PacketCreator {
@@ -24,7 +24,7 @@ impl PacketCreator {
         ip.set_version(4);
         ip.set_ihl(5);
         ip.set_length(20);
-        PacketCreator { mac : mac, ip : ip, producer: producer }
+        PacketCreator { mac : mac, ip : ip, producer: producer, }
     }
 
     #[inline]
@@ -38,5 +38,10 @@ impl Executable for PacketCreator {
         for _ in 0..16 {
             self.producer.enqueue_one(&mut self.create_packet());
         }
+        //let mut vec = Vec::with_capacity(16);
+        //vec.extend((0..16).map(|_| self.create_packet()));
+        //{
+            //self.producer.enqueue(&mut vec[..]);
+        //}
     }
 }

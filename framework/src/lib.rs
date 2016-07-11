@@ -20,6 +20,7 @@ pub mod headers;
 mod io;
 pub mod scheduler;
 pub mod utils;
+pub mod queues;
 pub mod state;
 pub mod packet_batch;
 pub mod interface;

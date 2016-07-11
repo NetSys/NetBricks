@@ -6,11 +6,11 @@ use interface::Packet;
 use headers::EndOffset;
 use packet_batch::ReceiveQueueGen;
 use std::cmp::min;
+use std::clone::Clone;
 use std::default::Default;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
-use super::round_to_power_of_2;
-use super::pause;
+use utils::{round_to_power_of_2, pause};
 use super::ReceivableQueue;
 
 #[derive(Default)]
@@ -26,6 +26,7 @@ struct MpscQueue {
     producer: QueueMetadata,
     consumer: QueueMetadata,
     queue: Vec<AtomicPtr<MBuf>>,
+    n_producers: AtomicUsize, // Number of consumers.
 }
 
 impl MpscQueue {
@@ -41,7 +42,14 @@ impl MpscQueue {
             queue: (0..slots).map(|_| Default::default()).collect(),
             producer: Default::default(),
             consumer: Default::default(),
+            n_producers: Default::default(),
         }
+    }
+
+    // This assumes that no producers are currently active.
+    #[inline]
+    pub fn reference_producers(&self) {
+        self.n_producers.fetch_add(1, Ordering::AcqRel);
     }
 
     #[inline]
@@ -68,6 +76,44 @@ impl MpscQueue {
 
     #[inline]
     pub fn enqueue(&self, mbufs: &[*mut MBuf]) -> usize {
+        let producers = self.n_producers.load(Ordering::Acquire);
+        assert!(producers >= 1, "Insertion into a queue without producers");
+        if producers == 1 {
+            self.enqueue_sp(mbufs)
+        } else {
+            self.enqueue_mp(mbufs)
+        }
+    }
+
+    // In the mp only version lots of time was being consumed in CAS. We want to allow for the mp case, but there is no
+    // need to waste cycles.
+    #[inline]
+    fn enqueue_sp(&self, mbufs: &[*mut MBuf]) -> usize {
+        let len = mbufs.len();
+        
+        let producer_head = self.producer.head.load(Ordering::Acquire);
+        let consumer_tail = self.consumer.tail.load(Ordering::Acquire);
+
+        let free = self.mask.wrapping_add(consumer_tail).wrapping_sub(producer_head);
+        let insert = min(free, len);
+        
+        if insert > 0 {
+            let producer_next = producer_head.wrapping_add(insert);
+            // Reserve slots by incrementing head
+            self.producer.head.store(producer_next, Ordering::Release);
+            // Write to reserved slot.
+            self.enqueue_mbufs(producer_head, insert, &mbufs[..insert]);
+            // Commit write by changing tail.
+            // Once this has been achieved, update tail. Any conflicting updates will wait on the previous spin lock.
+            self.producer.tail.store(producer_next, Ordering::Release);
+            insert
+        } else {
+            0
+        }
+    }
+
+    #[inline]
+    fn enqueue_mp(&self, mbufs: &[*mut MBuf]) -> usize {
         let len = mbufs.len();
         let mut insert;
         let mut producer_head;
@@ -161,9 +207,17 @@ impl MpscQueue {
     }
 }
 
-#[derive(Clone)]
 pub struct MpscProducer {
     mpsc_queue: Arc<MpscQueue>,
+}
+
+// Need an explicit clone mechanism so that we can reference as appropriate
+impl Clone for MpscProducer {
+    fn clone(&self) -> MpscProducer {
+        let q = self.mpsc_queue.clone();
+        q.reference_producers();
+        MpscProducer { mpsc_queue: q }
+    }
 }
 
 impl MpscProducer {
@@ -190,6 +244,7 @@ impl ReceivableQueue for MpscConsumer {
 
 pub fn new_mpsc_queue_pair_with_size(size: usize) -> (MpscProducer, ReceiveQueueGen<MpscConsumer>) {
     let mpsc_q = Arc::new(MpscQueue::new(size));
+    mpsc_q.reference_producers();
     (MpscProducer { mpsc_queue: mpsc_q.clone() }, ReceiveQueueGen::new(MpscConsumer {mpsc_queue: mpsc_q}))
 }
 
