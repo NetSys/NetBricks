@@ -28,20 +28,28 @@ impl PacketCreator {
     }
 
     #[inline]
+    fn initialize_packet(&self, pkt: Packet<NullHeader>) -> Packet<IpHeader> {
+        pkt.push_header(&self.mac).unwrap().push_header(&self.ip).unwrap()
+    }
+
+    #[inline]
     pub fn create_packet(&self) -> Packet<IpHeader> {
-        new_packet().unwrap().push_header(&self.mac).unwrap().push_header(&self.ip).unwrap()
+        self.initialize_packet(new_packet().unwrap())
     }
 }
 
 impl Executable for PacketCreator {
     fn execute(&mut self) {
+        //let mut parray = new_packet_array(16);
+        //let mut vec:Vec<Packet<IpHeader>> = parray.drain(..).map(|p| self.initialize_packet(p)).collect();
+        //self.producer.enqueue(&mut vec);
         for _ in 0..16 {
             self.producer.enqueue_one(&mut self.create_packet());
         }
-        //let mut vec = Vec::with_capacity(16);
-        //vec.extend((0..16).map(|_| self.create_packet()));
-        //{
-            //self.producer.enqueue(&mut vec[..]);
-        //}
+        ////let mut vec = Vec::with_capacity(16);
+        ////vec.extend((0..16).map(|_| self.create_packet()));
+        ////{
+            ////self.producer.enqueue(&mut vec[..]);
+        ////}
     }
 }

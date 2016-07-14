@@ -8,6 +8,7 @@ use headers::{EndOffset, NullHeader};
 extern "C" {
     fn mbuf_alloc() -> *mut MBuf;
     fn mbuf_free(buf: *mut MBuf);
+    fn mbuf_alloc_bulk(array: *mut *mut MBuf, len: u16, cnt: i32) -> i32;
 }
 
 /// A packet is a safe wrapper around mbufs, that can be allocated and manipulated.
@@ -60,6 +61,17 @@ pub fn new_packet() -> Option<Packet<NullHeader>> {
             })
         }
     }
+}
+
+pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader>> {
+    let mut array = Vec::with_capacity(count);
+    unsafe {
+        let alloc_ret = mbuf_alloc_bulk(array.as_mut_ptr(), 0, count as i32);
+        if alloc_ret == 0 {
+            array.set_len(count);
+        }
+    }
+    array.iter().map(|m| Packet {mbuf: m.clone(), offset: 0, _phantom_t: PhantomData}).collect()
 }
 
 impl<T: EndOffset> Packet<T> {
