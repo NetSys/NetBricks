@@ -1,5 +1,5 @@
 use e2d2::headers::*;
-use e2d2::packet_batch::*;
+use e2d2::operators::*;
 use e2d2::scheduler::*;
 use fnv::FnvHasher;
 use std::net::Ipv4Addr;
@@ -105,9 +105,11 @@ pub fn lpm<T: 'static + Batch<Header = NullHeader>>(parent: T, s: &mut Scheduler
     lpm_table.construct_table();
     let mut groups = parent.parse::<MacHeader>()
                            .parse::<IpHeader>()
-                           .group_by::<Empty>(3,
-                                              box move |hdr, _, _| (lpm_table.lookup_entry(hdr.src()) as usize, None),
-                                              s);
+                           .group_by(3,
+                                    box move |pkt| {
+                                        let hdr = pkt.get_header();
+                                        lpm_table.lookup_entry(hdr.src()) as usize
+                                    }, s);
     let pipeline = merge(vec![groups.get_group(0).unwrap(),
                               groups.get_group(1).unwrap(),
                               groups.get_group(2).unwrap()])

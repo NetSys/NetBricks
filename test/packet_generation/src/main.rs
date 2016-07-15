@@ -8,9 +8,10 @@ extern crate getopts;
 extern crate rand;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
-use e2d2::packet_batch::*;
+use e2d2::operators::*;
 use e2d2::scheduler::*;
 use e2d2::queues::*;
+use e2d2::headers::*;
 use getopts::Options;
 use std::convert::From;
 use std::collections::HashMap;
@@ -112,6 +113,11 @@ fn main() {
         }
         ports.push(pmd_port);
     }
+
+    let mut pkt = new_packet().unwrap();
+    let pkt_mbuf = unsafe { pkt.get_mbuf() };
+    let pkt = packet_from_mbuf::<NullHeader>(pkt_mbuf, 0);
+    drop(pkt);
 
     //const _BATCH: usize = 1 << 10;
     //const _CHANNEL_SIZE: usize = 256;

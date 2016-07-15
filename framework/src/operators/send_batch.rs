@@ -3,9 +3,9 @@ use interface::PortQueue;
 use super::act::Act;
 use super::Batch;
 use super::iterator::*;
-use std::any::Any;
 use scheduler::Executable;
 use headers::NullHeader;
+use super::packet_batch::PacketBatch;
 
 // FIXME: Should we be handling multiple queues and ports here?
 // FIXME: Should this really even be a batch?
@@ -32,30 +32,20 @@ impl<V> SendBatch<V>
 impl<V> Batch for SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
-    type Header = NullHeader;
 }
 
 impl<V> BatchIterator for SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
+    type Header = NullHeader;
     #[inline]
     fn start(&mut self) -> usize {
-        panic!("Cannot iterate SendBatch")
+        panic!("Cannot iterate send batch")
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, _: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        panic!("Cannot iterate SendBatch")
-    }
-
-    #[inline]
-    unsafe fn next_base_payload(&mut self, _: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        panic!("Cannot iterate SendBatch")
-    }
-
-    #[inline]
-    unsafe fn next_payload_popped(&mut self, _: usize, _: i32) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        panic!("Cannot iterate SendBatch")
+    unsafe fn next_payload(&mut self, _: usize) -> Option<PacketDescriptor<NullHeader>> {
+        panic!("Cannot iterate send batch")
     }
 }
 
@@ -64,19 +54,10 @@ impl<V> Act for SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
     #[inline]
-    fn parent(&mut self) -> &mut Act {
-        &mut self.parent
-    }
-
-    #[inline]
-    fn parent_immutable(&self) -> &Act {
-        &self.parent
-    }
-    #[inline]
     fn act(&mut self) {
         // First everything is applied
         self.parent.act();
-        self.parent
+        self.parent.get_packet_batch()
             .send_q(&mut self.port)
             .and_then(|x| {
                 self.sent += x as u64;
@@ -97,18 +78,18 @@ impl<V> Act for SendBatch<V>
     }
 
     #[inline]
-    fn drop_packets(&mut self, _: &Vec<usize>) -> Option<usize> {
+    fn drop_packets(&mut self, _: &[usize]) -> Option<usize> {
         panic!("Cannot drop packets from a sent batch")
     }
 
     #[inline]
-    fn adjust_payload_size(&mut self, _: usize, _: isize) -> Option<isize> {
-        panic!("Cannot resize a sent batch")
+    fn clear_packets(&mut self) {
+        panic!("Cannot clear packets from a sent batch")
     }
 
     #[inline]
-    fn adjust_headroom(&mut self, _: usize, _: isize) -> Option<isize> {
-        panic!("Cannot resize a sent batch")
+    fn get_packet_batch(&mut self) -> &mut PacketBatch {
+        self.parent.get_packet_batch()
     }
 }
 

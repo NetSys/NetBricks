@@ -7,7 +7,7 @@ extern crate getopts;
 extern crate rand;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
-use e2d2::packet_batch::*;
+use e2d2::operators::*;
 use e2d2::scheduler::*;
 use getopts::Options;
 use std::collections::HashMap;

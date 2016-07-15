@@ -18,6 +18,8 @@
 /* Largely taken from SoftNIC (snbuf.c) */
 #define NUM_MEMPOOL_CACHE 32 // Size of per-core object cache.
 
+#define PRIV_SIZE 16
+
 RTE_DEFINE_PER_LCORE(int, _mempool_core) = 0;
 
 #if PER_CORE
@@ -65,7 +67,7 @@ int init_mempool_core(int core)
 	pframe_pool[core] = rte_pktmbuf_pool_create(name,
 			core_mempool_size,
 			core_mempool_cache_size,
-			0,
+			PRIV_SIZE,
 			RTE_MBUF_DEFAULT_BUF_SIZE,
 			sid);
 	if (pframe_pool[core] == NULL) {
@@ -104,7 +106,7 @@ static int init_mempool_socket(int sid,
 	pframe_pool[sid] = rte_pktmbuf_pool_create(name,
 			mempool_size,
 			mcache_size,
-			0,
+			PRIV_SIZE,
 			RTE_MBUF_DEFAULT_BUF_SIZE,
 			sid);
 	return pframe_pool[sid] != NULL;

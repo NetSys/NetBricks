@@ -1,6 +1,5 @@
 use byteorder::{BigEndian, ByteOrder};
 use fnv::FnvHasher;
-use headers::MacHeader;
 
 use std::hash::Hasher;
 use std::mem;
@@ -22,19 +21,15 @@ const IHL_TO_BYTE_FACTOR: usize = 4; // IHL is in terms of number of 32-bit word
 
 /// This assumes the function is given the Mac Payload
 #[inline]
-pub fn ipv4_extract_flow(header: &MacHeader, bytes: &[u8]) -> Option<Flow> {
-    if header.etype() == 0x0800 {
-        let port_start = (bytes[0] & 0xf) as usize * IHL_TO_BYTE_FACTOR;
-        Some(Flow {
-            proto: bytes[9],
-            src_ip: BigEndian::read_u32(&bytes[12..16]),
-            dst_ip: BigEndian::read_u32(&bytes[16..20]),
-            src_port: BigEndian::read_u16(&bytes[(port_start)..(port_start + 2)]),
-            dst_port: BigEndian::read_u16(&bytes[(port_start + 2)..(port_start + 4)]),
-        })
-    } else {
-        None
-    }
+pub fn ipv4_extract_flow(bytes: &[u8]) -> Option<Flow> {
+    let port_start = (bytes[0] & 0xf) as usize * IHL_TO_BYTE_FACTOR;
+    Some(Flow {
+        proto: bytes[9],
+        src_ip: BigEndian::read_u32(&bytes[12..16]),
+        dst_ip: BigEndian::read_u32(&bytes[16..20]),
+        src_port: BigEndian::read_u16(&bytes[(port_start)..(port_start + 2)]),
+        dst_port: BigEndian::read_u16(&bytes[(port_start + 2)..(port_start + 4)]),
+    })
 }
 
 impl Flow {
@@ -50,22 +45,17 @@ impl Flow {
     }
 
     #[inline]
-    pub fn ipv4_stamp_flow(&self, header: &MacHeader, bytes: &mut [u8]) -> bool {
-        if header.etype() == 0x0800 && bytes[9] == self.proto {
-            let port_start = (bytes[0] & 0xf) as usize * IHL_TO_BYTE_FACTOR;
-            BigEndian::write_u32(&mut bytes[12..16], self.src_ip);
-            BigEndian::write_u32(&mut bytes[16..20], self.dst_ip);
-            BigEndian::write_u16(&mut bytes[(port_start)..(port_start + 2)], self.src_port);
-            BigEndian::write_u16(&mut bytes[(port_start + 2)..(port_start + 4)],
-                                 self.dst_port);
-            BigEndian::write_u16(&mut bytes[10..12], 0);
-            let csum = ipcsum(bytes);
-            BigEndian::write_u16(&mut bytes[10..12], csum);
-            // FIXME: l4 cksum
-            true
-        } else {
-            false
-        }
+    pub fn ipv4_stamp_flow(&self, bytes: &mut [u8]) {
+        let port_start = (bytes[0] & 0xf) as usize * IHL_TO_BYTE_FACTOR;
+        BigEndian::write_u32(&mut bytes[12..16], self.src_ip);
+        BigEndian::write_u32(&mut bytes[16..20], self.dst_ip);
+        BigEndian::write_u16(&mut bytes[(port_start)..(port_start + 2)], self.src_port);
+        BigEndian::write_u16(&mut bytes[(port_start + 2)..(port_start + 4)],
+                             self.dst_port);
+        BigEndian::write_u16(&mut bytes[10..12], 0);
+        let csum = ipcsum(bytes);
+        BigEndian::write_u16(&mut bytes[10..12], csum);
+        // FIXME: l4 cksum
     }
 }
 
@@ -73,8 +63,8 @@ impl Flow {
 /// Given the MAC payload, generate a flow hash. The flow hash generated depends on the IV, so different IVs will
 /// produce different results (in cases when implementing Cuckoo hashing, etc.).
 #[inline]
-pub fn ipv4_flow_hash(header: &MacHeader, bytes: &[u8], _iv: u32) -> usize {
-    if let Some(flow) = ipv4_extract_flow(header, bytes) {
+pub fn ipv4_flow_hash(bytes: &[u8], _iv: u32) -> usize {
+    if let Some(flow) = ipv4_extract_flow(bytes) {
         flow_hash(&flow)
     } else {
         0

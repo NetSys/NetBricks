@@ -6,8 +6,7 @@ extern crate rand;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
 use e2d2::headers::*;
-use e2d2::utils::*;
-use e2d2::packet_batch::*;
+use e2d2::operators::*;
 use e2d2::scheduler::Executable;
 use e2d2::state::*;
 use getopts::Options;
@@ -15,7 +14,6 @@ use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 use std::thread;
-use std::any::Any;
 use std::sync::Arc;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
@@ -24,17 +22,18 @@ fn monitor<T: 'static + Batch<Header = NullHeader>>(parent: T,
                                                     mut monitoring_cache: MergeableStoreDP<isize>)
                                                     -> CompositionBatch<IpHeader> {
     parent.parse::<MacHeader>()
-          .transform(move |hdr: &mut MacHeader, payload: &mut [u8], _: Option<&mut Any>| {
-              // No one else should be writing to this, so I think relaxed is safe here.
+          .transform(box |pkt| {
+              let hdr = pkt.get_mut_header();
               let src = hdr.src.clone();
               hdr.src = hdr.dst;
               hdr.dst = src;
-              monitoring_cache.update(ipv4_extract_flow(hdr, payload).unwrap(), 1);
           })
           .parse::<IpHeader>()
-          .transform(|hdr: &mut IpHeader, _: &mut [u8], _: Option<&mut Any>| {
+          .transform(box move |pkt| {
+              let hdr = pkt.get_mut_header();
               let ttl = hdr.ttl();
-              hdr.set_ttl(ttl + 1)
+              hdr.set_ttl(ttl + 1);
+              monitoring_cache.update(hdr.flow().unwrap(), 1);
           })
           .compose()
 }

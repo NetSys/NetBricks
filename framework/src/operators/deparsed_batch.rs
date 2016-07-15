@@ -5,7 +5,6 @@ use super::Batch;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use interface::PortQueue;
 use headers::EndOffset;
-use std::any::Any;
 use utils::SpscProducer;
 
 pub struct DeparsedBatch<T: EndOffset, V>

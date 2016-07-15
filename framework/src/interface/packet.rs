@@ -15,7 +15,9 @@ extern "C" {
 /// We associate a header type with a packet to allow safe insertion of headers.
 pub struct Packet<T: EndOffset> {
     mbuf: *mut MBuf,
+    header_offset: usize,
     offset: usize,
+    free_packet: bool,
     _phantom_t: PhantomData<T>,
 }
 
@@ -23,28 +25,47 @@ fn reference_mbuf(mbuf: *mut MBuf) {
     unsafe { (*mbuf).reference() };
 }
 
-/// All the iterators should switch to returning this type, it makes much more sense.
-pub trait PacketFromMbuf {
-    fn from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
-        // Need to up the refcnt, so that things don't drop.
-        reference_mbuf(mbuf);
-        Packet {
-            mbuf: mbuf,
-            offset: offset,
-            _phantom_t: PhantomData,
-        }
-    }
-}
-
 impl<T: EndOffset> Drop for Packet<T> {
     fn drop(&mut self) {
-        if !self.mbuf.is_null() {
+        if self.free_packet && !self.mbuf.is_null() {
             unsafe { mbuf_free(self.mbuf) };
         }
     }
 }
 
-impl<T: EndOffset> PacketFromMbuf for Packet<T> {}
+pub fn packet_from_mbuf<T:EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
+        // Need to up the refcnt, so that things don't drop.
+        reference_mbuf(mbuf);
+        packet_from_mbuf_no_increment(mbuf, offset)
+}
+
+pub fn packet_from_mbuf_no_increment<T:EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
+        // Compute the real offset
+        let payload_offset = offset + unsafe {
+            let header =  (*mbuf).data_address(offset) as *mut T;
+            (*header).offset()
+        };
+        Packet::<T> {
+            mbuf: mbuf,
+            header_offset: offset,
+            offset: payload_offset,
+            _phantom_t: PhantomData,
+            free_packet: true,
+        }
+}
+
+pub unsafe fn packet_from_mbuf_no_free<T:EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
+        // Compute the real offset
+        let header =  (*mbuf).data_address(offset) as *mut T;
+        let payload_offset = offset + (*header).offset();
+        Packet::<T> {
+            mbuf: mbuf,
+            header_offset: offset,
+            offset: payload_offset,
+            _phantom_t: PhantomData,
+            free_packet: false,
+        }
+}
 
 /// Allocate a new packet.
 pub fn new_packet() -> Option<Packet<NullHeader>> {
@@ -56,8 +77,10 @@ pub fn new_packet() -> Option<Packet<NullHeader>> {
         } else {
             Some(Packet {
                 mbuf: mbuf,
+                header_offset: 0,
                 offset: 0,
                 _phantom_t: PhantomData,
+                free_packet: true,
             })
         }
     }
@@ -71,10 +94,11 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader>> {
             array.set_len(count);
         }
     }
-    array.iter().map(|m| Packet {mbuf: m.clone(), offset: 0, _phantom_t: PhantomData}).collect()
+    array.iter().map(|m| packet_from_mbuf_no_increment(m.clone(), 0)).collect()
 }
 
 impl<T: EndOffset> Packet<T> {
+    pub const METADATA_SLOTS : usize = 2;
     #[inline]
     fn data(&self) -> *mut u8 {
         unsafe { (*self.mbuf).data_address(self.offset) }
@@ -95,6 +119,7 @@ impl<T: EndOffset> Packet<T> {
             let len = self.data_len();
             let size = header.offset();
             let added = (*self.mbuf).add_data_end(size);
+            self.header_offset = self.offset;
             if added >= size {
                 let dst = if len != self.offset as usize {
                     // Need to move down the rest of the data down.
@@ -107,15 +132,68 @@ impl<T: EndOffset> Packet<T> {
                     self.data() as *mut T2
                 };
                 ptr::copy_nonoverlapping(header, dst, 1);
-                let mbuf = self.mbuf;
-                self.mbuf = ptr::null_mut(); // We null this out here because drop is more expensive than this.
                 Some(Packet {
-                    mbuf: mbuf,
+                    mbuf: self.get_mbuf(),
+                    header_offset: self.offset,
                     offset: self.offset + size,
                     _phantom_t: PhantomData,
+                    free_packet: self.free_packet,
                 })
             } else {
                 None
+            }
+        }
+    }
+
+    #[inline]
+    fn header(&self) -> *mut T {
+        unsafe { (*self.mbuf).data_address(self.header_offset) as *mut T }
+    }
+
+    #[inline]
+    pub fn get_header(&self) -> &T {
+        unsafe { &(*(self.header())) }
+    }
+
+    #[inline]
+    pub fn get_mut_header(&mut self) -> &mut T {
+        unsafe { &mut (*(self.header())) }
+    }
+
+    #[inline]
+    pub fn parse_header<T2: EndOffset<PreviousHeader = T>>(mut self) -> Option<Packet<T2>> {
+        unsafe {
+            let len = self.data_len();
+            let required_size = T2::size();
+            if len < required_size {
+                None
+            } else {
+                let header_offset = self.offset;
+                let hdr = (*self.mbuf).data_address(header_offset) as *mut T2;
+                let offset = header_offset + (*hdr).offset();
+                Some(Packet {
+                    mbuf: self.get_mbuf(),
+                    header_offset: header_offset,
+                    offset: offset,
+                    _phantom_t: PhantomData,
+                    free_packet: self.free_packet,
+                })
+            }
+        }
+    }
+
+    #[inline]
+    pub fn deparse_header(mut self, offset: usize) -> Packet<T::PreviousHeader> {
+        assert!(offset <= self.header_offset, "Cannot read before packet");
+        let header_offset = self.header_offset - offset;
+        let offset = self.header_offset; // FIXME: Check to make sure is correct.
+        unsafe {
+            Packet {
+                mbuf: self.get_mbuf(),
+                header_offset: header_offset,
+                offset: offset,
+                _phantom_t: PhantomData,
+                free_packet: self.free_packet,
             }
         }
     }
@@ -133,8 +211,7 @@ impl<T: EndOffset> Packet<T> {
     pub fn get_payload(&self) -> &[u8] {
         unsafe {
             let len = self.payload_size();
-            let ptr = self.data();
-            slice::from_raw_parts(ptr, len)
+            slice::from_raw_parts(self.data(), len)
         }
     }
 
@@ -182,7 +259,22 @@ impl<T: EndOffset> Packet<T> {
     #[inline]
     pub unsafe fn get_mbuf(&mut self) -> *mut MBuf {
         let mbuf = self.mbuf;
-        self.mbuf = ptr::null_mut();
+        self.free_packet = false;
+        //self.mbuf = ptr::null_mut();
         mbuf
+    }
+
+    #[inline]
+    pub fn reset(mut self) -> Packet<NullHeader> {
+        unsafe {
+            let mbuf = self.get_mbuf();
+            Packet {
+                mbuf: mbuf,
+                header_offset: 0,
+                offset: 0,
+                _phantom_t: PhantomData,
+                free_packet: self.free_packet,
+            }
+        }
     }
 }

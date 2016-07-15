@@ -1,5 +1,5 @@
 use e2d2::headers::*;
-use e2d2::packet_batch::*;
+use e2d2::operators::*;
 use e2d2::utils::*;
 use e2d2::scheduler::*;
 use fnv::FnvHasher;
@@ -80,8 +80,6 @@ impl Maglev {
     }
 }
 
-#[derive(Default, Clone)]
-struct Empty;
 pub fn maglev<T: 'static + Batch<Header = NullHeader>>(parent: T,
                                                        s: &mut Scheduler,
                                                        backends: &[&str])
@@ -90,11 +88,12 @@ pub fn maglev<T: 'static + Batch<Header = NullHeader>>(parent: T,
     let lut = Maglev::new(backends, 65537);
     let mut cache = HashMap::<usize, usize, FnvHash>::with_hasher(Default::default());
     let mut groups = parent.parse::<MacHeader>()
-                           .group_by::<Empty>(ct,
-                                              box move |hdr, payload, _| {
-                                                  let hash = ipv4_flow_hash(hdr, payload, 0);
+                           .group_by(ct,
+                                              box move |pkt| {
+                                                  let payload = pkt.get_payload();
+                                                  let hash = ipv4_flow_hash(payload, 0);
                                                   let out = cache.entry(hash).or_insert_with(|| lut.lookup(hash));
-                                                  (*out, None)
+                                                  *out
                                               },
                                               s);
     let pipeline = merge((0..ct).map(|i| groups.get_group(i).unwrap()).collect());

@@ -1,13 +1,11 @@
 use common::*;
 use interface::*;
 use io::*;
-use utils::*;
 use queues::*;
 use std::result;
 use super::act::Act;
 use super::Batch;
 use super::iterator::{BatchIterator, PacketDescriptor};
-use std::any::Any;
 use headers::NullHeader;
 
 /// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
@@ -17,7 +15,6 @@ pub struct PacketBatch {
     array: Vec<*mut MBuf>,
     cnt: i32,
     scratch: Vec<*mut MBuf>,
-    scratch_idxes: Vec<usize>,
 }
 
 // *mut MBuf is not send by default.
@@ -30,7 +27,6 @@ impl PacketBatch {
             array: Vec::<*mut MBuf>::with_capacity(cnt as usize),
             cnt: cnt,
             scratch: Vec::<*mut MBuf>::with_capacity(cnt as usize),
-            scratch_idxes: Vec::with_capacity(cnt as usize),
         }
     }
 
@@ -99,21 +95,6 @@ impl PacketBatch {
         }
     }
 
-    // FIXME: Delete spsc specialization
-    #[inline]
-    pub fn recv_spsc_queue(&mut self, queue: &SpscConsumer<u8>, meta: &mut Vec<*mut u8>) -> Result<u32> {
-        match self.deallocate_batch() {
-            Err(err) => Err(err),
-            Ok(_) => self.recv_spsc_internal(queue, meta),
-        }
-    }
-
-    #[inline]
-    fn recv_spsc_internal(&mut self, queue: &SpscConsumer<u8>, meta: &mut Vec<*mut u8>) -> Result<u32> {
-        let cnt = self.cnt as usize;
-        Ok(queue.dequeue(&mut self.array, meta, cnt) as u32)
-    }
-
     #[inline]
     pub fn recv_queue<T: ReceivableQueue>(&mut self, queue: &T) -> Result<u32> {
         match self.deallocate_batch() {
@@ -132,29 +113,10 @@ impl PacketBatch {
         }
     }
 
-    #[inline]
-    pub fn distribute_spsc_queues(&mut self, queue: &[SpscProducer<u8>], groups: &Vec<(usize, *mut u8)>, _: usize) {
-
-        let mut idx = 0;
-        for &(group, meta) in groups {
-            if !queue[group].enqueue_one(self.array[idx], meta) {
-                self.scratch_idxes.push(idx);
-            }
-            idx += 1;
-        }
-        idx = 0;
-        for nen in &self.scratch_idxes {
-            self.array[idx] = self.array[*nen];
-            idx += 1;
-        }
-        unsafe { self.array.set_len(idx) };
-        self.scratch_idxes.clear();
-    }
-
     /// This drops packet buffers and keeps things ordered. We expect that idxes is an ordered vector of indices, no
     /// guarantees are made when this is not the case.
     #[inline]
-    fn drop_packets_stable(&mut self, idxes: &Vec<usize>) -> Option<usize> {
+    fn drop_packets_stable(&mut self, idxes: &[usize]) -> Option<usize> {
         // Short circuit when we don't have to do this work.
         if idxes.is_empty() {
             return Some(0);
@@ -216,13 +178,18 @@ impl PacketBatch {
     }
 
     #[inline]
-    unsafe fn consumed_batch(&mut self, consumed: usize) {
+    unsafe fn consume_batch_partial(&mut self, consumed: usize) {
         let len = self.array.len();
         for (new_idx, idx) in (consumed..len).enumerate() {
             self.array[new_idx] = self.array[idx];
         }
 
         self.array.set_len(len - consumed);
+    }
+
+    #[inline]
+    unsafe fn consume_batch(&mut self) {
+        self.array.set_len(0)
     }
 
     #[inline]
@@ -266,120 +233,29 @@ impl PacketBatch {
             }
         }
     }
-
-    /// Return the payload for a given packet and size for a given packet.
-    ///
-    /// # Safety
-    /// `idx` must be a valid index.
-    #[inline]
-    unsafe fn payload(&mut self, idx: usize) -> (*mut u8, usize) {
-        let val = &mut *self.array[idx];
-        (val.data_address(0), val.data_len())
-    }
-
-    /// Address for the payload for a given packet.
-    #[inline]
-    unsafe fn address(&mut self, idx: usize) -> (*mut u8, usize) {
-        let val = &mut *self.array[idx];
-        (val.data_address(0), val.data_len())
-    }
-
-    #[inline]
-    unsafe fn adjust_packet_size(&mut self, idx: usize, size: isize) -> Option<isize> {
-        if size < 0 {
-            let abs_size = (-size) as usize;
-            let ret = (*self.array[idx]).remove_data_end(abs_size);
-            if ret > 0 {
-                Some(-(ret as isize))
-            } else {
-                None
-            }
-        } else if size > 0 {
-            let ret = (*self.array[idx]).add_data_end(size as usize);
-            if ret > 0 {
-                Some(ret as isize)
-            } else {
-                None
-            }
-        } else {
-            Some(0)
-        }
-    }
-
-    #[inline]
-    unsafe fn adjust_packet_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
-        if size < 0 {
-            let abs_size = (-size) as usize;
-            let ret = (*self.array[idx]).remove_data_beginning(abs_size);
-            if ret > 0 {
-                Some(-(ret as isize))
-            } else {
-                None
-            }
-        } else if size > 0 {
-            let ret = (*self.array[idx]).add_data_beginning(size as usize);
-            if ret > 0 {
-                Some(ret as isize)
-            } else {
-                None
-            }
-        } else {
-            Some(0)
-        }
-    }
 }
 
 // A packet batch is also a batch (just a special kind)
 impl BatchIterator for PacketBatch {
     /// The starting offset for packets in the current batch.
-    #[inline]
-    fn start(&mut self) -> usize {
-        0
-    }
-
-    /// Payload for the next packet.
-    #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
+    type Header = NullHeader;
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader>> {
         if idx < self.array.len() {
-            Some((PacketDescriptor {
-                offset: 0,
-                header: self.address(idx).0,
-                payload: self.payload(idx).0,
-                payload_size: self.payload(idx).1,
-                packet: self.array[idx],
-            },
-                  None,
-                  idx + 1))
+            Some(PacketDescriptor {
+                packet: packet_from_mbuf_no_free::<NullHeader>(self.array[idx], 0),
+            })
         } else {
             None
         }
     }
-
     #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        self.next_payload(idx)
-    }
-
-    #[inline]
-    unsafe fn next_payload_popped(&mut self,
-                                  idx: usize,
-                                  _: i32)
-                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        self.next_payload(idx)
+    fn start(&mut self) -> usize {
+        0
     }
 }
 
 /// Internal interface for packets.
 impl Act for PacketBatch {
-    #[inline]
-    fn parent(&mut self) -> &mut Act {
-        self
-    }
-
-    #[inline]
-    fn parent_immutable(&self) -> &Act {
-        self
-    }
 
     #[inline]
     fn act(&mut self) {}
@@ -395,7 +271,7 @@ impl Act for PacketBatch {
             unsafe {
                 match port.send(self.packet_ptr(), self.available() as i32)
                     .and_then(|sent| {
-                        self.consumed_batch(sent as usize);
+                        self.consume_batch_partial(sent as usize);
                         Ok(sent)
                     }) {
                     Ok(sent) => total_sent += sent,
@@ -413,28 +289,22 @@ impl Act for PacketBatch {
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: &Vec<usize>) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &[usize]) -> Option<usize> {
         self.drop_packets_stable(idxes)
     }
 
     #[inline]
-    fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
-        unsafe { self.adjust_packet_size(idx, size) }
+    fn clear_packets(&mut self) {
+        unsafe { self.consume_batch() }
     }
 
     #[inline]
-    fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
-        unsafe { self.adjust_packet_headroom(idx, size) }
-    }
-
-    #[inline]
-    fn distribute_to_queues(&mut self, queues: &[SpscProducer<u8>], groups: &Vec<(usize, *mut u8)>, ngroups: usize) {
-        self.distribute_spsc_queues(queues, &groups, ngroups)
+    fn get_packet_batch(&mut self) -> &mut PacketBatch {
+        self
     }
 }
 
 impl Batch for PacketBatch {
-    type Header = NullHeader;
 }
 
 impl Drop for PacketBatch {
@@ -443,11 +313,11 @@ impl Drop for PacketBatch {
     }
 }
 
-#[inline]
-pub fn cast_from_u8<'a, T: 'a>(data: *mut u8) -> &'a mut T {
-    let typecast = data as *mut T;
-    unsafe { &mut *typecast }
-}
+//#[inline]
+//pub fn cast_from_u8<'a, T: 'a>(data: *mut u8) -> &'a mut T {
+    //let typecast = data as *mut T;
+    //unsafe { &mut *typecast }
+//}
 
 // Some low level functions that need access to private members.
 #[link(name = "zcsi")]

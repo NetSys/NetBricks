@@ -19,8 +19,7 @@ macro_rules! batch_no_new {
     ($name : ident) => {
         impl<T, V> Batch for $name<T, V>
             where T: EndOffset,
-            V:Batch + BatchIterator + Act {
-            type Header = T;
+            V:Batch + BatchIterator<Header=T> + Act {
         }
     };
     ($name: ident, [ $($parts: ident : $pty: ty),* ]) => {
@@ -30,15 +29,6 @@ macro_rules! batch_no_new {
 
 macro_rules! act {
     () => {
-        #[inline]
-        fn parent(&mut self) -> &mut Act {
-            &mut self.parent
-        }
-
-        #[inline]
-        fn parent_immutable(&self) -> &Act {
-            &self.parent
-        }
         #[inline]
         fn act(&mut self) {
             self.parent.act();
@@ -60,25 +50,18 @@ macro_rules! act {
         }
 
         #[inline]
-        fn drop_packets(&mut self, idxes: &Vec<usize>) -> Option<usize> {
+        fn drop_packets(&mut self, idxes: &[usize]) -> Option<usize> {
             self.parent.drop_packets(idxes)
         }
 
         #[inline]
-        fn adjust_payload_size(&mut self, idx: usize, size: isize) -> Option<isize> {
-            self.parent.adjust_payload_size(idx, size)
+        fn clear_packets(&mut self) {
+            self.parent.clear_packets()
         }
 
         #[inline]
-        fn adjust_headroom(&mut self, idx: usize, size: isize) -> Option<isize> {
-            self.parent.adjust_headroom(idx, size)
-        }
-
-        #[inline]
-        fn distribute_to_queues(&mut self, queues: &[SpscProducer<u8>],
-                                groups: &Vec<(usize, *mut u8)>,
-                                ngroups: usize) {
-            self.parent.distribute_to_queues(queues, groups, ngroups)
+        fn get_packet_batch(&mut self) -> &mut PacketBatch {
+            self.parent.get_packet_batch()
         }
     }
 }

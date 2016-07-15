@@ -4,7 +4,6 @@ use super::act::Act;
 use super::Batch;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use std::default::Default;
-use std::any::Any;
 
 pub struct ContextBatch<T, V>
     where T: 'static + Any + Default + Clone + Sized + Send,
@@ -71,7 +70,7 @@ impl<T, V> Act for ContextBatch<T, V>
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: &Vec<usize>) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &[usize]) -> Option<usize> {
         // Need to adjust data
         let mut idx_orig = self.parent.start();
         let mut idx_new = 0;

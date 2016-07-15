@@ -4,7 +4,7 @@
 use io::*;
 use interface::Packet;
 use headers::EndOffset;
-use packet_batch::ReceiveQueueGen;
+use operators::ReceiveQueueGen;
 use std::cmp::min;
 use std::clone::Clone;
 use std::default::Default;

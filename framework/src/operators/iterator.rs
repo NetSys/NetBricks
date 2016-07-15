@@ -1,22 +1,10 @@
-use super::packet_batch::cast_from_u8;
-use io::MBuf;
 use std::marker::PhantomData;
 use headers::EndOffset;
-use std::any::Any;
 use std::cell::Cell;
-use std::slice::*;
+use interface::Packet;
 
-/// A struct containing all the packet related information passed around by iterators.
-pub struct PacketDescriptor {
-    pub offset: usize,
-    /// Address for the header.
-    pub header: *mut u8,
-    /// Address for the payload (this comes after the header).
-    pub payload: *mut u8,
-    /// Payload size, useful for making bounded vectors into the packet.
-    pub payload_size: usize,
-    /// A reference to the original packet.
-    pub packet: *mut MBuf,
+pub struct PacketDescriptor<T: EndOffset> {
+    pub packet: Packet<T>,
 }
 
 /// An interface implemented by all batches for iterating through the set of packets in a batch.
@@ -30,37 +18,21 @@ pub struct PacketDescriptor {
 /// packets to be modified and apply this modification later. Everything about iterator invalidation is likely to change
 /// later.
 pub trait BatchIterator {
+    type Header: EndOffset;
+
     /// Returns the starting index for the packet batch. This allows for cases where the head of the batch is not at
     /// index 0.
     fn start(&mut self) -> usize;
 
-    /// If packets are available (i.e., `idx` is not past the end of the batch), returns the descriptor for the `idx`th
-    /// packet, any associated metadata (context) and the next index. Otherwise returns None. Note this should not be
-    /// used directly, use one of the nice iterators below.
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)>;
-
-    /// Same as above, except pop off (subtract packet offset) by as `pop` parse nodes. This allows `DeparsedBatch` to
-    /// be implemented.
-    unsafe fn next_payload_popped(&mut self,
-                                  idx: usize,
-                                  pop: i32)
-                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)>;
-
-    /// Same as above, except return addresses from the start of the packet (offset 0). This allows `ResetBatch` to be
-    /// implemented.
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)>;
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<Self::Header>>;
 }
 
 /// A struct containing the parsed information returned by the `PayloadEnumerator`.
-pub struct ParsedDescriptor<'a, T>
-    where T: 'a + EndOffset
+pub struct ParsedDescriptor<T>
+    where T: EndOffset
 {
     pub index: usize,
-    pub header: &'a mut T,
-    pub payload: &'a mut [u8],
-    pub ctx: Option<&'a mut Any>,
-    /// Offset (from 0) at which the current payload resides.
-    pub offset: usize,
+    pub packet: Packet<T>,
 }
 
 /// An enumerator over both the header and the payload. The payload is represented as an appropriately sized slice of
@@ -81,7 +53,7 @@ impl<T> PayloadEnumerator<T>
 {
     /// Create a new iterator.
     #[inline]
-    pub fn new(batch: &mut BatchIterator) -> PayloadEnumerator<T> {
+    pub fn new(batch: &mut BatchIterator<Header = T>) -> PayloadEnumerator<T> {
         let start = batch.start();
         PayloadEnumerator {
             idx: Cell::new(start),
@@ -92,23 +64,17 @@ impl<T> PayloadEnumerator<T>
     /// Used for looping over packets. Note this iterator is not safe if packets are added or dropped during iteration,
     /// so you should not do that if possible.
     #[inline]
-    pub fn next<'a>(&'a self, batch: &'a mut BatchIterator) -> Option<ParsedDescriptor<'a, T>> {
+    pub fn next(&self, batch: &mut BatchIterator<Header = T>) -> Option<ParsedDescriptor<T>> {
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_payload(original_idx) };
         match item {
-            Some((PacketDescriptor { offset, header: haddr, payload, payload_size, .. }, ctx, next_idx)) => {
-                let header = cast_from_u8::<T>(haddr);
-                // println!("Payload size is {}", payload_size);
+            Some(PacketDescriptor { packet }) => {
                 // This is safe (assuming our size accounting has been correct so far).
                 // Switch to providing packets
-                let payload_slice = unsafe { from_raw_parts_mut::<u8>(payload, payload_size) };
-                self.idx.set(next_idx);
+                self.idx.set(original_idx + 1);
                 Some(ParsedDescriptor {
-                    offset: offset,
-                    index: original_idx,
-                    header: header,
-                    payload: payload_slice,
-                    ctx: ctx,
+                    index: original_idx, 
+                    packet: packet,
                 })
             }
             None => None,

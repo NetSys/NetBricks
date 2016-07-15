@@ -1,5 +1,5 @@
 use e2d2::headers::*;
-use e2d2::packet_batch::*;
+use e2d2::operators::*;
 use e2d2::utils::*;
 use e2d2::scheduler::*;
 use fnv::FnvHasher;
@@ -29,11 +29,13 @@ pub fn nat<T: 'static + Batch<Header = NullHeader>>(parent: T,
     const MIN_PORT: u16 = 1024;
     const MAX_PORT: u16 = 65535;
     let pipeline = parent.parse::<MacHeader>()
-                         .transform(move |hdr, payload, _| {
-                             if let Some(flow) = ipv4_extract_flow(hdr, payload) {
+                         .transform(box move |pkt| {
+                             //let hdr = pkt.get_mut_header();
+                             let payload = pkt.get_mut_payload();
+                             if let Some(flow) = ipv4_extract_flow(payload) {
                                  let found = match port_hash.get(&flow) {
                                      Some(s) => {
-                                         s.ipv4_stamp_flow(hdr, payload);
+                                         s.ipv4_stamp_flow(payload);
                                          true
                                      }
                                      None => false, 
@@ -52,7 +54,7 @@ pub fn nat<T: 'static + Batch<Header = NullHeader>>(parent: T,
                                          port_hash.insert(flow, outgoing_flow);
                                          port_hash.insert(rev_flow, flow.reverse_flow());
 
-                                         outgoing_flow.ipv4_stamp_flow(hdr, payload);
+                                         outgoing_flow.ipv4_stamp_flow(payload);
                                      }
                                  }
                              }

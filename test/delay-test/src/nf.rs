@@ -1,6 +1,5 @@
 use e2d2::headers::*;
-use e2d2::packet_batch::*;
-use std::any::Any;
+use e2d2::operators::*;
 
 #[inline]
 fn lat() {
@@ -26,7 +25,8 @@ pub fn delay<T: 'static + Batch<Header = NullHeader>>(parent: T,
                                                       delay: u64)
                                                       -> TransformBatch<MacHeader, ParsedBatch<MacHeader, T>> {
     parent.parse::<MacHeader>()
-          .transform(move |hdr: &mut MacHeader, _: &mut [u8], _: Option<&mut Any>| {
+          .transform(box move |pkt| {
+              let mut hdr = pkt.get_mut_header();
               let src = hdr.src.clone();
               hdr.src = hdr.dst;
               hdr.dst = src;

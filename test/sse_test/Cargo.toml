@@ -10,5 +10,5 @@ rand = "0.3"
 [profile.release]
 opt-level = 3
 rpath = true
-debug = false
+debug = true
 debug-assertions = false

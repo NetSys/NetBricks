@@ -1,8 +1,6 @@
 pub use self::flow::*;
-pub use self::spsc_mbuf_queue::*;
 pub use self::asm::*;
 mod flow;
-mod spsc_mbuf_queue;
 mod asm;
 
 pub const PAGE_SIZE: usize = 4096; // Page size in bytes, not using huge pages here.
