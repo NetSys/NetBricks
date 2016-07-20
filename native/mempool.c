@@ -17,8 +17,8 @@
 
 /* Largely taken from SoftNIC (snbuf.c) */
 #define NUM_MEMPOOL_CACHE 32 // Size of per-core object cache.
-
-#define PRIV_SIZE 16
+#define METADATA_SLOT_SIZE 8 // size in bytes of a metadata slot
+_Static_assert(METADATA_SLOT_SIZE % RTE_MBUF_PRIV_ALIGN == 0, "Must be aligned to RTE_MBUF_PRIV_ALIGN");
 
 RTE_DEFINE_PER_LCORE(int, _mempool_core) = 0;
 
@@ -30,6 +30,7 @@ struct rte_mbuf mbuf_template[RTE_MAX_LCORE];
 static int mempool_initialized[RTE_MAX_LCORE]; 
 static unsigned int core_mempool_size;
 static unsigned int core_mempool_cache_size;
+static unsigned short core_metadata_slots;
 #else 
 /* Creating one pool per NUMA node. */
 static struct rte_mempool *pframe_pool[RTE_MAX_NUMA_NODES];
@@ -67,7 +68,7 @@ int init_mempool_core(int core)
 	pframe_pool[core] = rte_pktmbuf_pool_create(name,
 			core_mempool_size,
 			core_mempool_cache_size,
-			PRIV_SIZE,
+			core_metadata_slots * METADATA_SLOT_SIZE,
 			RTE_MBUF_DEFAULT_BUF_SIZE,
 			sid);
 	if (pframe_pool[core] == NULL) {
@@ -99,14 +100,15 @@ struct rte_mempool *get_mempool_for_core(int coreid) {
 
 static int init_mempool_socket(int sid, 
 		unsigned int mempool_size, 
-		unsigned int mcache_size)
+		unsigned int mcache_size,
+		uint16_t metadata_slots)
 {
 	char name[256];
 	sprintf(name, "pframe%d", sid);
 	pframe_pool[sid] = rte_pktmbuf_pool_create(name,
 			mempool_size,
 			mcache_size,
-			PRIV_SIZE,
+			metadata_slots * METADATA_SLOT_SIZE,
 			RTE_MBUF_DEFAULT_BUF_SIZE,
 			sid);
 	return pframe_pool[sid] != NULL;
@@ -114,7 +116,8 @@ static int init_mempool_socket(int sid,
 
 int init_mempool(int master_core, 
 		unsigned int mempool_size, 
-		unsigned int mcache_size)
+		unsigned int mcache_size,
+		unsigned short metadata_slots)
 {
 #if (!PER_CORE)
 	int initialized[RTE_MAX_NUMA_NODES];
@@ -129,7 +132,7 @@ int init_mempool(int master_core,
 		if (!initialized[sid]) {
 			struct rte_mbuf *mbuf;
 			if (!init_mempool_socket(sid, mempool_size, 
-						mcache_size)) {
+						mcache_size, metadata_slots)) {
 				goto fail;
 			}
 			/* Initialize mbuf template */
@@ -148,6 +151,7 @@ fail:
 	
 	core_mempool_size = mempool_size;
 	core_mempool_cache_size = mcache_size;
+	core_metadata_slots = metadata_slots;
 	memset(mempool_initialized, 0, sizeof(int) * RTE_MAX_LCORE);
 	return init_mempool_core(master_core);
 #endif

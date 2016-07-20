@@ -14,7 +14,8 @@ typedef struct rte_mbuf* restrict * restrict mbuf_array_t;
 int init_mempool_core(int core);
 int init_mempool(int master_core,
 		unsigned int mempool_size,
-		unsigned int mcache_size);
+		unsigned int mcache_size,
+		unsigned short slots);
 int init_secondary_mempool(const char* mempool_name);
 int find_secondary_mempool();
 struct rte_mbuf *mbuf_alloc();

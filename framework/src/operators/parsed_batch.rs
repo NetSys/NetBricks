@@ -49,7 +49,8 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
         let parent_payload = self.parent.next_payload(idx);
         match parent_payload {
             Some(PacketDescriptor { packet } ) =>
-                packet.parse_header().and_then(|p| Some(PacketDescriptor {packet: p})),
+                Some(PacketDescriptor { packet: packet.parse_header() } ),
+                //packet.parse_header().and_then(|p| Some(PacketDescriptor {packet: p})),
             None => None
         }
     }

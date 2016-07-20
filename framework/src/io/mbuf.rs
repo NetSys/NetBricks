@@ -27,6 +27,22 @@ pub struct MBuf {
 #[allow(dead_code)]
 impl MBuf {
     #[inline]
+    pub fn read_metadata_slot(mbuf: *mut MBuf, slot: usize) -> usize {
+        unsafe {
+            let ptr = (mbuf.offset(1) as *mut usize).offset(slot as isize);
+            *ptr
+        }
+    }
+
+    #[inline]
+    pub fn write_metadata_slot(mbuf: *mut MBuf, slot: usize, value: usize) {
+        unsafe {
+            let ptr = (mbuf.offset(1) as *mut usize).offset(slot as isize);
+            *ptr = value;
+        }
+    }
+
+    #[inline]
     pub fn data_address(&self, offset: usize) -> *mut u8 {
         unsafe { self.buf_addr.offset(self.data_off as isize + offset as isize) }
     }

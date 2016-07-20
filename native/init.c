@@ -143,7 +143,7 @@ int init_secondary(const char* name, int nlen, int core, char* vdevs[], int vdev
 }
 
 int init_system_whitelisted(const char* name, int nlen, int core, char* whitelist[], int wlcount,
-                            unsigned int mempool_size, unsigned int mcache_size) {
+                            unsigned int mempool_size, unsigned int mcache_size, int slots) {
     int ret = 0;
     if (name == NULL || nlen >= MAX_NAME_LEN) {
         return -EINVAL;
@@ -156,13 +156,13 @@ int init_system_whitelisted(const char* name, int nlen, int core, char* whitelis
     if ((ret = init_eal(clean_name, 0, core, whitelist, wlcount, NULL, 0)) < 0) {
         return ret;
     }
-    return init_mempool(core, mempool_size, mcache_size);
+    return init_mempool(core, mempool_size, mcache_size, slots);
 }
 
 /* Call this from the main thread on ZCSI to initialize things. This initializes
  * the master thread. */
-int init_system(char* name, int nlen, int core) {
-    return init_system_whitelisted(name, nlen, core, NULL, 0, NUM_PFRAMES, CACHE_SIZE);
+int init_system(char* name, int nlen, int core, int slots) {
+    return init_system_whitelisted(name, nlen, core, NULL, 0, NUM_PFRAMES, CACHE_SIZE, slots);
 }
 
 /* Declared within eal_thread.c, but not exposed */

@@ -1,16 +1,18 @@
 use std::ffi::CString;
+use super::METADATA_SLOTS;
 mod native {
     use std::os::raw::c_char;
     #[link(name = "zcsi")]
     extern "C" {
-        pub fn init_system(name: *const c_char, nlen: i32, core: i32) -> i32;
+        pub fn init_system(name: *const c_char, nlen: i32, core: i32, slots: u16) -> i32;
         pub fn init_system_whitelisted(name: *const c_char,
                                        nlen: i32,
                                        core: i32,
                                        whitelist: *mut *const c_char,
                                        wlcount: i32,
                                        pool_size: u32,
-                                       cache_size: u32)
+                                       cache_size: u32,
+                                       slots: u16)
                                        -> i32;
         pub fn init_thread(tid: i32, core: i32);
         pub fn init_secondary(name: *const c_char,
@@ -28,7 +30,7 @@ mod native {
 pub fn init_system(name: &str, core: i32) {
     let name_cstr = CString::new(name).unwrap();
     unsafe {
-        let ret = native::init_system(name_cstr.as_ptr(), name.len() as i32, core);
+        let ret = native::init_system(name_cstr.as_ptr(), name.len() as i32, core, METADATA_SLOTS);
         if ret != 0 {
             panic!("Could not initialize the system errno {}", ret)
         }
@@ -47,7 +49,8 @@ pub fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_s
                                                   whitelist.as_mut_ptr(),
                                                   pci.len() as i32,
                                                   pool_size,
-                                                  cache_size);
+                                                  cache_size,
+                                                  METADATA_SLOTS);
         if ret != 0 {
             panic!("Could not initialize the system errno {}", ret)
         }
