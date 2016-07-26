@@ -337,6 +337,10 @@ case $TASK in
     clean)
         clean
         ;;
+    env)
+        echo "export PATH=\"${BIN_DIR}:${PATH}\""
+        echo "export LD_LIBRARY_PATH=\"${TOOLS_BASE}:${LD_LIBRARY_PATH}\""
+        ;;
     *)
         echo "./build.sh <Command>
         Where command is one of
@@ -347,6 +351,7 @@ case $TASK in
         lint: Run clippy to lint the project
         clean: Remove all built files
         dist_clean: Remove all support files
+        env: Environment variables, run as eval `./build.sh env`.
         "
         ;;
 esac
