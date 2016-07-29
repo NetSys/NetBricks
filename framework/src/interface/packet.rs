@@ -126,7 +126,7 @@ impl<T: EndOffset> Packet<T> {
 
     #[inline]
     fn payload_offset(&self) -> usize {
-        self.offset() + unsafe { (*self.header()).offset() }
+        unsafe { (*self.header()).offset() }
     }
 
     #[inline]

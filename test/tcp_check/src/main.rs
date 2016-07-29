@@ -7,7 +7,7 @@ extern crate getopts;
 extern crate rand;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
-use e2d2::packet_batch::*;
+use e2d2::operators::*;
 use e2d2::scheduler::*;
 use getopts::Options;
 use std::collections::HashMap;
@@ -39,7 +39,7 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32) {
     for pipeline in pipelines {
         sched.add_task(pipeline);
     }
-    sched.execute_loop();
+    sched.execute_one();
 }
 
 fn main() {
@@ -49,8 +49,7 @@ fn main() {
     opts.optflag("h", "help", "print this help menu");
     opts.optflag("", "secondary", "run as a secondary process");
     opts.optopt("n", "name", "name to use for the current process", "name");
-    opts.optmulti("w", "whitelist", "Whitelist PCI", "PCI");
-    opts.optmulti("v", "vdevs", "Virtual Devices to add", "PCI");
+    opts.optmulti("p", "port", "Port to use", "[type:]id");
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
     let matches = match opts.parse(&args[1..]) {
@@ -84,15 +83,10 @@ fn main() {
 
     let primary = !matches.opt_present("secondary");
 
-    let cores_for_port = if primary {
-        extract_cores_for_port(&matches.opt_strs("w"), &cores)
-    } else {
-        extract_cores_for_port(&matches.opt_strs("v"), &cores)
-    };
+    let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
 
     if primary {
-        let whitelisted: Vec<_> = cores_for_port.keys().map(|p| p.clone()).collect();
-        init_system_wl(&name, master_core, &whitelisted[..]);
+        init_system_wl(&name, master_core, &[]);
     } else {
         init_system_secondary(&name, master_core);
     }
@@ -103,19 +97,9 @@ fn main() {
     let mut ports = Vec::<Arc<PmdPort>>::with_capacity(ports_to_activate.len());
     for port in &ports_to_activate {
         let cores = cores_for_port.get(*port).unwrap();
-        let pmd_port = if primary {
-            let port_id = PmdPort::find_port_id(*port);
-            if port_id < 0 {
-                println!("Could not find port {}", port);
-                panic!("Could not find port")
-            } else {
-                let queues = cores.len() as i32;
-                PmdPort::new_mq_port(port_id, queues, queues, cores, cores).expect("Could not initialize port")
-            }
-        } else {
-            assert!(cores.len() == 1);
-            PmdPort::new_vdev(*port, cores[0]).expect("Could not initialize vdev")
-        };
+        let queues = cores.len() as i32;
+        let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
+                           .expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
             queues_by_core.entry(*core)
@@ -124,6 +108,7 @@ fn main() {
         }
         ports.push(pmd_port);
     }
+
 
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
@@ -136,8 +121,8 @@ fn main() {
                                         .collect();
     let mut pkts_so_far = (0, 0);
     let mut last_printed = 0.;
-    const MAX_PRINT_INTERVAL: f64 = 60.;
-    const PRINT_DELAY: f64 = 30.;
+    const MAX_PRINT_INTERVAL: f64 = 1.0;
+    const PRINT_DELAY: f64 = 0.5;
     let sleep_delay = (PRINT_DELAY / 2.) as u64;
     let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
     let sleep_time = Duration::from_millis(sleep_delay);
