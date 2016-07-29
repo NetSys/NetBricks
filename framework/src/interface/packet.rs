@@ -163,7 +163,7 @@ impl<T: EndOffset> Packet<T> {
             let header = self.payload();
 
             let hdr = header as *mut T2;
-            let offset = self.payload_offset();
+            let offset = self.offset() + self.payload_offset();
             if added >= size {
                 let dst = if len != offset {
                     // Need to move down the rest of the data down.
@@ -191,7 +191,7 @@ impl<T: EndOffset> Packet<T> {
     pub fn parse_header<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2> {
         unsafe {
             let hdr = self.payload();
-            let offset = self.payload_offset();
+            let offset = self.offset() + self.payload_offset();
             self.update_ptrs(hdr, offset);
             Packet {
                 mbuf: self.get_mbuf(),
