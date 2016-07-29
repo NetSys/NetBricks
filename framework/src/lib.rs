@@ -15,8 +15,12 @@ extern crate byteorder;
 extern crate fnv;
 extern crate twox_hash;
 extern crate regex;
+extern crate net2;
 #[macro_use]
 extern crate lazy_static;
+
+#[cfg(unix)]
+extern crate nix;
 pub mod headers;
 mod io;
 pub mod scheduler;
@@ -26,3 +30,4 @@ pub mod state;
 pub mod operators;
 pub mod interface;
 pub mod common;
+pub mod control;

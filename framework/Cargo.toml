@@ -18,6 +18,9 @@ fnv = "*"
 twox-hash = "*"
 regex = "*"
 lazy_static = "*"
+net2 = "*"
+# NIX restricts us to just unix for now, we can fix this if someone cares at a later point.
+nix = "*"
 
 [profile.release]
 opt-level = 3
