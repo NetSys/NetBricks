@@ -43,9 +43,9 @@ impl<T, V> Executable for GroupByProducer<T, V>
             while let Some(ParsedDescriptor { mut packet, .. }) = iter.next(&mut self.parent) {
                 let group = (self.group_fn)(&packet);
                 self.producers[group].enqueue_one(&mut packet);
-                // FIXME: Clear it out from the parent.
             }
         }
+        self.parent.get_packet_batch().clear_packets();
         self.parent.done();
     }
 }
