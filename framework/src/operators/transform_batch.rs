@@ -16,6 +16,7 @@ pub struct TransformBatch<T, V>
 {
     parent: V,
     transformer: TransformFn<T>,
+    applied: bool,
     phantom_t: PhantomData<T>,
 }
 
@@ -29,6 +30,7 @@ impl<T, V> TransformBatch<T, V>
         TransformBatch {
             parent: parent,
             transformer: transformer,
+            applied: false,
             phantom_t: PhantomData,
         }
     }
@@ -62,17 +64,21 @@ impl<T, V> Act for TransformBatch<T, V>
 {
     #[inline]
     fn act(&mut self) {
-        self.parent.act();
-        {
-            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some(ParsedDescriptor { mut packet, .. }) = iter.next(&mut self.parent) {
-                (self.transformer)(&mut packet);
+        if !self.applied {
+            self.parent.act();
+            {
+                let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+                while let Some(ParsedDescriptor { mut packet, .. }) = iter.next(&mut self.parent) {
+                    (self.transformer)(&mut packet);
+                }
             }
+            self.applied = true;
         }
     }
 
     #[inline]
     fn done(&mut self) {
+        self.applied = false;
         self.parent.done();
     }
 

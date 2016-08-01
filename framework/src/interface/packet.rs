@@ -97,6 +97,10 @@ impl<T: EndOffset> Packet<T> {
 
     #[inline]
     fn update_ptrs(&mut self, header: *mut u8, offset: usize) {
+        if false {
+            println!("packet {:x} update_ptrs header {:x} offset {:x}", self.mbuf as usize, header as usize, offset as
+                     usize);
+        }
         MBuf::write_metadata_slot(self.mbuf, HEADER_SLOT, header as usize);
         MBuf::write_metadata_slot(self.mbuf, OFFSET_SLOT, offset as usize);
     }

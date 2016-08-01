@@ -16,6 +16,7 @@ pub struct MapBatch<T, V>
 {
     parent: V,
     transformer: MapFn<T>,
+    applied: bool,
     phantom_t: PhantomData<T>,
 }
 
@@ -27,6 +28,7 @@ impl<T, V> MapBatch<T, V>
         MapBatch {
             parent: parent,
             transformer: transformer,
+            applied: false,
             phantom_t: PhantomData,
         }
     }
@@ -44,17 +46,21 @@ impl<T, V> Act for MapBatch<T, V>
 {
     #[inline]
     fn act(&mut self) {
-        self.parent.act();
-        {
-            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some(ParsedDescriptor { packet, .. }) = iter.next(&mut self.parent) {
-                (self.transformer)(&packet);
+        if !self.applied {
+            self.parent.act();
+            {
+                let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+                while let Some(ParsedDescriptor { packet, .. }) = iter.next(&mut self.parent) {
+                    (self.transformer)(&packet);
+                }
             }
+            self.applied = true;
         }
     }
 
     #[inline]
     fn done(&mut self) {
+        self.applied = false;
         self.parent.done();
     }
 
@@ -97,6 +103,7 @@ impl<T, V> BatchIterator for MapBatch<T, V>
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T>> {
+        //self.parent.next_payload(idx).map(|p| {(self.transformer)(&p.packet); p})
         self.parent.next_payload(idx)
     }
 }

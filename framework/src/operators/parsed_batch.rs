@@ -46,14 +46,9 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
 {
     type Header = T;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T>> {
-        let parent_payload = self.parent.next_payload(idx);
-        match parent_payload {
-            Some(PacketDescriptor { packet } ) =>
-                Some(PacketDescriptor { packet: packet.parse_header() } ),
-                //packet.parse_header().and_then(|p| Some(PacketDescriptor {packet: p})),
-            None => None
-        }
+        self.parent.next_payload(idx).map(|p| {PacketDescriptor {packet: p.packet.parse_header()}})
     }
+
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()

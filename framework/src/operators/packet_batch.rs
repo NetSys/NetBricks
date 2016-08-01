@@ -313,12 +313,6 @@ impl Drop for PacketBatch {
     }
 }
 
-//#[inline]
-//pub fn cast_from_u8<'a, T: 'a>(data: *mut u8) -> &'a mut T {
-    //let typecast = data as *mut T;
-    //unsafe { &mut *typecast }
-//}
-
 // Some low level functions that need access to private members.
 #[link(name = "zcsi")]
 extern "C" {
