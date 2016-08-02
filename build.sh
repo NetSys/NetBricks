@@ -52,19 +52,19 @@ rust_build_static() {
 
 rust_static() {
     echo "Running rust_static"
-    if [ ! -e ${MUSL_TEST} ]; then
+    if [ ! -e ${MUSL_TEST} ] || [ ! -z ${_BUILD_UPDATE_} ]; then
         musl
     else
         echo "Musl found, not building"
     fi
 
-    if [ ! -e ${UNWIND_RESULT} ]; then
+    if [ ! -e ${UNWIND_RESULT} ] || [ ! -z ${_BUILD_UPDATE_} ]; then
         libunwind
     else
         echo "libunwind found, not building"
     fi
 
-    if [ ! -e ${RUST_TEST} ]; then
+    if [ ! -e ${RUST_TEST} ] || [ ! -z ${_BUILD_UPDATE_} ]; then
         rust_build_static
     else
         echo "Rust found not building"
@@ -269,6 +269,9 @@ case $TASK in
         pushd $BASE_DIR/test/maglev
                 ${CARGO} build --release
                 popd
+        pushd $BASE_DIR/test/tcp_check
+                ${CARGO} build --release
+        popd
         ;;
     build_container)
         clean
@@ -283,6 +286,7 @@ case $TASK in
         popd
         ;;
     update_rust)
+        _BUILD_UPDATE_=1
         rust
         ;;
     fmt)
@@ -309,11 +313,14 @@ case $TASK in
 
         pushd $BASE_DIR/test/nat
                 ${CARGO} fmt
-                popd
+        popd
 
         pushd $BASE_DIR/test/maglev
                 ${CARGO} fmt
-                popd
+        popd
+        pushd $BASE_DIR/test/tcp_check
+                ${CARGO} fmt
+        popd
         ;;
     doc)
         deps
