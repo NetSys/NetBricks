@@ -1,3 +1,4 @@
+use common::*;
 use io::MBuf;
 use std::ptr;
 use std::marker::PhantomData;
@@ -199,6 +200,7 @@ impl<T: EndOffset> Packet<T> {
         unsafe { &mut (*(self.header())) }
     }
 
+    #[inline]
     pub fn push_header<T2: EndOffset<PreviousHeader = T>>(mut self, header: &T2) -> Option<Packet<T2>> {
         unsafe {
             let len = self.data_len();
@@ -229,6 +231,34 @@ impl<T: EndOffset> Packet<T> {
     }
 
     #[inline]
+    pub fn add_headroom(&mut self, size: usize) -> Result<()>{
+        unsafe {
+            let added = (*self.mbuf).add_data_end(size);
+            if added >= size {
+                let src = self.payload();
+                let dst = src.offset(size as isize);
+                ptr::copy_nonoverlapping(src, dst, size);
+                Ok(())
+            } else {
+                Err(ZCSIError::FailedAllocation)
+            }
+        }
+    }
+
+    #[inline]
+    pub fn write_header<T2: EndOffset + Sized>(&mut self, header: &T2, offset: usize) -> Result<()>{
+        if offset >self.payload_size() {
+            Err(ZCSIError::BadOffset)
+        } else {
+            unsafe {
+                let dst = self.payload().offset(offset as isize);
+                ptr::copy_nonoverlapping(header, dst as *mut T2, 1);
+            }
+            Ok(())
+        }
+    }
+
+    #[inline]
     pub fn parse_header<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2> {
         unsafe {
             let hdr = self.payload() as *mut T2;
@@ -242,7 +272,6 @@ impl<T: EndOffset> Packet<T> {
         let offset = offset as isize;
         unsafe {
             let header = self.header_u8().offset(-offset) as *mut T::PreviousHeader;
-            //let payload = self.payload().offset(-offset);
             let new_offset = self.offset() - offset as usize;
             create_packet(self.get_mbuf(), header, new_offset)
         }

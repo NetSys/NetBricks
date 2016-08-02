@@ -10,6 +10,7 @@ pub enum ZCSIError {
     BadVdev,
     BadTxQueue,
     BadRxQueue,
+    BadOffset,
 }
 
 pub type Result<T> = result::Result<T, ZCSIError>;
