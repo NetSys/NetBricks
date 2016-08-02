@@ -200,6 +200,7 @@ impl<T: EndOffset> Packet<T> {
         unsafe { &mut (*(self.header())) }
     }
 
+    /// When constructing a packet, take a packet as input and add a header.
     #[inline]
     pub fn push_header<T2: EndOffset<PreviousHeader = T>>(mut self, header: &T2) -> Option<Packet<T2>> {
         unsafe {
@@ -230,14 +231,47 @@ impl<T: EndOffset> Packet<T> {
         }
     }
 
+    /// Remove data at the top of the payload, useful when removing headers.
     #[inline]
-    pub fn add_headroom(&mut self, size: usize) -> Result<()>{
+    pub fn remove_from_payload_head(&mut self, size: usize) -> Result<()> {
+        unsafe {
+            let src = self.data_base();
+            let dst = src.offset(size as isize);
+            ptr::copy_nonoverlapping(src, dst, size);
+            (*self.mbuf).remove_data_beginning(size);
+            Ok(())
+        }
+    }
+
+    /// Add data to the head of the payload.
+    #[inline]
+    pub fn add_to_payload_head(&mut self, size: usize) -> Result<()>{
         unsafe {
             let added = (*self.mbuf).add_data_end(size);
             if added >= size {
                 let src = self.payload();
                 let dst = src.offset(size as isize);
                 ptr::copy_nonoverlapping(src, dst, size);
+                Ok(())
+            } else {
+                Err(ZCSIError::FailedAllocation)
+            }
+        }
+    }
+
+    #[inline]
+    pub fn remove_from_payload_tail(&mut self, size: usize) -> Result<()> {
+        unsafe {
+            (*self.mbuf).remove_data_end(size);
+            Ok(())
+        }
+    }
+
+    #[inline]
+    pub fn add_to_payload_tail(&mut self, size: usize) -> Result<()>{
+        unsafe {
+            let added = (*self.mbuf).add_data_end(size);
+            if added >= size {
                 Ok(())
             } else {
                 Err(ZCSIError::FailedAllocation)
@@ -264,6 +298,13 @@ impl<T: EndOffset> Packet<T> {
             let hdr = self.payload() as *mut T2;
             let offset = self.offset() + self.payload_offset();
             create_packet(self.get_mbuf(), hdr, offset)
+        }
+    }
+
+    #[inline]
+    pub fn replace_header(&mut self, hdr: &T) {
+        unsafe {
+            ptr::copy_nonoverlapping(hdr, self.header(), 1);
         }
     }
 
