@@ -6,6 +6,7 @@ extern crate time;
 extern crate simd;
 extern crate getopts;
 extern crate rand;
+extern crate nix;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
 use e2d2::operators::*;

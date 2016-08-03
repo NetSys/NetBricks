@@ -1,6 +1,8 @@
 use e2d2::control::tcp::*;
 use std::net::*;
 use std::io::Read;
+use nix::errno;
+use std::str::from_utf8;
 
 pub struct ControlListener {
     scheduler: TcpScheduler,
@@ -15,13 +17,36 @@ impl TcpControlAgent for ControlListener {
     }
 
     fn handle_read_ready(&mut self) -> bool {
+        let mut schedule = true;
         while {
-            let r = self.stream.read(&mut self.buffer[..]).unwrap();
-            r > 0
+            let r = self.stream.read(&mut self.buffer[..]);
+            match r {
+                Ok(r) => { 
+                    if r > 0 {
+                        println!("Read {}", from_utf8(&self.buffer[..r]).unwrap());
+                    };
+                    r > 0
+                },
+                Err(e) => {
+                    println!("Error {}", e);
+                    if let Some(e) = e.raw_os_error() {
+                        if errno::from_i32(e) != errno::Errno::EAGAIN {
+                            schedule = false;
+                        } else {
+                            schedule = true;
+                        }
+                    } else {
+                        schedule = false;
+                    }
+                    false
+                },
+            }
         } {
         }
-        self.scheduler.schedule_read();
-        true
+        if schedule {
+            self.scheduler.schedule_read();
+        };
+        schedule
     }
     
     fn handle_write_ready(&mut self) -> bool {
@@ -29,6 +54,7 @@ impl TcpControlAgent for ControlListener {
     }
     
     fn handle_hup(&mut self) -> bool {
+        println!("Hanging up");
         false
     }
 }
