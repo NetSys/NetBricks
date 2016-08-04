@@ -43,7 +43,9 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32) {
                                      .collect();
     println!("Running {} pipelines", pipelines.len());
     if pipelines.len() > 1 {
-        sched.add_task(merge(pipelines));
+        for pipeline in pipelines {
+            sched.add_task(pipeline)
+        }
     } else {
         sched.add_task(pipelines.pop().unwrap());
     };

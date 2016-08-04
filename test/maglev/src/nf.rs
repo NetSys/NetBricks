@@ -88,7 +88,13 @@ pub fn maglev<T: 'static + Batch<Header = NullHeader>>(parent: T,
     let lut = Maglev::new(backends, 65537);
     let mut cache = HashMap::<usize, usize, FnvHash>::with_hasher(Default::default());
     let mut groups = parent.parse::<MacHeader>()
-                           .group_by(ct,
+                          .transform(box move |pkt| {
+                              assert!(pkt.refcnt() == 1);
+                              let mut hdr = pkt.get_mut_header();
+                              let src = hdr.src;
+                              hdr.src = hdr.dst;
+                              hdr.dst = src;
+                          }).group_by(ct,
                                               box move |pkt| {
                                                   let payload = pkt.get_payload();
                                                   let hash = ipv4_flow_hash(payload, 0);
