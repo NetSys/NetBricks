@@ -40,9 +40,9 @@ impl<T, V> Executable for GroupByProducer<T, V>
         self.parent.act(); // Let the parent get some packets.
         {
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some(ParsedDescriptor { mut packet, .. }) = iter.next(&mut self.parent) {
+            while let Some(ParsedDescriptor { packet, .. }) = iter.next(&mut self.parent) {
                 let group = (self.group_fn)(&packet);
-                self.producers[group].enqueue_one(&mut packet);
+                self.producers[group].enqueue_one(packet);
             }
         }
         self.parent.get_packet_batch().clear_packets();

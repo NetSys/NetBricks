@@ -134,7 +134,6 @@ impl<T: EndOffset> Packet<T> {
     #[inline]
     #[cfg(not(feature="packet_offset"))]
     fn header(&self) -> *mut T {
-        // MBuf::read_metadata_slot(self.mbuf, HEADER_SLOT) as *mut T
         self.header
     }
 
@@ -224,7 +223,7 @@ impl<T: EndOffset> Packet<T> {
                     self.payload() as *mut T2
                 };
                 ptr::copy_nonoverlapping(hdr, dst, 1);
-                Some(create_packet(self.get_mbuf(), hdr, offset))
+                Some(create_packet(self.get_mbuf_ref(), hdr, offset))
             } else {
                 None
             }
@@ -297,7 +296,7 @@ impl<T: EndOffset> Packet<T> {
         unsafe {
             let hdr = self.payload() as *mut T2;
             let offset = self.offset() + self.payload_offset();
-            create_packet(self.get_mbuf(), hdr, offset)
+            create_packet(self.get_mbuf_ref(), hdr, offset)
         }
     }
 
@@ -314,7 +313,7 @@ impl<T: EndOffset> Packet<T> {
         unsafe {
             let header = self.header_u8().offset(-offset) as *mut T::PreviousHeader;
             let new_offset = self.offset() - offset as usize;
-            create_packet(self.get_mbuf(), header, new_offset)
+            create_packet(self.get_mbuf_ref(), header, new_offset)
         }
     }
 
@@ -322,7 +321,7 @@ impl<T: EndOffset> Packet<T> {
     #[inline]
     pub fn reset(mut self) -> Packet<NullHeader> {
         unsafe {
-            let mbuf = self.get_mbuf();
+            let mbuf = self.get_mbuf_ref();
             let header = self.data_base() as *mut NullHeader;
             create_packet(mbuf, header, 0)
         }
@@ -387,7 +386,12 @@ impl<T: EndOffset> Packet<T> {
     /// The reference held by this Packet is nulled out as a result of this code. The callee is responsible for
     /// appropriately freeing this mbuf from here-on out.
     #[inline]
-    pub unsafe fn get_mbuf(&mut self) -> *mut MBuf {
+    pub unsafe fn get_mbuf(mut self) -> *mut MBuf {
+        self.get_mbuf_ref()
+    }
+
+    #[inline]
+    unsafe fn get_mbuf_ref(&mut self) -> *mut MBuf {
         let mbuf = self.mbuf;
         self.mbuf = ptr::null_mut();
         mbuf
