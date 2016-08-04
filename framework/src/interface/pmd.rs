@@ -337,6 +337,14 @@ impl PmdPort {
         }))
     }
 
+    /// Create a new port.
+    ///
+    /// Description
+    /// -   `name`: The name for a port. NetBricks currently supports Bess native vports, OVS shared memory ports and
+    ///     `dpdk` PMDs. DPDK PMDs can be used to input pcap (e.g., `dpdk:eth_pcap0,rx_pcap=<pcap_name>`), etc.
+    /// -   `rxqs`, `txqs`: Number of RX and TX queues.
+    /// -   `tx_cores`, `rx_cores`: Core affinity of where the queues will be used.
+    /// -   `nrxd`, `ntxd`: RX and TX descriptors.
     pub fn new_port_with_queues_descriptors_offloads(name: &str,
                                                      rxqs: i32,
                                                      txqs: i32,
