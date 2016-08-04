@@ -73,7 +73,7 @@ impl<T> PayloadEnumerator<T>
                 // Switch to providing packets
                 self.idx.set(original_idx + 1);
                 Some(ParsedDescriptor {
-                    index: original_idx, 
+                    index: original_idx,
                     packet: packet,
                 })
             }

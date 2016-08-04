@@ -23,10 +23,7 @@ impl<T> CompositionBatch<T>
     }
 }
 
-impl<T> Batch for CompositionBatch<T>
-    where T: EndOffset
-{
-}
+impl<T> Batch for CompositionBatch<T> where T: EndOffset {}
 
 impl<T> BatchIterator for CompositionBatch<T>
     where T: EndOffset
@@ -41,11 +38,10 @@ impl<T> BatchIterator for CompositionBatch<T>
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader>> {
         match self.parent.next_payload(idx) {
-            Some(PacketDescriptor { packet }) => Some(PacketDescriptor{ packet: packet.reset() }),
-            None => None
+            Some(PacketDescriptor { packet }) => Some(PacketDescriptor { packet: packet.reset() }),
+            None => None,
         }
     }
-
 }
 
 /// Internal interface for packets.

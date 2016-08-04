@@ -241,9 +241,7 @@ impl BatchIterator for PacketBatch {
     type Header = NullHeader;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader>> {
         if idx < self.array.len() {
-            Some(PacketDescriptor {
-                packet: packet_from_mbuf_no_free::<NullHeader>(self.array[idx], 0),
-            })
+            Some(PacketDescriptor { packet: packet_from_mbuf_no_free::<NullHeader>(self.array[idx], 0) })
         } else {
             None
         }
@@ -256,7 +254,6 @@ impl BatchIterator for PacketBatch {
 
 /// Internal interface for packets.
 impl Act for PacketBatch {
-
     #[inline]
     fn act(&mut self) {}
 
@@ -304,8 +301,7 @@ impl Act for PacketBatch {
     }
 }
 
-impl Batch for PacketBatch {
-}
+impl Batch for PacketBatch {}
 
 impl Drop for PacketBatch {
     fn drop(&mut self) {

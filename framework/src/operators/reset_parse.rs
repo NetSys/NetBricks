@@ -32,8 +32,8 @@ impl<V> BatchIterator for ResetParsingBatch<V>
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader>> {
         match self.parent.next_payload(idx) {
-            Some(PacketDescriptor { packet }) => Some(PacketDescriptor{ packet: packet.reset() }),
-            None => None
+            Some(PacketDescriptor { packet }) => Some(PacketDescriptor { packet: packet.reset() }),
+            None => None,
         }
     }
 }

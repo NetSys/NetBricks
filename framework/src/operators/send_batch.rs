@@ -29,10 +29,7 @@ impl<V> SendBatch<V>
     }
 }
 
-impl<V> Batch for SendBatch<V>
-    where V: Batch + BatchIterator + Act
-{
-}
+impl<V> Batch for SendBatch<V> where V: Batch + BatchIterator + Act {}
 
 impl<V> BatchIterator for SendBatch<V>
     where V: Batch + BatchIterator + Act
@@ -57,7 +54,8 @@ impl<V> Act for SendBatch<V>
     fn act(&mut self) {
         // First everything is applied
         self.parent.act();
-        self.parent.get_packet_batch()
+        self.parent
+            .get_packet_batch()
             .send_q(&mut self.port)
             .and_then(|x| {
                 self.sent += x as u64;

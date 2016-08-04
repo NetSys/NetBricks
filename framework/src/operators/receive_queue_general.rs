@@ -33,8 +33,7 @@ impl<T: ReceivableQueue + Send> ReceiveQueueGen<T> {
     }
 }
 
-impl<T: ReceivableQueue + Send> Batch for ReceiveQueueGen<T> {
-}
+impl<T: ReceivableQueue + Send> Batch for ReceiveQueueGen<T> {}
 
 impl<T: ReceivableQueue + Send> BatchIterator for ReceiveQueueGen<T> {
     type Header = NullHeader;
@@ -47,7 +46,6 @@ impl<T: ReceivableQueue + Send> BatchIterator for ReceiveQueueGen<T> {
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader>> {
         self.parent.next_payload(idx)
     }
-
 }
 
 /// Internal interface for packets.

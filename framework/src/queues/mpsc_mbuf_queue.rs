@@ -10,7 +10,7 @@ use std::clone::Clone;
 use std::default::Default;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
-use utils::{round_to_power_of_2, pause};
+use utils::{pause, round_to_power_of_2};
 use super::ReceivableQueue;
 
 #[derive(Default)]
@@ -90,13 +90,13 @@ impl MpscQueue {
     #[inline]
     fn enqueue_sp(&self, mbufs: &[*mut MBuf]) -> usize {
         let len = mbufs.len();
-        
+
         let producer_head = self.producer.head.load(Ordering::Acquire);
         let consumer_tail = self.consumer.tail.load(Ordering::Acquire);
 
         let free = self.mask.wrapping_add(consumer_tail).wrapping_sub(producer_head);
         let insert = min(free, len);
-        
+
         if insert > 0 {
             let producer_next = producer_head.wrapping_add(insert);
             // Reserve slots by incrementing head
@@ -245,7 +245,7 @@ impl ReceivableQueue for MpscConsumer {
 pub fn new_mpsc_queue_pair_with_size(size: usize) -> (MpscProducer, ReceiveQueueGen<MpscConsumer>) {
     let mpsc_q = Arc::new(MpscQueue::new(size));
     mpsc_q.reference_producers();
-    (MpscProducer { mpsc_queue: mpsc_q.clone() }, ReceiveQueueGen::new(MpscConsumer {mpsc_queue: mpsc_q}))
+    (MpscProducer { mpsc_queue: mpsc_q.clone() }, ReceiveQueueGen::new(MpscConsumer { mpsc_queue: mpsc_q }))
 }
 
 const DEFAULT_QUEUE_SIZE: usize = 1024;

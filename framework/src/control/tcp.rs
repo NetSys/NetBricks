@@ -1,7 +1,7 @@
 /// TCP connection.
 use net2::TcpBuilder;
 use std::net::*;
-use super::{Available, PollScheduler, PollHandle, Token, READ, WRITE, HUP};
+use super::{Available, HUP, PollHandle, PollScheduler, READ, Token, WRITE};
 use scheduler::Executable;
 use std::marker::PhantomData;
 use std::os::unix::io::AsRawFd;
@@ -20,14 +20,18 @@ pub trait TcpControlAgent {
 
 pub struct TcpScheduler {
     fd: RawFd,
-    scheduler: PollHandle, 
+    scheduler: PollHandle,
     token: Token,
 }
 
 impl TcpScheduler {
-    pub fn new(scheduler: PollHandle, fd: RawFd,token: Token) -> TcpScheduler {
+    pub fn new(scheduler: PollHandle, fd: RawFd, token: Token) -> TcpScheduler {
         scheduler.new_io_fd(fd, token);
-        TcpScheduler { fd : fd, scheduler : scheduler, token : token }
+        TcpScheduler {
+            fd: fd,
+            scheduler: scheduler,
+            token: token,
+        }
     }
 
     pub fn schedule_read(&self) {
@@ -50,7 +54,7 @@ pub struct TcpControlServer<T: TcpControlAgent> {
     connections: HashMap<Token, T, FnvHash>,
 }
 
-impl <T: TcpControlAgent> Executable for TcpControlServer<T> {
+impl<T: TcpControlAgent> Executable for TcpControlServer<T> {
     fn execute(&mut self) {
         self.schedule();
     }
@@ -59,13 +63,10 @@ impl <T: TcpControlAgent> Executable for TcpControlServer<T> {
 impl<T: TcpControlAgent> TcpControlServer<T> {
     pub fn new(address: SocketAddr) -> TcpControlServer<T> {
         let socket = match address {
-            SocketAddr::V4(_) => {
-                TcpBuilder::new_v4()
-            },
-            SocketAddr::V6(_) => {
-                TcpBuilder::new_v6()
+                SocketAddr::V4(_) => TcpBuilder::new_v4(),
+                SocketAddr::V6(_) => TcpBuilder::new_v6(),
             }
-        }.unwrap();
+            .unwrap();
         let _ = socket.reuse_address(true).unwrap();
         // FIXME: Change 1024 to a parameter
         let listener = socket.bind(address).unwrap().listen(1024).unwrap();
@@ -90,27 +91,31 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
         match self.scheduler.get_token_noblock() {
             Some((token, avail)) if token == self.listener_token => {
                 self.accept_connection(avail);
-            },
+            }
             Some((token, available)) => {
                 self.handle_data(token, available);
-            },
+            }
             _ => {}
         }
     }
 
     fn accept_connection(&mut self, available: Available) {
-        if available & READ != 0 { // Make sure we have something to accept
+        if available & READ != 0 {
+            // Make sure we have something to accept
             match self.listener.accept() {
                 Ok((stream, addr)) => {
                     let token = self.next_token;
                     self.next_token += 1;
                     let _ = stream.set_nonblocking(true).unwrap();
                     let stream_fd = stream.as_raw_fd();
-                    self.connections.insert(token, 
-                                        T::new(addr, stream, TcpScheduler::new(self.scheduler.new_poll_handle(), 
-                                                                               stream_fd, token)));
+                    self.connections.insert(token,
+                                            T::new(addr,
+                                                   stream,
+                                                   TcpScheduler::new(self.scheduler.new_poll_handle(),
+                                                                     stream_fd,
+                                                                     token)));
                     // Add to some sort of hashmap.
-                },
+                }
                 Err(_) => {
                     // FIXME: Record
                 }
@@ -134,9 +139,9 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
                     } else {
                         true
                     }
-                },
+                }
                 None => {
-                    //FIXME: Record
+                    // FIXME: Record
                     true
                 }
             }

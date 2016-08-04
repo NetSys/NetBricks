@@ -19,7 +19,7 @@ pub struct Packet<T: EndOffset> {
     mbuf: *mut MBuf,
     _phantom_t: PhantomData<T>,
     header: *mut T,
-    offset: usize
+    offset: usize,
 }
 
 #[cfg(feature = "packet_offset")]
@@ -60,23 +60,23 @@ fn create_packet<T: EndOffset>(mbuf: *mut MBuf, hdr: *mut T, offset: usize) -> P
 }
 
 #[inline]
-pub fn packet_from_mbuf<T:EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
-        // Need to up the refcnt, so that things don't drop.
-        reference_mbuf(mbuf);
-        packet_from_mbuf_no_increment(mbuf, offset)
+pub fn packet_from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
+    // Need to up the refcnt, so that things don't drop.
+    reference_mbuf(mbuf);
+    packet_from_mbuf_no_increment(mbuf, offset)
 }
 
 #[inline]
-pub fn packet_from_mbuf_no_increment<T:EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
+pub fn packet_from_mbuf_no_increment<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
     unsafe {
         // Compute the real offset
-        let header =  (*mbuf).data_address(offset) as *mut T;
+        let header = (*mbuf).data_address(offset) as *mut T;
         create_packet(mbuf, header, offset)
     }
 }
 
 #[inline]
-pub unsafe fn packet_from_mbuf_no_free<T:EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
+pub unsafe fn packet_from_mbuf_no_free<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
     packet_from_mbuf_no_increment(mbuf, offset)
 }
 
@@ -104,7 +104,7 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader>> {
     array.iter().map(|m| packet_from_mbuf_no_increment(m.clone(), 0)).collect()
 }
 
-pub const METADATA_SLOTS : u16 = 8;
+pub const METADATA_SLOTS: u16 = 8;
 
 impl<T: EndOffset> Packet<T> {
     #[inline]
@@ -134,7 +134,7 @@ impl<T: EndOffset> Packet<T> {
     #[inline]
     #[cfg(not(feature="packet_offset"))]
     fn header(&self) -> *mut T {
-        //MBuf::read_metadata_slot(self.mbuf, HEADER_SLOT) as *mut T
+        // MBuf::read_metadata_slot(self.mbuf, HEADER_SLOT) as *mut T
         self.header
     }
 
@@ -245,7 +245,7 @@ impl<T: EndOffset> Packet<T> {
 
     /// Add data to the head of the payload.
     #[inline]
-    pub fn add_to_payload_head(&mut self, size: usize) -> Result<()>{
+    pub fn add_to_payload_head(&mut self, size: usize) -> Result<()> {
         unsafe {
             let added = (*self.mbuf).add_data_end(size);
             if added >= size {
@@ -268,7 +268,7 @@ impl<T: EndOffset> Packet<T> {
     }
 
     #[inline]
-    pub fn add_to_payload_tail(&mut self, size: usize) -> Result<()>{
+    pub fn add_to_payload_tail(&mut self, size: usize) -> Result<()> {
         unsafe {
             let added = (*self.mbuf).add_data_end(size);
             if added >= size {
@@ -280,8 +280,8 @@ impl<T: EndOffset> Packet<T> {
     }
 
     #[inline]
-    pub fn write_header<T2: EndOffset + Sized>(&mut self, header: &T2, offset: usize) -> Result<()>{
-        if offset >self.payload_size() {
+    pub fn write_header<T2: EndOffset + Sized>(&mut self, header: &T2, offset: usize) -> Result<()> {
+        if offset > self.payload_size() {
             Err(ZCSIError::BadOffset)
         } else {
             unsafe {

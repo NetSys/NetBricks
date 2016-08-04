@@ -2,15 +2,15 @@ use self::act::Act;
 use self::iterator::BatchIterator;
 
 pub use self::composition_batch::CompositionBatch;
-//pub use self::context_batch::ContextBatch;
-//pub use self::deparsed_batch::DeparsedBatch;
+// pub use self::context_batch::ContextBatch;
+// pub use self::deparsed_batch::DeparsedBatch;
 pub use self::filter_batch::FilterBatch;
 pub use self::map_batch::MapBatch;
 pub use self::merge_batch::MergeBatch;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::receive_batch::ReceiveBatch;
 pub use self::receive_queue_general::ReceiveQueueGen;
-//pub use self::resize_payload::ResizePayload;
+// pub use self::resize_payload::ResizePayload;
 pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
 pub use self::group_by::*;
@@ -29,8 +29,8 @@ mod macros;
 
 mod act;
 mod composition_batch;
-//mod context_batch;
-//mod deparsed_batch;
+// mod context_batch;
+// mod deparsed_batch;
 mod filter_batch;
 mod group_by;
 mod iterator;
@@ -47,8 +47,7 @@ mod receive_queue_general;
 /// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
 /// the precise batch being processed will be determined by the scheduling policy used.
 #[inline]
-pub fn merge<T:Batch<Header=NullHeader>>(batches: Vec<T>) -> MergeBatch<T>
-{
+pub fn merge<T: Batch<Header = NullHeader>>(batches: Vec<T>) -> MergeBatch<T> {
     MergeBatch::new(batches)
 }
 
@@ -83,9 +82,7 @@ pub trait Batch: BatchIterator + Act + Send {
     }
 
     /// Transform a header field.
-    fn transform
-        (self, transformer: TransformFn<Self::Header>)
-         -> TransformBatch<Self::Header, Self>
+    fn transform(self, transformer: TransformFn<Self::Header>) -> TransformBatch<Self::Header, Self>
         where Self: Sized
     {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
@@ -93,9 +90,7 @@ pub trait Batch: BatchIterator + Act + Send {
 
     /// Map over a set of header fields. Map and transform primarily differ in map being immutable. Immutability
     /// provides some optimization opportunities not otherwise available.
-    fn map(self,
-           transformer: MapFn<Self::Header>)
-           -> MapBatch<Self::Header, Self>
+    fn map(self, transformer: MapFn<Self::Header>) -> MapBatch<Self::Header, Self>
         where Self: Sized
     {
         MapBatch::<Self::Header, Self>::new(self, transformer)
@@ -115,19 +110,19 @@ pub trait Batch: BatchIterator + Act + Send {
         ResetParsingBatch::<Self>::new(self)
     }
 
-    ///// Deparse, i.e., remove the last parsed header. Note the assumption here is that T = the last header parsed
-    ///// (which we cannot statically enforce since we loose reference to that header).
-    //fn deparse<T: EndOffset>(self) -> DeparsedBatch<T, Self>
-        //where Self: Sized
-    //{
-        //DeparsedBatch::<T, Self>::new(self)
-    //}
+    /// // Deparse, i.e., remove the last parsed header. Note the assumption here is that T = the last header parsed
+    /// // (which we cannot statically enforce since we loose reference to that header).
+    /// fn deparse<T: EndOffset>(self) -> DeparsedBatch<T, Self>
+    /// where Self: Sized
+    /// {
+    /// DeparsedBatch::<T, Self>::new(self)
+    /// }
 
     fn group_by(self,
-                   groups: usize,
-                   group_f: GroupFn<Self::Header>,
-                   sched: &mut Scheduler)
-                   -> GroupBy<Self::Header, Self>
+                groups: usize,
+                group_f: GroupFn<Self::Header>,
+                sched: &mut Scheduler)
+                -> GroupBy<Self::Header, Self>
         where Self: Sized
     {
         GroupBy::<Self::Header, Self>::new(self, groups, group_f, sched)

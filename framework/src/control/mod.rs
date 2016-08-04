@@ -2,7 +2,7 @@
 pub use self::epoll::*;
 
 #[cfg(target_os = "linux")]
-#[path="linux/epoll.rs"] mod epoll;
+#[path="linux/epoll.rs"]mod epoll;
 pub mod tcp;
 
 pub type Available = u64;

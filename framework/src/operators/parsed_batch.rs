@@ -8,9 +8,8 @@ use super::iterator::*;
 use super::packet_batch::PacketBatch;
 
 pub struct ParsedBatch<T, V>
-    where T: EndOffset<PreviousHeader=V::Header>,
-          V: Batch + BatchIterator + Act,
-         
+    where T: EndOffset<PreviousHeader = V::Header>,
+          V: Batch + BatchIterator + Act
 {
     parent: V,
     phantom: PhantomData<T>,
@@ -23,7 +22,7 @@ impl<T, V> Act for ParsedBatch<T, V>
     act!{}
 }
 
-//batch!{ParsedBatch, [parent: V], [phantom: PhantomData]}
+// batch!{ParsedBatch, [parent: V], [phantom: PhantomData]}
 impl<T, V> Batch for ParsedBatch<T, V>
     where V: Batch + BatchIterator + Act,
           T: EndOffset<PreviousHeader = V::Header>
@@ -36,7 +35,10 @@ impl<T, V> ParsedBatch<T, V>
 {
     #[inline]
     pub fn new(parent: V) -> ParsedBatch<T, V> {
-        ParsedBatch { parent: parent, phantom: PhantomData }
+        ParsedBatch {
+            parent: parent,
+            phantom: PhantomData,
+        }
     }
 }
 
@@ -46,7 +48,7 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
 {
     type Header = T;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T>> {
-        self.parent.next_payload(idx).map(|p| {PacketDescriptor {packet: p.packet.parse_header()}})
+        self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.parse_header() })
     }
 
     #[inline]

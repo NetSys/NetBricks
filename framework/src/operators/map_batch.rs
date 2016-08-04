@@ -12,7 +12,7 @@ pub type MapFn<T> = Box<FnMut(&Packet<T>) + Send>;
 
 pub struct MapBatch<T, V>
     where T: EndOffset,
-          V: Batch + BatchIterator<Header=T> + Act
+          V: Batch + BatchIterator<Header = T> + Act
 {
     parent: V,
     transformer: MapFn<T>,
@@ -22,7 +22,7 @@ pub struct MapBatch<T, V>
 
 impl<T, V> MapBatch<T, V>
     where T: EndOffset,
-          V: Batch + BatchIterator<Header=T> + Act
+          V: Batch + BatchIterator<Header = T> + Act
 {
     pub fn new(parent: V, transformer: MapFn<T>) -> MapBatch<T, V> {
         MapBatch {
@@ -36,13 +36,13 @@ impl<T, V> MapBatch<T, V>
 
 impl<T, V> Batch for MapBatch<T, V>
     where T: EndOffset,
-          V: Batch + BatchIterator<Header=T> + Act
+          V: Batch + BatchIterator<Header = T> + Act
 {
 }
 
 impl<T, V> Act for MapBatch<T, V>
     where T: EndOffset,
-          V: Batch + BatchIterator<Header=T> + Act
+          V: Batch + BatchIterator<Header = T> + Act
 {
     #[inline]
     fn act(&mut self) {
@@ -92,7 +92,7 @@ impl<T, V> Act for MapBatch<T, V>
 
 impl<T, V> BatchIterator for MapBatch<T, V>
     where T: EndOffset,
-          V: Batch + BatchIterator<Header=T> + Act
+          V: Batch + BatchIterator<Header = T> + Act
 {
     type Header = T;
 
@@ -103,7 +103,7 @@ impl<T, V> BatchIterator for MapBatch<T, V>
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T>> {
-        //self.parent.next_payload(idx).map(|p| {(self.transformer)(&p.packet); p})
+        // self.parent.next_payload(idx).map(|p| {(self.transformer)(&p.packet); p})
         self.parent.next_payload(idx)
     }
 }

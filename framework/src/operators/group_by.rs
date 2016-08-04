@@ -19,11 +19,11 @@ pub struct GroupBy<T, V>
     _phantom_v: PhantomData<V>,
     groups: usize,
     _phantom_t: PhantomData<T>,
-    consumers: HashMap<usize, ReceiveQueueGen<MpscConsumer>> 
+    consumers: HashMap<usize, ReceiveQueueGen<MpscConsumer>>,
 }
 
 struct GroupByProducer<T, V>
-    where T:  EndOffset + 'static,
+    where T: EndOffset + 'static,
           V: Batch + BatchIterator<Header = T> + Act + 'static
 {
     parent: V,
@@ -31,8 +31,8 @@ struct GroupByProducer<T, V>
     group_fn: GroupFn<T>,
 }
 
-impl<T, V> Executable for GroupByProducer<T, V> 
-    where T:  EndOffset + 'static,
+impl<T, V> Executable for GroupByProducer<T, V>
+    where T: EndOffset + 'static,
           V: Batch + BatchIterator<Header = T> + Act + 'static
 {
     #[inline]

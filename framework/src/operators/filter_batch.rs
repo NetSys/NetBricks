@@ -11,7 +11,7 @@ pub type FilterFn<T> = Box<FnMut(&Packet<T>) -> bool + Send>;
 
 pub struct FilterBatch<T, V>
     where T: EndOffset,
-          V: Batch + BatchIterator<Header=T> + Act
+          V: Batch + BatchIterator<Header = T> + Act
 {
     parent: V,
     filter: FilterFn<T>,
@@ -21,7 +21,7 @@ pub struct FilterBatch<T, V>
 
 impl<T, V> FilterBatch<T, V>
     where T: EndOffset,
-          V: Batch + BatchIterator<Header=T> + Act
+          V: Batch + BatchIterator<Header = T> + Act
 {
     #[inline]
     pub fn new(parent: V, filter: FilterFn<T>) -> FilterBatch<T, V> {
@@ -39,7 +39,7 @@ batch_no_new!{FilterBatch}
 
 impl<T, V> Act for FilterBatch<T, V>
     where T: EndOffset,
-          V: Batch + BatchIterator<Header=T> + Act
+          V: Batch + BatchIterator<Header = T> + Act
 {
     #[inline]
     fn act(&mut self) {
@@ -90,7 +90,7 @@ impl<T, V> Act for FilterBatch<T, V>
 
 impl<T, V> BatchIterator for FilterBatch<T, V>
     where T: EndOffset,
-          V: Batch + BatchIterator<Header=T> + Act
+          V: Batch + BatchIterator<Header = T> + Act
 {
     type Header = T;
     #[inline]

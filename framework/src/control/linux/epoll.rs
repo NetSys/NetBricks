@@ -2,7 +2,7 @@ use nix::sys::epoll::*;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::slice;
-use super::{Available, NONE, WRITE, READ, HUP}; 
+use super::{Available, HUP, NONE, READ, WRITE};
 
 pub type Token = u64;
 
@@ -11,7 +11,7 @@ pub struct PollHandle {
 }
 
 impl PollHandle {
-    pub fn schedule_read<Fd:AsRawFd>(&self, file: &Fd, token: Token) {
+    pub fn schedule_read<Fd: AsRawFd>(&self, file: &Fd, token: Token) {
         self.schedule_read_rawfd(file.as_raw_fd(), token);
     }
 
@@ -22,12 +22,12 @@ impl PollHandle {
         kind.insert(EPOLLONESHOT); // One shot
         let event = EpollEvent {
             events: kind,
-            data: token
+            data: token,
         };
         let _ = epoll_ctl(self.epoll_fd, EpollOp::EpollCtlMod, fd, &event).unwrap();
     }
 
-    pub fn schedule_write<Fd:AsRawFd>(&self, file: &Fd, token: Token) {
+    pub fn schedule_write<Fd: AsRawFd>(&self, file: &Fd, token: Token) {
         self.schedule_write_rawfd(file.as_raw_fd(), token);
     }
 
@@ -38,7 +38,7 @@ impl PollHandle {
         kind.insert(EPOLLONESHOT); // One shot
         let event = EpollEvent {
             events: kind,
-            data: token
+            data: token,
         };
         let _ = epoll_ctl(self.epoll_fd, EpollOp::EpollCtlMod, fd, &event).unwrap();
     }
@@ -54,11 +54,10 @@ impl PollHandle {
         kind.insert(EPOLLONESHOT); // One shot
         let event = EpollEvent {
             events: kind,
-            data: token
+            data: token,
         };
         let _ = epoll_ctl(self.epoll_fd, EpollOp::EpollCtlAdd, fd, &event).unwrap();
     }
-
 }
 
 pub struct PollScheduler {
@@ -69,7 +68,7 @@ pub struct PollScheduler {
 
 impl PollScheduler {
     pub fn new_poll_handle(&self) -> PollHandle {
-        PollHandle { epoll_fd : self.epoll_fd } 
+        PollHandle { epoll_fd: self.epoll_fd }
     }
 
     pub fn new() -> PollScheduler {
@@ -97,14 +96,15 @@ impl PollScheduler {
 
     pub fn get_token_noblock(&mut self) -> Option<(Token, Available)> {
         if self.events > 0 {
-            self.events -= 1;
-            self.ready_tokens.pop()
-        } else {
-            let dest = unsafe { slice::from_raw_parts_mut(self.ready_tokens.as_mut_ptr(),
-                                                          self.ready_tokens.capacity()) };
-            self.events = epoll_wait(self.epoll_fd, dest, 0).unwrap();
-            unsafe { self.ready_tokens.set_len(self.events) };
-            self.ready_tokens.pop()
-        }.map(|t| (t.data, self.epoll_kind_to_available(&t.events)))
+                self.events -= 1;
+                self.ready_tokens.pop()
+            } else {
+                let dest =
+                    unsafe { slice::from_raw_parts_mut(self.ready_tokens.as_mut_ptr(), self.ready_tokens.capacity()) };
+                self.events = epoll_wait(self.epoll_fd, dest, 0).unwrap();
+                unsafe { self.ready_tokens.set_len(self.events) };
+                self.ready_tokens.pop()
+            }
+            .map(|t| (t.data, self.epoll_kind_to_available(&t.events)))
     }
 }
