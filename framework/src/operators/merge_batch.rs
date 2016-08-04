@@ -48,7 +48,6 @@ impl<T: Batch<Header = NullHeader>> Act for MergeBatch<T> {
     #[inline]
     fn done(&mut self) {
         self.parents[self.which].done();
-        // self.which = (self.which + 1) % self.parents.len();
         let next = self.which + 1;
         if next == self.parents.len() {
             self.which = 0

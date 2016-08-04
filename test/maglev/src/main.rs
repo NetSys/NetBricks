@@ -33,7 +33,7 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32) {
                  core);
     }
 
-    let mut pipelines: Vec<_> = ports.iter()
+    let pipelines: Vec<_> = ports.iter()
                                      .map(|port| {
                                          maglev(ReceiveBatch::new(port.clone()),
                                                 &mut sched,
@@ -42,13 +42,14 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32) {
                                      })
                                      .collect();
     println!("Running {} pipelines", pipelines.len());
-    if pipelines.len() > 1 {
-        for pipeline in pipelines {
-            sched.add_task(pipeline)
-        }
-    } else {
-        sched.add_task(pipelines.pop().unwrap());
-    };
+    sched.add_task(merge(pipelines));
+    //if pipelines.len() > 1 {
+        //for pipeline in pipelines {
+            //sched.add_task(pipeline)
+        //}
+    //} else {
+        //sched.add_task(pipelines.pop().unwrap());
+    //};
     sched.execute_loop();
 }
 

@@ -95,13 +95,13 @@ pub fn maglev<T: 'static + Batch<Header = NullHeader>>(parent: T,
                               hdr.src = hdr.dst;
                               hdr.dst = src;
                           }).group_by(ct,
-                                              box move |pkt| {
-                                                  let payload = pkt.get_payload();
-                                                  let hash = ipv4_flow_hash(payload, 0);
-                                                  let out = cache.entry(hash).or_insert_with(|| lut.lookup(hash));
-                                                  *out
-                                              },
-                                              s);
+                              box move |pkt| {
+                                  let payload = pkt.get_payload();
+                                  let hash = ipv4_flow_hash(payload, 0);
+                                  let out = cache.entry(hash).or_insert_with(|| lut.lookup(hash));
+                                  *out
+                              },
+                              s);
     let pipeline = merge((0..ct).map(|i| groups.get_group(i).unwrap()).collect());
     pipeline.compose()
 }

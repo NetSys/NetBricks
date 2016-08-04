@@ -1,37 +1,39 @@
-The build is entirely self contained, needing nothing.
+NetBricks is a Rust based framework for NFV development. Please refer to the paper (available soon) for information
+about the architecture and design. Currently NetBricks requires a relatively modern Linux version.
 
-To build
+Building
 --------
+NetBricks can be built either using a Rust nightly build or using Rust built from the current Git head. In the later
+case we also build [`musl`](https://www.musl-libc.org/) and statically link to things. Below we provide basic
+instructions for both.
 
-- Run `./build.sh deps`. This will take a while initially as it downloads and
-  builds all dependencies.
+Using Rust Nightly
+------------------
+First obtain Rust nightly. I use [rustup](rustup.rs), in which case the following works
 
-- Run `./build.sh` to build the project as a whole.
+```
+curl https://sh.rustup.rs -sSf | sh  # Install rustup
+rustup install nightly
+```
 
-To run
-------
+Then clone this repository and run `build.sh`
 
--   You first need to use dpdk_nic_bind.py to associate NICs with DPDK drivers.
-    For example on my machines I use
-    ```
-    sudo modprobe uio_pci_generic
-    sudo ~/e2d2/3rdparty/dpdk/tools/dpdk_nic_bind.py -b uio_pci_generic 07:00.0 07:00.1 07:00.2 07:00.3
-    ```
-    See the [DPDK documentation](http://dpdk.readthedocs.org/en/v2.2.0/linux_gsg/build_dpdk.html) for more information
-    about this.
--   Once done, you can run the test program by running
-    ```
-    sudo env LD_LIBRARY_PATH=$LD_LIBRARY_PATH $ZCSI_HOME/test/framework-test/target/release/zcsi-test -m 0 -c 6 -w "07:00.0" -c 6 -w "07:00.1" -c 7 -w "07:00.2" -c 7 -w "07:00.3"
-    ```
-    We need to redeclare the env because by default `sudo` resets environment variables. You can edit the sudoers file
-    to prevent this, but the current method also works. The `-m` parameter indicates the master core that ZCSI should
-    use, while each `-c, -w` pair indicate that ZCSI should associate the given NIC with the given core. The test
-    program currently only initializes one queue per core, but this is expected to change.
+```
+./build.sh
+```
 
-Current usage
--------------
+This should download DPDK, and build all of NetBricks.
 
-Currently the running program takes all received packets, exchanges the source
-and destination MAC address (since we assume we are receiving and sending
-packets back to the same packet generator), performs some other transformations
-(this has been changing as I find more things to do) and sends packets out.
+Using Rust from Git
+-------------------
+The instructions for doing so are simple, however building takes significantly longer in this case (and consumes tons of
+memory), so do this only if you have lots of time and memory. Building is as simple as
+
+```
+export RUST_STATIC=1
+./build.sh
+```
+
+Example NFs
+-----------
+Coming Soon.

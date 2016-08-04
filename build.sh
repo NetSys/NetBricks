@@ -69,6 +69,7 @@ rust_static() {
     else
         echo "Rust found not building"
     fi
+    export RUSTC="${TOOLS_BASE}/bin/rustc"
 }
 
 rust () {
@@ -238,7 +239,7 @@ case $TASK in
         ;;
     build)
         deps
-        toggle_symbols
+        #toggle_symbols
 
         make -j $proc -C $BASE_DIR/native
 
