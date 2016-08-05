@@ -106,7 +106,7 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader>> {
 pub const METADATA_SLOTS: u16 = 8;
 
 impl<T: EndOffset> Packet<T> {
-// --------------------- Not using packet offsets ------------------------------------------------------
+    // --------------------- Not using packet offsets ------------------------------------------------------
     #[inline]
     #[cfg(not(feature="packet_offset"))]
     fn header(&self) -> *mut T {
@@ -126,7 +126,7 @@ impl<T: EndOffset> Packet<T> {
         self.offset
     }
 
-// ----------------- Using packet offsets -------------------------------------------------------------
+    // ----------------- Using packet offsets -------------------------------------------------------------
     #[inline]
     #[cfg(feature="packet_offset")]
     fn header(&self) -> *mut T {
@@ -146,7 +146,7 @@ impl<T: EndOffset> Packet<T> {
         self.read_offset()
     }
 
-// -----------------Common code ------------------------------------------------------------------------
+    // -----------------Common code ------------------------------------------------------------------------
     #[inline]
     pub fn free_packet(self) {
         if !self.mbuf.is_null() {

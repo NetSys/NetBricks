@@ -115,5 +115,4 @@ pub fn lpm<T: 'static + Batch<Header = NullHeader>>(parent: T, s: &mut Scheduler
                               groups.get_group(2).unwrap()])
                        .compose();
     pipeline
-    //groups.get_group(3).unwrap().compose()
 }
