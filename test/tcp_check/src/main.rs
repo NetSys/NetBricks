@@ -12,13 +12,9 @@ use e2d2::scheduler::*;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;
-use std::time::Duration;
-use std::thread;
 use std::sync::Arc;
 use self::nf::*;
 mod nf;
-
-const CONVERSION_FACTOR: f64 = 1000000000.;
 
 fn recv_thread(ports: Vec<PortQueue>, core: i32) {
     init_thread(core, core);
