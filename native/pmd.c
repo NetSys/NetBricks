@@ -184,11 +184,11 @@ int recv_pkts(int port, int qid, mbuf_array_t pkts, int len) {
     int ret = rte_eth_rx_burst(port, qid, (struct rte_mbuf**)pkts, len);
     /* Removed prefetching since the benefit in performance for single core was
      * outweighed by the loss in performance with several cores. */
-/*#if 0*/
+#if 0
     for (int i = 0; i < ret; i++) {
         rte_prefetch0(rte_pktmbuf_mtod(pkts[i], void*));
     }
-/*#endif*/
+#endif
     return ret;
 }
 

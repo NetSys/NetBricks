@@ -49,11 +49,7 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
 {
     type Header = T;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T>> {
-        if self.push {
-            self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.parse_header_and_record() })
-        } else {
-            self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.parse_header() })
-        }
+        self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.parse_header() })
     }
 
     #[inline]
