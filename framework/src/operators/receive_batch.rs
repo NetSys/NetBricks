@@ -44,6 +44,7 @@ impl BatchIterator for ReceiveBatch {
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader>> {
         self.parent.next_payload(idx)
+        //self.parent.next_payload(idx).map(|mut p| { p.packet.reset_stack_offset(); p })
     }
 }
 

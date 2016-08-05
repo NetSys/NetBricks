@@ -13,6 +13,7 @@ pub struct ParsedBatch<T, V>
 {
     parent: V,
     phantom: PhantomData<T>,
+    push: bool,
 }
 
 impl<T, V> Act for ParsedBatch<T, V>
@@ -22,7 +23,6 @@ impl<T, V> Act for ParsedBatch<T, V>
     act!{}
 }
 
-// batch!{ParsedBatch, [parent: V], [phantom: PhantomData]}
 impl<T, V> Batch for ParsedBatch<T, V>
     where V: Batch + BatchIterator + Act,
           T: EndOffset<PreviousHeader = V::Header>
@@ -38,6 +38,7 @@ impl<T, V> ParsedBatch<T, V>
         ParsedBatch {
             parent: parent,
             phantom: PhantomData,
+            push: false,
         }
     }
 }
@@ -48,7 +49,11 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
 {
     type Header = T;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T>> {
-        self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.parse_header() })
+        if self.push {
+            self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.parse_header_and_record() })
+        } else {
+            self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.parse_header() })
+        }
     }
 
     #[inline]

@@ -1,52 +1,49 @@
 use common::*;
-use std::marker::PhantomData;
+use interface::*;
+use headers::EndOffset;
 use super::act::Act;
 use super::Batch;
-use super::iterator::{BatchIterator, PacketDescriptor};
-use interface::PortQueue;
-use headers::EndOffset;
-use utils::SpscProducer;
+use super::iterator::*;
+use super::packet_batch::PacketBatch;
 
-pub struct DeparsedBatch<T: EndOffset, V>
+pub struct DeparsedBatch<V>
     where V: Batch + BatchIterator + Act
 {
     parent: V,
-    phantom: PhantomData<T>,
 }
 
-impl<T, V> Act for DeparsedBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
+impl<V> Act for DeparsedBatch<V>
+    where V: Batch + BatchIterator + Act
 {
     act!{}
 }
 
-batch!{DeparsedBatch, [parent: V], [phantom: PhantomData]}
-
-impl<T, V> BatchIterator for DeparsedBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator + Act
+impl<V> Batch for DeparsedBatch<V>
+    where V: Batch + BatchIterator + Act
 {
+}
+
+impl<V> DeparsedBatch<V>
+    where V: Batch + BatchIterator + Act,
+{
+    #[inline]
+    pub fn new(parent: V) -> DeparsedBatch<V> {
+        DeparsedBatch {
+            parent: parent,
+        }
+    }
+}
+
+impl<V> BatchIterator for DeparsedBatch<V>
+    where V: Batch + BatchIterator + Act,
+{
+    type Header = <<V as BatchIterator>::Header as EndOffset>::PreviousHeader;
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<Self::Header>> {
+        self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.deparse_header_stack().unwrap() })
+    }
+
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
-    }
-
-    #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        self.next_payload_popped(idx, 1)
-    }
-
-    #[inline]
-    unsafe fn next_base_payload(&mut self, idx: usize) -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        self.parent.next_base_payload(idx)
-    }
-
-    #[inline]
-    unsafe fn next_payload_popped(&mut self,
-                                  idx: usize,
-                                  pop: i32)
-                                  -> Option<(PacketDescriptor, Option<&mut Any>, usize)> {
-        self.parent.next_payload_popped(idx, pop + 1)
     }
 }

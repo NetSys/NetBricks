@@ -3,14 +3,13 @@ use self::iterator::BatchIterator;
 
 pub use self::composition_batch::CompositionBatch;
 // pub use self::context_batch::ContextBatch;
-// pub use self::deparsed_batch::DeparsedBatch;
+pub use self::deparsed_batch::DeparsedBatch;
 pub use self::filter_batch::FilterBatch;
 pub use self::map_batch::MapBatch;
 pub use self::merge_batch::MergeBatch;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::receive_batch::ReceiveBatch;
 pub use self::receive_queue_general::ReceiveQueueGen;
-// pub use self::resize_payload::ResizePayload;
 pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
 pub use self::group_by::*;
@@ -31,7 +30,7 @@ mod macros;
 mod act;
 mod composition_batch;
 // mod context_batch;
-// mod deparsed_batch;
+mod deparsed_batch;
 mod filter_batch;
 mod group_by;
 mod iterator;
@@ -112,13 +111,13 @@ pub trait Batch: BatchIterator + Act + Send {
         ResetParsingBatch::<Self>::new(self)
     }
 
-    /// // Deparse, i.e., remove the last parsed header. Note the assumption here is that T = the last header parsed
-    /// // (which we cannot statically enforce since we loose reference to that header).
-    /// fn deparse<T: EndOffset>(self) -> DeparsedBatch<T, Self>
-    /// where Self: Sized
-    /// {
-    /// DeparsedBatch::<T, Self>::new(self)
-    /// }
+    /// Deparse, i.e., remove the last parsed header. Note the assumption here is that T = the last header parsed
+    /// (which we cannot statically enforce since we loose reference to that header).
+    fn deparse(self) -> DeparsedBatch<Self>
+        where Self: Sized
+    {
+        DeparsedBatch::<Self>::new(self)
+    }
 
     fn group_by(self,
                 groups: usize,

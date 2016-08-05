@@ -54,11 +54,12 @@ fn reference_mbuf(mbuf: *mut MBuf) {
     unsafe { (*mbuf).reference() };
 }
 
+pub const METADATA_SLOTS: u16 = 8;
 const HEADER_SLOT: usize = 0;
 const OFFSET_SLOT: usize = HEADER_SLOT + 1;
 const STACK_DEPTH_SLOT: usize = OFFSET_SLOT + 1;
 const STACK_OFFSET_SLOT: usize = STACK_DEPTH_SLOT + 1;
-const STACK_SIZE: usize  = 12;
+const STACK_SIZE: usize  = METADATA_SLOTS as usize - STACK_OFFSET_SLOT;
 #[allow(dead_code)]
 const END_OF_STACK_SLOT: usize = STACK_OFFSET_SLOT + STACK_SIZE;
 
@@ -108,7 +109,6 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader>> {
     array.iter().map(|m| packet_from_mbuf_no_increment(m.clone(), 0)).collect()
 }
 
-pub const METADATA_SLOTS: u16 = 16;
 
 impl<T: EndOffset> Packet<T> {
     // --------------------- Not using packet offsets ------------------------------------------------------
@@ -170,6 +170,11 @@ impl<T: EndOffset> Packet<T> {
     #[inline]
     fn write_stack_offset(&mut self, depth: usize, offset: usize) {
         MBuf::write_metadata_slot(self.mbuf, STACK_OFFSET_SLOT + depth, offset)
+    }
+
+    #[inline]
+    pub fn reset_stack_offset(&mut self) {
+        self.write_stack_depth(0)
     }
 
     #[inline]
