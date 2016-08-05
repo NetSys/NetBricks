@@ -54,7 +54,7 @@ fn reference_mbuf(mbuf: *mut MBuf) {
     unsafe { (*mbuf).reference() };
 }
 
-pub const METADATA_SLOTS: u16 = 8;
+pub const METADATA_SLOTS: u16 = 16;
 const HEADER_SLOT: usize = 0;
 const OFFSET_SLOT: usize = HEADER_SLOT + 1;
 const STACK_DEPTH_SLOT: usize = OFFSET_SLOT + 1;
