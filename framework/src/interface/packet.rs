@@ -55,7 +55,12 @@ fn reference_mbuf(mbuf: *mut MBuf) {
 }
 
 const HEADER_SLOT: usize = 0;
-const OFFSET_SLOT: usize = 1;
+const OFFSET_SLOT: usize = HEADER_SLOT + 1;
+const STACK_DEPTH_SLOT: usize = OFFSET_SLOT + 1;
+const STACK_OFFSET_SLOT: usize = STACK_DEPTH_SLOT + 1;
+const STACK_SIZE: usize  = 12;
+#[allow(dead_code)]
+const END_OF_STACK_SLOT: usize = STACK_OFFSET_SLOT + STACK_SIZE;
 
 #[inline]
 pub fn packet_from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
@@ -103,7 +108,7 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader>> {
     array.iter().map(|m| packet_from_mbuf_no_increment(m.clone(), 0)).collect()
 }
 
-pub const METADATA_SLOTS: u16 = 8;
+pub const METADATA_SLOTS: u16 = 16;
 
 impl<T: EndOffset> Packet<T> {
     // --------------------- Not using packet offsets ------------------------------------------------------
@@ -147,6 +152,49 @@ impl<T: EndOffset> Packet<T> {
     }
 
     // -----------------Common code ------------------------------------------------------------------------
+    #[inline]
+    fn read_stack_depth(&self) -> usize {
+        MBuf::read_metadata_slot(self.mbuf, STACK_DEPTH_SLOT)
+    }
+
+    #[inline]
+    fn write_stack_depth(&mut self, new_depth: usize) {
+        MBuf::write_metadata_slot(self.mbuf, STACK_DEPTH_SLOT, new_depth);
+    }
+
+    #[inline]
+    fn read_stack_offset(&mut self, depth: usize) -> usize {
+        MBuf::read_metadata_slot(self.mbuf, STACK_OFFSET_SLOT + depth)
+    }
+
+    #[inline]
+    fn write_stack_offset(&mut self, depth: usize, offset: usize) {
+        MBuf::write_metadata_slot(self.mbuf, STACK_OFFSET_SLOT + depth, offset)
+    }
+
+    #[inline]
+    fn push_offset(&mut self, offset: usize) -> Option<usize> {
+        let depth = self.read_stack_depth();
+        if depth < STACK_SIZE {
+            self.write_stack_depth(depth + 1);
+            self.write_stack_offset(depth, offset);
+            Some(depth + 1)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn pop_offset(&mut self) -> Option<usize> {
+        let depth = self.read_stack_depth();
+        if depth > 0 {
+            self.write_stack_depth(depth - 1);
+            Some(self.read_stack_offset(depth - 1))
+        } else {
+            None
+        }
+    }
+
     #[inline]
     pub fn free_packet(self) {
         if !self.mbuf.is_null() {
@@ -319,6 +367,20 @@ impl<T: EndOffset> Packet<T> {
     }
 
     #[inline]
+    pub fn parse_header_and_record<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2> {
+        unsafe {
+            assert!{self.payload_size() > T2::size()}
+            let hdr = self.payload() as *mut T2;
+            let payload_offset = self.payload_offset();
+            let offset = self.offset() + payload_offset;
+            // FIXME: Log failure?
+            self.push_offset(payload_offset).unwrap();
+            create_packet(self.get_mbuf_ref(), hdr, offset)
+        }
+    }
+
+
+    #[inline]
     pub fn restore_saved_header<T2: EndOffset>(mut self) -> Option<Packet<T2>> {
         unsafe {
             let hdr = self.read_header::<T2>();
@@ -347,6 +409,13 @@ impl<T: EndOffset> Packet<T> {
             let new_offset = self.offset() - offset as usize;
             create_packet(self.get_mbuf_ref(), header, new_offset)
         }
+    }
+
+    #[inline]
+    pub fn deparse_header_stack(mut self) -> Option<Packet<T::PreviousHeader>> {
+        self.pop_offset().map(|offset| {
+            self.deparse_header(offset)
+        })
     }
 
 
