@@ -289,6 +289,7 @@ case $TASK in
     update_rust)
         _BUILD_UPDATE_=1
         rust
+        cargo
         ;;
     fmt)
         deps

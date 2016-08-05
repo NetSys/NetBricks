@@ -97,7 +97,7 @@ impl IPLookup {
     }
 }
 
-pub fn lpm<T: 'static + Batch<Header = NullHeader>>(parent: T, s: &mut Scheduler) -> CompositionBatch<NullHeader> {
+pub fn lpm<T: 'static + Batch<Header = NullHeader>>(parent: T, s: &mut Scheduler) -> CompositionBatch<IpHeader> {
     let mut lpm_table = IPLookup::new();
     lpm_table.insert_ipv4(&Ipv4Addr::new(0, 0, 0, 0), 0, 1);
     lpm_table.insert_ipv4(&Ipv4Addr::new(10, 0, 0, 0), 8, 2);
@@ -115,4 +115,5 @@ pub fn lpm<T: 'static + Batch<Header = NullHeader>>(parent: T, s: &mut Scheduler
                               groups.get_group(2).unwrap()])
                        .compose();
     pipeline
+    //groups.get_group(3).unwrap().compose()
 }

@@ -14,6 +14,7 @@ pub use self::receive_queue_general::ReceiveQueueGen;
 pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
 pub use self::group_by::*;
+pub use self::restore_header::*;
 
 use self::filter_batch::FilterFn;
 use self::transform_batch::TransformFn;
@@ -43,11 +44,12 @@ mod reset_parse;
 mod send_batch;
 mod transform_batch;
 mod receive_queue_general;
+mod restore_header;
 
 /// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
 /// the precise batch being processed will be determined by the scheduling policy used.
 #[inline]
-pub fn merge<T: Batch<Header = NullHeader>>(batches: Vec<T>) -> MergeBatch<T> {
+pub fn merge<T: Batch>(batches: Vec<T>) -> MergeBatch<T> {
     MergeBatch::new(batches)
 }
 

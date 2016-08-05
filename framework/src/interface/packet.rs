@@ -4,7 +4,7 @@ use std::ptr;
 use std::marker::PhantomData;
 use std::slice;
 use headers::{EndOffset, NullHeader};
-// Some low level functions.
+
 #[link(name = "zcsi")]
 extern "C" {
     fn mbuf_alloc() -> *mut MBuf;
@@ -22,20 +22,22 @@ pub struct Packet<T: EndOffset> {
     offset: usize,
 }
 
+#[inline]
+#[cfg(not(feature = "packet_offset"))]
+fn create_packet<T: EndOffset>(mbuf: *mut MBuf, hdr: *mut T, offset: usize) -> Packet<T> {
+    Packet::<T> {
+        mbuf: mbuf,
+        _phantom_t: PhantomData,
+        offset: offset,
+        header: hdr,
+    }
+}
+
 #[cfg(feature = "packet_offset")]
 pub struct Packet<T: EndOffset> {
     mbuf: *mut MBuf,
     _phantom_t: PhantomData<T>,
 }
-
-fn reference_mbuf(mbuf: *mut MBuf) {
-    unsafe { (*mbuf).reference() };
-}
-
-#[cfg(feature = "packet_offset")]
-const HEADER_SLOT: usize = 0;
-#[cfg(feature = "packet_offset")]
-const OFFSET_SLOT: usize = 1;
 
 #[inline]
 #[cfg(feature = "packet_offset")]
@@ -48,16 +50,12 @@ fn create_packet<T: EndOffset>(mbuf: *mut MBuf, hdr: *mut T, offset: usize) -> P
     pkt
 }
 
-#[inline]
-#[cfg(not(feature = "packet_offset"))]
-fn create_packet<T: EndOffset>(mbuf: *mut MBuf, hdr: *mut T, offset: usize) -> Packet<T> {
-    Packet::<T> {
-        mbuf: mbuf,
-        _phantom_t: PhantomData,
-        offset: offset,
-        header: hdr,
-    }
+fn reference_mbuf(mbuf: *mut MBuf) {
+    unsafe { (*mbuf).reference() };
 }
+
+const HEADER_SLOT: usize = 0;
+const OFFSET_SLOT: usize = 1;
 
 #[inline]
 pub fn packet_from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
@@ -93,6 +91,7 @@ pub fn new_packet() -> Option<Packet<NullHeader>> {
     }
 }
 
+/// Allocate an array of packets.
 pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader>> {
     let mut array = Vec::with_capacity(count);
     unsafe {
@@ -107,40 +106,11 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader>> {
 pub const METADATA_SLOTS: u16 = 8;
 
 impl<T: EndOffset> Packet<T> {
-    #[inline]
-    pub fn free_packet(self) {
-        if !self.mbuf.is_null() {
-            unsafe { mbuf_free(self.mbuf) };
-        }
-    }
-
-    #[inline]
-    #[cfg(feature="packet_offset")]
-    fn update_ptrs(&mut self, header: *mut u8, offset: usize) {
-        if false {
-            println!("packet {:x} update_ptrs header {:x} offset {:x}", self.mbuf as usize, header as usize, offset as
-                     usize);
-        }
-        MBuf::write_metadata_slot(self.mbuf, HEADER_SLOT, header as usize);
-        MBuf::write_metadata_slot(self.mbuf, OFFSET_SLOT, offset as usize);
-    }
-
-    #[inline]
-    #[cfg(feature="packet_offset")]
-    fn header(&self) -> *mut T {
-        MBuf::read_metadata_slot(self.mbuf, HEADER_SLOT) as *mut T
-    }
-
+// --------------------- Not using packet offsets ------------------------------------------------------
     #[inline]
     #[cfg(not(feature="packet_offset"))]
     fn header(&self) -> *mut T {
         self.header
-    }
-
-    #[inline]
-    #[cfg(feature="packet_offset")]
-    fn header_u8(&self) -> *mut u8 {
-        MBuf::read_metadata_slot(self.mbuf, HEADER_SLOT) as *mut u8
     }
 
     #[inline]
@@ -149,24 +119,71 @@ impl<T: EndOffset> Packet<T> {
         self.header as *mut u8
     }
 
+
+    #[inline]
+    #[cfg(not(feature="packet_offset"))]
+    fn offset(&self) -> usize {
+        self.offset
+    }
+
+// ----------------- Using packet offsets -------------------------------------------------------------
+    #[inline]
+    #[cfg(feature="packet_offset")]
+    fn header(&self) -> *mut T {
+        self.read_header()
+    }
+
+    #[inline]
+    #[cfg(feature="packet_offset")]
+    fn header_u8(&self) -> *mut u8 {
+        MBuf::read_metadata_slot(self.mbuf, HEADER_SLOT) as *mut u8
+    }
+
+
+    #[inline]
+    #[cfg(feature="packet_offset")]
+    fn offset(&self) -> usize {
+        self.read_offset()
+    }
+
+// -----------------Common code ------------------------------------------------------------------------
+    #[inline]
+    pub fn free_packet(self) {
+        if !self.mbuf.is_null() {
+            unsafe { mbuf_free(self.mbuf) };
+        }
+    }
+
+    #[inline]
+    fn update_ptrs(&mut self, header: *mut u8, offset: usize) {
+        MBuf::write_metadata_slot(self.mbuf, HEADER_SLOT, header as usize);
+        MBuf::write_metadata_slot(self.mbuf, OFFSET_SLOT, offset as usize);
+    }
+
+    /// Save the header and offset into the MBuf. This is useful for later restoring this information.
+    #[inline]
+    pub fn save_header_and_offset(&mut self) {
+        let header = self.header_u8();
+        let offset = self.offset();
+        self.update_ptrs(header, offset)
+    }
+
+    #[inline]
+    fn read_header<T2: EndOffset>(&self) -> *mut T2 {
+        MBuf::read_metadata_slot(self.mbuf, HEADER_SLOT) as *mut T2
+    }
+
+    #[inline]
+    fn read_offset(&self) -> usize {
+        MBuf::read_metadata_slot(self.mbuf, OFFSET_SLOT)
+    }
+
     #[inline]
     fn payload(&self) -> *mut u8 {
         unsafe {
             let payload_offset = self.payload_offset();
             self.header_u8().offset(payload_offset as isize)
         }
-    }
-
-    #[inline]
-    #[cfg(feature="packet_offset")]
-    fn offset(&self) -> usize {
-        MBuf::read_metadata_slot(self.mbuf, OFFSET_SLOT)
-    }
-
-    #[inline]
-    #[cfg(not(feature="packet_offset"))]
-    fn offset(&self) -> usize {
-        self.offset
     }
 
     #[inline]
@@ -294,11 +311,26 @@ impl<T: EndOffset> Packet<T> {
     #[inline]
     pub fn parse_header<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2> {
         unsafe {
+            assert!{self.payload_size() > T2::size()}
             let hdr = self.payload() as *mut T2;
             let offset = self.offset() + self.payload_offset();
             create_packet(self.get_mbuf_ref(), hdr, offset)
         }
     }
+
+    #[inline]
+    pub fn restore_saved_header<T2: EndOffset>(mut self) -> Option<Packet<T2>> {
+        unsafe {
+            let hdr = self.read_header::<T2>();
+            if hdr == ptr::null_mut() {
+                None
+            } else {
+                let offset = self.read_offset();
+                Some(create_packet(self.get_mbuf_ref(), hdr, offset))
+            }
+        }
+    }
+
 
     #[inline]
     pub fn replace_header(&mut self, hdr: &T) {

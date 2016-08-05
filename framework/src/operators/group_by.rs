@@ -6,10 +6,10 @@ use scheduler::{Executable, Scheduler};
 use super::ReceiveQueueGen;
 use interface::Packet;
 use super::iterator::*;
+use super::RestoreHeader;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-// FIXME: This is moving all the metadata stuff int
 pub type GroupFn<T> = Box<FnMut(&Packet<T>) -> usize + Send>;
 
 pub struct GroupBy<T, V>
@@ -40,8 +40,9 @@ impl<T, V> Executable for GroupByProducer<T, V>
         self.parent.act(); // Let the parent get some packets.
         {
             let iter = PayloadEnumerator::<T>::new(&mut self.parent);
-            while let Some(ParsedDescriptor { packet, .. }) = iter.next(&mut self.parent) {
+            while let Some(ParsedDescriptor { mut packet, .. }) = iter.next(&mut self.parent) {
                 let group = (self.group_fn)(&packet);
+                packet.save_header_and_offset();
                 self.producers[group].enqueue_one(packet);
             }
         }
@@ -79,7 +80,7 @@ impl<T, V> GroupBy<T, V>
         self.groups
     }
 
-    pub fn get_group(&mut self, group: usize) -> Option<ReceiveQueueGen<MpscConsumer>> {
-        self.consumers.remove(&group)
+    pub fn get_group(&mut self, group: usize) -> Option<RestoreHeader<T, ReceiveQueueGen<MpscConsumer>>> {
+        self.consumers.remove(&group).map(|b| RestoreHeader::new(b))
     }
 }

@@ -5,15 +5,14 @@ use super::Batch;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use std::cmp;
 use scheduler::Executable;
-use headers::NullHeader;
 use super::packet_batch::PacketBatch;
 
-pub struct MergeBatch<T: Batch<Header = NullHeader>> {
+pub struct MergeBatch<T: Batch> {
     parents: Vec<T>,
     which: usize,
 }
 
-impl<T: Batch<Header = NullHeader>> MergeBatch<T> {
+impl<T: Batch> MergeBatch<T> {
     pub fn new(parents: Vec<T>) -> MergeBatch<T> {
         MergeBatch {
             parents: parents,
@@ -22,10 +21,10 @@ impl<T: Batch<Header = NullHeader>> MergeBatch<T> {
     }
 }
 
-impl<T: Batch<Header = NullHeader>> Batch for MergeBatch<T> {}
+impl<T: Batch> Batch for MergeBatch<T> {}
 
-impl<T: Batch<Header = NullHeader>> BatchIterator for MergeBatch<T> {
-    type Header = NullHeader;
+impl<T: Batch> BatchIterator for MergeBatch<T> {
+    type Header = T::Header;
 
     #[inline]
     fn start(&mut self) -> usize {
@@ -33,13 +32,13 @@ impl<T: Batch<Header = NullHeader>> BatchIterator for MergeBatch<T> {
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader>> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T::Header>> {
         self.parents[self.which].next_payload(idx)
     }
 }
 
 /// Internal interface for packets.
-impl<T: Batch<Header = NullHeader>> Act for MergeBatch<T> {
+impl<T: Batch> Act for MergeBatch<T> {
     #[inline]
     fn act(&mut self) {
         self.parents[self.which].act()
@@ -82,7 +81,7 @@ impl<T: Batch<Header = NullHeader>> Act for MergeBatch<T> {
     }
 }
 
-impl<T: Batch<Header = NullHeader>> Executable for MergeBatch<T> {
+impl<T: Batch> Executable for MergeBatch<T> {
     #[inline]
     fn execute(&mut self) {
         self.act();
