@@ -24,9 +24,7 @@ fn monitor<T: 'static + Batch<Header = NullHeader>>(parent: T,
     parent.parse::<MacHeader>()
           .transform(box |pkt| {
               let hdr = pkt.get_mut_header();
-              let src = hdr.src.clone();
-              hdr.src = hdr.dst;
-              hdr.dst = src;
+              hdr.swap_addresses();
           })
           .parse::<IpHeader>()
           .transform(box move |pkt| {

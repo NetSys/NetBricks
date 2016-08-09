@@ -91,9 +91,7 @@ pub fn maglev<T: 'static + Batch<Header = NullHeader>>(parent: T,
                           .transform(box move |pkt| {
                               assert!(pkt.refcnt() == 1);
                               let mut hdr = pkt.get_mut_header();
-                              let src = hdr.src;
-                              hdr.src = hdr.dst;
-                              hdr.dst = src;
+                              hdr.swap_addresses();
                           }).group_by(ct,
                               box move |pkt| {
                                   let payload = pkt.get_payload();

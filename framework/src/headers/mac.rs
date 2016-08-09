@@ -22,32 +22,47 @@ impl fmt::Display for MacAddress {
     }
 }
 
+impl MacAddress {
+    pub fn new(a:u8, b:u8, c:u8, d:u8, e: u8, f:u8) -> MacAddress {
+        MacAddress { addr: [a,b,c,d,e,f] }
+    }
+
+    pub fn new_from_slice(slice: &[u8]) -> MacAddress {
+        MacAddress { addr: [slice[0], slice[1], slice[2], slice[3], slice[4], slice[5]] }
+    }
+
+    #[inline]
+    pub fn copy_address(&mut self, other: &MacAddress) {
+        self.addr.copy_from_slice(&other.addr);
+    }
+}
+
+impl Clone for MacAddress {
+    fn clone(&self) -> MacAddress {
+        let mut m: MacAddress = Default::default();
+        m.addr.copy_from_slice(&self.addr);
+        m
+    }
+    fn clone_from(&mut self, source: &MacAddress) {
+        self.addr.copy_from_slice(&source.addr)
+    }
+}
+
 /// A packet's MAC header.
 #[derive(Debug, Default)]
 #[repr(C, packed)]
 pub struct MacHeader {
-    pub dst: [u8; 6],
-    pub src: [u8; 6],
+    pub dst: MacAddress,
+    pub src: MacAddress,
     etype: u16,
 }
 
 impl fmt::Display for MacHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
-               "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x} > \
-                {:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x} 0x{:04x}",
-               self.src[0],
-               self.src[1],
-               self.src[2],
-               self.src[3],
-               self.src[4],
-               self.src[5],
-               self.dst[0],
-               self.dst[1],
-               self.dst[2],
-               self.dst[3],
-               self.dst[4],
-               self.dst[5],
+               "{} > {} 0x{:04x}",
+               self.src,
+               self.dst,
                u16::from_be(self.etype))
     }
 }
@@ -100,5 +115,13 @@ impl MacHeader {
     #[inline]
     pub fn set_etype(&mut self, etype: u16) {
         self.etype = u16::to_be(etype)
+    }
+
+    #[inline]
+    pub fn swap_addresses(&mut self) {
+        let mut src:MacAddress = Default::default();
+        src.copy_address(&self.src);
+        self.src.copy_address(&self.dst);
+        self.dst.copy_address(&src);
     }
 }

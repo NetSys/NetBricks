@@ -13,7 +13,6 @@ pub struct ParsedBatch<T, V>
 {
     parent: V,
     phantom: PhantomData<T>,
-    push: bool,
 }
 
 impl<T, V> Act for ParsedBatch<T, V>
@@ -38,7 +37,6 @@ impl<T, V> ParsedBatch<T, V>
         ParsedBatch {
             parent: parent,
             phantom: PhantomData,
-            push: false,
         }
     }
 }
