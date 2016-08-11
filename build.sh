@@ -96,7 +96,7 @@ find_sctp () {
     gcc -lsctp 2>&1 | grep "cannot find" >/dev/null
     export SCTP_PRESENT=$? 
     set -o errexit
-    if [ ! -z ${SCTP_PRESENT} ]; then
+    if [ ${SCTP_PRESENT} -eq 1 ]; then
         echo "SCTP library found"
     else
         echo "No SCTP library found, install libsctp ('sudo apt-get install libsctp-dev' on debian)"
@@ -260,7 +260,7 @@ case $TASK in
         find_sctp
 
         pushd $BASE_DIR/framework
-        if [ ! -z ${SCTP_PRESENT} ]; then
+        if [ ${SCTP_PRESENT} -eq 1 ]; then
             ${CARGO} build --release --features "sctp"
         else
             ${CARGO} build --release
@@ -293,7 +293,7 @@ case $TASK in
         pushd $BASE_DIR/test/tcp_check
                 ${CARGO} build --release
         popd
-        if [ ! -z ${SCTP_PRESENT} ]; then
+        if [ ${SCTP_PRESENT} -eq 1 ]; then
             pushd $BASE_DIR/test/sctp-test
                     ${CARGO} build --release
             popd
