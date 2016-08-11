@@ -1,0 +1,26 @@
+[package]
+name = "zcsi-sctp"
+version = "0.1.0"
+authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
+
+[dependencies]
+e2d2 = { path = "../../framework", features = ["performance"] }
+time = ">=0.1.0"
+simd = { git = "https://github.com/huonw/simd" }
+getopts = "*"
+rand = "0.3"
+fnv = "*"
+nix = "*"
+# Figure out if we want this permanently or just for now.
+rust-sctp = { git="https://github.com/netsys/rust-sctp" }
+
+[features]
+default = []
+print = []
+
+[profile.release]
+opt-level = 3
+lto = true
+rpath = true
+debug = true
+debug-assertions = false

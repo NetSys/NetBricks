@@ -1,6 +1,6 @@
-/// TCP connection.
-use net2::TcpBuilder;
-use std::net::*;
+/// SCTP Connections.
+use sctp::*;
+use std::net::{SocketAddr, ToSocketAddrs};
 use super::{Available, HUP, PollHandle, PollScheduler, READ, Token, WRITE, IOScheduler};
 use scheduler::Executable;
 use std::marker::PhantomData;
@@ -10,16 +10,17 @@ use fnv::FnvHasher;
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 
-pub trait TcpControlAgent {
-    fn new(address: SocketAddr, stream: TcpStream, scheduler: IOScheduler) -> Self;
+
+pub trait SctpControlAgent {
+    fn new(address: SocketAddr, stream: SctpStream, scheduler: IOScheduler) -> Self;
     fn handle_read_ready(&mut self) -> bool;
     fn handle_write_ready(&mut self) -> bool;
     fn handle_hup(&mut self) -> bool;
 }
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
-pub struct TcpControlServer<T: TcpControlAgent> {
-    listener: TcpListener,
+pub struct SctpControlServer<T: SctpControlAgent> {
+    listener: SctpListener,
     scheduler: PollScheduler,
     handle: PollHandle,
     next_token: Token,
@@ -28,29 +29,23 @@ pub struct TcpControlServer<T: TcpControlAgent> {
     connections: HashMap<Token, T, FnvHash>,
 }
 
-impl<T: TcpControlAgent> Executable for TcpControlServer<T> {
+impl<T: SctpControlAgent> Executable for SctpControlServer<T> {
     fn execute(&mut self) {
         self.schedule();
     }
 }
 
-impl<T: TcpControlAgent> TcpControlServer<T> {
-    pub fn new(address: SocketAddr) -> TcpControlServer<T> {
-        let socket = match address {
-                SocketAddr::V4(_) => TcpBuilder::new_v4(),
-                SocketAddr::V6(_) => TcpBuilder::new_v6(),
-            }
-            .unwrap();
-        let _ = socket.reuse_address(true).unwrap();
-        // FIXME: Change 1024 to a parameter
-        let listener = socket.bind(address).unwrap().listen(1024).unwrap();
+// FIXME: Add one-to-many SCTP support?
+impl<T: SctpControlAgent> SctpControlServer<T> {
+    pub fn new_streaming<A: ToSocketAddrs>(address: A) -> SctpControlServer<T> {
+        let listener = SctpListener::bind(address).unwrap();
         let _ = listener.set_nonblocking(true).unwrap();
         let scheduler = PollScheduler::new();
         let listener_token = 0;
         let handle = scheduler.new_poll_handle();
         handle.new_io_port(&listener, listener_token);
         handle.schedule_read(&listener, listener_token);
-        TcpControlServer {
+        SctpControlServer {
             listener: listener,
             scheduler: scheduler,
             handle: handle,
@@ -59,6 +54,10 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
             phantom_t: PhantomData,
             connections: HashMap::with_capacity_and_hasher(32, Default::default()),
         }
+    }
+
+    fn listen(&mut self) {
+        self.handle.schedule_read(&self.listener, self.listener_token);
     }
 
     pub fn schedule(&mut self) {
@@ -97,7 +96,7 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
         } else {
             // FIXME: Report something.
         }
-        self.handle.schedule_read(&self.listener, self.listener_token);
+        self.listen();
     }
 
     fn handle_data(&mut self, token: Token, available: Available) {
