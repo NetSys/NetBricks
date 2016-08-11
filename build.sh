@@ -91,6 +91,18 @@ toggle_symbols () {
     fi
 }
 
+find_sctp () {
+    set +o errexit
+    gcc -lsctp 2>&1 | grep "cannot find" >/dev/null
+    export SCTP_PRESENT=$? 
+    set -o errexit
+    if [ ! -z ${SCTP_PRESENT} ]; then
+        echo "SCTP library found"
+    else
+        echo "No SCTP library found, install libsctp ('sudo apt-get install libsctp-dev' on debian)"
+    fi
+}
+
 clean () {
     pushd $BASE_DIR/framework
     ${CARGO} clean || true
@@ -237,14 +249,22 @@ case $TASK in
         unset NETBRICKS_SYMBOLS || true
         toggle_symbols
         ;;
+    sctp)
+        find_sctp
+        ;;
     build)
         deps
-        #toggle_symbols
 
         make -j $proc -C $BASE_DIR/native
 
+        find_sctp
+
         pushd $BASE_DIR/framework
-        ${CARGO} build --release
+        if [ ! -z ${SCTP_PRESENT} ]; then
+            ${CARGO} build --release --features "sctp"
+        else
+            ${CARGO} build --release
+        fi
         popd
 
         pushd $BASE_DIR/test/framework-test
@@ -273,6 +293,11 @@ case $TASK in
         pushd $BASE_DIR/test/tcp_check
                 ${CARGO} build --release
         popd
+        if [ ! -z ${SCTP_PRESENT} ]; then
+            pushd $BASE_DIR/test/sctp-test
+                    ${CARGO} build --release
+            popd
+        fi
         ;;
     build_container)
         clean

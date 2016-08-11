@@ -18,6 +18,7 @@ extern crate regex;
 extern crate net2;
 #[macro_use]
 extern crate lazy_static;
+#[cfg(feature="sctp")]
 extern crate sctp;
 
 #[cfg(unix)]
