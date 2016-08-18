@@ -5,6 +5,10 @@
 #![feature(type_macros)]
 #![feature(specialization)]
 #![feature(associated_consts)]
+
+#![allow(unused_features)]
+#![feature(integer_atomics)]
+
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 // Need this since PMD port construction triggers too many arguments.
 #![cfg_attr(feature = "dev", allow(too_many_arguments))]
@@ -33,3 +37,4 @@ pub mod operators;
 pub mod interface;
 pub mod common;
 pub mod control;
+pub mod shared_state;
