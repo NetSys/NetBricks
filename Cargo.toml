@@ -1,0 +1,10 @@
+[workspace]
+members=["framework",
+        "test/framework-test",
+        "test/delay-test",
+        "test/chain-test",
+        "test/lpm",
+        "test/nat",
+        "test/maglev",
+        "test/tcp_check",
+        "test/sctp-test"]
