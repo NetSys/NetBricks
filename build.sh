@@ -103,6 +103,18 @@ find_sctp () {
     fi
 }
 
+
+examples=(
+        test/framework-test
+        test/delay-test
+        test/chain-test
+        test/lpm
+        test/nat
+        test/maglev
+        test/tcp_check
+        test/sctp-test
+)
+
 clean () {
     pushd $BASE_DIR/framework
     ${CARGO} clean || true
@@ -112,26 +124,10 @@ clean () {
     ${CARGO} clean || true
     popd
 
-    pushd $BASE_DIR/test/delay-test
-            ${CARGO} clean || true
-            popd
-
-    pushd $BASE_DIR/test/chain-test
-            ${CARGO} clean || true
-            popd
-
-    pushd $BASE_DIR/test/lpm
-            ${CARGO} clean || true
-            popd
-
-    pushd $BASE_DIR/test/nat
-            ${CARGO} clean || true
-            popd
-
-    pushd $BASE_DIR/test/maglev
-            ${CARGO} clean || true
-            popd
-
+    for example in ${examples[@]}; do
+        pushd ${BASE_DIR}/$example
+        ${CARGO} clean || true
+    done
     make clean -C ${BASE_DIR}/native 
 }
 
@@ -267,37 +263,19 @@ case $TASK in
         fi
         popd
 
-        pushd $BASE_DIR/test/framework-test
-        ${CARGO} build --release
-        popd
-
-        pushd $BASE_DIR/test/delay-test
-                ${CARGO} build --release
-                popd
-
-        pushd $BASE_DIR/test/chain-test
-                ${CARGO} build --release
-                popd
-
-        pushd $BASE_DIR/test/lpm
-                ${CARGO} build --release
-                popd
-
-        pushd $BASE_DIR/test/nat
-                ${CARGO} build --release
-                popd
-
-        pushd $BASE_DIR/test/maglev
-                ${CARGO} build --release
-                popd
-        pushd $BASE_DIR/test/tcp_check
-                ${CARGO} build --release
-        popd
-        if [ ${SCTP_PRESENT} -eq 1 ]; then
-            pushd $BASE_DIR/test/sctp-test
+        for example in ${examples[@]}; do
+            if [[ ${example} == *sctp* ]]; then
+                if [ ${SCTP_PRESENT} -eq 1]; then
+                    pushd ${BASE_DIR}/${example}
                     ${CARGO} build --release
-            popd
-        fi
+                    popd
+                fi
+            else
+                pushd ${BASE_DIR}/${example}
+                ${CARGO} build --release
+                popd
+            fi
+        done
         ;;
     build_container)
         clean
@@ -322,32 +300,12 @@ case $TASK in
         ${CARGO} fmt
         popd
 
-        pushd $BASE_DIR/test/framework-test
-        ${CARGO} fmt
-        popd
+        for example in ${examples[@]}; do
+            pushd ${BASE_DIR}/${example}
+            ${CARGO} fmt
+            popd
+        done
 
-        pushd $BASE_DIR/test/delay-test
-        ${CARGO} fmt
-        popd
-
-        pushd $BASE_DIR/test/chain-test
-                ${CARGO} fmt
-                popd
-
-        pushd $BASE_DIR/test/lpm
-                ${CARGO} fmt
-                popd
-
-        pushd $BASE_DIR/test/nat
-                ${CARGO} fmt
-        popd
-
-        pushd $BASE_DIR/test/maglev
-                ${CARGO} fmt
-        popd
-        pushd $BASE_DIR/test/tcp_check
-                ${CARGO} fmt
-        popd
         ;;
     doc)
         deps
