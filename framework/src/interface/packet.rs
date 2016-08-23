@@ -59,7 +59,7 @@ const HEADER_SLOT: usize = 0;
 const OFFSET_SLOT: usize = HEADER_SLOT + 1;
 const STACK_DEPTH_SLOT: usize = OFFSET_SLOT + 1;
 const STACK_OFFSET_SLOT: usize = STACK_DEPTH_SLOT + 1;
-const STACK_SIZE: usize  = METADATA_SLOTS as usize - STACK_OFFSET_SLOT;
+const STACK_SIZE: usize = METADATA_SLOTS as usize - STACK_OFFSET_SLOT;
 #[allow(dead_code)]
 const END_OF_STACK_SLOT: usize = STACK_OFFSET_SLOT + STACK_SIZE;
 
@@ -418,9 +418,7 @@ impl<T: EndOffset> Packet<T> {
 
     #[inline]
     pub fn deparse_header_stack(mut self) -> Option<Packet<T::PreviousHeader>> {
-        self.pop_offset().map(|offset| {
-            self.deparse_header(offset)
-        })
+        self.pop_offset().map(|offset| self.deparse_header(offset))
     }
 
 

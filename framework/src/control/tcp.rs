@@ -1,7 +1,7 @@
 /// TCP connection.
 use net2::TcpBuilder;
 use std::net::*;
-use super::{Available, HUP, PollHandle, PollScheduler, READ, Token, WRITE, IOScheduler};
+use super::{Available, HUP, IOScheduler, PollHandle, PollScheduler, READ, Token, WRITE};
 use scheduler::Executable;
 use std::marker::PhantomData;
 use std::os::unix::io::AsRawFd;
@@ -86,8 +86,8 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
                                             T::new(addr,
                                                    stream,
                                                    IOScheduler::new(self.scheduler.new_poll_handle(),
-                                                                     stream_fd,
-                                                                     token)));
+                                                                    stream_fd,
+                                                                    token)));
                     // Add to some sort of hashmap.
                 }
                 Err(_) => {

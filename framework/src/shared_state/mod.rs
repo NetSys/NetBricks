@@ -1,9 +1,9 @@
 /// Shareable data structures.
-pub mod directory; 
-pub use self::shared_vec::*; 
+pub mod directory;
+pub use self::shared_vec::*;
 mod shared_vec;
 use utils::PAGE_SIZE;
-use libc::{self, ftruncate, mmap, shm_open, close, munmap, shm_unlink, c_void};
+use libc::{self, c_void, close, ftruncate, mmap, munmap, shm_open, shm_unlink};
 use std::io::Error;
 use std::ffi::CString;
 use std::ptr;
@@ -31,8 +31,8 @@ unsafe fn open_shared<T>(name: &str, size: usize) -> SharedMemory<T> {
     assert!(size & !PAGE_SIZE == 0);
     let name = CString::new(name).unwrap();
     let mut fd = shm_open(name.as_ptr(),
-                      libc::O_CREAT | libc::O_EXCL | libc::O_RDWR,
-                      0o700);
+                          libc::O_CREAT | libc::O_EXCL | libc::O_RDWR,
+                          0o700);
     if fd == -1 {
         if let Some(e) = Error::last_os_error().raw_os_error() {
             if e == libc::EEXIST {

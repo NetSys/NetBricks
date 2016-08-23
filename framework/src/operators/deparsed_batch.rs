@@ -18,24 +18,19 @@ impl<V> Act for DeparsedBatch<V>
     act!{}
 }
 
-impl<V> Batch for DeparsedBatch<V>
-    where V: Batch + BatchIterator + Act
-{
-}
+impl<V> Batch for DeparsedBatch<V> where V: Batch + BatchIterator + Act {}
 
 impl<V> DeparsedBatch<V>
-    where V: Batch + BatchIterator + Act,
+    where V: Batch + BatchIterator + Act
 {
     #[inline]
     pub fn new(parent: V) -> DeparsedBatch<V> {
-        DeparsedBatch {
-            parent: parent,
-        }
+        DeparsedBatch { parent: parent }
     }
 }
 
 impl<V> BatchIterator for DeparsedBatch<V>
-    where V: Batch + BatchIterator + Act,
+    where V: Batch + BatchIterator + Act
 {
     type Header = <<V as BatchIterator>::Header as EndOffset>::PreviousHeader;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<Self::Header>> {

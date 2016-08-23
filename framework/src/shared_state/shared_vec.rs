@@ -2,7 +2,7 @@ use super::{SharedMemory, open_shared};
 use utils::round_to_pages;
 use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};
-use std::ops::{Index, Range, RangeTo, RangeFrom, IndexMut};
+use std::ops::{Index, IndexMut, Range, RangeFrom, RangeTo};
 
 struct SharedVec<T: Sized + 'static> {
     vec: Vec<T>,

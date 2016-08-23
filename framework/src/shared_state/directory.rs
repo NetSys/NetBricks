@@ -1,7 +1,7 @@
 use utils::PAGE_SIZE;
 use std::sync::atomic::*;
 use std::mem::size_of;
-use super::{SharedMemory, open_shared}; 
+use super::{SharedMemory, open_shared};
 /// A directory of shared structures.
 
 const MAX_LEN: usize = 256; // 255 byte names
@@ -27,7 +27,7 @@ pub struct Directory {
     head: *mut DirectoryHeader,
     data: *mut DirectoryEntry,
     // Need this to make sure memory is not dropped
-    _shared_memory: SharedMemory<DirectoryHeader>, 
+    _shared_memory: SharedMemory<DirectoryHeader>,
     entry: usize,
     len: usize,
 }

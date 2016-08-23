@@ -23,8 +23,8 @@ impl fmt::Display for MacAddress {
 }
 
 impl MacAddress {
-    pub fn new(a:u8, b:u8, c:u8, d:u8, e: u8, f:u8) -> MacAddress {
-        MacAddress { addr: [a,b,c,d,e,f] }
+    pub fn new(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8) -> MacAddress {
+        MacAddress { addr: [a, b, c, d, e, f] }
     }
 
     pub fn new_from_slice(slice: &[u8]) -> MacAddress {
@@ -119,7 +119,7 @@ impl MacHeader {
 
     #[inline]
     pub fn swap_addresses(&mut self) {
-        let mut src:MacAddress = Default::default();
+        let mut src: MacAddress = Default::default();
         src.copy_address(&self.src);
         self.src.copy_address(&self.dst);
         self.dst.copy_address(&src);
