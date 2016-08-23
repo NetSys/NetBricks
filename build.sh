@@ -311,6 +311,15 @@ case $TASK in
         ${CARGO} test --release
         popd
         ;;
+    run)
+        shift
+        cmd=$1
+        shift
+        export PATH="${BIN_DIR}:${PATH}"
+        export LD_LIBRARY_PATH="${TOOLS_BASE}:${LD_LIBRARY_PATH}"
+        sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
+            ${BASE_DIR}/target/release/$cmd "$@"
+        ;;
     update_rust)
         _BUILD_UPDATE_=1
         rust
