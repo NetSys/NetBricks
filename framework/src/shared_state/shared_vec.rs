@@ -4,7 +4,8 @@ use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};
 use std::ops::{Index, IndexMut, Range, RangeFrom, RangeTo};
 
-struct SharedVec<T: Sized + 'static> {
+#[allow(dead_code)] // FIXME: While WIP
+pub struct SharedVec<T: Sized + 'static> {
     vec: Vec<T>,
     shared: SharedMemory<T>,
     modified: bool,
@@ -16,7 +17,7 @@ impl<T: Sized + 'static> SharedVec<T> {
         unsafe {
             SharedVec {
                 vec: Vec::with_capacity(capacity),
-                shared: open_shared(name, capacity),
+                shared: open_shared(name, capacity_pages),
                 modified: false,
             }
         }

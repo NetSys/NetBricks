@@ -51,8 +51,30 @@ apt-get install libsctp-dev
 
 Example NFs
 -----------
-Coming Soon.
+This repository includes a set of example NFs under the `test` directory. The examples include
 
+|Example| Functionality |
+|-------|---------------|
+|zcsi-lpm| LPM lookup   |
+|zcsi-maglev| Maglev implementation|
+|zcsi-delay| Inject processing delay|
+|zcsi-chain| Chaining test|
+
+The build script can be used to run these examples as
+
+```
+./build.sh run <example name> <options>
+```
+
+Passing `-h` will provide a list of options. All of these examples accept one or more ports as input. Ports can be
+specified as one of:
+
+-   PCI ID of a NIC
+-   `dpdk:<PMD spec>` where PMD spec can be something like
+    `dpdk:eth_pcap0,rx_pcap=$HOME/tcpflow/tests/udp.pcap,tx_pcap=out.pcap` which specifies a PCAP file should be used.
+    See DPDK source for other PMD drivers that are available.
+-   `ovs:<integer>` to connect to an OpenVSwitch DPDK ring port (`dpdkr`).
+-   `bess:<port name>` to connect to a BESS `ZeroCopyVPort`
 Future Work
 -----------
 Support for [`futures`](https://github.com/alexcrichton/futures-rs) for control plane functionality.

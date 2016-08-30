@@ -2,6 +2,7 @@
 # Stop on any errors
 set -e
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
+BUILD_SCRIPT=$( basename "$0" )
 
 EXT_BASE="$BASE_DIR/3rdparty"
 TOOLS_BASE="$BASE_DIR/3rdparty/tools"
@@ -265,7 +266,7 @@ case $TASK in
 
         for example in ${examples[@]}; do
             if [[ ${example} == *sctp* ]]; then
-                if [ ${SCTP_PRESENT} -eq 1]; then
+                if [ ${SCTP_PRESENT} -eq 1 ]; then
                     pushd ${BASE_DIR}/${example}
                     ${CARGO} build --release
                     popd
@@ -293,6 +294,11 @@ case $TASK in
         shift
         cmd=$1
         shift
+        executable=${BASE_DIR}/target/release/$cmd
+        if [ ! -e ${executable} ]; then
+            echo "${executable} not found, building"
+            ${BASE_DIR}/${BUILD_SCRIPT} build
+        fi
         export PATH="${BIN_DIR}:${PATH}"
         export LD_LIBRARY_PATH="${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \

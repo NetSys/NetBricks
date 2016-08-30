@@ -13,6 +13,7 @@ use getopts::Options;
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
+use std::process;
 use self::nf::*;
 mod nf;
 
@@ -54,6 +55,7 @@ fn main() {
     };
     if matches.opt_present("h") {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
+        process::exit(0)
     }
 
     let cores_str = matches.opt_strs("c");

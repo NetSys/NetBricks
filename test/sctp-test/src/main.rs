@@ -22,6 +22,7 @@ use self::nf::*;
 use self::control::*;
 use e2d2::control::sctp::*;
 use std::net::*;
+use std::process;
 use std::str::{FromStr};
 mod nf;
 mod control;
@@ -71,6 +72,7 @@ fn main() {
     };
     if matches.opt_present("h") {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
+        process::exit(0)
     }
 
     let delay_arg = matches.opt_str("d")
