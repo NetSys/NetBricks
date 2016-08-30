@@ -75,6 +75,7 @@ specified as one of:
     See DPDK source for other PMD drivers that are available.
 -   `ovs:<integer>` to connect to an OpenVSwitch DPDK ring port (`dpdkr`).
 -   `bess:<port name>` to connect to a BESS `ZeroCopyVPort`
+
 Future Work
 -----------
 Support for [`futures`](https://github.com/alexcrichton/futures-rs) for control plane functionality.
