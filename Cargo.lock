@@ -69,6 +69,7 @@ dependencies = [
  "rust-sctp 0.0.5 (git+https://github.com/netsys/rust-sctp)",
  "simd 0.1.1 (git+https://github.com/huonw/simd)",
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "twox-hash 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -261,6 +262,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "toml"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "twox-hash"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -304,6 +313,18 @@ dependencies = [
 
 [[package]]
 name = "zcsi-chain"
+version = "0.1.0"
+dependencies = [
+ "e2d2 0.1.0",
+ "fnv 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "getopts 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "simd 0.1.1 (git+https://github.com/huonw/simd)",
+ "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "zcsi-config"
 version = "0.1.0"
 dependencies = [
  "e2d2 0.1.0",
@@ -421,6 +442,7 @@ dependencies = [
 "checksum thread_local 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "55dd963dbaeadc08aa7266bf7f91c3154a7805e32bb94b820b769d2ef3b4744d"
 "checksum time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)" = "3c7ec6d62a20df54e07ab3b78b9a3932972f4b7981de295563686849eb3989af"
 "checksum toml 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)" = "0590d72182e50e879c4da3b11c6488dae18fccb1ae0c7a3eda18e16795844796"
+"checksum toml 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a442dfc13508e603c3f763274361db7f79d7469a0e95c411cde53662ab30fc72"
 "checksum twox-hash 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "967dcc388dfad978dacf0fb7ffdc41d88381a8b54d842f3948864390a3381613"
 "checksum unicode-normalization 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "26643a2f83bac55f1976fb716c10234485f9202dcd65cfbdf9da49867b271172"
 "checksum utf8-ranges 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a1ca13c08c41c9c3e04224ed9ff80461d97e121589ff27c753a16cb10830ae0f"

@@ -7,4 +7,5 @@ members=["framework",
         "test/nat",
         "test/maglev",
         "test/tcp_check",
-        "test/sctp-test"]
+        "test/sctp-test",
+        "test/config-test"]

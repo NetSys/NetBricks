@@ -4,6 +4,7 @@
 #![feature(box_syntax)]
 #![feature(specialization)]
 #![feature(associated_consts)]
+#![feature(slice_concat_ext)]
 
 #![allow(unused_features)]
 #![feature(integer_atomics)]
@@ -23,6 +24,8 @@ extern crate net2;
 extern crate lazy_static;
 #[cfg(feature="sctp")]
 extern crate sctp;
+/// TOML for scheduling configuration
+extern crate toml;
 
 #[cfg(unix)]
 extern crate nix;

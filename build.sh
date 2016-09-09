@@ -114,6 +114,7 @@ examples=(
         test/maglev
         test/tcp_check
         test/sctp-test
+        test/config-test
 )
 
 clean () {
