@@ -87,7 +87,7 @@ static int init_eal(char* name, int secondary, int core, char* whitelist[], int 
     rte_argv[rte_argc++] = name;
     rte_argv[rte_argc++] = "-c";
     rte_argv[rte_argc++] = opt_lcore_bitmap;
-    /* Otherwise assume everything is white listed */
+
     for (int i = 0; i < wl_count; i++) {
         rte_argv[rte_argc++] = "-w";
         rte_argv[rte_argc++] = whitelist[i];
@@ -96,10 +96,14 @@ static int init_eal(char* name, int secondary, int core, char* whitelist[], int 
         rte_argv[rte_argc++] = "--vdev";
         rte_argv[rte_argc++] = vdevs[i];
     }
+
+    /* This just makes sure that by default everything is blacklisted */
     rte_argv[rte_argc++] = "-w";
     rte_argv[rte_argc++] = "99:99.0";
+
     rte_argv[rte_argc++] = "--master-lcore";
     rte_argv[rte_argc++] = opt_master_lcore;
+
     rte_argv[rte_argc++] = "-n";
     /* number of memory channels (Sandy Bridge) */
     rte_argv[rte_argc++] = "4";  // Number of memory channels on

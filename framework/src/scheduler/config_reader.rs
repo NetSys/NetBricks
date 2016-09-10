@@ -13,6 +13,11 @@ pub struct PortConfiguration {
     pub loopback: bool,
 }
 
+pub const DEFAULT_POOL_SIZE: u32 = 2048 - 1;
+pub const DEFAULT_CACHE_SIZE: u32 = 32;
+pub const DEFAULT_SECONDARY: bool = false;
+pub const DEFAULT_PRIMARY_CORE: i32 = 0;
+
 impl fmt::Display for PortConfiguration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let queues_str_vec : Vec<_> = self.queues.iter().map(|q| q.to_string()).collect();
@@ -29,8 +34,12 @@ impl fmt::Display for PortConfiguration {
 }
 
 pub struct SchedulerConfiguration {
+    pub name: String,
+    pub secondary: bool,
     pub primary_core: i32,
     pub ports: Vec<PortConfiguration>,
+    pub pool_size: u32,
+    pub cache_size: u32,
 }
 
 impl fmt::Display for SchedulerConfiguration {
@@ -86,6 +95,7 @@ fn read_port(value: &Value) -> Option<PortConfiguration> {
             None => Vec::with_capacity(0), // Allow cases where no queues are initialized.
             _ => return None,
         };
+
         Some(PortConfiguration {
             name: name,
             queues: queues,
@@ -98,7 +108,7 @@ fn read_port(value: &Value) -> Option<PortConfiguration> {
     }
 }
 
-/// Read a configuration file and create a SchedulerConfiguration structure.
+/// Read a configuration file and create a `SchedulerConfiguration` structure.
 pub fn read_configuration(filename: &str) -> Option<SchedulerConfiguration> {
     let mut toml_str = String::new();
     let len = match File::open(filename) {
@@ -134,7 +144,47 @@ pub fn read_configuration(filename: &str) -> Option<SchedulerConfiguration> {
                     _ => return None,
                 }
             }
-            _ => 0,
+            None => DEFAULT_PRIMARY_CORE,
+            _ => {
+                println!("Could not parse core");
+                return None
+            }
+        };
+
+        let name = match toml.get("name") {
+            Some(&Value::String(ref name)) => name.clone(),
+            None => String::from("zcsi"),
+            _ => {
+                println!("Could not parse name");
+                return None
+            }
+        };
+
+        let pool_size = match toml.get("pool_size") {
+            Some(&Value::Integer(pool)) => pool as u32,
+            None => DEFAULT_POOL_SIZE,
+            _ => { 
+                println!("Could parse pool size");
+                return None
+            }
+        };
+
+        let cache_size = match toml.get("cache_size") {
+            Some(&Value::Integer(cache)) => cache as u32,
+            None => DEFAULT_CACHE_SIZE,
+            _ => { 
+                println!("Could parse cache size");
+                return None
+            }
+        };
+
+        let secondary = match toml.get("secondary") {
+            Some(&Value::Boolean(secondary)) => secondary,
+            None => DEFAULT_SECONDARY,
+            _ => {
+                println!("Could not parse whether this is a secondary process");
+                return None
+            }
         };
 
         let ports = match toml.get("ports") {
@@ -159,7 +209,11 @@ pub fn read_configuration(filename: &str) -> Option<SchedulerConfiguration> {
         };
 
         Some(SchedulerConfiguration {
+            name: name,
             primary_core: master_lcore,
+            secondary: secondary,
+            pool_size: pool_size,
+            cache_size: cache_size,
             ports: ports,
         })
     } else {

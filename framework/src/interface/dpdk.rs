@@ -1,5 +1,6 @@
 use std::ffi::CString;
 use super::METADATA_SLOTS;
+use scheduler::{SchedulerConfiguration, DEFAULT_POOL_SIZE, DEFAULT_CACHE_SIZE};
 mod native {
     use std::os::raw::c_char;
     #[link(name = "zcsi")]
@@ -57,9 +58,6 @@ pub fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_s
     }
 }
 
-const DEFAULT_POOL_SIZE: u32 = 2048 - 1;
-const DEFAULT_CACHE_SIZE: u32 = 32;
-
 /// Initialize the system, whitelisting some set of NICs.
 pub fn init_system_wl(name: &str, core: i32, pci: &[String]) {
     init_system_wl_with_mempool(name, core, pci, DEFAULT_POOL_SIZE, DEFAULT_CACHE_SIZE);
@@ -78,6 +76,16 @@ pub fn init_system_secondary(name: &str, core: i32) {
         if ret != 0 {
             panic!("Could not initialize secondary process errno {}", ret)
         }
+    }
+}
+
+pub fn init_system_cfg(config: &SchedulerConfiguration) {
+    // We init with all devices blacklisted and rely on the attach logic to white list them as necessary.
+    if config.secondary {
+        // We do not have control over any of the other settings in this case.
+        init_system_secondary(&config.name[..], config.primary_core);
+    } else {
+        init_system_wl_with_mempool(&config.name[..], config.primary_core, &[], config.pool_size, config.cache_size);
     }
 }
 
