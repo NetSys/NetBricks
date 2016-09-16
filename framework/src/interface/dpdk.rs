@@ -5,7 +5,6 @@ mod native {
     use std::os::raw::c_char;
     #[link(name = "zcsi")]
     extern "C" {
-        pub fn init_system(name: *const c_char, nlen: i32, core: i32, slots: u16) -> i32;
         pub fn init_system_whitelisted(name: *const c_char,
                                        nlen: i32,
                                        core: i32,
@@ -22,19 +21,6 @@ mod native {
                               vdevs: *mut *const c_char,
                               vdev_count: i32)
                               -> i32;
-    }
-}
-
-/// Initialize system. This must be run before any of the rest of this library is used.
-/// Calling this function is somewhat slow.
-/// # Failures: If a call to this function fails, DPDK will panic and kill the entire application.
-pub fn init_system(name: &str, core: i32) {
-    let name_cstr = CString::new(name).unwrap();
-    unsafe {
-        let ret = native::init_system(name_cstr.as_ptr(), name.len() as i32, core, METADATA_SLOTS);
-        if ret != 0 {
-            panic!("Could not initialize the system errno {}", ret)
-        }
     }
 }
 
@@ -79,7 +65,11 @@ pub fn init_system_secondary(name: &str, core: i32) {
     }
 }
 
-pub fn init_system_cfg(config: &SchedulerConfiguration) {
+/// Initialize the system based on the supplied scheduler configuration.
+pub fn init_system(config: &SchedulerConfiguration) {
+    if config.name.is_empty() {
+        panic!("Configuration must provide a name.");
+    }
     // We init with all devices blacklisted and rely on the attach logic to white list them as necessary.
     if config.secondary {
         // We do not have control over any of the other settings in this case.

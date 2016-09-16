@@ -1,10 +1,12 @@
 use toml::*;
+use std::default::*;
 use std::fs::File;
 use std::io::Read;
 use std::slice::SliceConcatExt;
 use interface::{NUM_RXD, NUM_TXD};
 use std::fmt;
 
+#[derive(Default)]
 pub struct PortConfiguration {
     pub name: String,
     pub queues: Vec<i32>,
@@ -40,6 +42,27 @@ pub struct SchedulerConfiguration {
     pub ports: Vec<PortConfiguration>,
     pub pool_size: u32,
     pub cache_size: u32,
+}
+impl Default for SchedulerConfiguration {
+    fn default() -> SchedulerConfiguration {
+        SchedulerConfiguration {
+            name: String::new(),
+            pool_size: DEFAULT_POOL_SIZE,
+            cache_size: DEFAULT_CACHE_SIZE,
+            primary_core: 0,
+            secondary: false,
+            ports: vec![],
+        }
+    }
+}
+
+impl SchedulerConfiguration {
+    pub fn new_with_name(name: &str) -> SchedulerConfiguration {
+        SchedulerConfiguration {
+            name: String::from(name),
+            ..Default::default()
+        }
+    }
 }
 
 impl fmt::Display for SchedulerConfiguration {
