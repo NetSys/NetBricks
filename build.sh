@@ -95,7 +95,7 @@ toggle_symbols () {
 find_sctp () {
     set +o errexit
     gcc -lsctp 2>&1 | grep "cannot find" >/dev/null
-    export SCTP_PRESENT=$? 
+    export SCTP_PRESENT=$?
     set -o errexit
     if [ ${SCTP_PRESENT} -eq 1 ]; then
         echo "SCTP library found"
@@ -117,6 +117,14 @@ examples=(
         test/config-test
 )
 
+print_examples () {
+    echo "The following examples are available:"
+    for eg in ${examples[@]}; do
+        printf "\t %s\n" $(basename $eg)
+    done
+    exit 0
+}
+
 clean () {
     pushd $BASE_DIR/framework
     ${CARGO} clean || true
@@ -130,7 +138,7 @@ clean () {
         pushd ${BASE_DIR}/$example
         ${CARGO} clean || true
     done
-    make clean -C ${BASE_DIR}/native 
+    make clean -C ${BASE_DIR}/native
 }
 
 UNWIND_BUILD="${TOOLS_BASE}"/libunwind
@@ -159,7 +167,7 @@ clean_deps() {
     rm -rf ${TOOLS_BASE} || true
     rm -rf ${LLVM_RESULT} || true
     rm -rf ${MUSL_RESULT} || true
-    rm -rf ${DPDK_HOME} || true 
+    rm -rf ${DPDK_HOME} || true
     echo "Cleaned DEPS"
 }
 
@@ -293,6 +301,9 @@ case $TASK in
         ;;
     run)
         shift
+        if [ $# -le 1 ]; then
+            print_examples
+        fi
         cmd=$1
         shift
         executable=${BASE_DIR}/target/release/$cmd
@@ -307,6 +318,9 @@ case $TASK in
         ;;
     debug)
         shift
+        if [ $# -le 1 ]; then
+            print_examples
+        fi
         cmd=$1
         shift
         executable=${BASE_DIR}/target/release/$cmd
@@ -335,7 +349,6 @@ case $TASK in
             ${CARGO} fmt
             popd
         done
-
         ;;
     doc)
         deps
@@ -374,6 +387,8 @@ case $TASK in
         clean: Remove all built files
         dist_clean: Remove all support files
         env: Environment variables, run as eval `./build.sh env`.
+        run: Run one of the examples.
+        debug: Debug one of the examples.
         "
         ;;
 esac
