@@ -40,3 +40,4 @@ pub mod interface;
 pub mod common;
 pub mod control;
 pub mod shared_state;
+pub mod config;

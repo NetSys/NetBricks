@@ -1,6 +1,6 @@
 use std::ffi::CString;
 use super::METADATA_SLOTS;
-use scheduler::{SchedulerConfiguration, DEFAULT_POOL_SIZE, DEFAULT_CACHE_SIZE};
+use config::{SchedulerConfiguration, DEFAULT_POOL_SIZE, DEFAULT_CACHE_SIZE};
 mod native {
     use std::os::raw::c_char;
     #[link(name = "zcsi")]
