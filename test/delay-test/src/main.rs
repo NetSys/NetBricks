@@ -14,6 +14,7 @@ use e2d2::config::*;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;
+use std::error::Error;
 use std::time::Duration;
 use std::thread;
 use std::sync::Arc;
@@ -76,8 +77,8 @@ fn main() {
     let configuration = if matches.opt_present("f") {
         let config_file = matches.opt_str("f").unwrap();
         match read_configuration(&config_file[..]) {
-            Some(cfg) => cfg,
-            None => panic!("Could not parse configuration file {}", config_file),
+            Ok(cfg) => cfg,
+            Err(e) => panic!("Could not parse configuration file {}\n {}", config_file, e.description()),
         }
     } else {
         let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));

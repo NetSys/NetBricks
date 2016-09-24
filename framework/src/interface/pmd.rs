@@ -1,6 +1,7 @@
 use common::*;
 use io::MBuf;
 use headers::MacAddress;
+use config::PortConfiguration;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::cmp::min;
@@ -92,7 +93,7 @@ impl Drop for PmdPort {
 
 /// Represents a single RX/TX queue pair for a port. This is what is needed to send or receive traffic.
 impl PortQueue {
-    /// Send a batch of packets out this PortQueue. Note this method is internal to ZCSI (should not be directly
+    /// Send a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
     /// called).
     #[inline]
     pub fn send(&mut self, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
@@ -100,7 +101,7 @@ impl PortQueue {
         self.send_queue(txq, pkts, to_send)
     }
 
-    /// Receive a batch of packets out this PortQueue. Note this method is internal to ZCSI (should not be directly
+    /// Receive a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
     /// called).
     #[inline]
     pub fn recv(&self, pkts: *mut *mut MBuf, to_recv: i32) -> Result<u32> {
@@ -139,6 +140,7 @@ impl PortQueue {
 
 // Utility function to go from Rust bools to C ints. Allowing match bools since this looks nicer to me.
 #[cfg_attr(feature = "dev", allow(match_bool))]
+#[inline]
 fn i32_from_bool(x: bool) -> i32 {
     match x {
         true => 1,
@@ -335,6 +337,19 @@ impl PmdPort {
             stats_rx: vec![Arc::new(PmdStats::new())],
             stats_tx: vec![Arc::new(PmdStats::new())],
         }))
+    }
+
+    pub fn new_port_from_configuration(port_config: &PortConfiguration) -> Result<Arc<PmdPort>> {
+        PmdPort::new_port_with_queues_descriptors_offloads(&port_config.name[..],
+                                                           port_config.rx_queues.len() as i32,
+                                                           port_config.tx_queues.len() as i32,
+                                                           &port_config.rx_queues[..],
+                                                           &port_config.tx_queues[..],
+                                                           port_config.rxd,
+                                                           port_config.txd,
+                                                           port_config.loopback,
+                                                           port_config.tso,
+                                                           port_config.csum)
     }
 
     /// Create a new port.

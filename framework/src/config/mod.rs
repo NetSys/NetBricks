@@ -1,6 +1,55 @@
 use std::fmt;
+use interface::PmdPort;
+use interface::dpdk::init_system;
+use std::sync::Arc;
+use std::collections::HashMap;
+use std::convert::From;
+use std::error::Error;
+
 pub use self::config_reader::*;
 mod config_reader;
+
+#[derive(Debug)]
+pub struct ConfigurationError {
+    pub description: String,
+}
+
+impl fmt::Display for ConfigurationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Configuration Error: {}", self.description)
+    }
+}
+
+impl Error for ConfigurationError {
+    fn description(&self) -> &str {
+        &self.description[..]
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        None
+    }
+}
+
+
+impl From<String> for ConfigurationError {
+    fn from(description: String) -> ConfigurationError {
+        ConfigurationError { description: description }
+    }
+}
+
+impl<'a> From<&'a String> for ConfigurationError {
+    fn from(description: &'a String) -> ConfigurationError {
+        ConfigurationError { description: description.clone() }
+    }
+}
+
+impl<'a> From<&'a str> for ConfigurationError {
+    fn from(description: &'a str) -> ConfigurationError {
+        ConfigurationError { description: String::from(description) }
+    }
+}
+
+pub type ConfigurationResult<T> = Result<T, ConfigurationError>;
 
 /// NetBricks control configuration. In theory all applications create one of these, either through the use of
 /// `read_configuration` or manually using args.
@@ -62,26 +111,60 @@ pub struct PortConfiguration {
     ///    bess:<port_name>: BESS RingVport with name.
     ///    ovs:<port_id>: OVS ring with ID.
     pub name: String,
-    /// Core on which a given queue will be used.
-    pub queues: Vec<i32>,
+    /// Core on which receive node for a given queue lives.
+    pub rx_queues: Vec<i32>,
+    /// Core on which sending node lives.
+    pub tx_queues: Vec<i32>,
     /// Number of RX descriptors to use.
     pub rxd: i32,
     /// Number of TX descriptors to use.
     pub txd: i32,
     pub loopback: bool,
+    pub tso: bool,
+    pub csum: bool,
 }
 
 impl fmt::Display for PortConfiguration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let queues_str_vec: Vec<_> = self.queues.iter().map(|q| q.to_string()).collect();
-        let queue_str = queues_str_vec.join(" ");
+        let rx_queues_str_vec: Vec<_> = self.rx_queues.iter().map(|q| q.to_string()).collect();
+        let rx_queue_str = rx_queues_str_vec.join(" ");
+        let tx_queues_str_vec: Vec<_> = self.tx_queues.iter().map(|q| q.to_string()).collect();
+        let tx_queue_str = tx_queues_str_vec.join(" ");
         write!(f,
-               "Port {} Queue_Count: {} Queues: [ {} ] RXD: {} TXD: {} Loopback {}",
+               "Port {} RXQ_Count: {} RX_Queues: [ {} ] TXQ_COunt: {} TX_Quesus: {} RXD: {} TXD: {} Loopback {}",
                self.name,
-               self.queues.len(),
-               queue_str,
+               self.rx_queues.len(),
+               rx_queue_str,
+               self.tx_queues.len(),
+               tx_queue_str,
                self.rxd,
                self.txd,
                self.loopback)
     }
+}
+
+#[derive(Default)]
+pub struct NetBricksContext {
+    pub ports: HashMap<String, Arc<PmdPort>>,
+}
+
+pub fn initialize_system(configuration: &SchedulerConfiguration) -> ConfigurationResult<NetBricksContext> {
+    init_system(configuration);
+    let mut ctx: NetBricksContext = Default::default();
+    for port in &configuration.ports {
+        if ctx.ports.contains_key(&port.name) {
+            println!("Port {} appears twice in specification", port.name);
+            return Err(ConfigurationError::from(format!("Port {} appears twice in specification", port.name)));
+        } else {
+            match PmdPort::new_port_from_configuration(port) {
+                Ok(p) => {
+                    ctx.ports.insert(port.name.clone(), p);
+                }
+                Err(e) => {
+                    return Err(ConfigurationError::from(format!("Port {} could not be initialized {:?}", port.name, e)))
+                }
+            }
+        }
+    }
+    Ok(ctx)
 }

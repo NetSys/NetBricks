@@ -2,7 +2,9 @@ use toml::*;
 use std::fs::File;
 use std::io::Read;
 use interface::{NUM_RXD, NUM_TXD};
-use super::{PortConfiguration, SchedulerConfiguration};
+use super::{ConfigurationError, ConfigurationResult, PortConfiguration, SchedulerConfiguration};
+use std::convert::From;
+use std::error;
 
 /// Default configuration values
 pub const DEFAULT_POOL_SIZE: u32 = 2048 - 1;
@@ -12,64 +14,107 @@ pub const DEFAULT_PRIMARY_CORE: i32 = 0;
 pub const DEFAULT_NAME: &'static str = "zcsi";
 
 /// Read a TOML stub and figure out the port.
-fn read_port(value: &Value) -> Option<PortConfiguration> {
+fn read_port(value: &Value) -> ConfigurationResult<PortConfiguration> {
     if let &Value::Table(ref port_def) = value {
         let name = match port_def.get("name") {
             Some(&Value::String(ref name)) => name.clone(),
-            _ => return None,
+            _ => return Err(ConfigurationError::from("Could not parse name for port")),
         };
 
         let rxd = match port_def.get("rxd") {
             Some(&Value::Integer(rxd)) => rxd as i32,
             None => NUM_RXD,
-            _ => return None,
+            v => return Err(ConfigurationError::from(format!("Could not parse number of rx descriptors {:?}", v))),
         };
 
         let txd = match port_def.get("txd") {
             Some(&Value::Integer(txd)) => txd as i32,
             None => NUM_TXD,
-            _ => return None,
+            v => return Err(ConfigurationError::from(format!("Could not parse number of tx descriptors {:?}", v))),
         };
 
         let loopback = match port_def.get("loopback") {
             Some(&Value::Boolean(l)) => l,
             None => false,
-            _ => return None,
+            v => return Err(ConfigurationError::from(format!("Could not parse loopback spec {:?}", v))),
         };
 
-        let queues = match port_def.get("cores") {
-            Some(&Value::Array(ref queues)) => {
-                let mut qs = Vec::with_capacity(queues.len());
-                for q in queues {
-                    if let &Value::Integer(core) = q {
-                        qs.push(core as i32)
-                    } else {
-                        return None;
-                    };
+        let tso = match port_def.get("tso") {
+            Some(&Value::Boolean(l)) => l,
+            None => false,
+            v => return Err(ConfigurationError::from(format!("Could not parse tso spec {:?}", v))),
+        };
+
+        let csum = match port_def.get("checksum") {
+            Some(&Value::Boolean(l)) => l,
+            None => false,
+            v => return Err(ConfigurationError::from(format!("Could not parse csum spec {:?}", v))),
+        };
+
+        let symmetric_queue = port_def.contains_key("cores");
+        if symmetric_queue && (port_def.contains_key("rx_cores") || port_def.contains_key("tx_cores")) {
+            println!("cores specified along with rx_cores and/or tx_cores for port {}",
+                     name);
+            return Err(ConfigurationError::from(format!("cores specified along with rx_cores and/or tx_cores for \
+                                                         port {}",
+                                                        name)));
+        }
+
+        fn read_queue(queue: &Value) -> ConfigurationResult<Vec<i32>> {
+            match queue {
+                &Value::Array(ref queues) => {
+                    let mut qs = Vec::with_capacity(queues.len());
+                    for q in queues {
+                        if let &Value::Integer(core) = q {
+                            qs.push(core as i32)
+                        } else {
+                            return Err(ConfigurationError::from(format!("Could not parse queue spec {:?}", q)));
+                        };
+                    }
+                    Ok(qs)
                 }
-                qs
+                &Value::Integer(core) => Ok(vec![core as i32]),
+                _ => Ok(vec![]),
             }
-            Some(&Value::Integer(core)) => vec![core as i32],
-            None => Vec::with_capacity(0), // Allow cases where no queues are initialized.
-            _ => return None,
+        }
+
+        let rx_queues = if symmetric_queue {
+            try!(read_queue(port_def.get("cores").unwrap()))
+        } else {
+            match port_def.get("rx_cores") {
+                Some(v) => try!(read_queue(v)),
+                None => Vec::with_capacity(0),
+            }
         };
 
-        Some(PortConfiguration {
+        let tx_queues = if symmetric_queue {
+            rx_queues.clone()
+        } else {
+            match port_def.get("tx_cores") {
+                Some(v) => try!(read_queue(v)),
+                None => Vec::with_capacity(0),
+            }
+        };
+
+        Ok(PortConfiguration {
             name: name,
-            queues: queues,
+            rx_queues: rx_queues,
+            tx_queues: tx_queues,
             rxd: rxd,
             txd: txd,
             loopback: loopback,
+            csum: csum,
+            tso: tso,
         })
     } else {
-        None
+        Err(ConfigurationError::from("Could not understand port spec"))
     }
 }
 
 /// Read a TOML string and create a `SchedulerConfiguration` structure.
 /// `configuration` is a TOML formatted string.
 /// `filename` is used for error reporting purposes, and is otherwise meaningless.
-pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Option<SchedulerConfiguration> {
+pub fn read_configuration_from_str(configuration: &str, filename: &str) -> ConfigurationResult<SchedulerConfiguration> {
     // Parse string for TOML file.
     let mut parser = Parser::new(configuration);
     let toml = match parser.parse() {
@@ -87,7 +132,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Optio
                          hicol,
                          hiline);
             }
-            return None;
+            return Err(ConfigurationError::from(format!("Experienced {} parse errors in spec.", parser.errors.len())));
         }
     };
 
@@ -97,13 +142,13 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Optio
         Some(&Value::String(ref core)) => {
             match core.parse() {
                 Ok(c) => c,
-                _ => return None,
+                _ => return Err(ConfigurationError::from(format!("Could not parse {} as core", core))),
             }
         }
         None => DEFAULT_PRIMARY_CORE,
-        _ => {
+        v => {
             println!("Could not parse core");
-            return None;
+            return Err(ConfigurationError::from(format!("Could not parse {:?} as core", v)));
         }
     };
 
@@ -113,7 +158,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Optio
         None => String::from(DEFAULT_NAME),
         _ => {
             println!("Could not parse name");
-            return None;
+            return Err(ConfigurationError::from("Could not parse name"));
         }
     };
 
@@ -123,7 +168,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Optio
         None => DEFAULT_POOL_SIZE,
         _ => {
             println!("Could parse pool size");
-            return None;
+            return Err(ConfigurationError::from("Could not parse pool size"));
         }
     };
 
@@ -132,7 +177,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Optio
         None => DEFAULT_CACHE_SIZE,
         _ => {
             println!("Could parse cache size");
-            return None;
+            return Err(ConfigurationError::from("Could not parse cache size"));
         }
     };
 
@@ -141,7 +186,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Optio
         None => DEFAULT_SECONDARY,
         _ => {
             println!("Could not parse whether this is a secondary process");
-            return None;
+            return Err(ConfigurationError::from("Could not parse secondary processor spec"));
         }
     };
 
@@ -149,24 +194,20 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Optio
         Some(&Value::Array(ref ports)) => {
             let mut pouts = Vec::with_capacity(ports.len());
             for port in ports {
-                match read_port(port) {
-                    Some(p) => pouts.push(p),
-                    None => {
-                        println!("Could not parse port {}", port);
-                        return None;
-                    }
-                };
+                let p = try!(read_port(port));
+                pouts.push(p);
+                //match read_port(port) {
             }
             pouts
         }
         None => Vec::with_capacity(0),
         _ => {
             println!("Ports is not an array");
-            return None;
+            return Err(ConfigurationError::from("Ports is not an array"));
         }
     };
 
-    Some(SchedulerConfiguration {
+    Ok(SchedulerConfiguration {
         name: name,
         primary_core: master_lcore,
         secondary: secondary,
@@ -178,10 +219,11 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Optio
 
 /// Read a configuration file and create a `SchedulerConfiguration` structure.
 /// `filename` should be TOML formatted file.
-pub fn read_configuration(filename: &str) -> Option<SchedulerConfiguration> {
+pub fn read_configuration(filename: &str) -> ConfigurationResult<SchedulerConfiguration> {
     let mut toml_str = String::new();
     match File::open(filename).and_then(|mut f| f.read_to_string(&mut toml_str)) {
         Ok(_) => read_configuration_from_str(&toml_str[..], filename),
-        _ => None,
+        // Conflict with Error in `TOML` bah.
+        Err(e) => Err(ConfigurationError::from(error::Error::description(&e))),
     }
 }
