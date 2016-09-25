@@ -109,47 +109,47 @@ fn main() {
         configuration
     };
 
-    init_system(&configuration);
+    let config = initialize_system(&configuration).unwrap();
 
-    let cores_str = matches.opt_strs("c");
+    //let cores_str = matches.opt_strs("c");
 
-    let cores: Vec<i32> = cores_str.iter()
-        .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
-        .collect();
-
-
-    fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
-        let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
-        for (port, core) in ports.iter().zip(cores.iter()) {
-            cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
-        }
-        cores_for_port
-    }
+    //let cores: Vec<i32> = cores_str.iter()
+        //.map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
+        //.collect();
 
 
-    let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
+    //fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
+        //let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
+        //for (port, core) in ports.iter().zip(cores.iter()) {
+            //cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
+        //}
+        //cores_for_port
+    //}
 
-    let ports_to_activate: Vec<_> = cores_for_port.keys().collect();
 
-    let mut queues_by_core = HashMap::<i32, Vec<_>>::with_capacity(cores.len());
-    let mut ports = Vec::<Arc<PmdPort>>::with_capacity(ports_to_activate.len());
-    for port in &ports_to_activate {
-        let cores = cores_for_port.get(*port).unwrap();
-        let queues = cores.len() as i32;
-        let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
-            .expect("Could not initialize port");
-        for (idx, core) in cores.iter().enumerate() {
-            let queue = idx as i32;
-            queues_by_core.entry(*core)
-                .or_insert(vec![])
-                .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
-        }
-        ports.push(pmd_port);
-    }
+    //let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
+
+    //let ports_to_activate: Vec<_> = cores_for_port.keys().collect();
+
+    //let mut queues_by_core = HashMap::<i32, Vec<_>>::with_capacity(cores.len());
+    //let mut ports = Vec::<Arc<PmdPort>>::with_capacity(ports_to_activate.len());
+    //for port in &ports_to_activate {
+        //let cores = cores_for_port.get(*port).unwrap();
+        //let queues = cores.len() as i32;
+        //let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
+            //.expect("Could not initialize port");
+        //for (idx, core) in cores.iter().enumerate() {
+            //let queue = idx as i32;
+            //queues_by_core.entry(*core)
+                //.or_insert(vec![])
+                //.push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
+        //}
+        //ports.push(pmd_port);
+    //}
 
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
-    let _thread: Vec<_> = queues_by_core.iter()
+    let _thread: Vec<_> = config.rx_queues.iter()
         .map(|(core, ports)| {
             let c = core.clone();
             let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
@@ -170,7 +170,7 @@ fn main() {
         if now - start > PRINT_DELAY {
             let mut rx = 0;
             let mut tx = 0;
-            for port in &ports {
+            for port in config.ports.values() {
                 for q in 0..port.rxqs() {
                     let (rp, tp) = port.stats(q);
                     rx += rp;

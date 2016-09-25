@@ -1,7 +1,6 @@
 use toml::*;
 use std::fs::File;
 use std::io::Read;
-use interface::{NUM_RXD, NUM_TXD};
 use super::{ConfigurationError, ConfigurationResult, PortConfiguration, SchedulerConfiguration};
 use std::convert::From;
 use std::error;
@@ -12,6 +11,8 @@ pub const DEFAULT_CACHE_SIZE: u32 = 32;
 pub const DEFAULT_SECONDARY: bool = false;
 pub const DEFAULT_PRIMARY_CORE: i32 = 0;
 pub const DEFAULT_NAME: &'static str = "zcsi";
+pub const NUM_RXD: i32 = 128;
+pub const NUM_TXD: i32 = 128;
 
 /// Read a TOML stub and figure out the port.
 fn read_port(value: &Value) -> ConfigurationResult<PortConfiguration> {
@@ -196,7 +197,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Confi
             for port in ports {
                 let p = try!(read_port(port));
                 pouts.push(p);
-                //match read_port(port) {
+                // match read_port(port) {
             }
             pouts
         }

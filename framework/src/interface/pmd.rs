@@ -1,7 +1,7 @@
 use common::*;
 use io::MBuf;
 use headers::MacAddress;
-use config::PortConfiguration;
+use config::{PortConfiguration, NUM_RXD, NUM_TXD};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::cmp::min;
@@ -37,9 +37,6 @@ extern "C" {
     fn max_txqs(port: i32) -> i32;
 }
 
-// Make this into an input parameter
-pub const NUM_RXD: i32 = 128;
-pub const NUM_TXD: i32 = 128;
 
 
 struct PmdStats {

@@ -1,5 +1,5 @@
 use std::fmt;
-use interface::PmdPort;
+use interface::{PmdPort, PortQueue};
 use interface::dpdk::init_system;
 use std::sync::Arc;
 use std::collections::HashMap;
@@ -103,7 +103,6 @@ impl fmt::Display for SchedulerConfiguration {
 }
 
 /// Configuration for each port (network device) in NetBricks.
-#[derive(Default)]
 pub struct PortConfiguration {
     /// Name. The exact semantics vary by backend. For DPDK, we allow things of the form:
     ///    <PCI ID> : Hardware device with PCI ID
@@ -122,6 +121,27 @@ pub struct PortConfiguration {
     pub loopback: bool,
     pub tso: bool,
     pub csum: bool,
+}
+
+impl Default for PortConfiguration {
+    fn default() -> PortConfiguration {
+        PortConfiguration {
+            name: String::new(),
+            rx_queues: vec![],
+            tx_queues: vec![],
+            rxd: NUM_RXD,
+            txd: NUM_TXD,
+            loopback: false,
+            tso: false,
+            csum: false,
+        }
+    }
+}
+
+impl PortConfiguration {
+    pub fn new_port_with_name(name: &str) -> PortConfiguration {
+        PortConfiguration { name: String::from(name), ..Default::default() }
+    }
 }
 
 impl fmt::Display for PortConfiguration {
@@ -146,6 +166,7 @@ impl fmt::Display for PortConfiguration {
 #[derive(Default)]
 pub struct NetBricksContext {
     pub ports: HashMap<String, Arc<PmdPort>>,
+    pub rx_queues: HashMap<i32, Vec<PortQueue>>,
 }
 
 pub fn initialize_system(configuration: &SchedulerConfiguration) -> ConfigurationResult<NetBricksContext> {
@@ -162,6 +183,24 @@ pub fn initialize_system(configuration: &SchedulerConfiguration) -> Configuratio
                 }
                 Err(e) => {
                     return Err(ConfigurationError::from(format!("Port {} could not be initialized {:?}", port.name, e)))
+                }
+            }
+
+            let port_instance = ctx.ports.get(&port.name).unwrap();
+
+            for (rx_q, core) in port.rx_queues.iter().enumerate() {
+                let rx_q = rx_q as i32;
+                match PmdPort::new_queue_pair(port_instance, rx_q, rx_q) {
+                    Ok(q) => {
+                        ctx.rx_queues.entry(*core).or_insert(vec![]).push(q);
+                    }
+                    Err(e) => {
+                        return Err(ConfigurationError::from(format!("Queue {} on port {} could not be initialized \
+                                                                     {:?}",
+                                                                    rx_q,
+                                                                    port.name,
+                                                                    e)))
+                    }
                 }
             }
         }
