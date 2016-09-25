@@ -425,9 +425,8 @@ impl<T: EndOffset> Packet<T> {
     #[inline]
     pub fn reset(mut self) -> Packet<NullHeader> {
         unsafe {
-            let mbuf = self.get_mbuf_ref();
             let header = self.data_base() as *mut NullHeader;
-            create_packet(mbuf, header, 0)
+            create_packet(self.get_mbuf_ref(), header, 0)
         }
     }
 
