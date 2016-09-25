@@ -17,7 +17,6 @@ use std::env;
 use std::error::Error;
 use std::time::Duration;
 use std::thread;
-use std::sync::Arc;
 use std::process;
 use self::nf::*;
 mod nf;
@@ -109,43 +108,41 @@ fn main() {
         configuration
     };
 
+    fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
+        let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
+        for (port, core) in ports.iter().zip(cores.iter()) {
+            cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
+        }
+        cores_for_port
+    }
+
+    let configuration = if matches.opt_present("c") {
+
+        let cores_str = matches.opt_strs("c");
+
+        let cores: Vec<i32> = cores_str.iter()
+            .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
+            .collect();
+
+
+        let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
+
+        let ports_to_activate: Vec<_> = cores_for_port.keys().collect();
+
+        let mut ports = Vec::with_capacity(ports_to_activate.len());
+
+        for port in &ports_to_activate {
+            let cores = cores_for_port.get(*port).unwrap();
+            ports.push(PortConfiguration::new_with_queues(*port, cores, cores))
+        }
+        SchedulerConfiguration { ports: ports, ..configuration }
+    } else {
+        configuration
+    };
+
+    println!("Going to start with configuration {}", configuration);
+
     let config = initialize_system(&configuration).unwrap();
-
-    //let cores_str = matches.opt_strs("c");
-
-    //let cores: Vec<i32> = cores_str.iter()
-        //.map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
-        //.collect();
-
-
-    //fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
-        //let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
-        //for (port, core) in ports.iter().zip(cores.iter()) {
-            //cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
-        //}
-        //cores_for_port
-    //}
-
-
-    //let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
-
-    //let ports_to_activate: Vec<_> = cores_for_port.keys().collect();
-
-    //let mut queues_by_core = HashMap::<i32, Vec<_>>::with_capacity(cores.len());
-    //let mut ports = Vec::<Arc<PmdPort>>::with_capacity(ports_to_activate.len());
-    //for port in &ports_to_activate {
-        //let cores = cores_for_port.get(*port).unwrap();
-        //let queues = cores.len() as i32;
-        //let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
-            //.expect("Could not initialize port");
-        //for (idx, core) in cores.iter().enumerate() {
-            //let queue = idx as i32;
-            //queues_by_core.entry(*core)
-                //.or_insert(vec![])
-                //.push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
-        //}
-        //ports.push(pmd_port);
-    //}
 
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;

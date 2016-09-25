@@ -139,8 +139,13 @@ impl Default for PortConfiguration {
 }
 
 impl PortConfiguration {
-    pub fn new_port_with_name(name: &str) -> PortConfiguration {
+    pub fn new_with_name(name: &str) -> PortConfiguration {
         PortConfiguration { name: String::from(name), ..Default::default() }
+    }
+
+    pub fn new_with_queues(name: &str, rx_queues: &[i32], tx_queues: &[i32]) -> PortConfiguration {
+        PortConfiguration { rx_queues: Vec::from(rx_queues), tx_queues: Vec::from(tx_queues), 
+            ..PortConfiguration::new_with_name(name)}
     }
 }
 
@@ -151,7 +156,7 @@ impl fmt::Display for PortConfiguration {
         let tx_queues_str_vec: Vec<_> = self.tx_queues.iter().map(|q| q.to_string()).collect();
         let tx_queue_str = tx_queues_str_vec.join(" ");
         write!(f,
-               "Port {} RXQ_Count: {} RX_Queues: [ {} ] TXQ_COunt: {} TX_Quesus: {} RXD: {} TXD: {} Loopback {}",
+               "Port {} RXQ_Count: {} RX_Queues: [ {} ] TXQ_Count: {} TX_Queues: {} RXD: {} TXD: {} Loopback {}",
                self.name,
                self.rx_queues.len(),
                rx_queue_str,
