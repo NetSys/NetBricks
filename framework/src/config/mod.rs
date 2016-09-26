@@ -1,6 +1,9 @@
 use std::fmt;
+use std::thread::{self, JoinHandle};
+use std::sync::mpsc::{SyncSender, sync_channel};
 use interface::{PmdPort, PortQueue};
-use interface::dpdk::init_system;
+use interface::dpdk::{init_system, init_thread};
+use scheduler::*;
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::convert::From;
@@ -144,8 +147,11 @@ impl PortConfiguration {
     }
 
     pub fn new_with_queues(name: &str, rx_queues: &[i32], tx_queues: &[i32]) -> PortConfiguration {
-        PortConfiguration { rx_queues: Vec::from(rx_queues), tx_queues: Vec::from(tx_queues), 
-            ..PortConfiguration::new_with_name(name)}
+        PortConfiguration {
+            rx_queues: Vec::from(rx_queues),
+            tx_queues: Vec::from(tx_queues),
+            ..PortConfiguration::new_with_name(name)
+        }
     }
 }
 
@@ -172,6 +178,9 @@ impl fmt::Display for PortConfiguration {
 pub struct NetBricksContext {
     pub ports: HashMap<String, Arc<PmdPort>>,
     pub rx_queues: HashMap<i32, Vec<PortQueue>>,
+    pub active_cores: Vec<i32>,
+    pub scheduler_channels: HashMap<i32, SyncSender<SchedulerCommand>>,
+    pub scheduler_handles: HashMap<i32, JoinHandle<()>>,
 }
 
 pub fn initialize_system(configuration: &SchedulerConfiguration) -> ConfigurationResult<NetBricksContext> {
@@ -210,5 +219,49 @@ pub fn initialize_system(configuration: &SchedulerConfiguration) -> Configuratio
             }
         }
     }
+    ctx.active_cores = ctx.rx_queues.keys().map(|x| *x).collect();
     Ok(ctx)
+}
+
+impl NetBricksContext {
+    pub fn start_schedulers(&mut self) {
+        let cores = self.active_cores.clone();
+        for core in &cores {
+            self.start_scheduler(*core);
+        }
+    }
+
+    #[inline]
+    fn start_scheduler(&mut self, core: i32) {
+        let builder = thread::Builder::new();
+        let (sender, receiver) = sync_channel(0);
+        self.scheduler_channels.insert(core, sender);
+        let join_handle = builder.name(format!("sched-{}", core).into())
+            .spawn(move || {
+                init_thread(core, core);
+                // Other init?
+                let mut sched = Scheduler::new_with_channel(receiver);
+                sched.handle_requests()
+            })
+            .unwrap();
+        self.scheduler_handles.insert(core, join_handle);
+    }
+
+    pub fn add_pipeline_to_run<T: Fn(Vec<PortQueue>, &mut Scheduler) + Send + Sync + 'static>(&mut self, run: Arc<T>) {
+        for (core, channel) in &self.scheduler_channels {
+            let ports = match self.rx_queues.get(core) {
+                Some(v) => v.clone(),
+                None => vec![],
+            };
+            let boxed_run = run.clone();
+            channel.send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(ports.clone(), s)))).unwrap();
+        }
+    }
+
+    pub fn execute(&mut self) {
+        for (core, channel) in &self.scheduler_channels {
+            channel.send(SchedulerCommand::Execute).unwrap();
+            println!("Starting scheduler on {}", core);
+        }
+    }
 }

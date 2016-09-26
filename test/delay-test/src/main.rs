@@ -18,20 +18,18 @@ use std::error::Error;
 use std::time::Duration;
 use std::thread;
 use std::process;
+use std::sync::Arc;
 use self::nf::*;
 mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn recv_thread(ports: Vec<PortQueue>, core: i32, delay_arg: u64) {
-    init_thread(core, core);
-    println!("Receiving started");
+fn test(ports: Vec<PortQueue>, sched: &mut Scheduler, delay_arg: u64) {
     for port in &ports {
-        println!("Receiving port {} rxq {} txq {} on core {} delay {}",
+        println!("Receiving port {} rxq {} txq {} w/ delay {}",
                  port.port.mac_address(),
                  port.rxq(),
                  port.txq(),
-                 core,
                  delay_arg);
     }
 
@@ -39,11 +37,9 @@ fn recv_thread(ports: Vec<PortQueue>, core: i32, delay_arg: u64) {
         .map(|port| delay(ReceiveBatch::new(port.clone()), delay_arg).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
-    let mut sched = Scheduler::new();
     for pipeline in pipelines {
         sched.add_task(pipeline);
     }
-    sched.execute_loop();
 }
 
 fn main() {
@@ -142,17 +138,13 @@ fn main() {
 
     println!("Going to start with configuration {}", configuration);
 
-    let config = initialize_system(&configuration).unwrap();
+    let mut config = initialize_system(&configuration).unwrap();
+    config.start_schedulers();
 
-    const _BATCH: usize = 1 << 10;
-    const _CHANNEL_SIZE: usize = 256;
-    let _thread: Vec<_> = config.rx_queues.iter()
-        .map(|(core, ports)| {
-            let c = core.clone();
-            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
-            std::thread::spawn(move || recv_thread(p, c, delay_arg))
-        })
-        .collect();
+    let delay:u64 = delay_arg;
+    config.add_pipeline_to_run(Arc::new(move |p, s: &mut Scheduler| test(p, s, delay)));
+    config.execute();
+
     let mut pkts_so_far = (0, 0);
     let mut last_printed = 0.;
     const MAX_PRINT_INTERVAL: f64 = 30.;

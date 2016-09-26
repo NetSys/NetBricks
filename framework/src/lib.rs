@@ -5,6 +5,7 @@
 #![feature(specialization)]
 #![feature(associated_consts)]
 #![feature(slice_concat_ext)]
+#![feature(fnbox)]
 
 #![allow(unused_features)]
 #![feature(integer_atomics)]
