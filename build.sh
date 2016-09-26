@@ -121,7 +121,10 @@ examples=(
 print_examples () {
     echo "The following examples are available:"
     for eg in ${examples[@]}; do
-        printf "\t %s\n" $(basename $eg)
+        if [ -e ${BASE_DIR}/${eg}/Cargo.toml ]; then
+            target=$( ${CARGO} read-manifest --manifest-path ${BASE_DIR}/${eg}/Cargo.toml | ${BASE_DIR}/scripts/read-target.py - )
+            printf "\t %s\n" ${target}
+        fi
     done
     exit 0
 }
