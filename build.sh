@@ -262,6 +262,24 @@ case $TASK in
     sctp)
         find_sctp
         ;;
+    build_test)
+        shift
+        if [ $# -lt 1 ]; then
+            echo Can build one of the following tests:
+            for example in ${examples[@]}; do
+                base_eg=$( basename ${example} )
+                printf "\t %s\n" ${base_eg}
+            done
+            exit 1
+        fi
+        build_dir=$1
+        if [ ! -e ${BASE_DIR}/test/${build_dir}/Cargo.toml ]; then
+            echo "No Cargo.toml, not valid"
+        fi
+        pushd ${BASE_DIR}/test/${build_dir}
+            ${CARGO} build --release
+        popd
+        ;;
     build)
         deps
 
@@ -385,6 +403,7 @@ case $TASK in
         Where command is one of
         deps: Build dependencies
         build: Build the project
+        build_test: Build a particular test.
         doc: Run rustdoc and produce documentation
         fmt: Run rustfmt to format text prettily.
         lint: Run clippy to lint the project
