@@ -1,16 +1,11 @@
 use std::fmt;
-use std::thread::{self, JoinHandle};
-use std::sync::mpsc::{SyncSender, sync_channel};
-use interface::{PmdPort, PortQueue};
-use interface::dpdk::{init_system, init_thread};
-use scheduler::*;
-use std::sync::Arc;
-use std::collections::HashMap;
 use std::convert::From;
 use std::error::Error;
 
 pub use self::config_reader::*;
+pub use self::context::*;
 mod config_reader;
+mod context;
 
 #[derive(Debug)]
 pub struct ConfigurationError {
@@ -56,7 +51,7 @@ pub type ConfigurationResult<T> = Result<T, ConfigurationError>;
 
 /// NetBricks control configuration. In theory all applications create one of these, either through the use of
 /// `read_configuration` or manually using args.
-pub struct SchedulerConfiguration {
+pub struct NetbricksConfiguration {
     /// Name, this is passed on to DPDK. If you want to run multiple DPDK apps, this needs to be unique per application.
     pub name: String,
     /// Should this process be run as a secondary process or a primary process?
@@ -72,10 +67,10 @@ pub struct SchedulerConfiguration {
     pub cache_size: u32,
 }
 
-/// Create an empty `SchedulerConfiguration`, useful when initializing through arguments.
-impl Default for SchedulerConfiguration {
-    fn default() -> SchedulerConfiguration {
-        SchedulerConfiguration {
+/// Create an empty `NetbricksConfiguration`, useful when initializing through arguments.
+impl Default for NetbricksConfiguration {
+    fn default() -> NetbricksConfiguration {
+        NetbricksConfiguration {
             name: String::new(),
             pool_size: DEFAULT_POOL_SIZE,
             cache_size: DEFAULT_CACHE_SIZE,
@@ -86,14 +81,14 @@ impl Default for SchedulerConfiguration {
     }
 }
 
-impl SchedulerConfiguration {
-    /// Create a `SchedulerConfiguration` with a name.
-    pub fn new_with_name(name: &str) -> SchedulerConfiguration {
-        SchedulerConfiguration { name: String::from(name), ..Default::default() }
+impl NetbricksConfiguration {
+    /// Create a `NetbricksConfiguration` with a name.
+    pub fn new_with_name(name: &str) -> NetbricksConfiguration {
+        NetbricksConfiguration { name: String::from(name), ..Default::default() }
     }
 }
 
-impl fmt::Display for SchedulerConfiguration {
+impl fmt::Display for NetbricksConfiguration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f,
                     "Configuration: primary core: {}\n Ports:\n",
@@ -171,97 +166,5 @@ impl fmt::Display for PortConfiguration {
                self.rxd,
                self.txd,
                self.loopback)
-    }
-}
-
-#[derive(Default)]
-pub struct NetBricksContext {
-    pub ports: HashMap<String, Arc<PmdPort>>,
-    pub rx_queues: HashMap<i32, Vec<PortQueue>>,
-    pub active_cores: Vec<i32>,
-    pub scheduler_channels: HashMap<i32, SyncSender<SchedulerCommand>>,
-    pub scheduler_handles: HashMap<i32, JoinHandle<()>>,
-}
-
-pub fn initialize_system(configuration: &SchedulerConfiguration) -> ConfigurationResult<NetBricksContext> {
-    init_system(configuration);
-    let mut ctx: NetBricksContext = Default::default();
-    for port in &configuration.ports {
-        if ctx.ports.contains_key(&port.name) {
-            println!("Port {} appears twice in specification", port.name);
-            return Err(ConfigurationError::from(format!("Port {} appears twice in specification", port.name)));
-        } else {
-            match PmdPort::new_port_from_configuration(port) {
-                Ok(p) => {
-                    ctx.ports.insert(port.name.clone(), p);
-                }
-                Err(e) => {
-                    return Err(ConfigurationError::from(format!("Port {} could not be initialized {:?}", port.name, e)))
-                }
-            }
-
-            let port_instance = ctx.ports.get(&port.name).unwrap();
-
-            for (rx_q, core) in port.rx_queues.iter().enumerate() {
-                let rx_q = rx_q as i32;
-                match PmdPort::new_queue_pair(port_instance, rx_q, rx_q) {
-                    Ok(q) => {
-                        ctx.rx_queues.entry(*core).or_insert(vec![]).push(q);
-                    }
-                    Err(e) => {
-                        return Err(ConfigurationError::from(format!("Queue {} on port {} could not be initialized \
-                                                                     {:?}",
-                                                                    rx_q,
-                                                                    port.name,
-                                                                    e)))
-                    }
-                }
-            }
-        }
-    }
-    ctx.active_cores = ctx.rx_queues.keys().map(|x| *x).collect();
-    Ok(ctx)
-}
-
-impl NetBricksContext {
-    pub fn start_schedulers(&mut self) {
-        let cores = self.active_cores.clone();
-        for core in &cores {
-            self.start_scheduler(*core);
-        }
-    }
-
-    #[inline]
-    fn start_scheduler(&mut self, core: i32) {
-        let builder = thread::Builder::new();
-        let (sender, receiver) = sync_channel(0);
-        self.scheduler_channels.insert(core, sender);
-        let join_handle = builder.name(format!("sched-{}", core).into())
-            .spawn(move || {
-                init_thread(core, core);
-                // Other init?
-                let mut sched = Scheduler::new_with_channel(receiver);
-                sched.handle_requests()
-            })
-            .unwrap();
-        self.scheduler_handles.insert(core, join_handle);
-    }
-
-    pub fn add_pipeline_to_run<T: Fn(Vec<PortQueue>, &mut Scheduler) + Send + Sync + 'static>(&mut self, run: Arc<T>) {
-        for (core, channel) in &self.scheduler_channels {
-            let ports = match self.rx_queues.get(core) {
-                Some(v) => v.clone(),
-                None => vec![],
-            };
-            let boxed_run = run.clone();
-            channel.send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(ports.clone(), s)))).unwrap();
-        }
-    }
-
-    pub fn execute(&mut self) {
-        for (core, channel) in &self.scheduler_channels {
-            channel.send(SchedulerCommand::Execute).unwrap();
-            println!("Starting scheduler on {}", core);
-        }
     }
 }

@@ -76,11 +76,11 @@ fn main() {
         }
     } else {
         let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
-        SchedulerConfiguration::new_with_name(&name[..])
+        NetbricksConfiguration::new_with_name(&name[..])
     };
 
     let configuration = if matches.opt_present("m") {
-        SchedulerConfiguration {
+        NetbricksConfiguration {
             primary_core: matches.opt_str("m")
                 .unwrap()
                 .parse()
@@ -92,13 +92,13 @@ fn main() {
     };
 
     let configuration = if matches.opt_present("secondary") {
-        SchedulerConfiguration { secondary: true, ..configuration }
+        NetbricksConfiguration { secondary: true, ..configuration }
     } else {
         configuration
     };
 
     let configuration = if matches.opt_present("primary") {
-        SchedulerConfiguration { secondary: false, ..configuration }
+        NetbricksConfiguration { secondary: false, ..configuration }
     } else {
         configuration
     };
@@ -130,7 +130,7 @@ fn main() {
             let cores = cores_for_port.get(*port).unwrap();
             ports.push(PortConfiguration::new_with_queues(*port, cores, cores))
         }
-        SchedulerConfiguration { ports: ports, ..configuration }
+        NetbricksConfiguration { ports: ports, ..configuration }
     } else {
         configuration
     };

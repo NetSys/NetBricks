@@ -1,6 +1,6 @@
 use std::ffi::CString;
 use super::METADATA_SLOTS;
-use config::{SchedulerConfiguration, DEFAULT_POOL_SIZE, DEFAULT_CACHE_SIZE};
+use config::{NetbricksConfiguration, DEFAULT_POOL_SIZE, DEFAULT_CACHE_SIZE};
 mod native {
     use std::os::raw::c_char;
     #[link(name = "zcsi")]
@@ -66,7 +66,7 @@ pub fn init_system_secondary(name: &str, core: i32) {
 }
 
 /// Initialize the system based on the supplied scheduler configuration.
-pub fn init_system(config: &SchedulerConfiguration) {
+pub fn init_system(config: &NetbricksConfiguration) {
     if config.name.is_empty() {
         panic!("Configuration must provide a name.");
     }

@@ -1,7 +1,7 @@
 use toml::*;
 use std::fs::File;
 use std::io::Read;
-use super::{ConfigurationError, ConfigurationResult, PortConfiguration, SchedulerConfiguration};
+use super::{ConfigurationError, ConfigurationResult, PortConfiguration, NetbricksConfiguration};
 use std::convert::From;
 use std::error;
 
@@ -112,10 +112,10 @@ fn read_port(value: &Value) -> ConfigurationResult<PortConfiguration> {
     }
 }
 
-/// Read a TOML string and create a `SchedulerConfiguration` structure.
+/// Read a TOML string and create a `NetbricksConfiguration` structure.
 /// `configuration` is a TOML formatted string.
 /// `filename` is used for error reporting purposes, and is otherwise meaningless.
-pub fn read_configuration_from_str(configuration: &str, filename: &str) -> ConfigurationResult<SchedulerConfiguration> {
+pub fn read_configuration_from_str(configuration: &str, filename: &str) -> ConfigurationResult<NetbricksConfiguration> {
     // Parse string for TOML file.
     let mut parser = Parser::new(configuration);
     let toml = match parser.parse() {
@@ -208,7 +208,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Confi
         }
     };
 
-    Ok(SchedulerConfiguration {
+    Ok(NetbricksConfiguration {
         name: name,
         primary_core: master_lcore,
         secondary: secondary,
@@ -218,9 +218,9 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Confi
     })
 }
 
-/// Read a configuration file and create a `SchedulerConfiguration` structure.
+/// Read a configuration file and create a `NetbricksConfiguration` structure.
 /// `filename` should be TOML formatted file.
-pub fn read_configuration(filename: &str) -> ConfigurationResult<SchedulerConfiguration> {
+pub fn read_configuration(filename: &str) -> ConfigurationResult<NetbricksConfiguration> {
     let mut toml_str = String::new();
     match File::open(filename).and_then(|mut f| f.read_to_string(&mut toml_str)) {
         Ok(_) => read_configuration_from_str(&toml_str[..], filename),
