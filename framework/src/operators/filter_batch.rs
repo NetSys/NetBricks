@@ -47,7 +47,7 @@ impl<T, V> Act for FilterBatch<T, V>
         // Filter during the act
         let iter = PayloadEnumerator::<T>::new(&mut self.parent);
         while let Some(ParsedDescriptor { mut packet, index: idx }) = iter.next(&mut self.parent) {
-            if (self.filter)(&mut packet) {
+            if !(self.filter)(&mut packet) {
                 self.remove.push(idx)
             }
         }
