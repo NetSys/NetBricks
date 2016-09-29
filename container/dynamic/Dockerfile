@@ -1,4 +1,4 @@
-FROM debian
+FROM debian:testing
 MAINTAINER "Aurojit Panda <apanda@cs.berkeley.edu>"
 COPY container/sources.list /etc/apt/sources.list 
 RUN apt-get -yq update && apt-get -yq install apt-utils
