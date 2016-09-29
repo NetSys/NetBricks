@@ -9,7 +9,6 @@ RUN apt-get -yq update && apt-get -yq install build-essential \
 RUN apt-get -yq update && apt-get -yq install libssl-dev \
 					libgnutls30 libgnutls-openssl-dev \
 					libcurl4-gnutls-dev cmake
-# Fix the date at which we take Rust
 RUN curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- \
 		--channel=nightly --date=2016-04-13
 RUN mkdir -p ~/.ssh && ssh-keyscan -t rsa github.com > ~/.ssh/known_hosts
@@ -23,4 +22,4 @@ ENV DELAY_TEST_ROOT="/opt/e2d2/test/delay-test/target/release"
 RUN /opt/e2d2/build.sh
 COPY run-script.sh /opt/run-script.sh 
 COPY run-script.py /opt/run-script.py
-CMD /opt/run-script.py
+CMD /bin/bash #FIXME: Make actual script 
