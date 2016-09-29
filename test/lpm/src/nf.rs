@@ -104,6 +104,7 @@ pub fn lpm<T: 'static + Batch<Header = NullHeader>>(parent: T, s: &mut Scheduler
     lpm_table.insert_ipv4(&Ipv4Addr::new(192, 0, 0, 0), 8, 2);
     lpm_table.construct_table();
     let mut groups = parent.parse::<MacHeader>()
+                           .transform(box |p| p.get_mut_header().swap_addresses())
                            .parse::<IpHeader>()
                            .group_by(3,
                                     box move |pkt| {

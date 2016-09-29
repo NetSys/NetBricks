@@ -4,6 +4,7 @@ use std::ptr;
 use std::marker::PhantomData;
 use std::slice;
 use headers::{EndOffset, NullHeader};
+use std::mem::size_of;
 
 #[link(name = "zcsi")]
 extern "C" {
@@ -41,7 +42,7 @@ pub struct Packet<T: EndOffset> {
 
 #[inline]
 #[cfg(feature = "packet_offset")]
-fn create_packet<T: EndOffset>(mbuf: *mut MBuf, hdr: *mut T, offset: usize) -> Packet<T> {
+fn create_packet<T: EndOffset>(mbuf: *mut MBuf, hdr: *mut T, offset: usiz) -> Packet<T> {
     let mut pkt = Packet::<T> {
         mbuf: mbuf,
         _phantom_t: PhantomData,
@@ -59,9 +60,11 @@ const HEADER_SLOT: usize = 0;
 const OFFSET_SLOT: usize = HEADER_SLOT + 1;
 const STACK_DEPTH_SLOT: usize = OFFSET_SLOT + 1;
 const STACK_OFFSET_SLOT: usize = STACK_DEPTH_SLOT + 1;
-const STACK_SIZE: usize = METADATA_SLOTS as usize - STACK_OFFSET_SLOT;
+const STACK_SIZE: usize = 0;
 #[allow(dead_code)]
 const END_OF_STACK_SLOT: usize = STACK_OFFSET_SLOT + STACK_SIZE;
+const FREEFORM_METADATA_SLOT: usize = END_OF_STACK_SLOT;
+const FREEFORM_METADATA_SIZE: usize = (METADATA_SLOTS as usize - FREEFORM_METADATA_SLOT) * 8;
 
 #[inline]
 pub fn packet_from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
@@ -269,6 +272,28 @@ impl<T: EndOffset> Packet<T> {
         unsafe { &mut (*(self.header())) }
     }
 
+    #[inline]
+    pub fn read_metadata<M: Sized>(&self) -> &M {
+        assert!(size_of::<M>() < FREEFORM_METADATA_SIZE);
+        unsafe {
+            let ptr = MBuf::metadata_as::<M>(self.mbuf, FREEFORM_METADATA_SLOT);
+            &(*(ptr))
+        }
+    }
+
+    #[inline]
+    pub fn write_metadata<M: Sized>(&mut self, metadata: &M) -> Result<()>{
+        if size_of::<M>() >= FREEFORM_METADATA_SIZE {
+            Err(ZCSIError::MetadataTooLarge)
+        } else {
+            unsafe {
+                let ptr = MBuf::mut_metadata_as::<M>(self.mbuf, FREEFORM_METADATA_SLOT);
+                ptr::copy_nonoverlapping(metadata, ptr, 1);
+                Ok(())
+            }
+        }
+    }
+
     /// When constructing a packet, take a packet as input and add a header.
     #[inline]
     pub fn push_header<T2: EndOffset<PreviousHeader = T>>(mut self, header: &T2) -> Option<Packet<T2>> {
@@ -383,7 +408,6 @@ impl<T: EndOffset> Packet<T> {
             create_packet(self.get_mbuf_ref(), hdr, offset)
         }
     }
-
 
     #[inline]
     pub fn restore_saved_header<T2: EndOffset>(mut self) -> Option<Packet<T2>> {

@@ -11,6 +11,7 @@ pub enum ZCSIError {
     BadTxQueue,
     BadRxQueue,
     BadOffset,
+    MetadataTooLarge,
 }
 
 pub type Result<T> = result::Result<T, ZCSIError>;

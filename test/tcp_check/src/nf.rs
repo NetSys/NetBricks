@@ -28,12 +28,3 @@ pub fn tcp_nf<T: 'static + Batch<Header=NullHeader>>(parent: T) -> CompositionBa
           })
           .compose()
 }
-
-//#[inline]
-//pub fn chain<T: 'static + Batch>(parent: T, len: u32) -> CompositionBatch {
-    //let mut chained = chain_nf(parent);
-    //for _ in 1..len {
-        //chained = chain_nf(chained);
-    //}
-    //chained
-//}
