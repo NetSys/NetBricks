@@ -1,7 +1,8 @@
 sudo: required
 language: rust
-rust:
-    - nightly
+matrix:
+    include:
+        - rust: nightly
 services:
     -docker
 script:
