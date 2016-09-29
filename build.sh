@@ -141,6 +141,7 @@ clean () {
     for example in ${examples[@]}; do
         pushd ${BASE_DIR}/$example
         ${CARGO} clean || true
+        popd
     done
     make clean -C ${BASE_DIR}/native
 }
