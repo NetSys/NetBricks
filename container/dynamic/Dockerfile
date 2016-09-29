@@ -24,16 +24,15 @@ COPY native /opt/netbricks/native
 COPY patches /opt/netbricks/patches
 COPY scripts /opt/netbricks/scripts
 COPY test /opt/netbricks/test
-COPY tuning /opt/netbricks/tuning
+#COPY tuning /opt/netbricks/tuning
 COPY .gitignore /opt/netbricks/.gitignore
 COPY LICENSE.md /opt/netbricks/LICENSE.md
 COPY README.md /opt/netbricks/README.md
 COPY build.sh /opt/netbricks/build.sh
 COPY rustfmt.toml /opt/netbricks/rustfmt.toml
 RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
-RUN cat /root/.profile | grep PATH >> /root/.bashrc
-#RUN /opt/e2d2/build.sh
-#COPY run-script.sh /opt/run-script.sh 
-#COPY run-script.py /opt/run-script.py
+RUN . /root/.profile; /opt/netbricks/build.sh
+COPY container/run-script.sh /opt/run-script.sh 
+COPY container/run-script.py /opt/run-script.py
 #CMD /opt/run-script.py
 CMD /bin/bash
