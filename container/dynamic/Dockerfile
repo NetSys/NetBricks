@@ -5,7 +5,7 @@ RUN apt-get -yq update && apt-get -yq install apt-utils
 RUN apt-get -yq update && apt-get -yq install build-essential \
 				vim-nox curl \
 				pciutils sudo git linux-headers-`uname -r` \
-				python
+				python python3
 RUN apt-get -yq update && apt-get -yq install libssl-dev \
 					libgnutls30 libgnutls-openssl-dev \
 					libcurl4-gnutls-dev cmake bash libpcap-dev
