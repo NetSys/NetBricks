@@ -4,7 +4,7 @@ matrix:
     include:
         - rust: nightly
 services:
-    -docker
+    - docker
 script:
     - ./build.sh build
     - ./build.sh build_container
