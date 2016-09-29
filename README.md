@@ -51,14 +51,11 @@ apt-get install libsctp-dev
 
 Example NFs
 -----------
-This repository includes a set of example NFs under the `test` directory. The examples include
-
-|Example| Functionality |
-|-------|---------------|
-|zcsi-lpm| LPM lookup   |
-|zcsi-maglev| Maglev implementation|
-|zcsi-delay| Inject processing delay|
-|zcsi-chain| Chaining test|
+This repository includes a set of example NFs under the `test` directory. A complete list of example can be found by
+running
+```
+./build.sh run
+```
 
 The build script can be used to run these examples as
 
