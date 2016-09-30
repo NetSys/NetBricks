@@ -10,7 +10,7 @@ use super::RestoreHeader;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-pub type GroupFn<T> = Box<FnMut(&Packet<T>) -> usize + Send>;
+pub type GroupFn<T, M> = Box<FnMut(&Packet<T, M>) -> usize + Send>;
 
 pub struct GroupBy<T, V>
     where T: EndOffset + 'static,
@@ -28,7 +28,7 @@ struct GroupByProducer<T, V>
 {
     parent: V,
     producers: Vec<MpscProducer>,
-    group_fn: GroupFn<T>,
+    group_fn: GroupFn<T, V::Metadata>,
 }
 
 impl<T, V> Executable for GroupByProducer<T, V>
@@ -39,7 +39,7 @@ impl<T, V> Executable for GroupByProducer<T, V>
     fn execute(&mut self) {
         self.parent.act(); // Let the parent get some packets.
         {
-            let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+            let iter = PayloadEnumerator::<T, V::Metadata>::new(&mut self.parent);
             while let Some(ParsedDescriptor { mut packet, .. }) = iter.next(&mut self.parent) {
                 let group = (self.group_fn)(&packet);
                 packet.save_header_and_offset();
@@ -55,7 +55,7 @@ impl<T, V> GroupBy<T, V>
     where T: EndOffset + 'static,
           V: Batch + BatchIterator<Header = T> + Act + 'static
 {
-    pub fn new(parent: V, groups: usize, group_fn: GroupFn<T>, sched: &mut Scheduler) -> GroupBy<T, V> {
+    pub fn new(parent: V, groups: usize, group_fn: GroupFn<T, V::Metadata>, sched: &mut Scheduler) -> GroupBy<T, V> {
         let mut producers = Vec::with_capacity(groups);
         let mut consumers = HashMap::with_capacity(groups);
         for i in 0..groups {
@@ -80,7 +80,7 @@ impl<T, V> GroupBy<T, V>
         self.groups
     }
 
-    pub fn get_group(&mut self, group: usize) -> Option<RestoreHeader<T, ReceiveQueueGen<MpscConsumer>>> {
+    pub fn get_group(&mut self, group: usize) -> Option<RestoreHeader<T, V::Metadata, ReceiveQueueGen<MpscConsumer>>> {
         self.consumers.remove(&group).map(|b| RestoreHeader::new(b))
     }
 }

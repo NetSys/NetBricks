@@ -4,6 +4,7 @@ use std::ptr;
 use std::marker::PhantomData;
 use std::slice;
 use headers::{EndOffset, NullHeader};
+use std::mem::size_of;
 
 #[link(name = "zcsi")]
 extern "C" {
@@ -12,39 +13,44 @@ extern "C" {
     fn mbuf_alloc_bulk(array: *mut *mut MBuf, len: u16, cnt: i32) -> i32;
 }
 
+
 /// A packet is a safe wrapper around mbufs, that can be allocated and manipulated.
 /// We associate a header type with a packet to allow safe insertion of headers.
 #[cfg(not(feature = "packet_offset"))]
-pub struct Packet<T: EndOffset> {
+pub struct Packet<T: EndOffset, M: Sized + Send> {
     mbuf: *mut MBuf,
     _phantom_t: PhantomData<T>,
+    _phantom_m: PhantomData<M>,
     header: *mut T,
     offset: usize,
 }
 
 #[inline]
 #[cfg(not(feature = "packet_offset"))]
-fn create_packet<T: EndOffset>(mbuf: *mut MBuf, hdr: *mut T, offset: usize) -> Packet<T> {
-    Packet::<T> {
+fn create_packet<T: EndOffset, M: Sized + Send>(mbuf: *mut MBuf, hdr: *mut T, offset: usize) -> Packet<T, M> {
+    Packet::<T, M> {
         mbuf: mbuf,
         _phantom_t: PhantomData,
+        _phantom_m: PhantomData,
         offset: offset,
         header: hdr,
     }
 }
 
 #[cfg(feature = "packet_offset")]
-pub struct Packet<T: EndOffset> {
+pub struct Packet<T: EndOffset, M: Sized + Send> {
     mbuf: *mut MBuf,
     _phantom_t: PhantomData<T>,
+    _phantom_m: PhantomData<M>,
 }
 
 #[inline]
 #[cfg(feature = "packet_offset")]
-fn create_packet<T: EndOffset>(mbuf: *mut MBuf, hdr: *mut T, offset: usize) -> Packet<T> {
+fn create_packet<T: EndOffset, M: Sized + Send>(mbuf: *mut MBuf, hdr: *mut T, offset: usiz) -> Packet<T, M> {
     let mut pkt = Packet::<T> {
         mbuf: mbuf,
         _phantom_t: PhantomData,
+        _phantom_m: PhantomData,
     };
     pkt.update_ptrs(hdr as *mut u8, offset);
     pkt
@@ -59,19 +65,21 @@ const HEADER_SLOT: usize = 0;
 const OFFSET_SLOT: usize = HEADER_SLOT + 1;
 const STACK_DEPTH_SLOT: usize = OFFSET_SLOT + 1;
 const STACK_OFFSET_SLOT: usize = STACK_DEPTH_SLOT + 1;
-const STACK_SIZE: usize = METADATA_SLOTS as usize - STACK_OFFSET_SLOT;
+const STACK_SIZE: usize = 0;
 #[allow(dead_code)]
 const END_OF_STACK_SLOT: usize = STACK_OFFSET_SLOT + STACK_SIZE;
+const FREEFORM_METADATA_SLOT: usize = END_OF_STACK_SLOT;
+const FREEFORM_METADATA_SIZE: usize = (METADATA_SLOTS as usize - FREEFORM_METADATA_SLOT) * 8;
 
 #[inline]
-pub fn packet_from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
+pub fn packet_from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T, EmptyMetadata> {
     // Need to up the refcnt, so that things don't drop.
     reference_mbuf(mbuf);
     packet_from_mbuf_no_increment(mbuf, offset)
 }
 
 #[inline]
-pub fn packet_from_mbuf_no_increment<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
+pub fn packet_from_mbuf_no_increment<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T, EmptyMetadata> {
     unsafe {
         // Compute the real offset
         let header = (*mbuf).data_address(offset) as *mut T;
@@ -80,12 +88,12 @@ pub fn packet_from_mbuf_no_increment<T: EndOffset>(mbuf: *mut MBuf, offset: usiz
 }
 
 #[inline]
-pub unsafe fn packet_from_mbuf_no_free<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
+pub unsafe fn packet_from_mbuf_no_free<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T, EmptyMetadata> {
     packet_from_mbuf_no_increment(mbuf, offset)
 }
 
 /// Allocate a new packet.
-pub fn new_packet() -> Option<Packet<NullHeader>> {
+pub fn new_packet() -> Option<Packet<NullHeader, EmptyMetadata>> {
     unsafe {
         // This sets refcnt = 1
         let mbuf = mbuf_alloc();
@@ -98,7 +106,7 @@ pub fn new_packet() -> Option<Packet<NullHeader>> {
 }
 
 /// Allocate an array of packets.
-pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader>> {
+pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader, EmptyMetadata>> {
     let mut array = Vec::with_capacity(count);
     unsafe {
         let alloc_ret = mbuf_alloc_bulk(array.as_mut_ptr(), 0, count as i32);
@@ -110,7 +118,7 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader>> {
 }
 
 
-impl<T: EndOffset> Packet<T> {
+impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     // --------------------- Not using packet offsets ------------------------------------------------------
     #[inline]
     #[cfg(not(feature="packet_offset"))]
@@ -269,9 +277,38 @@ impl<T: EndOffset> Packet<T> {
         unsafe { &mut (*(self.header())) }
     }
 
+    #[inline]
+    pub fn read_metadata(&self) -> &M {
+        assert!(size_of::<M>() < FREEFORM_METADATA_SIZE);
+        unsafe {
+            let ptr = MBuf::metadata_as::<M>(self.mbuf, FREEFORM_METADATA_SLOT);
+            &(*(ptr))
+        }
+    }
+
+    #[inline]
+    pub fn write_metadata<M2: Sized + Send>(&mut self, metadata: &M2) -> Result<()> {
+        if size_of::<M2>() >= FREEFORM_METADATA_SIZE {
+            Err(ZCSIError::MetadataTooLarge)
+        } else {
+            unsafe {
+                let ptr = MBuf::mut_metadata_as::<M2>(self.mbuf, FREEFORM_METADATA_SLOT);
+                ptr::copy_nonoverlapping(metadata, ptr, 1);
+                Ok(())
+            }
+        }
+    }
+
+    #[inline]
+    pub fn reinterpret_metadata<M2: Sized + Send>(mut self) -> Packet<T, M2> {
+        let hdr = self.header();
+        let offset = self.offset();
+        unsafe { create_packet(self.get_mbuf_ref(), hdr, offset) }
+    }
+
     /// When constructing a packet, take a packet as input and add a header.
     #[inline]
-    pub fn push_header<T2: EndOffset<PreviousHeader = T>>(mut self, header: &T2) -> Option<Packet<T2>> {
+    pub fn push_header<T2: EndOffset<PreviousHeader = T>>(mut self, header: &T2) -> Option<Packet<T2, M>> {
         unsafe {
             let len = self.data_len();
             let size = header.offset();
@@ -362,7 +399,7 @@ impl<T: EndOffset> Packet<T> {
     }
 
     #[inline]
-    pub fn parse_header<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2> {
+    pub fn parse_header<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2, M> {
         unsafe {
             assert!{self.payload_size() > T2::size()}
             let hdr = self.payload() as *mut T2;
@@ -372,7 +409,7 @@ impl<T: EndOffset> Packet<T> {
     }
 
     #[inline]
-    pub fn parse_header_and_record<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2> {
+    pub fn parse_header_and_record<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2, M> {
         unsafe {
             assert!{self.payload_size() > T2::size()}
             let hdr = self.payload() as *mut T2;
@@ -384,9 +421,8 @@ impl<T: EndOffset> Packet<T> {
         }
     }
 
-
     #[inline]
-    pub fn restore_saved_header<T2: EndOffset>(mut self) -> Option<Packet<T2>> {
+    pub fn restore_saved_header<T2: EndOffset, M2: Sized + Send>(mut self) -> Option<Packet<T2, M2>> {
         unsafe {
             let hdr = self.read_header::<T2>();
             if hdr == ptr::null_mut() {
@@ -398,7 +434,6 @@ impl<T: EndOffset> Packet<T> {
         }
     }
 
-
     #[inline]
     pub fn replace_header(&mut self, hdr: &T) {
         unsafe {
@@ -407,7 +442,7 @@ impl<T: EndOffset> Packet<T> {
     }
 
     #[inline]
-    pub fn deparse_header(mut self, offset: usize) -> Packet<T::PreviousHeader> {
+    pub fn deparse_header(mut self, offset: usize) -> Packet<T::PreviousHeader, M> {
         let offset = offset as isize;
         unsafe {
             let header = self.header_u8().offset(-offset) as *mut T::PreviousHeader;
@@ -417,13 +452,13 @@ impl<T: EndOffset> Packet<T> {
     }
 
     #[inline]
-    pub fn deparse_header_stack(mut self) -> Option<Packet<T::PreviousHeader>> {
+    pub fn deparse_header_stack(mut self) -> Option<Packet<T::PreviousHeader, M>> {
         self.pop_offset().map(|offset| self.deparse_header(offset))
     }
 
 
     #[inline]
-    pub fn reset(mut self) -> Packet<NullHeader> {
+    pub fn reset(mut self) -> Packet<NullHeader, EmptyMetadata> {
         unsafe {
             let header = self.data_base() as *mut NullHeader;
             create_packet(self.get_mbuf_ref(), header, 0)

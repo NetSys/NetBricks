@@ -35,13 +35,14 @@ impl<V> BatchIterator for SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
     type Header = NullHeader;
+    type Metadata = EmptyMetadata;
     #[inline]
     fn start(&mut self) -> usize {
         panic!("Cannot iterate send batch")
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, _: usize) -> Option<PacketDescriptor<NullHeader>> {
+    unsafe fn next_payload(&mut self, _: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
         panic!("Cannot iterate send batch")
     }
 }

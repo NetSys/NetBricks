@@ -1,6 +1,7 @@
 use e2d2::headers::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
+use e2d2::common::EmptyMetadata;
 use fnv::FnvHasher;
 use std::net::Ipv4Addr;
 use std::convert::From;
@@ -97,22 +98,24 @@ impl IPLookup {
     }
 }
 
-pub fn lpm<T: 'static + Batch<Header = NullHeader>>(parent: T, s: &mut Scheduler) -> CompositionBatch<IpHeader> {
+pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata=EmptyMetadata>>(parent: T,
+                                                    s: &mut Scheduler)
+                                                    -> CompositionBatch<IpHeader, EmptyMetadata> {
     let mut lpm_table = IPLookup::new();
     lpm_table.insert_ipv4(&Ipv4Addr::new(0, 0, 0, 0), 0, 1);
     lpm_table.insert_ipv4(&Ipv4Addr::new(10, 0, 0, 0), 8, 2);
     lpm_table.insert_ipv4(&Ipv4Addr::new(192, 0, 0, 0), 8, 2);
     lpm_table.construct_table();
     let mut groups = parent.parse::<MacHeader>()
-                           .parse::<IpHeader>()
-                           .group_by(3,
-                                    box move |pkt| {
-                                        let hdr = pkt.get_header();
-                                        lpm_table.lookup_entry(hdr.src()) as usize
-                                    }, s);
-    let pipeline = merge(vec![groups.get_group(0).unwrap(),
-                              groups.get_group(1).unwrap(),
-                              groups.get_group(2).unwrap()])
-                       .compose();
+        .transform(box |p| p.get_mut_header().swap_addresses())
+        .parse::<IpHeader>()
+        .group_by(3,
+                  box move |pkt| {
+                      let hdr = pkt.get_header();
+                      lpm_table.lookup_entry(hdr.src()) as usize
+                  },
+                  s);
+    let pipeline =
+        merge(vec![groups.get_group(0).unwrap(), groups.get_group(1).unwrap(), groups.get_group(2).unwrap()]).compose();
     pipeline
 }
