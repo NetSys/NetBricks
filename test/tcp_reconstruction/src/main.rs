@@ -23,17 +23,16 @@ mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn test(ports: Vec<PortQueue>, sched: &mut Scheduler, delay_arg: u64) {
+fn test(ports: Vec<PortQueue>, sched: &mut Scheduler) {
     for port in &ports {
-        println!("Receiving port {} rxq {} txq {} w/ delay {}",
+        println!("Receiving port {} rxq {} txq {}",
                  port.port.mac_address(),
                  port.rxq(),
-                 port.txq(),
-                 delay_arg);
+                 port.txq());
     }
 
     let pipelines: Vec<_> = ports.iter()
-        .map(|port| delay(ReceiveBatch::new(port.clone()), delay_arg).send(port.clone()))
+        .map(|port| reconstruction(ReceiveBatch::new(port.clone())).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
@@ -52,7 +51,6 @@ fn main() {
     opts.optmulti("p", "port", "Port to use", "[type:]id");
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
-    opts.optopt("d", "delay", "Delay cycles", "cycles");
     opts.optopt("f", "configuration", "Configuration file", "path");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -62,11 +60,6 @@ fn main() {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
         process::exit(0)
     }
-
-    let delay_arg = matches.opt_str("d")
-        .unwrap_or_else(|| String::from("100"))
-        .parse()
-        .expect("Could not parse delay");
 
     let configuration = if matches.opt_present("f") {
         let config_file = matches.opt_str("f").unwrap();
@@ -140,8 +133,7 @@ fn main() {
     let mut config = initialize_system(&configuration).unwrap();
     config.start_schedulers();
 
-    let delay:u64 = delay_arg;
-    config.add_pipeline_to_run(Arc::new(move |p, s: &mut Scheduler| test(p, s, delay)));
+    config.add_pipeline_to_run(Arc::new(move |p, s: &mut Scheduler| test(p, s)));
     config.execute();
 
     let mut pkts_so_far = (0, 0);
