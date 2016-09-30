@@ -286,18 +286,25 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         }
     }
 
-    //#[inline]
-    //pub fn write_metadata<M: Sized>(&mut self, metadata: &M) -> Result<()>{
-        //if size_of::<M>() >= FREEFORM_METADATA_SIZE {
-            //Err(ZCSIError::MetadataTooLarge)
-        //} else {
-            //unsafe {
-                //let ptr = MBuf::mut_metadata_as::<M>(self.mbuf, FREEFORM_METADATA_SLOT);
-                //ptr::copy_nonoverlapping(metadata, ptr, 1);
-                //Ok(())
-            //}
-        //}
-    //}
+    #[inline]
+    pub fn write_metadata<M2: Sized + Send>(&mut self, metadata: &M2) -> Result<()> {
+        if size_of::<M2>() >= FREEFORM_METADATA_SIZE {
+            Err(ZCSIError::MetadataTooLarge)
+        } else {
+            unsafe {
+                let ptr = MBuf::mut_metadata_as::<M2>(self.mbuf, FREEFORM_METADATA_SLOT);
+                ptr::copy_nonoverlapping(metadata, ptr, 1);
+                Ok(())
+            }
+        }
+    }
+
+    #[inline]
+    pub fn reinterpret_metadata<M2: Sized + Send>(mut self) -> Packet<T, M2> {
+        let hdr = self.header();
+        let offset = self.offset();
+        unsafe { create_packet(self.get_mbuf_ref(), hdr, offset) }
+    }
 
     /// When constructing a packet, take a packet as input and add a header.
     #[inline]

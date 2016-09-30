@@ -18,13 +18,17 @@ impl<T, M> CompositionBatch<T, M>
     where T: EndOffset,
           M: Sized + Send
 {
-    pub fn new(parent: Box<Batch<Header = T, Metadata=M>>) -> CompositionBatch<T, M> {
+    pub fn new(parent: Box<Batch<Header = T, Metadata = M>>) -> CompositionBatch<T, M> {
         CompositionBatch { parent: parent }
 
     }
 }
 
-impl<T, M> Batch for CompositionBatch<T, M> where T: EndOffset, M: Sized + Send {}
+impl<T, M> Batch for CompositionBatch<T, M>
+    where T: EndOffset,
+          M: Sized + Send
+{
+}
 
 impl<T, M> BatchIterator for CompositionBatch<T, M>
     where T: EndOffset,

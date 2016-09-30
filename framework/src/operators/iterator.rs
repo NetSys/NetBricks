@@ -49,7 +49,7 @@ pub struct PayloadEnumerator<T, M>
     // entirely immutable for the moment, which makes sense.
     idx: Cell<usize>,
     _phantom_t: PhantomData<T>,
-    _phantom_m: PhantomData<M>
+    _phantom_m: PhantomData<M>,
 }
 
 impl<T, M> PayloadEnumerator<T, M>
@@ -58,7 +58,7 @@ impl<T, M> PayloadEnumerator<T, M>
 {
     /// Create a new iterator.
     #[inline]
-    pub fn new(batch: &mut BatchIterator<Header = T, Metadata=M>) -> PayloadEnumerator<T, M> {
+    pub fn new(batch: &mut BatchIterator<Header = T, Metadata = M>) -> PayloadEnumerator<T, M> {
         let start = batch.start();
         PayloadEnumerator {
             idx: Cell::new(start),
@@ -70,7 +70,7 @@ impl<T, M> PayloadEnumerator<T, M>
     /// Used for looping over packets. Note this iterator is not safe if packets are added or dropped during iteration,
     /// so you should not do that if possible.
     #[inline]
-    pub fn next(&self, batch: &mut BatchIterator<Header = T, Metadata=M>) -> Option<ParsedDescriptor<T, M>> {
+    pub fn next(&self, batch: &mut BatchIterator<Header = T, Metadata = M>) -> Option<ParsedDescriptor<T, M>> {
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_payload(original_idx) };
         match item {

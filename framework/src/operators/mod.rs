@@ -13,10 +13,12 @@ pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
 pub use self::group_by::*;
 pub use self::restore_header::*;
+pub use self::add_metadata::AddMetadataBatch;
 
 use self::filter_batch::FilterFn;
 use self::transform_batch::TransformFn;
 use self::map_batch::MapFn;
+use self::add_metadata::MetadataFn;
 
 pub use self::reset_parse::ResetParsingBatch;
 use interface::*;
@@ -42,6 +44,7 @@ mod send_batch;
 mod transform_batch;
 mod receive_queue_general;
 mod restore_header;
+mod add_metadata;
 
 /// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
 /// the precise batch being processed will be determined by the scheduling policy used.
@@ -59,6 +62,14 @@ pub trait Batch: BatchIterator + Act + Send {
         where Self: Sized
     {
         ParsedBatch::<T, Self>::new(self)
+    }
+
+    fn metadata<M: Sized + Send>(self,
+                                 generator: MetadataFn<Self::Header, Self::Metadata, M>)
+                                 -> AddMetadataBatch<M, Self>
+        where Self: Sized
+    {
+        AddMetadataBatch::new(self, generator)
     }
 
     /// Send this batch out a particular port and queue.

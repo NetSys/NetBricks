@@ -14,7 +14,7 @@ pub struct RestoreHeader<T, M, V>
 {
     parent: V,
     _phantom_t: PhantomData<T>,
-    _phantom_m: PhantomData<M>
+    _phantom_m: PhantomData<M>,
 }
 
 impl<T, M, V> Act for RestoreHeader<T, M, V>
