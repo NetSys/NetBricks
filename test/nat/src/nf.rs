@@ -21,7 +21,7 @@ type FnvHash = BuildHasherDefault<FnvHasher>;
 pub fn nat<T: 'static + Batch<Header = NullHeader>>(parent: T,
                                                     _s: &mut Scheduler,
                                                     nat_ip: &Ipv4Addr)
-                                                    -> CompositionBatch<MacHeader> {
+                                                    -> CompositionBatch<MacHeader, T::Metadata> {
     let ip = u32::from(*nat_ip);
     let mut port_hash = HashMap::<Flow, Flow, FnvHash>::with_capacity_and_hasher(65536, Default::default());
     let mut flow_vec: Vec<FlowUsed> = (MIN_PORT..65535).map(|_| Default::default()).collect();

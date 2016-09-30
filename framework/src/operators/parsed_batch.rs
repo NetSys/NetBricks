@@ -46,7 +46,8 @@ impl<T, V> BatchIterator for ParsedBatch<T, V>
           T: EndOffset<PreviousHeader = V::Header>
 {
     type Header = T;
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T>> {
+    type Metadata = V::Metadata;
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T, V::Metadata>> {
         self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.parse_header() })
     }
 

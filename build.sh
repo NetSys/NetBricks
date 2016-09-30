@@ -116,6 +116,7 @@ examples=(
         test/sctp-test
         test/config-test
         test/reset-parse
+        test/tcp_reconstruction
 )
 
 print_examples () {

@@ -25,6 +25,7 @@ impl<T: Batch> Batch for MergeBatch<T> {}
 
 impl<T: Batch> BatchIterator for MergeBatch<T> {
     type Header = T::Header;
+    type Metadata = T::Metadata;
 
     #[inline]
     fn start(&mut self) -> usize {
@@ -32,7 +33,7 @@ impl<T: Batch> BatchIterator for MergeBatch<T> {
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T::Header>> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T::Header, T::Metadata>> {
         self.parents[self.which].next_payload(idx)
     }
 }
