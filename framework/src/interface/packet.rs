@@ -59,9 +59,13 @@ const HEADER_SLOT: usize = 0;
 const OFFSET_SLOT: usize = HEADER_SLOT + 1;
 const STACK_DEPTH_SLOT: usize = OFFSET_SLOT + 1;
 const STACK_OFFSET_SLOT: usize = STACK_DEPTH_SLOT + 1;
-const STACK_SIZE: usize = METADATA_SLOTS as usize - STACK_OFFSET_SLOT;
+const STACK_SIZE: usize = 8;
 #[allow(dead_code)]
 const END_OF_STACK_SLOT: usize = STACK_OFFSET_SLOT + STACK_SIZE;
+#[allow(dead_code)]
+const BEGIN_METADATA: usize = END_OF_STACK_SLOT;
+#[allow(dead_code)]
+const METADATA_BYTES: usize = (METADATA_SLOTS - BEGIN_METADATA) * 8;
 
 #[inline]
 pub fn packet_from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T> {
