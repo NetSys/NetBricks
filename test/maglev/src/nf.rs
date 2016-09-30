@@ -83,7 +83,7 @@ impl Maglev {
 pub fn maglev<T: 'static + Batch<Header = NullHeader>>(parent: T,
                                                        s: &mut Scheduler,
                                                        backends: &[&str])
-                                                       -> CompositionBatch<MacHeader> {
+                                                       -> CompositionBatch<MacHeader, T::Metadata> {
     let ct = backends.len();
     let lut = Maglev::new(backends, 65537);
     let mut cache = HashMap::<usize, usize, FnvHash>::with_hasher(Default::default());

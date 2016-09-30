@@ -8,14 +8,14 @@ use super::Batch;
 use std::marker::PhantomData;
 use super::packet_batch::PacketBatch;
 
-pub type TransformFn<T> = Box<FnMut(&mut Packet<T>) + Send>;
+pub type TransformFn<T, M> = Box<FnMut(&mut Packet<T, M>) + Send>;
 
 pub struct TransformBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator<Header = T> + Act
 {
     parent: V,
-    transformer: TransformFn<T>,
+    transformer: TransformFn<T, V::Metadata>,
     applied: bool,
     phantom_t: PhantomData<T>,
 }
@@ -24,7 +24,7 @@ impl<T, V> TransformBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator<Header = T> + Act
 {
-    pub fn new(parent: V, transformer: TransformFn<T>) -> TransformBatch<T, V> {
+    pub fn new(parent: V, transformer: TransformFn<T, V::Metadata>) -> TransformBatch<T, V> {
         TransformBatch {
             parent: parent,
             transformer: transformer,
@@ -45,13 +45,14 @@ impl<T, V> BatchIterator for TransformBatch<T, V>
           V: Batch + BatchIterator<Header = T> + Act
 {
     type Header = T;
+    type Metadata = <V as BatchIterator>::Metadata;
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T>> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T, Self::Metadata>> {
         self.parent.next_payload(idx)
     }
 }
@@ -65,7 +66,7 @@ impl<T, V> Act for TransformBatch<T, V>
         if !self.applied {
             self.parent.act();
             {
-                let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+                let iter = PayloadEnumerator::<T, V::Metadata>::new(&mut self.parent);
                 while let Some(ParsedDescriptor { mut packet, .. }) = iter.next(&mut self.parent) {
                     (self.transformer)(&mut packet);
                 }

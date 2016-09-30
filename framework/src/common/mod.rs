@@ -15,3 +15,6 @@ pub enum ZCSIError {
 }
 
 pub type Result<T> = result::Result<T, ZCSIError>;
+
+/// Null metadata associated with packets initially.
+pub struct EmptyMetadata;

@@ -2,7 +2,7 @@ use e2d2::headers::*;
 use e2d2::operators::*;
 
 #[inline]
-pub fn tcp_nf<T: 'static + Batch<Header=NullHeader>>(parent: T) -> CompositionBatch<UdpHeader> {
+pub fn tcp_nf<T: 'static + Batch<Header=NullHeader>>(parent: T) -> CompositionBatch<UdpHeader, T::Metadata> {
     parent.parse::<MacHeader>()
           .map(box |pkt| {
               println!("hdr {}", pkt.get_header());

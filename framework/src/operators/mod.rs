@@ -2,7 +2,6 @@ use self::act::Act;
 use self::iterator::BatchIterator;
 
 pub use self::composition_batch::CompositionBatch;
-// pub use self::context_batch::ContextBatch;
 pub use self::deparsed_batch::DeparsedBatch;
 pub use self::filter_batch::FilterBatch;
 pub use self::map_batch::MapBatch;
@@ -29,7 +28,6 @@ mod macros;
 
 mod act;
 mod composition_batch;
-// mod context_batch;
 mod deparsed_batch;
 mod filter_batch;
 mod group_by;
@@ -76,14 +74,14 @@ pub trait Batch: BatchIterator + Act + Send {
     /// # Warning
     /// This causes some performance degradation: operations called through composition batches rely on indirect calls
     /// which affect throughput.
-    fn compose(self) -> CompositionBatch<Self::Header>
+    fn compose(self) -> CompositionBatch<Self::Header, Self::Metadata>
         where Self: Sized + 'static
     {
         CompositionBatch::new(box self)
     }
 
     /// Transform a header field.
-    fn transform(self, transformer: TransformFn<Self::Header>) -> TransformBatch<Self::Header, Self>
+    fn transform(self, transformer: TransformFn<Self::Header, Self::Metadata>) -> TransformBatch<Self::Header, Self>
         where Self: Sized
     {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
@@ -91,14 +89,14 @@ pub trait Batch: BatchIterator + Act + Send {
 
     /// Map over a set of header fields. Map and transform primarily differ in map being immutable. Immutability
     /// provides some optimization opportunities not otherwise available.
-    fn map(self, transformer: MapFn<Self::Header>) -> MapBatch<Self::Header, Self>
+    fn map(self, transformer: MapFn<Self::Header, Self::Metadata>) -> MapBatch<Self::Header, Self>
         where Self: Sized
     {
         MapBatch::<Self::Header, Self>::new(self, transformer)
     }
 
     /// Filter out packets, any packets for which `filter_f` returns false are dropped from the batch.
-    fn filter(self, filter_f: FilterFn<Self::Header>) -> FilterBatch<Self::Header, Self>
+    fn filter(self, filter_f: FilterFn<Self::Header, Self::Metadata>) -> FilterBatch<Self::Header, Self>
         where Self: Sized
     {
         FilterBatch::<Self::Header, Self>::new(self, filter_f)
@@ -121,7 +119,7 @@ pub trait Batch: BatchIterator + Act + Send {
 
     fn group_by(self,
                 groups: usize,
-                group_f: GroupFn<Self::Header>,
+                group_f: GroupFn<Self::Header, Self::Metadata>,
                 sched: &mut Scheduler)
                 -> GroupBy<Self::Header, Self>
         where Self: Sized
@@ -129,4 +127,3 @@ pub trait Batch: BatchIterator + Act + Send {
         GroupBy::<Self::Header, Self>::new(self, groups, group_f, sched)
     }
 }
-pub struct NoMeta;

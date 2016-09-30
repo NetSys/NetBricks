@@ -36,13 +36,14 @@ impl Batch for ReceiveBatch {}
 
 impl BatchIterator for ReceiveBatch {
     type Header = NullHeader;
+    type Metadata = EmptyMetadata;
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader>> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
         self.parent.next_payload(idx)
     }
 }

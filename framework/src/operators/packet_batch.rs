@@ -239,7 +239,8 @@ impl PacketBatch {
 impl BatchIterator for PacketBatch {
     /// The starting offset for packets in the current batch.
     type Header = NullHeader;
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader>> {
+    type Metadata = EmptyMetadata;
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
         if idx < self.array.len() {
             Some(PacketDescriptor { packet: packet_from_mbuf_no_free::<NullHeader>(self.array[idx], 0) })
         } else {

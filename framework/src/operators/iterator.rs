@@ -3,8 +3,8 @@ use headers::EndOffset;
 use std::cell::Cell;
 use interface::Packet;
 
-pub struct PacketDescriptor<T: EndOffset> {
-    pub packet: Packet<T>,
+pub struct PacketDescriptor<T: EndOffset, M: Sized + Send> {
+    pub packet: Packet<T, M>,
 }
 
 /// An interface implemented by all batches for iterating through the set of packets in a batch.
@@ -19,52 +19,58 @@ pub struct PacketDescriptor<T: EndOffset> {
 /// later.
 pub trait BatchIterator {
     type Header: EndOffset;
+    type Metadata: Sized + Send;
 
     /// Returns the starting index for the packet batch. This allows for cases where the head of the batch is not at
     /// index 0.
     fn start(&mut self) -> usize;
 
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<Self::Header>>;
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<Self::Header, Self::Metadata>>;
 }
 
 /// A struct containing the parsed information returned by the `PayloadEnumerator`.
-pub struct ParsedDescriptor<T>
-    where T: EndOffset
+pub struct ParsedDescriptor<T, M>
+    where T: EndOffset,
+          M: Sized + Send
 {
     pub index: usize,
-    pub packet: Packet<T>,
+    pub packet: Packet<T, M>,
 }
 
 /// An enumerator over both the header and the payload. The payload is represented as an appropriately sized slice of
 /// bytes. The expectation is therefore that the user can operate on bytes, or make appropriate adjustments as
 /// necessary.
-pub struct PayloadEnumerator<T>
-    where T: EndOffset
+pub struct PayloadEnumerator<T, M>
+    where T: EndOffset,
+          M: Sized + Send
 {
     // Was originally using a cell here so we didn't have to borrow the iterator mutably. I think at this point, given
     // that the batch is not stored in the iterator this might be a moot point, but it does allow the iterator to be
     // entirely immutable for the moment, which makes sense.
     idx: Cell<usize>,
-    phantom: PhantomData<T>,
+    _phantom_t: PhantomData<T>,
+    _phantom_m: PhantomData<M>
 }
 
-impl<T> PayloadEnumerator<T>
-    where T: EndOffset
+impl<T, M> PayloadEnumerator<T, M>
+    where T: EndOffset,
+          M: Sized + Send
 {
     /// Create a new iterator.
     #[inline]
-    pub fn new(batch: &mut BatchIterator<Header = T>) -> PayloadEnumerator<T> {
+    pub fn new(batch: &mut BatchIterator<Header = T, Metadata=M>) -> PayloadEnumerator<T, M> {
         let start = batch.start();
         PayloadEnumerator {
             idx: Cell::new(start),
-            phantom: PhantomData,
+            _phantom_t: PhantomData,
+            _phantom_m: PhantomData,
         }
     }
 
     /// Used for looping over packets. Note this iterator is not safe if packets are added or dropped during iteration,
     /// so you should not do that if possible.
     #[inline]
-    pub fn next(&self, batch: &mut BatchIterator<Header = T>) -> Option<ParsedDescriptor<T>> {
+    pub fn next(&self, batch: &mut BatchIterator<Header = T, Metadata=M>) -> Option<ParsedDescriptor<T, M>> {
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_payload(original_idx) };
         match item {

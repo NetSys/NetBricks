@@ -7,46 +7,54 @@ use super::Batch;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
 
-pub struct RestoreHeader<T, V>
+pub struct RestoreHeader<T, M, V>
     where T: EndOffset + 'static,
+          M: Sized + Send,
           V: Batch + BatchIterator + Act
 {
     parent: V,
-    phantom: PhantomData<T>,
+    _phantom_t: PhantomData<T>,
+    _phantom_m: PhantomData<M>
 }
 
-impl<T, V> Act for RestoreHeader<T, V>
+impl<T, M, V> Act for RestoreHeader<T, M, V>
     where T: EndOffset + 'static,
+          M: Sized + Send,
           V: Batch + BatchIterator + Act
 {
     act!{}
 }
 
-impl<T, V> Batch for RestoreHeader<T, V>
+impl<T, M, V> Batch for RestoreHeader<T, M, V>
     where V: Batch + BatchIterator + Act,
+          M: Sized + Send,
           T: EndOffset + 'static
 {
 }
 
-impl<T, V> RestoreHeader<T, V>
+impl<T, M, V> RestoreHeader<T, M, V>
     where V: Batch + BatchIterator + Act,
+          M: Sized + Send,
           T: EndOffset + 'static
 {
     #[inline]
-    pub fn new(parent: V) -> RestoreHeader<T, V> {
+    pub fn new(parent: V) -> RestoreHeader<T, M, V> {
         RestoreHeader {
             parent: parent,
-            phantom: PhantomData,
+            _phantom_t: PhantomData,
+            _phantom_m: PhantomData,
         }
     }
 }
 
-impl<T, V> BatchIterator for RestoreHeader<T, V>
+impl<T, M, V> BatchIterator for RestoreHeader<T, M, V>
     where V: Batch + BatchIterator + Act,
+          M: Sized + Send,
           T: EndOffset + 'static
 {
     type Header = T;
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T>> {
+    type Metadata = M;
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T, M>> {
         self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.restore_saved_header().unwrap() })
     }
 

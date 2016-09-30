@@ -221,12 +221,12 @@ impl Clone for MpscProducer {
 }
 
 impl MpscProducer {
-    pub fn enqueue<T: EndOffset>(&self, packets: &mut Vec<Packet<T>>) -> usize {
+    pub fn enqueue<T: EndOffset, M: Sized + Send>(&self, packets: &mut Vec<Packet<T, M>>) -> usize {
         let mbufs: Vec<_> = packets.drain(..).map(|p| unsafe { p.get_mbuf() }).collect();
         self.mpsc_queue.enqueue(&mbufs[..])
     }
 
-    pub fn enqueue_one<T: EndOffset>(&self, packet: Packet<T>) -> bool {
+    pub fn enqueue_one<T: EndOffset, M: Sized + Send>(&self, packet: Packet<T, M>) -> bool {
         unsafe { self.mpsc_queue.enqueue_one(packet.get_mbuf()) }
     }
 }

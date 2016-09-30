@@ -7,14 +7,14 @@ use interface::Packet;
 use headers::EndOffset;
 use super::packet_batch::PacketBatch;
 
-pub type FilterFn<T> = Box<FnMut(&Packet<T>) -> bool + Send>;
+pub type FilterFn<T, M> = Box<FnMut(&Packet<T, M>) -> bool + Send>;
 
 pub struct FilterBatch<T, V>
     where T: EndOffset,
           V: Batch + BatchIterator<Header = T> + Act
 {
     parent: V,
-    filter: FilterFn<T>,
+    filter: FilterFn<T, V::Metadata>,
     capacity: usize,
     remove: Vec<usize>,
 }
@@ -24,7 +24,7 @@ impl<T, V> FilterBatch<T, V>
           V: Batch + BatchIterator<Header = T> + Act
 {
     #[inline]
-    pub fn new(parent: V, filter: FilterFn<T>) -> FilterBatch<T, V> {
+    pub fn new(parent: V, filter: FilterFn<T, V::Metadata>) -> FilterBatch<T, V> {
         let capacity = parent.capacity() as usize;
         FilterBatch {
             parent: parent,
@@ -45,7 +45,7 @@ impl<T, V> Act for FilterBatch<T, V>
     fn act(&mut self) {
         self.parent.act();
         // Filter during the act
-        let iter = PayloadEnumerator::<T>::new(&mut self.parent);
+        let iter = PayloadEnumerator::<T, V::Metadata>::new(&mut self.parent);
         while let Some(ParsedDescriptor { mut packet, index: idx }) = iter.next(&mut self.parent) {
             if !(self.filter)(&mut packet) {
                 self.remove.push(idx)
@@ -93,13 +93,15 @@ impl<T, V> BatchIterator for FilterBatch<T, V>
           V: Batch + BatchIterator<Header = T> + Act
 {
     type Header = T;
+    type Metadata = <V as BatchIterator>::Metadata;
+
     #[inline]
     fn start(&mut self) -> usize {
         self.parent.start()
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T>> {
+    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T, Self::Metadata>> {
         self.parent.next_payload(idx)
     }
 }
