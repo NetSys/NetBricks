@@ -117,6 +117,7 @@ examples=(
         test/config-test
         test/reset-parse
         test/tcp_reconstruction
+        test/acl-fw
 )
 
 print_examples () {

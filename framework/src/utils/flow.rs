@@ -17,6 +17,35 @@ pub struct Flow {
     pub proto: u8,
 }
 
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
+pub struct Ipv4Prefix {
+    pub ip_address: u32,
+    pub prefix: u8,
+    mask: u32, /* min_address: u32,
+                * max_address: u32, */
+}
+
+impl Ipv4Prefix {
+    pub fn new(address: u32, prefix: u8) -> Ipv4Prefix {
+        let mask = if prefix == 0 {
+            0
+        } else {
+            let inv_pfx = 32 - prefix;
+            !((1u32 << (inv_pfx as u32)) - 1)
+        };
+        Ipv4Prefix {
+            ip_address: address & mask,
+            prefix: prefix,
+            mask: mask,
+        }
+    }
+
+    #[inline]
+    pub fn in_range(&self, address: u32) -> bool {
+        (address & self.mask) == self.ip_address
+    }
+}
+
 const IHL_TO_BYTE_FACTOR: usize = 4; // IHL is in terms of number of 32-bit words.
 
 /// This assumes the function is given the Mac Payload

@@ -312,6 +312,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "zcsi-aclfw"
+version = "0.1.0"
+dependencies = [
+ "e2d2 0.1.0",
+ "fnv 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "getopts 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "simd 0.1.1 (git+https://github.com/huonw/simd)",
+ "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
+ "twox-hash 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "zcsi-chain"
 version = "0.1.0"
 dependencies = [
