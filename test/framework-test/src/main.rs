@@ -22,7 +22,7 @@ const CONVERSION_FACTOR: f64 = 1000000000.;
 
 fn monitor<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T,
                                     mut monitoring_cache: MergeableStoreDP<isize>)
-                                    -> CompositionBatch<IpHeader, EmptyMetadata> {
+                                    -> CompositionBatch {
     parent.parse::<MacHeader>()
         .transform(box |pkt| {
             let hdr = pkt.get_mut_header();
