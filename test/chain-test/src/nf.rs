@@ -5,7 +5,7 @@ use e2d2::common::EmptyMetadata;
 #[inline]
 pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>
     (parent: T)
-     -> CompositionBatch<IpHeader, EmptyMetadata> {
+     -> CompositionBatch {
     parent.parse::<MacHeader>()
         .transform(box move |pkt| {
             let mut hdr = pkt.get_mut_header();
@@ -28,7 +28,7 @@ pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata
 pub fn chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>
     (parent: T,
      len: u32)
-     -> CompositionBatch<IpHeader, EmptyMetadata> {
+     -> CompositionBatch {
     let mut chained = chain_nf(parent);
     for _ in 1..len {
         chained = chain_nf(chained);

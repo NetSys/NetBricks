@@ -85,10 +85,10 @@ pub trait Batch: BatchIterator + Act + Send {
     /// # Warning
     /// This causes some performance degradation: operations called through composition batches rely on indirect calls
     /// which affect throughput.
-    fn compose(self) -> CompositionBatch<Self::Header, Self::Metadata>
+    fn compose(self) -> CompositionBatch
         where Self: Sized + 'static
     {
-        CompositionBatch::new(box self)
+        CompositionBatch::new(self)
     }
 
     /// Transform a header field.

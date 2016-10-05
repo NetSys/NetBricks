@@ -7,7 +7,7 @@ use std::hash::BuildHasherDefault;
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
 
-pub fn reconstruction<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch<TcpHeader, Flow> {
+pub fn reconstruction<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
     let mut cache = HashMap::<Flow, usize, FnvHash>::with_hasher(Default::default());
     parent.parse::<MacHeader>()
         .transform(box move |p| {

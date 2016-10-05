@@ -10,30 +10,20 @@ use super::packet_batch::PacketBatch;
 
 /// `CompositionBatch` allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
 /// can treat packets as originating from the NF itself.
-pub struct CompositionBatch<T: EndOffset, M: Sized + Send> {
-    parent: Box<Batch<Header = T, Metadata = M>>,
+pub struct CompositionBatch {
+    parent: Box<Batch<Header = NullHeader, Metadata = EmptyMetadata>>,
 }
 
-impl<T, M> CompositionBatch<T, M>
-    where T: EndOffset,
-          M: Sized + Send
-{
-    pub fn new(parent: Box<Batch<Header = T, Metadata = M>>) -> CompositionBatch<T, M> {
-        CompositionBatch { parent: parent }
-
+impl CompositionBatch {
+    pub fn new<T: EndOffset, M: Sized + Send, V: 'static + Batch<Header = T, Metadata = M>>(parent: V)
+                                                                                            -> CompositionBatch {
+        CompositionBatch { parent: box parent.reset() }
     }
 }
 
-impl<T, M> Batch for CompositionBatch<T, M>
-    where T: EndOffset,
-          M: Sized + Send
-{
-}
+impl Batch for CompositionBatch {}
 
-impl<T, M> BatchIterator for CompositionBatch<T, M>
-    where T: EndOffset,
-          M: Sized + Send
-{
+impl BatchIterator for CompositionBatch {
     type Header = NullHeader;
     type Metadata = EmptyMetadata;
 
@@ -44,25 +34,16 @@ impl<T, M> BatchIterator for CompositionBatch<T, M>
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
-        match self.parent.next_payload(idx) {
-            Some(PacketDescriptor { packet }) => Some(PacketDescriptor { packet: packet.reset() }),
-            None => None,
-        }
+        self.parent.next_payload(idx)
     }
 }
 
 /// Internal interface for packets.
-impl<T, M> Act for CompositionBatch<T, M>
-    where T: EndOffset,
-          M: Sized + Send
-{
+impl Act for CompositionBatch {
     act!{}
 }
 
-impl<T, M> Executable for CompositionBatch<T, M>
-    where T: EndOffset,
-          M: Sized + Send
-{
+impl Executable for CompositionBatch {
     #[inline]
     fn execute(&mut self) {
         self.act();
