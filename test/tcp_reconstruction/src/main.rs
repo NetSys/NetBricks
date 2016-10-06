@@ -32,7 +32,7 @@ fn test(ports: Vec<PortQueue>, sched: &mut Scheduler) {
     }
 
     let pipelines: Vec<_> = ports.iter()
-        .map(|port| reconstruction(ReceiveBatch::new(port.clone())).send(port.clone()))
+        .map(|port| reconstruction(ReceiveBatch::new(port.clone()), sched).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {

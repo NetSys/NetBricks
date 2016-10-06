@@ -1,11 +1,11 @@
-use libc::{c_void, mmap, perror, shmat, shmctl, shmdt, shmget};
-use libc;
+use libc::{self, c_void, mmap, shm_open, ftruncate, shm_unlink, munmap};
 use std::ffi::CString;
 use std::ptr;
 use std::slice;
 use std::io::Write;
 use std::io::Error;
 use std::cmp::min;
+use uuid::*;
 
 /// A ring buffer which can be used to insert and read ordered data.
 pub struct RingBuffer {
@@ -24,13 +24,13 @@ pub struct RingBuffer {
     buf: *mut u8,
 }
 
+unsafe impl Send for RingBuffer {}
+
 impl Drop for RingBuffer {
     fn drop(&mut self) {
         unsafe {
-            // Detach bottom mapping.
-            shmdt(self.bottom_map);
-            // Detach top mapping.
-            shmdt(self.top_map);
+            munmap(self.bottom_map, self.size);
+            munmap(self.top_map, self.size);
         }
     }
 }
@@ -44,71 +44,55 @@ impl RingBuffer {
         let bytes = pages << 12;
         let alloc_bytes = bytes * 2;
 
+        // First open a SHM region.
+        let name = Uuid::new(UuidVersion::Random).unwrap().simple().to_string();
+        let fd = shm_open(CString::new(name.clone()).unwrap().as_ptr(), libc::O_CREAT | libc::O_RDWR, 0o700);
+        if fd < 0 {
+            panic!("shm_open failed {}", Error::last_os_error());
+        }
+        if ftruncate(fd, bytes as i64) != 0 {
+            panic!("ftruncate failed {}", Error::last_os_error());
+        }
+ 
         // First get a big enough chunk of virtual memory. Fortunately for us this does not actually commit any physical
         // pages. We allocate twice as much memory so as to mirror the ring buffer.
         let address = mmap(ptr::null_mut(),
                            alloc_bytes,
-                           libc::PROT_NONE,
-                           libc::MAP_ANONYMOUS | libc::MAP_PRIVATE,
-                           -1,
+                           libc::PROT_READ | libc::PROT_WRITE,
+                           libc::MAP_ANONYMOUS | libc::MAP_SHARED,
+                           fd,
                            0);
         if address == libc::MAP_FAILED {
-            panic!("Could not map address range")
+            panic!("Could not map address range {}", Error::last_os_error());
         };
 
         assert!((address as usize) % 4096 == 0);
+        if shm_unlink(CString::new(name).unwrap().as_ptr()) != 0 {
+            panic!("Could not unlink shm {}", Error::last_os_error());
+        }
 
-        // Create a shm segment. Note: 0 is IPC_PRIVATE from shmget(2) based on `x86_64-linux-gnu/bits/ipc.h` in the
-        // Linux source tree.
-        let shm_id = shmget(0, bytes, libc::IPC_CREAT | 0o700);
-        if shm_id < 0 {
-            panic!("shmget failed")
-        };
-
-        // Compute the bottom half of the memory area.
         let bottom = (address as *mut u8).offset(bytes as isize) as *mut libc::c_void;
-
-        // Map the shared memory segment to the top half of the memory area.
-        let shm_top = shmat(shm_id, address, libc::SHM_REMAP);
-        if shm_top != address {
-            println!("shmat failed, supplied address {} got address {} {}",
-                     shm_top as isize,
-                     address as isize,
-                     Error::last_os_error());
-            let err_string = CString::new("shmat failed").unwrap();
-            perror(err_string.as_ptr());
-            println!("shmat failed, got address {} supplied address {}",
-                     shm_top as isize,
-                     address as isize);
-            panic!("shmat failed")
-        };
-
-        // Map to the bottom half.
-        let shm_bot = shmat(shm_id, bottom, libc::SHM_REMAP);
-        if shm_bot != bottom {
-            println!("shmat failed, supplied address {} got address {} {}",
-                     shm_top as isize,
-                     address as isize,
-                     Error::last_os_error());
-            let err_string = CString::new("shmat failed").unwrap();
-            perror(err_string.as_ptr());
-            panic!("shmat failed")
-        };
-
-        // Destroy segment when everyone has detached
-        let shmctl = shmctl(shm_id, libc::IPC_RMID, ptr::null_mut());
-        if shmctl < 0 {
-            panic!("shmctl failed")
-        };
+        let bottom_address = mmap(bottom,
+                                  bytes,
+                                  libc::PROT_READ | libc::PROT_WRITE,
+                                  libc::MAP_FIXED | libc::MAP_ANONYMOUS | libc::MAP_SHARED,
+                                  fd,
+                                  0);
+        if bottom_address == libc::MAP_FAILED {
+            panic!("Could not map bottom {}", Error::last_os_error());
+        }
+        if bottom_address != bottom {
+            panic!("Bottom address not as intended");
+        }
 
         Some(RingBuffer {
             head: 0,
             tail: 0,
             size: bytes,
             mask: bytes - 1,
-            bottom_map: shm_bot,
-            top_map: shm_top,
-            buf: shm_top as *mut u8,
+            bottom_map: bottom,
+            top_map: address,
+            buf: address as *mut u8,
         })
     }
 
@@ -179,6 +163,9 @@ impl RingBuffer {
     pub fn write_at_tail(&mut self, data: &[u8]) -> usize {
         let available = self.mask.wrapping_add(self.head).wrapping_sub(self.tail);
         let write = min(data.len(), available);
+        if write != data.len() {
+            println!("Not writing all, available {}", available);
+        }
         let offset = self.tail & self.mask;
         self.seek_tail(write);
         self.unsafe_mut_slice_at_offset(offset, write).write(&data[0..write]).unwrap()

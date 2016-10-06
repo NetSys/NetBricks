@@ -321,7 +321,7 @@ impl TcpHeader {
             write_or_return!(f, "ACK ")
         };
         if self.psh_flag() {
-            write_or_return!(f, "PHS ")
+            write_or_return!(f, "PSH ")
         };
         if self.rst_flag() {
             write_or_return!(f, "RST ")

@@ -27,6 +27,8 @@ extern crate lazy_static;
 extern crate sctp;
 /// TOML for scheduling configuration
 extern crate toml;
+/// UUID for SHM naming
+extern crate uuid;
 
 #[cfg(unix)]
 extern crate nix;

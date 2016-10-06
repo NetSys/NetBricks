@@ -396,6 +396,14 @@ impl ReorderedBuffer {
         }
     }
 
+    #[inline]
+    pub fn is_established(&self) -> bool {
+        match self.state {
+            State::Closed => false,
+            _ => true
+        }
+    }
+
     fn fast_path_insert(&mut self, data: &[u8]) -> InsertionResult {
         let written = self.data.write_at_tail(data);
         self.tail_seq = self.tail_seq.wrapping_add(written as u32);

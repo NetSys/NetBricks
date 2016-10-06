@@ -33,9 +33,13 @@ fn round_to_power_of_2_test() {
 /// Test that creation proceeds without a hitch.
 #[test]
 fn creation_test() {
-    for i in 128..131072 {
+    let mut i = 32;
+    while i <= 1073741824 {
         let ro = ReorderedBuffer::new(i);
         drop(ro);
+        let ro = ReorderedBuffer::new(i + 1);
+        drop(ro);
+        i *= 2;
     }
 }
 
@@ -174,6 +178,7 @@ fn test_state_change() {
 /// Test that things OOM correctly when out of memory.
 #[test]
 fn test_oom() {
+    println!("Running OOM test");
     let mut r0 = ReorderedBuffer::new(4096);
     let base_seq = 32;
     let mut seq = base_seq;
@@ -207,6 +212,7 @@ fn test_oom() {
 /// Test that reseting `ReorderedBuffer` works as expected.
 #[test]
 fn test_reset() {
+    println!("Running test_reset");
     let mut r0 = ReorderedBuffer::new(4096);
     let base_seq = 155;
     let mut seq = base_seq;
@@ -268,6 +274,7 @@ fn test_reset() {
 /// Test that reading after writing allows us to write infinitely
 #[test]
 fn test_read_after_write() {
+    println!("Running test_read_after_write");
     let mut r0 = ReorderedBuffer::new(4096);
     let mut base_seq = u32::MAX - 30;
     let iters = 5000;
@@ -301,6 +308,7 @@ fn test_read_after_write() {
 /// Test that overlapping writes work correctly.
 #[test]
 fn test_overlapping_write() {
+    println!("Running test_overlapping_write");
     let mut r0 = ReorderedBuffer::new(4096);
     let base_seq = 289;
 
