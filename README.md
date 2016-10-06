@@ -50,6 +50,14 @@ optional dependency) which can be installed on Debian using:
 apt-get install libsctp-dev
 ```
 
+Tuning
+------
+Changing some Linux parameters, including disabling C-State, and P-State; and isolating CPUs can greatly benefit NF
+performance. In addition to these boot-time settings, runtime settings (e.g., disabling uncore frequency scaling and
+setting the appropriate flags for Linux power management QoS) can greatly improve performance. The
+[energy.sh](scripts/tuning/energy.sh) in [scripts/tuning](scripts/tuning) will set these parameter appropriately, and
+it is recommended you run this before running the system.
+
 Example NFs
 -----------
 This repository includes a set of example NFs under the `test` directory. A complete list of example can be found by
