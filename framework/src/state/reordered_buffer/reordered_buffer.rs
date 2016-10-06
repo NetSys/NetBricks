@@ -2,6 +2,7 @@ use state::RingBuffer;
 use std::cmp::{max, min};
 use std::u16;
 use utils::*;
+use std::io::Error;
 
 /// Results from inserting into `ReorderedBuffer`
 pub enum InsertionResult {
@@ -321,23 +322,24 @@ impl ReorderedBuffer {
     }
 
     /// Create a new buffer with space for `buffer_size` bytes.
-    pub fn new(buffer_size: usize) -> ReorderedBuffer {
+    pub fn new(buffer_size: usize) -> Result<ReorderedBuffer, Error> {
         ReorderedBuffer::new_with_segments(buffer_size, buffer_size / 64)
     }
 
     /// Create a new buffer with space for `buffer_size` bytes and a segment list with `segment_size` elements. The
     /// later should be adjusted to reflect the expected number of out of order segments at a time.
-    pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> ReorderedBuffer {
+    pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> Result<ReorderedBuffer, Error> {
         let page_aligned_size = round_to_pages(buffer_size);
         let pages = round_to_power_of_2(page_aligned_size / PAGE_SIZE);
-        ReorderedBuffer {
-            data: RingBuffer::new(pages).unwrap(),
+        let ring_buffer = try!{RingBuffer::new(pages)};
+        Ok(ReorderedBuffer {
+            data: ring_buffer,
             buffer_size: page_aligned_size,
             state: State::Closed,
             head_seq: 0,
             tail_seq: 0,
             segment_list: SegmentList::new(segment_size), // Assuming we don't receive small chunks.
-        }
+        })
     }
 
 
