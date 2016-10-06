@@ -5,11 +5,12 @@ use e2d2::operators::*;
 use e2d2::state::*;
 use std::str;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use fnv::FnvHasher;
 use std::hash::BuildHasherDefault;
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
-const BUFFER_SIZE: usize = 10240; // 20K of buffers
+const BUFFER_SIZE: usize = 2048;
 const PRINT_SIZE: usize = 256;
 
 pub fn reconstruction<T: 'static + Batch<Header = NullHeader>>(parent: T, sched: &mut Scheduler) -> CompositionBatch {
@@ -29,7 +30,6 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>>(parent: T, sched:
             }
         },
                   sched);
-
     let pipe = groups.get_group(0)
         .unwrap()
         .metadata(box move |p| {
@@ -40,39 +40,62 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>>(parent: T, sched:
         .transform(box move |p| {
             if !p.get_header().psh_flag() {
                 let flow = p.read_metadata();
-                let mut e = cache.entry(*flow).or_insert_with(|| ReorderedBuffer::new(BUFFER_SIZE));
                 let seq = p.get_header().seq_num();
-                let result = if p.get_header().syn_flag() {
-                    e.seq(seq, p.get_payload())
-                } else if e.is_established() {
-                    e.add_data(seq, p.get_payload())
-                } else {
-                    e.seq(seq, p.get_payload())
-                };
-                match result {
-                    InsertionResult::Inserted { available, .. } => {
-                        if available > PRINT_SIZE {
-                            let mut read = 0;
-                            while available - read > PRINT_SIZE {
-                                let avail = e.read_data(&mut read_buf[0..]);
-                                read += avail;
-                                match str::from_utf8(&read_buf[0..avail]) {
-                                    Ok(_s) => {
-                                        // println!("Read {}", s);
+                match cache.entry(*flow) {
+                    Entry::Occupied(mut e) => {
+                        let reset = p.get_header().rst_flag();
+                        {
+                            let entry = e.get_mut();
+                            let result = entry.add_data(seq, p.get_payload());
+                            match result {
+                                InsertionResult::Inserted { available, .. } => {
+                                    if available > PRINT_SIZE {
+                                        let mut read = 0;
+                                        while available - read > PRINT_SIZE {
+                                            let avail = entry.read_data(&mut read_buf[..]);
+                                            read += avail;
+                                        }
                                     }
-                                    _ => (),
+                                },
+                                InsertionResult::OutOfMemory { written, .. } => {
+                                    if written == 0 {
+                                        //println!("Resetting since receiving data that is too far ahead");
+                                        entry.reset();
+                                        entry.seq(seq, p.get_payload());
+                                    }
                                 }
-                                println!("Read {}", str::from_utf8(&read_buf[0..avail]).unwrap());
                             }
                         }
+                        if reset {
+                            // Reset handling.
+                            e.remove_entry();
+                        }
                     }
-                    InsertionResult::OutOfMemory { .. } => {
-                        // InsertionResult::OutOfMemory { written, available } => {
-                        // println!("{}", p.get_header());
+                    Entry::Vacant(e) => {
+                        match ReorderedBuffer::new(BUFFER_SIZE) {
+                            Ok(mut b) => {
+                                if !p.get_header().syn_flag() {
+                                }
+                                let result = b.seq(seq, p.get_payload());
+                                match result {
+                                    InsertionResult::Inserted { available, .. } => {
+                                        if available > PRINT_SIZE {
+                                            let mut read = 0;
+                                            while available - read > PRINT_SIZE {
+                                                let avail = b.read_data(&mut read_buf[..]);
+                                                read += avail;
+                                            }
+                                        }
+                                    },
+                                    InsertionResult::OutOfMemory { .. } => {
+                                        println!("Too big a packet?");
+                                    }
+                                }
+                                e.insert(b);
+                            },
+                            Err(_) => ()
+                        }
                     }
-                };
-                if p.get_header().rst_flag() {
-                    e.reset();
                 }
             }
         })

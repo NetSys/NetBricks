@@ -35,9 +35,9 @@ fn round_to_power_of_2_test() {
 fn creation_test() {
     let mut i = 32;
     while i <= 1073741824 {
-        let ro = ReorderedBuffer::new(i);
+        let ro = ReorderedBuffer::new(i).unwrap();
         drop(ro);
-        let ro = ReorderedBuffer::new(i + 1);
+        let ro = ReorderedBuffer::new(i + 1).unwrap();
         drop(ro);
         i *= 2;
     }
@@ -46,7 +46,7 @@ fn creation_test() {
 /// Test that in order insertion works correctly.
 #[test]
 fn test_in_order_insertion() {
-    let mut ro = ReorderedBuffer::new(65536);
+    let mut ro = ReorderedBuffer::new(65536).unwrap();
     let data0 = "food";
     let base_seq = 1232;
     if let InsertionResult::Inserted{ written, available } = ro.seq(base_seq, data0.as_bytes()) {
@@ -81,7 +81,7 @@ fn test_in_order_insertion() {
 /// Test that out of order insertion works correctly.
 #[test]
 fn test_out_of_order_insertion() {
-    let mut ro = ReorderedBuffer::new(65536);
+    let mut ro = ReorderedBuffer::new(65536).unwrap();
     let data0 = "food";
     let base_seq = 1232;
     if let InsertionResult::Inserted{ written, available } = ro.seq(base_seq, data0.as_bytes()) {
@@ -124,7 +124,7 @@ fn test_out_of_order_insertion() {
 /// Test that things work fine once state is changed.
 #[test]
 fn test_state_change() {
-    let mut ro = ReorderedBuffer::new(65536);
+    let mut ro = ReorderedBuffer::new(65536).unwrap();
     let data0 = "food";
     let base_seq = 1232;
     if let InsertionResult::Inserted{ written, available } = ro.seq(base_seq, data0.as_bytes()) {
@@ -179,7 +179,7 @@ fn test_state_change() {
 #[test]
 fn test_oom() {
     println!("Running OOM test");
-    let mut r0 = ReorderedBuffer::new(4096);
+    let mut r0 = ReorderedBuffer::new(4096).unwrap();
     let base_seq = 32;
     let mut seq = base_seq;
     let data0 = "food";
@@ -213,7 +213,7 @@ fn test_oom() {
 #[test]
 fn test_reset() {
     println!("Running test_reset");
-    let mut r0 = ReorderedBuffer::new(4096);
+    let mut r0 = ReorderedBuffer::new(4096).unwrap();
     let base_seq = 155;
     let mut seq = base_seq;
     let data0 = "food";
@@ -275,7 +275,7 @@ fn test_reset() {
 #[test]
 fn test_read_after_write() {
     println!("Running test_read_after_write");
-    let mut r0 = ReorderedBuffer::new(4096);
+    let mut r0 = ReorderedBuffer::new(4096).unwrap();
     let mut base_seq = u32::MAX - 30;
     let iters = 5000;
     let data = "testtest";
@@ -309,7 +309,7 @@ fn test_read_after_write() {
 #[test]
 fn test_overlapping_write() {
     println!("Running test_overlapping_write");
-    let mut r0 = ReorderedBuffer::new(4096);
+    let mut r0 = ReorderedBuffer::new(4096).unwrap();
     let base_seq = 289;
 
     let data0 = "hello wo";
