@@ -1,4 +1,5 @@
-NetBricks is a Rust based framework for NFV development. Please refer to the paper (available soon) for information
+NetBricks is a Rust based framework for NFV development. Please refer to the
+[paper](https://people.eecs.berkeley.edu/~apanda/assets/papers/osdi16.pdf) for information
 about the architecture and design. Currently NetBricks requires a relatively modern Linux version.
 
 Building
