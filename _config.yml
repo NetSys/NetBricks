@@ -1,0 +1,23 @@
+# Dependencies
+markdown:         kramdown
+highlighter:      rouge
+
+gems:
+   - jekyll-coffeescript
+# Permalinks
+#permalink:        pretty
+#relative_permalinks: true
+
+# Setup
+title:            NetBricks
+tagline:          'A safe NFV framework'
+description:      ''
+url:              http://netbricks.io/
+baseurl:          ""
+
+author:
+  name:           'Aurojit Panda'
+  url:             'https://cs.berkeley.edu/~apanda/'
+
+# Custom vars
+version:          2.1.0

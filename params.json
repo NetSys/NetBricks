@@ -1,6 +1,0 @@
-{
-  "name": "NetBricks",
-  "tagline": "A safe NFV platform",
-  "body": "NetBricks is a [Rust](https://rust-lang.org/) and [DPDK](https://dpdk.org) based NF platform. This is the initial source code release, and the code has inline comments and tests. We will be adding more to this site over time.\r\n\r\n### Contact\r\nIf you need help, please e-mail [Aurojit Panda](https://cs.berkeley.edu/~apanda).",
-  "note": "Don't delete this file! It's used internally to help with page regeneration."
-}
