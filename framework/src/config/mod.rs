@@ -49,7 +49,7 @@ impl<'a> From<&'a str> for ConfigurationError {
 
 pub type ConfigurationResult<T> = Result<T, ConfigurationError>;
 
-/// NetBricks control configuration. In theory all applications create one of these, either through the use of
+/// `NetBricks` control configuration. In theory all applications create one of these, either through the use of
 /// `read_configuration` or manually using args.
 pub struct NetbricksConfiguration {
     /// Name, this is passed on to DPDK. If you want to run multiple DPDK apps, this needs to be unique per application.
@@ -100,7 +100,7 @@ impl fmt::Display for NetbricksConfiguration {
     }
 }
 
-/// Configuration for each port (network device) in NetBricks.
+/// Configuration for each port (network device) in `NetBricks`.
 pub struct PortConfiguration {
     /// Name. The exact semantics vary by backend. For DPDK, we allow things of the form:
     ///    <PCI ID> : Hardware device with PCI ID

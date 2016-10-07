@@ -286,7 +286,7 @@ impl SegmentList {
 
     /// Get a particular segment.
     #[inline]
-    pub fn get_segment<'a>(&'a self, idx: isize) -> &'a Segment {
+    pub fn get_segment(&self, idx: isize) -> &Segment {
         &self.storage[idx as usize]
     }
 

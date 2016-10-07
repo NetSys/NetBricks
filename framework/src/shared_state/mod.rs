@@ -53,7 +53,8 @@ unsafe fn open_shared<T>(name: &str, size: usize) -> SharedMemory<T> {
                        fd,
                        0);
     if address == libc::MAP_FAILED {
-        libc::perror(CString::new("mmap failed").unwrap().as_ptr());
+        let err_string = CString::new("mmap failed").unwrap();
+        libc::perror(err_string.as_ptr());
         panic!("Could not mmap shared region");
     }
     close(fd);

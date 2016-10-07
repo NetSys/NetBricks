@@ -2,6 +2,7 @@ use nix::sys::epoll::*;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::slice;
+use std::default::Default;
 use super::{Available, HUP, NONE, READ, WRITE};
 
 pub type Token = u64;
@@ -24,7 +25,7 @@ impl PollHandle {
             events: kind,
             data: token,
         };
-        let _ = epoll_ctl(self.epoll_fd, EpollOp::EpollCtlMod, fd, &event).unwrap();
+        epoll_ctl(self.epoll_fd, EpollOp::EpollCtlMod, fd, &event).unwrap();
     }
 
     pub fn schedule_write<Fd: AsRawFd>(&self, file: &Fd, token: Token) {
@@ -40,7 +41,7 @@ impl PollHandle {
             events: kind,
             data: token,
         };
-        let _ = epoll_ctl(self.epoll_fd, EpollOp::EpollCtlMod, fd, &event).unwrap();
+        epoll_ctl(self.epoll_fd, EpollOp::EpollCtlMod, fd, &event).unwrap();
     }
 
     /// This assumes file is already set to be non-blocking. This must also be called only the first time round.
@@ -56,7 +57,7 @@ impl PollHandle {
             events: kind,
             data: token,
         };
-        let _ = epoll_ctl(self.epoll_fd, EpollOp::EpollCtlAdd, fd, &event).unwrap();
+        epoll_ctl(self.epoll_fd, EpollOp::EpollCtlAdd, fd, &event).unwrap();
     }
 }
 
@@ -64,6 +65,12 @@ pub struct PollScheduler {
     epoll_fd: RawFd,
     ready_tokens: Vec<EpollEvent>,
     events: usize,
+}
+
+impl Default for PollScheduler {
+    fn default() -> PollScheduler {
+        PollScheduler::new()
+    }
 }
 
 impl PollScheduler {

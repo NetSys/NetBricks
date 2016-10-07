@@ -51,9 +51,10 @@ impl<T, V> Executable for GroupByProducer<T, V>
     }
 }
 
+#[cfg_attr(feature = "dev", allow(len_without_is_empty))]
 impl<T, V> GroupBy<T, V>
     where T: EndOffset + 'static,
-          V: Batch + BatchIterator<Header = T> + Act + 'static
+         V: Batch + BatchIterator<Header = T> + Act + 'static
 {
     pub fn new(parent: V, groups: usize, group_fn: GroupFn<T, V::Metadata>, sched: &mut Scheduler) -> GroupBy<T, V> {
         let mut producers = Vec::with_capacity(groups);
@@ -81,6 +82,6 @@ impl<T, V> GroupBy<T, V>
     }
 
     pub fn get_group(&mut self, group: usize) -> Option<RestoreHeader<T, V::Metadata, ReceiveQueueGen<MpscConsumer>>> {
-        self.consumers.remove(&group).map(|b| RestoreHeader::new(b))
+        self.consumers.remove(&group).map(RestoreHeader::new)
     }
 }

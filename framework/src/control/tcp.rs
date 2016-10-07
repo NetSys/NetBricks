@@ -44,7 +44,7 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
         let _ = socket.reuse_address(true).unwrap();
         // FIXME: Change 1024 to a parameter
         let listener = socket.bind(address).unwrap().listen(1024).unwrap();
-        let _ = listener.set_nonblocking(true).unwrap();
+        listener.set_nonblocking(true).unwrap();
         let scheduler = PollScheduler::new();
         let listener_token = 0;
         let handle = scheduler.new_poll_handle();
@@ -73,6 +73,7 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
         }
     }
 
+    #[cfg_attr(feature = "dev", allow(single_match))]
     fn accept_connection(&mut self, available: Available) {
         if available & READ != 0 {
             // Make sure we have something to accept
@@ -80,7 +81,7 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
                 Ok((stream, addr)) => {
                     let token = self.next_token;
                     self.next_token += 1;
-                    let _ = stream.set_nonblocking(true).unwrap();
+                    stream.set_nonblocking(true).unwrap();
                     let stream_fd = stream.as_raw_fd();
                     self.connections.insert(token,
                                             T::new(addr,
