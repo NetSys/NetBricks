@@ -57,20 +57,16 @@ impl Directory {
 
     pub fn register_new_entry(&mut self, name: &str) -> Option<usize> {
         let entry = self.entry;
-        if entry >= self.len {
+        if entry >= self.len  || name.len() >= MAX_LEN {
             None
         } else {
-            if name.len() < MAX_LEN {
-                unsafe {
-                    let entry_ptr = self.data.offset(entry as isize);
-                    (*entry_ptr).name.copy_from_slice(name.as_bytes());
-                    (*self.head).entries.store(entry, Ordering::Release);
-                }
-                self.entry += 1;
-                Some(entry)
-            } else {
-                None
+            unsafe {
+                let entry_ptr = self.data.offset(entry as isize);
+                (*entry_ptr).name.copy_from_slice(name.as_bytes());
+                (*self.head).entries.store(entry, Ordering::Release);
             }
+            self.entry += 1;
+            Some(entry)
         }
     }
 

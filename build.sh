@@ -387,6 +387,7 @@ case $TASK in
         deps
         pushd $BASE_DIR/framework
         ${CARGO} clean
+        ${CARGO} update # Clippy breaks with new compilers
         ${CARGO} build --features dev
         popd
         ;;

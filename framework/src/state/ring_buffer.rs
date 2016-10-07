@@ -35,6 +35,7 @@ impl Drop for RingBuffer {
     }
 }
 
+#[cfg_attr(feature = "dev", allow(len_without_is_empty))]
 impl RingBuffer {
     unsafe fn allocate(pages: usize) -> Result<RingBuffer, Error> {
         if pages & (pages - 1) != 0 {
@@ -45,8 +46,8 @@ impl RingBuffer {
         let alloc_bytes = bytes * 2;
 
         // First open a SHM region.
-        let name = Uuid::new(UuidVersion::Random).unwrap().simple().to_string();
-        let fd = shm_open(CString::new(name.clone()).unwrap().as_ptr(), libc::O_CREAT | libc::O_RDWR, 0o700);
+        let name = CString::new(Uuid::new(UuidVersion::Random).unwrap().simple().to_string()).unwrap();
+        let fd = shm_open(name.as_ptr(), libc::O_CREAT | libc::O_RDWR, 0o700);
 
         if fd < 0 {
             return Err(Error::last_os_error());
@@ -54,7 +55,7 @@ impl RingBuffer {
 
         if ftruncate(fd, bytes as i64) != 0 {
             libc::close(fd);
-            shm_unlink(CString::new(name).unwrap().as_ptr());
+            shm_unlink(name.as_ptr());
             return Err(Error::last_os_error());
         }
  
@@ -68,12 +69,12 @@ impl RingBuffer {
                            0);
         if address == libc::MAP_FAILED {
             libc::close(fd);
-            shm_unlink(CString::new(name).unwrap().as_ptr());
+            shm_unlink(name.as_ptr());
             return Err(Error::last_os_error());
         };
 
         assert!((address as usize) % 4096 == 0);
-        if shm_unlink(CString::new(name).unwrap().as_ptr()) != 0 {
+        if shm_unlink(name.as_ptr()) != 0 {
             munmap(address, alloc_bytes);
             libc::close(fd);
             return Err(Error::last_os_error());
@@ -119,7 +120,7 @@ impl RingBuffer {
     /// Produce an immutable slice at an offset. The nice thing about our implementation is that we can produce slices
     /// despite using a circular ring buffer.
     #[inline]
-    fn slice_at_offset<'a>(&'a self, offset: usize, len: usize) -> &'a [u8] {
+    fn slice_at_offset(&self, offset: usize, len: usize) -> &[u8] {
         if len >= self.size {
             panic!("slice beyond buffer length");
         }
@@ -131,7 +132,7 @@ impl RingBuffer {
 
     /// Produce a mutable slice.
     #[inline]
-    fn mut_slice_at_offset<'a>(&'a self, offset: usize, len: usize) -> &'a mut [u8] {
+    fn mut_slice_at_offset(&self, offset: usize, len: usize) -> &mut [u8] {
         if len >= self.size {
             panic!("slice beyond buffer length");
         }
@@ -143,7 +144,7 @@ impl RingBuffer {
 
     /// Unsafe version of `mut_slice_at_offset` for use when writing to the tail of the ring buffer.
     #[inline]
-    fn unsafe_mut_slice_at_offset<'a>(&'a self, offset: usize, len: usize) -> &'a mut [u8] {
+    fn unsafe_mut_slice_at_offset(&self, offset: usize, len: usize) -> &mut [u8] {
         unsafe {
             let begin = self.buf.offset(offset as isize);
             slice::from_raw_parts_mut(begin, len)
@@ -152,7 +153,7 @@ impl RingBuffer {
 
     /// Unsafe version of `slice_at_offset` for use when reading from head of the ring buffer.
     #[inline]
-    fn unsafe_slice_at_offset<'a>(&'a self, offset: usize, len: usize) -> &'a mut [u8] {
+    fn unsafe_slice_at_offset(&self, offset: usize, len: usize) -> &mut [u8] {
         unsafe {
             let begin = self.buf.offset(offset as isize);
             slice::from_raw_parts_mut(begin, len)

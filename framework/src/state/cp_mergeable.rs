@@ -13,7 +13,7 @@ const VEC_SIZE: usize = 1 << 24;
 
 /// A generic store for associating some merge-able type with each flow. Note, the merge must be commutative, we do not
 /// guarantee ordering for things being merged. The merge function is implemented by implementing the
-/// (AddAssign)[https://doc.rust-lang.org/std/ops/trait.AddAssign.html] trait and overriding the `add_assign` method
+/// [`AddAssign`](https://doc.rust-lang.org/std/ops/trait.AddAssign.html) trait and overriding the `add_assign` method
 /// there. We assume that the stored quantity needs to only be accessed from the control plane, and cannot be accessed
 /// from the data plane.
 ///

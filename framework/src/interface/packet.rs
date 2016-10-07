@@ -72,19 +72,17 @@ const FREEFORM_METADATA_SLOT: usize = END_OF_STACK_SLOT;
 const FREEFORM_METADATA_SIZE: usize = (METADATA_SLOTS as usize - FREEFORM_METADATA_SLOT) * 8;
 
 #[inline]
-pub fn packet_from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T, EmptyMetadata> {
+pub unsafe fn packet_from_mbuf<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T, EmptyMetadata> {
     // Need to up the refcnt, so that things don't drop.
     reference_mbuf(mbuf);
     packet_from_mbuf_no_increment(mbuf, offset)
 }
 
 #[inline]
-pub fn packet_from_mbuf_no_increment<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T, EmptyMetadata> {
-    unsafe {
-        // Compute the real offset
-        let header = (*mbuf).data_address(offset) as *mut T;
-        create_packet(mbuf, header, offset)
-    }
+pub unsafe fn packet_from_mbuf_no_increment<T: EndOffset>(mbuf: *mut MBuf, offset: usize) -> Packet<T, EmptyMetadata> {
+    // Compute the real offset
+    let header = (*mbuf).data_address(offset) as *mut T;
+    create_packet(mbuf, header, offset)
 }
 
 #[inline]
@@ -113,8 +111,8 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader, EmptyMetadata>> 
         if alloc_ret == 0 {
             array.set_len(count);
         }
+        array.iter().map(|m| packet_from_mbuf_no_increment(*m, 0)).collect()
     }
-    array.iter().map(|m| packet_from_mbuf_no_increment(m.clone(), 0)).collect()
 }
 
 
@@ -186,6 +184,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     }
 
     #[inline]
+    #[cfg_attr(feature = "dev", allow(absurd_extreme_comparisons))]
     fn push_offset(&mut self, offset: usize) -> Option<usize> {
         let depth = self.read_stack_depth();
         if depth < STACK_SIZE {
@@ -425,7 +424,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     pub fn restore_saved_header<T2: EndOffset, M2: Sized + Send>(mut self) -> Option<Packet<T2, M2>> {
         unsafe {
             let hdr = self.read_header::<T2>();
-            if hdr == ptr::null_mut() {
+            if hdr.is_null() {
                 None
             } else {
                 let offset = self.read_offset();

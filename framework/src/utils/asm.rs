@@ -35,8 +35,7 @@ pub fn rdtscp_unsafe() -> u64 {
              :
              : "ecx"
              : "volatile");
-        let ret = ((high as u64) << 32) | (low as u64);
-        ret
+        ((high as u64) << 32) | (low as u64)
     }
 }
 

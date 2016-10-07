@@ -84,7 +84,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Configuratio
                 let rx_q = rx_q as i32;
                 match PmdPort::new_queue_pair(port_instance, rx_q, rx_q) {
                     Ok(q) => {
-                        ctx.rx_queues.entry(*core).or_insert(vec![]).push(q);
+                        ctx.rx_queues.entry(*core).or_insert_with(|| vec![]).push(q);
                     }
                     Err(e) => {
                         return Err(ConfigurationError::from(format!("Queue {} on port {} could not be initialized \
@@ -97,6 +97,6 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Configuratio
             }
         }
     }
-    ctx.active_cores = ctx.rx_queues.keys().map(|x| *x).collect();
+    ctx.active_cores = ctx.rx_queues.keys().cloned().collect();
     Ok(ctx)
 }

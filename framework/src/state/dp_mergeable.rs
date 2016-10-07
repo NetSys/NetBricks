@@ -9,7 +9,7 @@ use utils::Flow;
 
 /// A generic store for associating some merge-able type with each flow. Note, the merge must be commutative, we do not
 /// guarantee ordering for things being merged. The merge function is implemented by implementing the
-/// [AddAssign](https://doc.rust-lang.org/std/ops/trait.AddAssign.html) trait and overriding the `add_assign` method
+/// [`AddAssign`](https://doc.rust-lang.org/std/ops/trait.AddAssign.html) trait and overriding the `add_assign` method
 /// there. We assume that the quantity stored here does not need to be accessed by the control plane and can only be
 /// accessed from the data plane. The `cache_size` should be tuned depending on whether gets or puts are the most common
 /// operation in this table.

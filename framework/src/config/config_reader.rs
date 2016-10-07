@@ -16,7 +16,7 @@ pub const NUM_TXD: i32 = 128;
 
 /// Read a TOML stub and figure out the port.
 fn read_port(value: &Value) -> ConfigurationResult<PortConfiguration> {
-    if let &Value::Table(ref port_def) = value {
+    if let Value::Table(ref port_def) = *value {
         let name = match port_def.get("name") {
             Some(&Value::String(ref name)) => name.clone(),
             _ => return Err(ConfigurationError::from("Could not parse name for port")),
@@ -62,11 +62,11 @@ fn read_port(value: &Value) -> ConfigurationResult<PortConfiguration> {
         }
 
         fn read_queue(queue: &Value) -> ConfigurationResult<Vec<i32>> {
-            match queue {
-                &Value::Array(ref queues) => {
+            match *queue {
+                Value::Array(ref queues) => {
                     let mut qs = Vec::with_capacity(queues.len());
                     for q in queues {
-                        if let &Value::Integer(core) = q {
+                        if let Value::Integer(core) = *q {
                             qs.push(core as i32)
                         } else {
                             return Err(ConfigurationError::from(format!("Could not parse queue spec {:?}", q)));
@@ -74,7 +74,7 @@ fn read_port(value: &Value) -> ConfigurationResult<PortConfiguration> {
                     }
                     Ok(qs)
                 }
-                &Value::Integer(core) => Ok(vec![core as i32]),
+                Value::Integer(core) => Ok(vec![core as i32]),
                 _ => Ok(vec![]),
             }
         }

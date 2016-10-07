@@ -150,12 +150,12 @@ impl TcpHeader {
 
     #[inline]
     pub fn set_ns(&mut self) {
-        self.offset_to_ns = self.offset_to_ns | 1
+        self.offset_to_ns |= 1
     }
 
     #[inline]
     pub fn unset_ns(&mut self) {
-        self.offset_to_ns = self.offset_to_ns & !0x1
+        self.offset_to_ns &= !0x1
     }
 
     /// Congestion window reduction flag.
@@ -168,13 +168,13 @@ impl TcpHeader {
     /// Set CWR flag to 1.
     #[inline]
     pub fn set_cwr_flag(&mut self) {
-        self.flags = self.flags | CWR;
+        self.flags |= CWR;
     }
 
     /// Set CWR flag to 0.
     #[inline]
     pub fn unset_cwr_flag(&mut self) {
-        self.flags = self.flags & !CWR;
+        self.flags &= !CWR;
     }
 
     /// ECN echo flag.
@@ -186,13 +186,13 @@ impl TcpHeader {
     /// Set ECE flag to 1.
     #[inline]
     pub fn set_ece_flag(&mut self) {
-        self.flags = self.flags | ECE;
+        self.flags |= ECE;
     }
 
     /// Set ECE flag to 0.
     #[inline]
     pub fn unset_ece_flag(&mut self) {
-        self.flags = self.flags & !ECE;
+        self.flags &= !ECE;
     }
 
     /// Urgent pointer field is significant.
@@ -204,13 +204,13 @@ impl TcpHeader {
     /// Set URG flag to 1.
     #[inline]
     pub fn set_urg_flag(&mut self) {
-        self.flags = self.flags | URG;
+        self.flags |= URG;
     }
 
     /// Set URG flag to 0.
     #[inline]
     pub fn unset_urg_flag(&mut self) {
-        self.flags = self.flags & !URG;
+        self.flags &= !URG;
     }
 
     /// Acknowledgment field is significant.
@@ -222,13 +222,13 @@ impl TcpHeader {
     /// Set ACK flag to 1.
     #[inline]
     pub fn set_ack_flag(&mut self) {
-        self.flags = self.flags | ACK;
+        self.flags |= ACK;
     }
 
     /// Set ACK flag to 0.
     #[inline]
     pub fn unset_ack_flag(&mut self) {
-        self.flags = self.flags & !ACK;
+        self.flags &= !ACK;
     }
 
     /// Push function: Push buffered data to receiving application.
@@ -240,13 +240,13 @@ impl TcpHeader {
     /// Set PSH flag to 1.
     #[inline]
     pub fn set_psh_flag(&mut self) {
-        self.flags = self.flags | PSH;
+        self.flags |= PSH;
     }
 
     /// Set PSH flag to 0.
     #[inline]
     pub fn unset_psh_flag(&mut self) {
-        self.flags = self.flags & !PSH;
+        self.flags &= !PSH;
     }
 
     /// Reset connection.
@@ -258,13 +258,13 @@ impl TcpHeader {
     /// Set RST flag to 1.
     #[inline]
     pub fn set_rst_flag(&mut self) {
-        self.flags = self.flags | RST;
+        self.flags |= RST;
     }
 
     /// Set RST flag to 0.
     #[inline]
     pub fn unset_rst_flag(&mut self) {
-        self.flags = self.flags & !RST;
+        self.flags &= !RST;
     }
 
     /// Synchronize sequence number.
@@ -276,13 +276,13 @@ impl TcpHeader {
     /// Set SYN flag to 1.
     #[inline]
     pub fn set_syn_flag(&mut self) {
-        self.flags = self.flags | SYN;
+        self.flags |= SYN;
     }
 
     /// Set SYN flag to 0.
     #[inline]
     pub fn unset_syn_flag(&mut self) {
-        self.flags = self.flags & !SYN;
+        self.flags &= !SYN;
     }
 
     /// No more data transfer from sender.
@@ -294,13 +294,13 @@ impl TcpHeader {
     /// Set FIN flag to 1.
     #[inline]
     pub fn set_fin_flag(&mut self) {
-        self.flags = self.flags | FIN;
+        self.flags |= FIN;
     }
 
     /// Set FIN flag to 0.
     #[inline]
     pub fn unset_fin_flag(&mut self) {
-        self.flags = self.flags & !FIN;
+        self.flags &= !FIN;
     }
 
     pub fn fmt_flags(&self, f: &mut fmt::Formatter) -> fmt::Result {

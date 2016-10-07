@@ -49,8 +49,7 @@ impl MBuf {
 
     #[inline]
     pub unsafe fn mut_metadata_as<T:Sized>(mbuf: *mut MBuf, slot: usize) -> *mut T {
-        let ptr = (mbuf.offset(1) as *mut usize).offset(slot as isize) as *mut T;
-        ptr
+        (mbuf.offset(1) as *mut usize).offset(slot as isize) as *mut T
     }
 
     #[inline]

@@ -1,6 +1,7 @@
 use std::sync::mpsc::{sync_channel, Receiver};
 use std::sync::Arc;
 use super::Executable;
+use std::default::Default;
 /// A very simple round-robin scheduler. This should really be more of a DRR scheduler.
 pub struct Scheduler {
     /// The set of runnable items. Note we currently don't have a blocked queue.
@@ -17,6 +18,12 @@ pub enum SchedulerCommand {
 }
 
 const DEFAULT_Q_SIZE: usize = 256;
+
+impl Default for Scheduler {
+    fn default() -> Scheduler {
+        Scheduler::new()
+    }
+}
 
 impl Scheduler {
     pub fn new() -> Scheduler {
@@ -41,15 +48,8 @@ impl Scheduler {
     }
 
     pub fn handle_requests(&mut self) {
-        loop {
-            match self.sched_channel.recv() {
-                Ok(cmd) => {
-                    self.handle_request(cmd)
-                },
-                _ => {
-                    break
-                }
-            }
+        while let Ok(cmd) = self.sched_channel.recv() {
+            self.handle_request(cmd)
         }
         println!("Scheduler exiting");
     }
@@ -62,7 +62,7 @@ impl Scheduler {
     #[inline]
     fn execute_internal(&mut self) {
         let len = self.run_q.len();
-        let ref mut task = &mut self.run_q[self.next_task];
+        let task = &mut (&mut self.run_q[self.next_task]);
         let next = self.next_task + 1;
         if next == len {
             self.next_task = 0;
