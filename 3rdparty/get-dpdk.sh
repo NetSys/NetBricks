@@ -2,7 +2,7 @@
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 DOWNLOAD_BASE="${1-$BASE_DIR}"
 echo Using "$DOWNLOAD_BASE" for downloads
-DPDK_VER=16.04
+DPDK_VER=16.07
 MODE=download # or git
 DOWNLOAD_PATH="${DOWNLOAD_BASE}/dpdk.tar.gz"
 DPDK_RESULT="${BASE_DIR}/dpdk"
