@@ -32,6 +32,8 @@ LLVM_DOWNLOAD_PATH="${DOWNLOAD_DIR}/llvm.tar.gz"
 LLVM_RESULT="${EXT_BASE}/llvm"
 UNWIND_RESULT="${TOOLS_BASE}/lib/libunwind.a"
 
+NATIVE_LIB_PATH="${BASE_DIR}/native"
+
 rust_build_static() {
     if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
         git clone https://github.com/rust-lang/rust.git \
@@ -337,7 +339,7 @@ case $TASK in
             ${BASE_DIR}/${BUILD_SCRIPT} build
         fi
         export PATH="${BIN_DIR}:${PATH}"
-        export LD_LIBRARY_PATH="${TOOLS_BASE}:${LD_LIBRARY_PATH}"
+        export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
             ${BASE_DIR}/target/release/$cmd "$@"
         ;;
@@ -354,7 +356,7 @@ case $TASK in
             ${BASE_DIR}/${BUILD_SCRIPT} build
         fi
         export PATH="${BIN_DIR}:${PATH}"
-        export LD_LIBRARY_PATH="${TOOLS_BASE}:${LD_LIBRARY_PATH}"
+        export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
             rust-gdb --args ${BASE_DIR}/target/release/$cmd "$@"
         ;;
@@ -400,7 +402,7 @@ case $TASK in
         ;;
     env)
         echo "export PATH=\"${BIN_DIR}:${PATH}\""
-        echo "export LD_LIBRARY_PATH=\"${TOOLS_BASE}:${LD_LIBRARY_PATH}\""
+        echo "export LD_LIBRARY_PATH=\"${NATIVE_LIB_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}\""
         ;;
     *)
         echo "./build.sh <Command>
@@ -413,7 +415,7 @@ case $TASK in
         lint: Run clippy to lint the project
         clean: Remove all built files
         dist_clean: Remove all support files
-        env: Environment variables, run as eval `./build.sh env`.
+        env: Environment variables, run as eval \`./build.sh env\`.
         run: Run one of the examples.
         debug: Debug one of the examples.
         "
