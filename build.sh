@@ -317,7 +317,7 @@ case $TASK in
     build_container)
         clean
         clean_deps
-        sudo docker build -f container/dynamic/Dockerfile -t netbricks:latest ${BASE_DIR}
+        sudo docker build -f container/Dockerfile -t netbricks:latest ${BASE_DIR}
         echo "Done building container as netbricks:latest"
         ;;
     test)
