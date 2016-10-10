@@ -12,4 +12,5 @@ services:
     - docker
 script:
     - ./build.sh build
+    - ./build.sh build_container 
 install: true
