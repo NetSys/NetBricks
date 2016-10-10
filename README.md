@@ -11,7 +11,7 @@ Finally, in addition to the above options, NetBricks can also be built within a 
 not need to install any of the dependencies, and the final product can be run the same. However to run NetBricks you
 still need to be on a machine that is correctly configured to run DPDK (see
 [here](http://dpdk.org/doc/guides-16.07/linux_gsg/quick_start.html) for more details), and you still need to install
-Rust nightly (for libraries). Please see the [container build instructions](#container) for more information.
+Rust nightly (for libraries). Please see the [container build instructions](#container-build) for more information.
 
 Using Rust Nightly
 ------------------
