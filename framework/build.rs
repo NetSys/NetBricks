@@ -47,6 +47,7 @@ fn main() {
                                    .join("build")
                                    .join("lib");
     let native_path = Path::new(&dir).parent().unwrap()
+                                     .join("target")
                                      .join("native");
     //println!("DPDK {:?}", dpdk_path.to_str());
     // Send current directory as -L

@@ -49,12 +49,20 @@ else
 # parallel build by default
 CORES ?= $(shell nproc || echo 1)
 MAKEFLAGS += -j $(CORES)
+INSTALL_PATH = $(abspath ../target/native)
 
 .PHONY: all clean tags cscope all-static
 
 all: $(DEPS) $(PROD)
 
 all-static: $(DEPS) $(PROD_STATIC)
+
+install: $(DEPS) $(PROD) | $(INSTALL_PATH)
+	cp $(PROD) $(INSTALL_PATH)
+
+$(INSTALL_PATH):
+	mkdir -p $(INSTALL_PATH)
+
 	
 $(DEPS): $(SRCS) $(HEADERS)
 	@echo $(RTE_SDK) $(DPDK_INC_DIR)
