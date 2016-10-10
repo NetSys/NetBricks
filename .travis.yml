@@ -13,4 +13,5 @@ services:
 script:
     - ./build.sh build
     - ./build.sh build_container 
+    - ./build.sh test
 install: true

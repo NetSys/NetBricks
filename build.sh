@@ -106,6 +106,10 @@ find_sctp () {
     fi
 }
 
+native () {
+    make -j $proc -C $BASE_DIR/native
+    make -C $BASE_DIR/native install
+}
 
 examples=(
         test/framework-test
@@ -288,7 +292,7 @@ case $TASK in
     build)
         deps
 
-        make -j $proc -C $BASE_DIR/native
+        native
 
         find_sctp
 
@@ -322,6 +326,7 @@ case $TASK in
         ;;
     test)
         deps
+        native
         pushd $BASE_DIR/framework
         ${CARGO} test --release
         popd
