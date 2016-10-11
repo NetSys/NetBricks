@@ -318,11 +318,21 @@ case $TASK in
             fi
         done
         ;;
+    create_container)
+        clean
+        clean_deps
+        docker build -f container/Dockerfile -t netbricks:latest ${BASE_DIR}
+        echo "Done building container as netbricks:latest"
+        ;;
     build_container)
         clean
         clean_deps
-        sudo docker build -f container/Dockerfile -t netbricks:latest ${BASE_DIR}
+        echo "Building container for NetBricks"
+        docker build -f container/Dockerfile -t netbricks:latest ${BASE_DIR}
         echo "Done building container as netbricks:latest"
+        echo "Creating new copy"
+        ctr="$( docker create netbricks:latest )"
+        docker cp ${ctr}:/opt/netbricks/target target
         ;;
     test)
         deps

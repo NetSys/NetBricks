@@ -19,20 +19,20 @@ ENV DPDK_CONFIG_PFX=".container"
 ENV LD_LIBRARY_PATH="/opt/netbricks/native:/opt/netbricks/3rdparty/dpdk/build/lib"
 ENV DELAY_TEST_ROOT="/opt/netbricks/test/delay-test/target/release"
 RUN mkdir -p /opt/netbricks
+COPY Cargo.toml /opt/netbricks
+COPY Cargo.lock /opt/netbricks
 COPY 3rdparty /opt/netbricks/3rdparty
 COPY framework /opt/netbricks/framework
 COPY native /opt/netbricks/native
 COPY patches /opt/netbricks/patches
 COPY scripts /opt/netbricks/scripts
 COPY test /opt/netbricks/test
-#COPY tuning /opt/netbricks/tuning
 COPY .gitignore /opt/netbricks/.gitignore
 COPY LICENSE.md /opt/netbricks/LICENSE.md
 COPY README.md /opt/netbricks/README.md
 COPY build.sh /opt/netbricks/build.sh
 COPY rustfmt.toml /opt/netbricks/rustfmt.toml
 RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
-RUN . /root/.profile; /opt/netbricks/build.sh
-COPY container/run-script.sh /opt/run-script.sh 
-COPY container/run-script.py /opt/run-script.py
+ENV PATH /root/.cargo/bin:$PATH
+RUN /opt/netbricks/build.sh
 CMD /bin/bash
