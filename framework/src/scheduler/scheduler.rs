@@ -61,15 +61,20 @@ impl Scheduler {
 
     #[inline]
     fn execute_internal(&mut self) {
+        {
+            let task = &mut (&mut self.run_q[self.next_task]);
+            task.execute()
+        }
         let len = self.run_q.len();
-        let task = &mut (&mut self.run_q[self.next_task]);
         let next = self.next_task + 1;
         if next == len {
             self.next_task = 0;
+            if let Ok(cmd) = self.sched_channel.try_recv() {
+                self.handle_request(cmd);
+            }
         } else {
-            self.next_task = next
+            self.next_task = next;
         }
-        task.execute()
     }
 
     /// Run the scheduling loop.
