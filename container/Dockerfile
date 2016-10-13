@@ -1,6 +1,7 @@
 FROM debian:testing
 MAINTAINER "Aurojit Panda <apanda@cs.berkeley.edu>"
-#COPY container/sources.list /etc/apt/sources.list 
+ARG dpdk_file="common_linuxapp-16.07.container"
+#COPY container/sources.list /etc/apt/sources.list
 RUN apt-get -yq update && apt-get -yq install apt-utils
 RUN apt-get -yq update && apt-get -yq install build-essential \
 				vim-nox curl \
@@ -15,7 +16,7 @@ ENV RTE_SDK=/opt/netbricks/3rdparty/dpdk
 ENV RTE_TARGET=build
 ENV RTE_ARCH=x86_64
 ENV NETBRICKS_ROOT=/opt/netbricks
-ENV DPDK_CONFIG_PFX=".container"
+ENV DPDK_CONFIG_FILE="/opt/netbricks/3rdparty/dpdk-confs/$dpdk_file"
 ENV LD_LIBRARY_PATH="/opt/netbricks/native:/opt/netbricks/3rdparty/dpdk/build/lib"
 ENV DELAY_TEST_ROOT="/opt/netbricks/test/delay-test/target/release"
 RUN mkdir -p /opt/netbricks

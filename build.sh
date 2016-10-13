@@ -15,8 +15,15 @@ fi
 if [ ! -e ${TOOLS_BASE} ]; then
     mkdir -p ${TOOLS_BASE}
 fi
+DPDK_VER=16.07
 DPDK_HOME="${BASE_DIR}/3rdparty/dpdk"
-DPDK="${DPDK_HOME}/build/lib/libdpdk.a"
+DPDK_LD_PATH="${DPDK_HOME}/build/lib"
+DPDK_CONFIG_FILE=${DPDK_CONFIG_FILE-"${EXT_BASE}/dpdk-confs/common_linuxapp-${DPDK_VER}"}
+if grep "CONFIG_RTE_BUILD_SHARED_LIB=y" ${DPDK_CONFIG_FILE}; then
+    DPDK="${DPDK_HOME}/build/lib/libdpdk.so"
+else
+    DPDK="${DPDK_HOME}/build/lib/libdpdk.a"
+fi
 
 CARGO="${TOOLS_BASE}/bin/cargo"
 CARGO_HOME="${TOOLS_BASE}/cargo"
@@ -158,6 +165,8 @@ UNWIND_BUILD="${TOOLS_BASE}"/libunwind
 
 deps () {
     # Build DPDK
+    export DPDK_CONFIG_FILE=${DPDK_CONFIG_FILE}
+    export DPDK_VER=${DPDK_VER}
     if [ ! -e $DPDK ]; then
         dpdk
     else
@@ -321,8 +330,19 @@ case $TASK in
     create_container)
         clean
         clean_deps
-        docker build -f container/Dockerfile -t netbricks:latest ${BASE_DIR}
-        echo "Done building container as netbricks:latest"
+        docker build -f container/Dockerfile -t netbricks:vswitch --build-arg dpdk_file="common_linuxapp-${DPDK_VER}.vswitch" ${BASE_DIR}
+        echo "Done building container as netbricks:vswitch"
+        ;;
+    ctr_dpdk)
+        shift
+        if [ $# -lt 1 ]; then
+            echo "build.sh ctr_dpdk dir"
+            exit 1
+        fi
+        result="$( readlink -f $1 )" 
+        ctr="$( docker create netbricks:vswitch )"
+        docker cp ${ctr}:/opt/netbricks/3rdparty/dpdk $result
+        docker rm ${ctr}
         ;;
     build_container)
         clean
@@ -333,6 +353,7 @@ case $TASK in
         echo "Creating new copy"
         ctr="$( docker create netbricks:latest )"
         docker cp ${ctr}:/opt/netbricks/target target
+        docker rm ${ctr}
         ;;
     test)
         deps
@@ -354,7 +375,7 @@ case $TASK in
             ${BASE_DIR}/${BUILD_SCRIPT} build
         fi
         export PATH="${BIN_DIR}:${PATH}"
-        export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
+        export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
             ${BASE_DIR}/target/release/$cmd "$@"
         ;;
@@ -371,7 +392,7 @@ case $TASK in
             ${BASE_DIR}/${BUILD_SCRIPT} build
         fi
         export PATH="${BIN_DIR}:${PATH}"
-        export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
+        export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}::${DPDK_LD_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
             rust-gdb --args ${BASE_DIR}/target/release/$cmd "$@"
         ;;
@@ -433,6 +454,7 @@ case $TASK in
         env: Environment variables, run as eval \`./build.sh env\`.
         run: Run one of the examples.
         debug: Debug one of the examples.
+        ctr_dpdk: Copy DPDK from container
         "
         ;;
 esac

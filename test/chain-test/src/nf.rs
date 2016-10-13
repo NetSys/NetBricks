@@ -33,5 +33,13 @@ pub fn chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>
     for _ in 1..len {
         chained = chain_nf(chained);
     }
-    chained
+    if len % 2 == 0 {
+        chained.parse::<MacHeader>()
+        .transform(box move |pkt| {
+            let mut hdr = pkt.get_mut_header();
+            hdr.swap_addresses();
+        }).compose()
+    } else {
+        chained
+    }
 }

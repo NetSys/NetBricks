@@ -12,6 +12,7 @@ services:
     - docker
 script:
     - ./build.sh build
-    - ./build.sh build_container 
     - ./build.sh test
+    - ./build.sh build_container 
+    - ./build.sh create_container 
 install: true
