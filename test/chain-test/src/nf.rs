@@ -3,9 +3,7 @@ use e2d2::operators::*;
 use e2d2::common::EmptyMetadata;
 
 #[inline]
-pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>
-    (parent: T)
-     -> CompositionBatch {
+pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T) -> CompositionBatch {
     parent.parse::<MacHeader>()
         .transform(box move |pkt| {
             let mut hdr = pkt.get_mut_header();
@@ -25,20 +23,21 @@ pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata
 }
 
 #[inline]
-pub fn chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>
-    (parent: T,
-     len: u32)
-     -> CompositionBatch {
+pub fn chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T,
+                                                                                len: u32,
+                                                                                pos: u32)
+                                                                                -> CompositionBatch {
     let mut chained = chain_nf(parent);
     for _ in 1..len {
         chained = chain_nf(chained);
     }
-    if len % 2 == 0 {
+    if len % 2 == 0  || pos % 2 == 1{
         chained.parse::<MacHeader>()
-        .transform(box move |pkt| {
-            let mut hdr = pkt.get_mut_header();
-            hdr.swap_addresses();
-        }).compose()
+            .transform(box move |pkt| {
+                let mut hdr = pkt.get_mut_header();
+                hdr.swap_addresses();
+            })
+            .compose()
     } else {
         chained
     }

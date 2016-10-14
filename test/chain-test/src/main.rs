@@ -21,21 +21,22 @@ mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn recv_thread(ports: Vec<PortQueue>, core: i32, chain_len: u32) {
+fn recv_thread(ports: Vec<PortQueue>, core: i32, chain_len: u32, chain_pos: u32) {
     init_thread(core, core);
     println!("Receiving started");
     for port in &ports {
-        println!("Receiving port {} rxq {} txq {} on core {} len {}",
+        println!("Receiving port {} rxq {} txq {} on core {} len {} pos {}",
                  port.port.mac_address(),
                  port.rxq(),
                  port.txq(),
                  core,
-                 chain_len);
+                 chain_len,
+                 chain_pos);
     }
 
     let pipelines: Vec<_> = ports.iter()
-                                 .map(|port| chain(ReceiveBatch::new(port.clone()), chain_len).send(port.clone()))
-                                 .collect();
+        .map(|port| chain(ReceiveBatch::new(port.clone()), chain_len, chain_pos).send(port.clone()))
+        .collect();
     println!("Running {} pipelines", pipelines.len());
     let mut sched = Scheduler::new();
     for pipeline in pipelines {
@@ -55,6 +56,10 @@ fn main() {
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
     opts.optopt("l", "chain", "Chain length", "length");
+    opts.optopt("j",
+                "position",
+                "Chain position (when externally chained)",
+                "position");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
@@ -65,21 +70,26 @@ fn main() {
     }
 
     let chain_len = matches.opt_str("l")
-                           .unwrap_or_else(|| String::from("1"))
-                           .parse()
-                           .expect("Could not parse chain length");
+        .unwrap_or_else(|| String::from("1"))
+        .parse()
+        .expect("Could not parse chain length");
+
+    let chain_pos = matches.opt_str("j")
+        .unwrap_or_else(|| String::from("0"))
+        .parse()
+        .expect("Could not parse chain position");
 
     let cores_str = matches.opt_strs("c");
     let master_core = matches.opt_str("m")
-                             .unwrap_or_else(|| String::from("0"))
-                             .parse()
-                             .expect("Could not parse master core spec");
+        .unwrap_or_else(|| String::from("0"))
+        .parse()
+        .expect("Could not parse master core spec");
     println!("Using master core {}", master_core);
     let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
 
     let cores: Vec<i32> = cores_str.iter()
-                                   .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
-                                   .collect();
+        .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
+        .collect();
 
 
     fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
@@ -108,12 +118,12 @@ fn main() {
         let cores = cores_for_port.get(*port).unwrap();
         let queues = cores.len() as i32;
         let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
-                           .expect("Could not initialize port");
+            .expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
             queues_by_core.entry(*core)
-                          .or_insert(vec![])
-                          .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
+                .or_insert(vec![])
+                .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
         }
         ports.push(pmd_port);
     }
@@ -122,12 +132,12 @@ fn main() {
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
     let _thread: Vec<_> = queues_by_core.iter()
-                                        .map(|(core, ports)| {
-                                            let c = core.clone();
-                                            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
-                                            std::thread::spawn(move || recv_thread(p, c, chain_len))
-                                        })
-                                        .collect();
+        .map(|(core, ports)| {
+            let c = core.clone();
+            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
+            std::thread::spawn(move || recv_thread(p, c, chain_len, chain_pos))
+        })
+        .collect();
     let mut pkts_so_far = (0, 0);
     let mut last_printed = 0.;
     const MAX_PRINT_INTERVAL: f64 = 60.;
