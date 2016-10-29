@@ -1,0 +1,24 @@
+core0 = int($BESS_CORE0!'0')
+core1 = int($BESS_CORE1!'1')
+
+bess.add_worker(0, core0)
+bess.add_worker(1, core1)
+
+iface = $BESS_IFACE!'02:00.0'
+
+chain_len = int($BESS_CHAIN!'1')
+print 'Using interface %s for chain of len %d cores %d %d'%(iface, chain_len, core0, core1)
+pp = PMDPort(pci=iface)
+prev_port = pp
+next_worker = 0
+
+for i in xrange(0, chain_len):
+    vp = RteRingVPort()
+    name='inc%d'%i
+    PortInc(name=name, port=prev_port) -> PortOut(port=vp)
+    bess.attach_task(name, 0, next_worker) 
+    next_worker = (next_worker + 1) % 2
+    prev_port = vp
+name='ppout'
+PortInc(name=name,port=prev_port) -> PortOut(port=pp)
+bess.attach_task(name, 0, 0) 
