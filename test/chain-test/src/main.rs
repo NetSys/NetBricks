@@ -5,6 +5,7 @@ extern crate time;
 extern crate simd;
 extern crate getopts;
 extern crate rand;
+use e2d2::allocators::*;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
 use e2d2::operators::*;
@@ -21,7 +22,7 @@ mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn recv_thread(ports: Vec<PortQueue>, core: i32, chain_len: u32, chain_pos: u32) {
+fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32, chain_len: u32, chain_pos: u32) {
     init_thread(core, core);
     println!("Receiving started");
     for port in &ports {

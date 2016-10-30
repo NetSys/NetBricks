@@ -6,6 +6,7 @@ extern crate time;
 extern crate simd;
 extern crate getopts;
 extern crate rand;
+use e2d2::allocators::CacheAligned;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
 use e2d2::operators::*;
@@ -25,7 +26,7 @@ use self::nf::*;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn recv_thread(ports: Vec<PortQueue>, core: i32) {
+fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32) {
     init_thread(core, core);
     if ports.len() > 1 {
         panic!("Currently this pipeline cannot handle more than one port per pipeline");
@@ -116,9 +117,9 @@ fn main() {
         ports.push(pmd_port);
     }
 
-    let mut pkt = new_packet().unwrap();
+    let pkt = new_packet().unwrap();
     let pkt_mbuf = unsafe { pkt.get_mbuf() };
-    let pkt = packet_from_mbuf::<NullHeader>(pkt_mbuf, 0);
+    let pkt = unsafe { packet_from_mbuf::<NullHeader>(pkt_mbuf, 0) };
     drop(pkt);
 
     //const _BATCH: usize = 1 << 10;
