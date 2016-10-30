@@ -57,7 +57,7 @@ impl Directory {
 
     pub fn register_new_entry(&mut self, name: &str) -> Option<usize> {
         let entry = self.entry;
-        if entry >= self.len  || name.len() >= MAX_LEN {
+        if entry >= self.len || name.len() >= MAX_LEN {
             None
         } else {
             unsafe {

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use std::convert::From;
 use scheduler::*;
-use super::{NetbricksConfiguration, ConfigurationResult, ConfigurationError}; 
+use super::{ConfigurationError, ConfigurationResult, NetbricksConfiguration};
 
 #[derive(Default)]
 pub struct NetBricksContext {

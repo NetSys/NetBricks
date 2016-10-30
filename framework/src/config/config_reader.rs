@@ -1,7 +1,7 @@
 use toml::*;
 use std::fs::File;
 use std::io::Read;
-use super::{ConfigurationError, ConfigurationResult, PortConfiguration, NetbricksConfiguration};
+use super::{ConfigurationError, ConfigurationResult, NetbricksConfiguration, PortConfiguration};
 use std::convert::From;
 use std::error;
 

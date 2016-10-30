@@ -8,6 +8,7 @@
 #![feature(fnbox)]
 #![feature(alloc)]
 #![feature(heap_api)]
+#![feature(unique)]
 
 #![allow(unused_features)]
 #![feature(integer_atomics)]

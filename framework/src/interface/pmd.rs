@@ -1,7 +1,8 @@
 use common::*;
+use allocators::*;
 use io::MBuf;
 use headers::MacAddress;
-use config::{PortConfiguration, NUM_RXD, NUM_TXD};
+use config::{NUM_RXD, NUM_TXD, PortConfiguration};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::cmp::min;
@@ -40,16 +41,12 @@ extern "C" {
 
 
 struct PmdStats {
-    pub stats: AtomicUsize,
-    _pad: [u64; 7],
+    pub stats: AtomicUsize, // _pad: [u64; 7],
 }
 
 impl PmdStats {
-    pub fn new() -> PmdStats {
-        PmdStats {
-            stats: AtomicUsize::new(0),
-            _pad: Default::default(),
-        }
+    pub fn new() -> CacheWrapper<PmdStats> {
+        cache_allocate(PmdStats { stats: AtomicUsize::new(0) })
     }
 }
 
@@ -59,8 +56,8 @@ pub struct PmdPort {
     port: i32,
     rxqs: i32,
     txqs: i32,
-    stats_rx: Vec<Arc<PmdStats>>,
-    stats_tx: Vec<Arc<PmdStats>>,
+    stats_rx: Vec<Arc<CacheWrapper<PmdStats>>>,
+    stats_tx: Vec<Arc<CacheWrapper<PmdStats>>>,
 }
 
 #[derive(Clone)]
@@ -69,8 +66,8 @@ pub struct PortQueue {
     // The Arc cost here should not affect anything, since we are really not doing anything to make it go in and out of
     // scope.
     pub port: Arc<PmdPort>,
-    stats_rx: Arc<PmdStats>,
-    stats_tx: Arc<PmdStats>,
+    stats_rx: Arc<CacheWrapper<PmdStats>>,
+    stats_tx: Arc<CacheWrapper<PmdStats>>,
     port_id: i32,
     txq: i32,
     rxq: i32,

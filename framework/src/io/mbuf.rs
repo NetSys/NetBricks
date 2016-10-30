@@ -43,12 +43,12 @@ impl MBuf {
     }
 
     #[inline]
-    pub unsafe fn metadata_as<T:Sized>(mbuf: *const MBuf, slot: usize) -> *const T {
+    pub unsafe fn metadata_as<T: Sized>(mbuf: *const MBuf, slot: usize) -> *const T {
         (mbuf.offset(1) as *const usize).offset(slot as isize) as *const T
     }
 
     #[inline]
-    pub unsafe fn mut_metadata_as<T:Sized>(mbuf: *mut MBuf, slot: usize) -> *mut T {
+    pub unsafe fn mut_metadata_as<T: Sized>(mbuf: *mut MBuf, slot: usize) -> *mut T {
         (mbuf.offset(1) as *mut usize).offset(slot as isize) as *mut T
     }
 
