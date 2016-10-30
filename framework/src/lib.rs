@@ -6,6 +6,9 @@
 #![feature(associated_consts)]
 #![feature(slice_concat_ext)]
 #![feature(fnbox)]
+#![feature(alloc)]
+#![feature(heap_api)]
+#![feature(unique)]
 
 #![allow(unused_features)]
 #![feature(integer_atomics)]
@@ -30,8 +33,12 @@ extern crate toml;
 /// UUID for SHM naming
 extern crate uuid;
 
+/// For cache aware allocation
+extern crate alloc;
+
 #[cfg(unix)]
 extern crate nix;
+pub mod allocators;
 pub mod headers;
 mod io;
 pub mod scheduler;

@@ -1,7 +1,8 @@
 use common::*;
+use allocators::*;
 use io::MBuf;
 use headers::MacAddress;
-use config::{PortConfiguration, NUM_RXD, NUM_TXD};
+use config::{NUM_RXD, NUM_TXD, PortConfiguration};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::cmp::min;
@@ -41,15 +42,11 @@ extern "C" {
 
 struct PmdStats {
     pub stats: AtomicUsize,
-    _pad: [u64; 7],
 }
 
 impl PmdStats {
-    pub fn new() -> PmdStats {
-        PmdStats {
-            stats: AtomicUsize::new(0),
-            _pad: Default::default(),
-        }
+    pub fn new() -> CacheAligned<PmdStats> {
+        CacheAligned::allocate(PmdStats { stats: AtomicUsize::new(0) })
     }
 }
 
@@ -59,8 +56,8 @@ pub struct PmdPort {
     port: i32,
     rxqs: i32,
     txqs: i32,
-    stats_rx: Vec<Arc<PmdStats>>,
-    stats_tx: Vec<Arc<PmdStats>>,
+    stats_rx: Vec<Arc<CacheAligned<PmdStats>>>,
+    stats_tx: Vec<Arc<CacheAligned<PmdStats>>>,
 }
 
 #[derive(Clone)]
@@ -69,13 +66,11 @@ pub struct PortQueue {
     // The Arc cost here should not affect anything, since we are really not doing anything to make it go in and out of
     // scope.
     pub port: Arc<PmdPort>,
-    stats_rx: Arc<PmdStats>,
-    stats_tx: Arc<PmdStats>,
+    stats_rx: Arc<CacheAligned<PmdStats>>,
+    stats_tx: Arc<CacheAligned<PmdStats>>,
     port_id: i32,
     txq: i32,
     rxq: i32,
-    _pad0: i32,
-    _pad1: [u64; 3],
 }
 
 impl Drop for PmdPort {
@@ -164,22 +159,20 @@ impl PmdPort {
         self.txqs
     }
 
-    pub fn new_queue_pair(port: &Arc<PmdPort>, rxq: i32, txq: i32) -> Result<PortQueue> {
+    pub fn new_queue_pair(port: &Arc<PmdPort>, rxq: i32, txq: i32) -> Result<CacheAligned<PortQueue>> {
         if rxq > port.rxqs || rxq < 0 {
             Err(ZCSIError::BadRxQueue)
         } else if txq > port.txqs || txq < 0 {
             Err(ZCSIError::BadTxQueue)
         } else {
-            Ok(PortQueue {
+            Ok(CacheAligned::allocate(PortQueue {
                 port: port.clone(),
                 port_id: port.port,
                 txq: txq,
                 rxq: rxq,
                 stats_rx: port.stats_rx[rxq as usize].clone(),
                 stats_tx: port.stats_tx[txq as usize].clone(),
-                _pad0: Default::default(),
-                _pad1: Default::default(),
-            })
+            }))
         }
     }
 

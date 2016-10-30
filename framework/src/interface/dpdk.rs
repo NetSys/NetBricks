@@ -1,6 +1,6 @@
 use std::ffi::CString;
 use super::METADATA_SLOTS;
-use config::{NetbricksConfiguration, DEFAULT_POOL_SIZE, DEFAULT_CACHE_SIZE};
+use config::{DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE, NetbricksConfiguration};
 mod native {
     use std::os::raw::c_char;
     #[link(name = "zcsi")]
@@ -75,7 +75,11 @@ pub fn init_system(config: &NetbricksConfiguration) {
         // We do not have control over any of the other settings in this case.
         init_system_secondary(&config.name[..], config.primary_core);
     } else {
-        init_system_wl_with_mempool(&config.name[..], config.primary_core, &[], config.pool_size, config.cache_size);
+        init_system_wl_with_mempool(&config.name[..],
+                                    config.primary_core,
+                                    &[],
+                                    config.pool_size,
+                                    config.cache_size);
     }
 }
 

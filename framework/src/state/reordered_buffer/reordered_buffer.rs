@@ -402,7 +402,7 @@ impl ReorderedBuffer {
     pub fn is_established(&self) -> bool {
         match self.state {
             State::Closed => false,
-            _ => true
+            _ => true,
         }
     }
 

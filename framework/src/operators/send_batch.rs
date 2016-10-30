@@ -1,4 +1,5 @@
 use common::*;
+use allocators::CacheAligned;
 use interface::PortQueue;
 use super::act::Act;
 use super::Batch;
@@ -12,7 +13,7 @@ use super::packet_batch::PacketBatch;
 pub struct SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
-    port: PortQueue,
+    port: CacheAligned<PortQueue>,
     parent: V,
     pub sent: u64,
 }
@@ -20,7 +21,7 @@ pub struct SendBatch<V>
 impl<V> SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
-    pub fn new(parent: V, port: PortQueue) -> SendBatch<V> {
+    pub fn new(parent: V, port: CacheAligned<PortQueue>) -> SendBatch<V> {
         SendBatch {
             port: port,
             sent: 0,

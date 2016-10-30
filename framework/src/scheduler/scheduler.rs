@@ -1,4 +1,4 @@
-use std::sync::mpsc::{sync_channel, Receiver};
+use std::sync::mpsc::{Receiver, sync_channel};
 use std::sync::Arc;
 use super::Executable;
 use std::default::Default;
@@ -42,8 +42,8 @@ impl Scheduler {
     fn handle_request(&mut self, request: SchedulerCommand) {
         match request {
             SchedulerCommand::Add(ex) => self.run_q.push(ex),
-            SchedulerCommand::Run(f) => { f(self) },
-            SchedulerCommand::Execute => { self.execute_loop() }
+            SchedulerCommand::Run(f) => f(self),
+            SchedulerCommand::Execute => self.execute_loop(),
         }
     }
 

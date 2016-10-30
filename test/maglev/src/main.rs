@@ -6,6 +6,7 @@ extern crate simd;
 extern crate getopts;
 extern crate rand;
 extern crate twox_hash;
+use e2d2::allocators::CacheAligned;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
 use e2d2::operators::*;
@@ -22,7 +23,7 @@ mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn recv_thread(ports: Vec<PortQueue>, core: i32) {
+fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32) {
     init_thread(core, core);
     let mut sched = Scheduler::new();
     println!("Receiving started");

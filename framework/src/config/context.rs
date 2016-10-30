@@ -2,16 +2,17 @@ use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{SyncSender, sync_channel};
 use interface::{PmdPort, PortQueue};
 use interface::dpdk::{init_system, init_thread};
+use allocators::CacheAligned;
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::convert::From;
 use scheduler::*;
-use super::{NetbricksConfiguration, ConfigurationResult, ConfigurationError}; 
+use super::{ConfigurationError, ConfigurationResult, NetbricksConfiguration};
 
 #[derive(Default)]
 pub struct NetBricksContext {
     pub ports: HashMap<String, Arc<PmdPort>>,
-    pub rx_queues: HashMap<i32, Vec<PortQueue>>,
+    pub rx_queues: HashMap<i32, Vec<CacheAligned<PortQueue>>>,
     pub active_cores: Vec<i32>,
     pub scheduler_channels: HashMap<i32, SyncSender<SchedulerCommand>>,
     pub scheduler_handles: HashMap<i32, JoinHandle<()>>,
@@ -41,7 +42,8 @@ impl NetBricksContext {
         self.scheduler_handles.insert(core, join_handle);
     }
 
-    pub fn add_pipeline_to_run<T: Fn(Vec<PortQueue>, &mut Scheduler) + Send + Sync + 'static>(&mut self, run: Arc<T>) {
+    pub fn add_pipeline_to_run<T: Fn(Vec<CacheAligned<PortQueue>>, &mut Scheduler) + Send + Sync + 'static>(&mut self,
+                                                                                                            run: Arc<T>) {
         for (core, channel) in &self.scheduler_channels {
             let ports = match self.rx_queues.get(core) {
                 Some(v) => v.clone(),

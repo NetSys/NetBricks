@@ -24,6 +24,7 @@ pub use self::reset_parse::ResetParsingBatch;
 use interface::*;
 use headers::*;
 use scheduler::Scheduler;
+use allocators::CacheAligned;
 
 #[macro_use]
 mod macros;
@@ -73,7 +74,7 @@ pub trait Batch: BatchIterator + Act + Send {
     }
 
     /// Send this batch out a particular port and queue.
-    fn send(self, port: PortQueue) -> SendBatch<Self>
+    fn send(self, port: CacheAligned<PortQueue>) -> SendBatch<Self>
         where Self: Sized
     {
         SendBatch::<Self>::new(self, port)

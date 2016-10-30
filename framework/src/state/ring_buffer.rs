@@ -1,4 +1,4 @@
-use libc::{self, c_void, mmap, shm_open, ftruncate, shm_unlink, munmap};
+use libc::{self, c_void, ftruncate, mmap, munmap, shm_open, shm_unlink};
 use std::ffi::CString;
 use std::ptr;
 use std::slice;
@@ -58,7 +58,7 @@ impl RingBuffer {
             shm_unlink(name.as_ptr());
             return Err(Error::last_os_error());
         }
- 
+
         // First get a big enough chunk of virtual memory. Fortunately for us this does not actually commit any physical
         // pages. We allocate twice as much memory so as to mirror the ring buffer.
         let address = mmap(ptr::null_mut(),

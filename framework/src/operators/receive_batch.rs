@@ -1,3 +1,4 @@
+use allocators::CacheAligned;
 use common::*;
 use interface::PortQueue;
 use super::act::Act;
@@ -9,12 +10,12 @@ use headers::NullHeader;
 // FIXME: Should we be handling multiple queues and ports here?
 pub struct ReceiveBatch {
     parent: PacketBatch,
-    port: PortQueue,
+    port: CacheAligned<PortQueue>,
     pub received: u64,
 }
 
 impl ReceiveBatch {
-    pub fn new_with_parent(parent: PacketBatch, port: PortQueue) -> ReceiveBatch {
+    pub fn new_with_parent(parent: PacketBatch, port: CacheAligned<PortQueue>) -> ReceiveBatch {
         ReceiveBatch {
             parent: parent,
             port: port,
@@ -22,7 +23,7 @@ impl ReceiveBatch {
         }
     }
 
-    pub fn new(port: PortQueue) -> ReceiveBatch {
+    pub fn new(port: CacheAligned<PortQueue>) -> ReceiveBatch {
         ReceiveBatch {
             parent: PacketBatch::new(32),
             port: port,

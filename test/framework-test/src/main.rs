@@ -10,6 +10,7 @@ use e2d2::headers::*;
 use e2d2::operators::*;
 use e2d2::scheduler::Executable;
 use e2d2::state::*;
+use e2d2::allocators::*;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;
@@ -38,7 +39,7 @@ fn monitor<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(pa
         .compose()
 }
 
-fn recv_thread(ports: Vec<PortQueue>, core: i32, counter: MergeableStoreDP<isize>) {
+fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32, counter: MergeableStoreDP<isize>) {
     init_thread(core, core);
     println!("Receiving started");
 

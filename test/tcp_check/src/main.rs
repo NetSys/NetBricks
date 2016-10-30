@@ -5,6 +5,7 @@ extern crate time;
 extern crate simd;
 extern crate getopts;
 extern crate rand;
+use e2d2::allocators::CacheAligned;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
 use e2d2::operators::*;
@@ -17,7 +18,7 @@ use std::process;
 use self::nf::*;
 mod nf;
 
-fn recv_thread(ports: Vec<PortQueue>, core: i32) {
+fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32) {
     init_thread(core, core);
     println!("Receiving started");
     for port in &ports {
