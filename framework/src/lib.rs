@@ -38,6 +38,7 @@ extern crate alloc;
 
 #[cfg(unix)]
 extern crate nix;
+pub mod native;
 pub mod allocators;
 pub mod headers;
 mod io;

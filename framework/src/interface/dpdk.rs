@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use super::METADATA_SLOTS;
 use config::{DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE, NetbricksConfiguration};
-mod native {
+mod libzcsi {
     use std::os::raw::c_char;
     #[link(name = "zcsi")]
     extern "C" {
@@ -30,14 +30,14 @@ pub fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_s
     let pci_cstr: Vec<_> = pci.iter().map(|p| CString::new(&p[..]).unwrap()).collect();
     let mut whitelist: Vec<_> = pci_cstr.iter().map(|p| p.as_ptr()).collect();
     unsafe {
-        let ret = native::init_system_whitelisted(name_cstr.as_ptr(),
-                                                  name.len() as i32,
-                                                  core,
-                                                  whitelist.as_mut_ptr(),
-                                                  pci.len() as i32,
-                                                  pool_size,
-                                                  cache_size,
-                                                  METADATA_SLOTS);
+        let ret = libzcsi::init_system_whitelisted(name_cstr.as_ptr(),
+                                                   name.len() as i32,
+                                                   core,
+                                                   whitelist.as_mut_ptr(),
+                                                   pci.len() as i32,
+                                                   pool_size,
+                                                   cache_size,
+                                                   METADATA_SLOTS);
         if ret != 0 {
             panic!("Could not initialize the system errno {}", ret)
         }
@@ -54,11 +54,11 @@ pub fn init_system_secondary(name: &str, core: i32) {
     let name_cstr = CString::new(name).unwrap();
     let mut vdev_list = vec![];
     unsafe {
-        let ret = native::init_secondary(name_cstr.as_ptr(),
-                                         name.len() as i32,
-                                         core,
-                                         vdev_list.as_mut_ptr(),
-                                         0);
+        let ret = libzcsi::init_secondary(name_cstr.as_ptr(),
+                                          name.len() as i32,
+                                          core,
+                                          vdev_list.as_mut_ptr(),
+                                          0);
         if ret != 0 {
             panic!("Could not initialize secondary process errno {}", ret)
         }
@@ -86,6 +86,6 @@ pub fn init_system(config: &NetbricksConfiguration) {
 /// Affinitize a pthread to a core and assign a DPDK thread ID.
 pub fn init_thread(tid: i32, core: i32) {
     unsafe {
-        native::init_thread(tid, core);
+        libzcsi::init_thread(tid, core);
     }
 }
