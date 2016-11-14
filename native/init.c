@@ -1,14 +1,15 @@
 #include <assert.h>
+#include <numa.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <rte_config.h>
 #include <rte_cycles.h>
-#include <rte_timer.h>
-#include <rte_ethdev.h>
 #include <rte_eal.h>
+#include <rte_ethdev.h>
+#include <rte_timer.h>
 
 #include "mempool.h"
 #define NUM_PFRAMES (2048 - 1)  // Number of pframes in the mempool
@@ -177,10 +178,15 @@ RTE_DECLARE_PER_LCORE(unsigned, _socket_id);
 void init_thread(int tid, int core) {
     /* Among other things this affinitizes the thread */
     rte_cpuset_t cpuset;
+    int socket_id = rte_lcore_to_socket_id(core);
+    struct bitmask* numa_bitmask =
+        numa_bitmask_setbit(numa_bitmask_clearall(numa_bitmask_alloc(numa_num_possible_nodes())), socket_id);
     CPU_ZERO(&cpuset);
     CPU_SET(core, &cpuset);
     rte_thread_set_affinity(&cpuset);
+    numa_bind(numa_bitmask);
     init_mempool_core(core);
+
     /* Set thread ID correctly */
     RTE_PER_LCORE(_lcore_id) = tid;
     RTE_PER_LCORE(_mempool_core) = core;
