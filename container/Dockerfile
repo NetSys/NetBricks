@@ -21,7 +21,6 @@ ENV LD_LIBRARY_PATH="/opt/netbricks/native:/opt/netbricks/3rdparty/dpdk/build/li
 ENV DELAY_TEST_ROOT="/opt/netbricks/test/delay-test/target/release"
 RUN mkdir -p /opt/netbricks
 COPY Cargo.toml /opt/netbricks
-COPY Cargo.lock /opt/netbricks
 COPY 3rdparty /opt/netbricks/3rdparty
 COPY framework /opt/netbricks/framework
 COPY native /opt/netbricks/native
