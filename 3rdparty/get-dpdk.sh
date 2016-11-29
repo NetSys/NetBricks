@@ -4,7 +4,7 @@ set -e
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 DOWNLOAD_BASE="${1-$BASE_DIR}"
 echo Using "$DOWNLOAD_BASE" for downloads
-DPDK_VER=${DPDK_VER-"16.07"}
+DPDK_VER=${DPDK_VER-"16.11"}
 MODE=download # or git
 DOWNLOAD_PATH="${DOWNLOAD_BASE}/dpdk.tar.gz"
 DPDK_RESULT="${BASE_DIR}/dpdk"
@@ -33,7 +33,7 @@ fi
 
 cp "${CONFIG_FILE}${CONFIG_PFX}" "${DPDK_RESULT}/config/common_linuxapp"
 export RTE_TARGET=x86_64-native-linuxapp-gcc
-FLAGS="-g3 -Wno-error=maybe-uninitialized -fPIC"
+FLAGS="-g3 -Wno-error=maybe-uninitialized -no-pie"
 make config -C "${DPDK_RESULT}" T=x86_64-native-linuxapp-gcc \
 	EXTRA_CFLAGS="$FLAGS"
 PROCS="$(nproc)"

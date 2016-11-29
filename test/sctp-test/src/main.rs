@@ -3,7 +3,6 @@
 extern crate e2d2;
 extern crate fnv;
 extern crate time;
-extern crate simd;
 extern crate getopts;
 extern crate rand;
 extern crate nix;

@@ -1,5 +1,4 @@
 #![feature(asm)]
-#![feature(repr_simd)]
 #![feature(log_syntax)]
 #![feature(box_syntax)]
 #![feature(specialization)]
