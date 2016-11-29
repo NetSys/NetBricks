@@ -298,6 +298,18 @@ case $TASK in
             ${CARGO} build --release
         popd
         ;;
+    build_fmwk)
+        deps
+        native
+        find_sctp
+        pushd $BASE_DIR/framework
+        if [ ${SCTP_PRESENT} -eq 1 ]; then
+            ${CARGO} build --release --features "sctp"
+        else
+            ${CARGO} build --release
+        fi
+        popd
+        ;;
     build)
         deps
 

@@ -16,9 +16,9 @@ extern "C" {
     /// The number of NUMA nodes available in the system.
     pub fn numa_max_node() -> i32;
     /// The number of memory nodes configured in the system.
-    pub fn numa_configured_nodes() -> i32;
+    pub fn numa_num_configured_nodes() -> i32;
     /// The number of configured CPUs in the system
-    pub fn numa_configured_cpus() -> i32;
+    pub fn numa_num_configured_cpus() -> i32;
     /// Number of CPUs current task can use.
     pub fn numa_num_task_cpus() -> i32;
     /// Number of nodes current task can use.
