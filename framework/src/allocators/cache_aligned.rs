@@ -22,13 +22,13 @@ impl<T: Sized> Drop for CacheAligned<T> {
 
 impl<T: Sized> Deref for CacheAligned<T> {
     type Target = T;
-    fn deref<'a>(&'a self) -> &'a T {
+    fn deref(&self) -> &T {
         unsafe { self.ptr.get() }
     }
 }
 
 impl<T: Sized> DerefMut for CacheAligned<T> {
-    fn deref_mut<'a>(&'a mut self) -> &'a mut T {
+    fn deref_mut(&mut self) -> &mut T {
         unsafe { self.ptr.get_mut() }
     }
 }

@@ -82,7 +82,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Configuratio
                 }
             }
 
-            let port_instance = ctx.ports.get(&port.name).unwrap();
+            let port_instance = &ctx.ports[&port.name];
 
             for (rx_q, core) in port.rx_queues.iter().enumerate() {
                 let rx_q = rx_q as i32;
