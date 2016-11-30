@@ -1,5 +1,4 @@
 #![feature(asm)]
-#![feature(repr_simd)]
 #![feature(log_syntax)]
 #![feature(box_syntax)]
 #![feature(specialization)]
@@ -38,6 +37,8 @@ extern crate alloc;
 
 #[cfg(unix)]
 extern crate nix;
+#[allow(dead_code)]
+mod native;
 pub mod allocators;
 pub mod headers;
 mod io;

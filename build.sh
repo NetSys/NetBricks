@@ -15,7 +15,7 @@ fi
 if [ ! -e ${TOOLS_BASE} ]; then
     mkdir -p ${TOOLS_BASE}
 fi
-DPDK_VER=16.07
+DPDK_VER=16.11
 DPDK_HOME="${BASE_DIR}/3rdparty/dpdk"
 DPDK_LD_PATH="${DPDK_HOME}/build/lib"
 DPDK_CONFIG_FILE=${DPDK_CONFIG_FILE-"${EXT_BASE}/dpdk-confs/common_linuxapp-${DPDK_VER}"}
@@ -40,6 +40,7 @@ LLVM_RESULT="${EXT_BASE}/llvm"
 UNWIND_RESULT="${TOOLS_BASE}/lib/libunwind.a"
 
 NATIVE_LIB_PATH="${BASE_DIR}/native"
+export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 rust_build_static() {
     if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
@@ -219,8 +220,10 @@ cargo () {
     else
         ./configure --prefix=${TOOLS_BASE}
     fi
+    export CARGO_TARGET_DIR="${CARGO_HOME}/target" # Work around the workspace thing.
     make -j
     make install
+    unset CARGO_TARGET_DIR
     popd
 }
 
@@ -296,6 +299,18 @@ case $TASK in
         fi
         pushd ${BASE_DIR}/test/${build_dir}
             ${CARGO} build --release
+        popd
+        ;;
+    build_fmwk)
+        deps
+        native
+        find_sctp
+        pushd $BASE_DIR/framework
+        if [ ${SCTP_PRESENT} -eq 1 ]; then
+            ${CARGO} build --release --features "sctp"
+        else
+            ${CARGO} build --release
+        fi
         popd
         ;;
     build)

@@ -4,11 +4,4 @@ version = "0.1.0"
 authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
 
 [dependencies]
-simd = { git = "https://github.com/huonw/simd" }
 rand = "0.3"
-
-[profile.release]
-opt-level = 3
-rpath = true
-debug = true
-debug-assertions = false

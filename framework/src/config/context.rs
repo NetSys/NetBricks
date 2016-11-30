@@ -9,6 +9,7 @@ use std::convert::From;
 use scheduler::*;
 use super::{ConfigurationError, ConfigurationResult, NetbricksConfiguration};
 
+type AlignedPortQueue = CacheAligned<PortQueue>;
 #[derive(Default)]
 pub struct NetBricksContext {
     pub ports: HashMap<String, Arc<PmdPort>>,
@@ -42,8 +43,9 @@ impl NetBricksContext {
         self.scheduler_handles.insert(core, join_handle);
     }
 
-    pub fn add_pipeline_to_run<T: Fn(Vec<CacheAligned<PortQueue>>, &mut Scheduler) + Send + Sync + 'static>(&mut self,
-                                                                                                            run: Arc<T>) {
+
+    pub fn add_pipeline_to_run<T: Fn(Vec<AlignedPortQueue>, &mut Scheduler) + Send + Sync + 'static>(&mut self,
+                                                                                                     run: Arc<T>) {
         for (core, channel) in &self.scheduler_channels {
             let ports = match self.rx_queues.get(core) {
                 Some(v) => v.clone(),

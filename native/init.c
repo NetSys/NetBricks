@@ -1,18 +1,26 @@
 #include <assert.h>
+#include <numa.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <rte_config.h>
 #include <rte_cycles.h>
-#include <rte_timer.h>
-#include <rte_ethdev.h>
 #include <rte_eal.h>
+#include <rte_ethdev.h>
+#include <rte_timer.h>
 
 #include "mempool.h"
 #define NUM_PFRAMES (2048 - 1)  // Number of pframes in the mempool
 #define CACHE_SIZE 32           // Size of per-core mempool cache
+
+static inline void bind_to_domain(int socket_id) {
+    struct bitmask* numa_bitmask =
+        numa_bitmask_setbit(numa_bitmask_clearall(numa_bitmask_alloc(numa_num_possible_nodes())), socket_id);
+    numa_bind(numa_bitmask);
+}
+
 
 /* Taken from SoftNIC (dpdk.c) */
 /* Get NUMA count */
@@ -58,6 +66,7 @@ static int init_eal(char* name, int secondary, int core, char* whitelist[], int 
     const char* socket_mem = "1024";
 
     int numa_count = get_numa_count();
+    int socket_id = 0;
 
     int ret;
     int i;
@@ -124,6 +133,11 @@ static int init_eal(char* name, int secondary, int core, char* whitelist[], int 
     /* Change lcore ID */
     RTE_PER_LCORE(_lcore_id) = tid;
     RTE_PER_LCORE(_mempool_core) = core;
+    socket_id = rte_lcore_to_socket_id(core);
+    if (numa_available() != -1) {
+        bind_to_domain(socket_id);
+    }
+
     return ret;
 }
 
@@ -174,14 +188,21 @@ RTE_DECLARE_PER_LCORE(unsigned, _socket_id);
 
 /* Called by each secondary threads on ZCSI, responsible for affinitization,
  * etc.*/
-void init_thread(int tid, int core) {
+int init_thread(int tid, int core) {
     /* Among other things this affinitizes the thread */
     rte_cpuset_t cpuset;
+    int socket_id = rte_lcore_to_socket_id(core);
+    int numa_active = numa_available();
     CPU_ZERO(&cpuset);
     CPU_SET(core, &cpuset);
     rte_thread_set_affinity(&cpuset);
+    if (numa_active != -1) {
+        bind_to_domain(socket_id);
+    }
     init_mempool_core(core);
+
     /* Set thread ID correctly */
     RTE_PER_LCORE(_lcore_id) = tid;
     RTE_PER_LCORE(_mempool_core) = core;
+    return numa_active == -1 ? numa_active : socket_id;
 }
