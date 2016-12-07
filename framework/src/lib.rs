@@ -1,3 +1,4 @@
+#![recursion_limit = "1024"]
 #![feature(asm)]
 #![feature(log_syntax)]
 #![feature(box_syntax)]
@@ -27,13 +28,17 @@ extern crate net2;
 extern crate lazy_static;
 #[cfg(feature="sctp")]
 extern crate sctp;
-/// TOML for scheduling configuration
+// TOML for scheduling configuration
 extern crate toml;
-/// UUID for SHM naming
+// UUID for SHM naming
 extern crate uuid;
 
-/// For cache aware allocation
+// For cache aware allocation
 extern crate alloc;
+
+// Better error handling.
+#[macro_use]
+extern crate error_chain;
 
 #[cfg(unix)]
 extern crate nix;

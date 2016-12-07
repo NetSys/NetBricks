@@ -44,7 +44,7 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreDataPath<T> {
         self.updates += 1;
         if self.updates >= self.delay {
             self.updates = 0;
-            if let Ok(_) = self.channel.try_send(self.cache.drain(0..).collect()) {
+            if self.channel.try_send(self.cache.drain(0..).collect()).is_ok() {
                 ()
             }
         }

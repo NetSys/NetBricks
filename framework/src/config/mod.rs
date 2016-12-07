@@ -1,53 +1,8 @@
 use std::fmt;
-use std::convert::From;
-use std::error::Error;
-
 pub use self::config_reader::*;
 pub use self::context::*;
 mod config_reader;
 mod context;
-
-#[derive(Debug)]
-pub struct ConfigurationError {
-    pub description: String,
-}
-
-impl fmt::Display for ConfigurationError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Configuration Error: {}", self.description)
-    }
-}
-
-impl Error for ConfigurationError {
-    fn description(&self) -> &str {
-        &self.description[..]
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        None
-    }
-}
-
-
-impl From<String> for ConfigurationError {
-    fn from(description: String) -> ConfigurationError {
-        ConfigurationError { description: description }
-    }
-}
-
-impl<'a> From<&'a String> for ConfigurationError {
-    fn from(description: &'a String) -> ConfigurationError {
-        ConfigurationError { description: description.clone() }
-    }
-}
-
-impl<'a> From<&'a str> for ConfigurationError {
-    fn from(description: &'a str) -> ConfigurationError {
-        ConfigurationError { description: String::from(description) }
-    }
-}
-
-pub type ConfigurationResult<T> = Result<T, ConfigurationError>;
 
 /// `NetBricks` control configuration. In theory all applications create one of these, either through the use of
 /// `read_configuration` or manually using args.

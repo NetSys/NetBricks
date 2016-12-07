@@ -1,3 +1,4 @@
+use common::*;
 use std::thread::{self, JoinHandle};
 use std::sync::mpsc::{SyncSender, sync_channel};
 use interface::{PmdPort, PortQueue};
@@ -5,9 +6,8 @@ use interface::dpdk::{init_system, init_thread};
 use allocators::CacheAligned;
 use std::sync::Arc;
 use std::collections::HashMap;
-use std::convert::From;
 use scheduler::*;
-use super::{ConfigurationError, ConfigurationResult, NetbricksConfiguration};
+use super::NetbricksConfiguration;
 
 type AlignedPortQueue = CacheAligned<PortQueue>;
 #[derive(Default)]
@@ -65,24 +65,28 @@ impl NetBricksContext {
 }
 
 /// Initialize the system from a configuration.
-pub fn initialize_system(configuration: &NetbricksConfiguration) -> ConfigurationResult<NetBricksContext> {
+pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBricksContext> {
     init_system(configuration);
     let mut ctx: NetBricksContext = Default::default();
     for port in &configuration.ports {
         if ctx.ports.contains_key(&port.name) {
             println!("Port {} appears twice in specification", port.name);
-            return Err(ConfigurationError::from(format!("Port {} appears twice in specification", port.name)));
+            return Err(ErrorKind::ConfigurationError(format!("Port {} appears twice in specification", port.name))
+                .into());
         } else {
             match PmdPort::new_port_from_configuration(port) {
                 Ok(p) => {
                     ctx.ports.insert(port.name.clone(), p);
                 }
                 Err(e) => {
-                    return Err(ConfigurationError::from(format!("Port {} could not be initialized {:?}", port.name, e)))
+                    return Err(ErrorKind::ConfigurationError(format!("Port {} could not be initialized {:?}",
+                                                                     port.name,
+                                                                     e))
+                        .into())
                 }
             }
 
-            let port_instance = ctx.ports.get(&port.name).unwrap();
+            let port_instance = &ctx.ports[&port.name];
 
             for (rx_q, core) in port.rx_queues.iter().enumerate() {
                 let rx_q = rx_q as i32;
@@ -91,11 +95,11 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Configuratio
                         ctx.rx_queues.entry(*core).or_insert_with(|| vec![]).push(q);
                     }
                     Err(e) => {
-                        return Err(ConfigurationError::from(format!("Queue {} on port {} could not be initialized \
+                        return Err(ErrorKind::ConfigurationError(format!("Queue {} on port {} could not be initialized \
                                                                      {:?}",
                                                                     rx_q,
                                                                     port.name,
-                                                                    e)))
+                                                                    e)).into())
                     }
                 }
             }

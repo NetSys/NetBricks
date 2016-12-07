@@ -288,7 +288,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     #[inline]
     pub fn write_metadata<M2: Sized + Send>(&mut self, metadata: &M2) -> Result<()> {
         if size_of::<M2>() >= FREEFORM_METADATA_SIZE {
-            Err(ZCSIError::MetadataTooLarge)
+            Err(ErrorKind::MetadataTooLarge.into())
         } else {
             unsafe {
                 let ptr = MBuf::mut_metadata_as::<M2>(self.mbuf, FREEFORM_METADATA_SLOT);
@@ -359,7 +359,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                 ptr::copy_nonoverlapping(src, dst, size);
                 Ok(())
             } else {
-                Err(ZCSIError::FailedAllocation)
+                Err(ErrorKind::FailedAllocation.into())
             }
         }
     }
@@ -379,7 +379,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
             if added >= size {
                 Ok(())
             } else {
-                Err(ZCSIError::FailedAllocation)
+                Err(ErrorKind::FailedAllocation.into())
             }
         }
     }
@@ -387,7 +387,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     #[inline]
     pub fn write_header<T2: EndOffset + Sized>(&mut self, header: &T2, offset: usize) -> Result<()> {
         if offset > self.payload_size() {
-            Err(ZCSIError::BadOffset)
+            Err(ErrorKind::BadOffset(offset).into())
         } else {
             unsafe {
                 let dst = self.payload().offset(offset as isize);
