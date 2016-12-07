@@ -35,10 +35,11 @@ impl PacketBatch {
     #[inline]
     pub fn allocate_batch_with_size(&mut self, len: u16) -> Result<&mut Self> {
         let cnt = self.cnt;
-        match self.alloc_packet_batch(len, cnt) {
-            Ok(_) => Ok(self),
-            Err(_) => Err(ZCSIError::FailedAllocation),
-        }
+        self.alloc_packet_batch(len, cnt).and_then(|_| Ok(self))
+        //match self.alloc_packet_batch(len, cnt) {
+            //Ok(_) => Ok(self),
+            //Err(_) => Err(ErrorKind::FailedAllocation.into),
+        //}
     }
 
     /// Allocate `cnt` mbufs. `len` sets the metadata field indicating how much of the mbuf should be considred when
@@ -47,7 +48,7 @@ impl PacketBatch {
     pub fn allocate_partial_batch_with_size(&mut self, len: u16, cnt: i32) -> Result<&mut Self> {
         match self.alloc_packet_batch(len, cnt) {
             Ok(_) => Ok(self),
-            Err(_) => Err(ZCSIError::FailedAllocation),
+            Err(_) => Err(ErrorKind::FailedAllocation.into()),
         }
     }
 
@@ -56,7 +57,7 @@ impl PacketBatch {
     pub fn deallocate_batch(&mut self) -> Result<&mut Self> {
         match self.free_packet_batch() {
             Ok(_) => Ok(self),
-            Err(_) => Err(ZCSIError::FailedDeallocation),
+            Err(_) => Err(ErrorKind::FailedDeallocation.into()),
         }
     }
 
@@ -198,10 +199,10 @@ impl PacketBatch {
     }
 
     #[inline]
-    fn alloc_packet_batch(&mut self, len: u16, cnt: i32) -> result::Result<(), ()> {
+    fn alloc_packet_batch(&mut self, len: u16, cnt: i32) -> Result<()> {
         unsafe {
             if self.array.capacity() < (cnt as usize) {
-                Err(())
+                Err(ErrorKind::FailedAllocation.into())
             } else {
                 let parray = self.array.as_mut_ptr();
                 let ret = mbuf_alloc_bulk(parray, len, cnt);
@@ -209,7 +210,7 @@ impl PacketBatch {
                     self.array.set_len(cnt as usize);
                     Ok(())
                 } else {
-                    Err(())
+                    Err(ErrorKind::FailedAllocation.into())
                 }
             }
         }

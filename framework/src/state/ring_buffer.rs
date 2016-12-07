@@ -1,9 +1,10 @@
+use common::*;
 use libc::{self, c_void, ftruncate, mmap, munmap, shm_open, shm_unlink};
 use std::ffi::CString;
 use std::ptr;
 use std::slice;
 use std::io::Write;
-use std::io::{Error, ErrorKind};
+use std::io;
 use std::cmp::min;
 use uuid::*;
 
@@ -37,10 +38,10 @@ impl Drop for RingBuffer {
 
 #[cfg_attr(feature = "dev", allow(len_without_is_empty))]
 impl RingBuffer {
-    unsafe fn allocate(pages: usize) -> Result<RingBuffer, Error> {
+    unsafe fn allocate(pages: usize) -> Result<RingBuffer> {
         if pages & (pages - 1) != 0 {
             // We need pages to be a power of 2.
-            return Err(Error::new(ErrorKind::InvalidInput, "Pages must be a power of 2"));
+            return Err(ErrorKind::InvalidRingSize(pages).into());
         }
         let bytes = pages << 12;
         let alloc_bytes = bytes * 2;
@@ -50,13 +51,13 @@ impl RingBuffer {
         let fd = shm_open(name.as_ptr(), libc::O_CREAT | libc::O_RDWR, 0o700);
 
         if fd < 0 {
-            return Err(Error::last_os_error());
+            return Err(io::Error::last_os_error()).chain_err(|| ErrorKind::RingAllocationFailure);
         }
 
         if ftruncate(fd, bytes as i64) != 0 {
             libc::close(fd);
             shm_unlink(name.as_ptr());
-            return Err(Error::last_os_error());
+            return Err(io::Error::last_os_error()).chain_err(|| ErrorKind::RingAllocationFailure);
         }
 
         // First get a big enough chunk of virtual memory. Fortunately for us this does not actually commit any physical
@@ -70,14 +71,14 @@ impl RingBuffer {
         if address == libc::MAP_FAILED {
             libc::close(fd);
             shm_unlink(name.as_ptr());
-            return Err(Error::last_os_error());
+            return Err(io::Error::last_os_error()).chain_err(|| ErrorKind::RingAllocationFailure);
         };
 
         assert!((address as usize) % 4096 == 0);
         if shm_unlink(name.as_ptr()) != 0 {
             munmap(address, alloc_bytes);
             libc::close(fd);
-            return Err(Error::last_os_error());
+            return Err(io::Error::last_os_error()).chain_err(|| ErrorKind::RingAllocationFailure);
         }
 
         let bottom = (address as *mut u8).offset(bytes as isize) as *mut libc::c_void;
@@ -90,12 +91,12 @@ impl RingBuffer {
         if bottom_address == libc::MAP_FAILED {
             munmap(address, alloc_bytes);
             libc::close(fd);
-            return Err(Error::last_os_error());
+            return Err(io::Error::last_os_error()).chain_err(|| ErrorKind::RingAllocationFailure);
         }
         if bottom_address != bottom {
             munmap(address, bytes);
             munmap(bottom_address, bytes);
-            return Err(Error::new(ErrorKind::Other, "Bottom address is not correct"));
+            return Err(ErrorKind::RingDuplicationFailure.into());
         }
 
         libc::close(fd);
@@ -113,7 +114,7 @@ impl RingBuffer {
 
     /// Create a new wrapping ring buffer. The ring buffer size is specified in page size (4KB) and must be a power of
     /// 2. This only works on Linux, and can panic should any of the syscalls fail.
-    pub fn new(pages: usize) -> Result<RingBuffer, Error> {
+    pub fn new(pages: usize) -> Result<RingBuffer> {
         unsafe { RingBuffer::allocate(pages) }
     }
 

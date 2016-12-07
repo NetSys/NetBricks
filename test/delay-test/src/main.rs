@@ -10,10 +10,10 @@ use e2d2::interface::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
 use e2d2::config::*;
+use e2d2::common::*;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;
-use std::error::Error;
 use std::time::Duration;
 use std::thread;
 use std::process;
@@ -72,7 +72,10 @@ fn main() {
         let config_file = matches.opt_str("f").unwrap();
         match read_configuration(&config_file[..]) {
             Ok(cfg) => cfg,
-            Err(e) => panic!("Could not parse configuration file {}\n {}", config_file, e.description()),
+            Err(ref e) => {
+                print_error(e);
+                process::exit(1);
+            },
         }
     } else {
         let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));

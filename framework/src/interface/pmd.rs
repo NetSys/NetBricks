@@ -161,9 +161,9 @@ impl PmdPort {
 
     pub fn new_queue_pair(port: &Arc<PmdPort>, rxq: i32, txq: i32) -> Result<CacheAligned<PortQueue>> {
         if rxq > port.rxqs || rxq < 0 {
-            Err(ZCSIError::BadRxQueue)
+            Err(ErrorKind::BadRxQueue(port.port, rxq).into())
         } else if txq > port.txqs || txq < 0 {
-            Err(ZCSIError::BadTxQueue)
+            Err(ErrorKind::BadTxQueue(port.port, txq).into())
         } else {
             Ok(CacheAligned::allocate(PortQueue {
                 port: port.clone(),
@@ -233,10 +233,10 @@ impl PmdPort {
                     stats_tx: (0..txqs).map(|_| Arc::new(PmdStats::new())).collect(),
                 }))
             } else {
-                Err(ZCSIError::FailedToInitializePort)
+                Err(ErrorKind::FailedToInitializePort(port).into())
             }
         } else {
-            Err(ZCSIError::FailedToInitializePort)
+            Err(ErrorKind::FailedToInitializePort(port).into())
         }
     }
 
@@ -260,7 +260,7 @@ impl PmdPort {
                 stats_tx: vec![Arc::new(PmdStats::new())],
             }))
         } else {
-            Err(ZCSIError::FailedToInitializePort)
+            Err(ErrorKind::FailedToInitializePort(port).into())
         }
     }
 
@@ -280,10 +280,10 @@ impl PmdPort {
                         stats_tx: vec![Arc::new(PmdStats::new())],
                     }))
                 } else {
-                    Err(ZCSIError::FailedToInitializePort)
+                    Err(ErrorKind::FailedToInitializePort(port).into())
                 }
             }
-            _ => Err(ZCSIError::BadVdev),
+            _ => Err(ErrorKind::BadVdev(String::from(name)).into()),
         }
     }
 
@@ -312,8 +312,9 @@ impl PmdPort {
                                     loopback,
                                     tso,
                                     csumoffload)
+                .chain_err(|| ErrorKind::BadDev(String::from(spec)))
         } else {
-            Err(ZCSIError::FailedToInitializePort)
+            Err(ErrorKind::BadDev(String::from(spec)).into())
         }
     }
 
