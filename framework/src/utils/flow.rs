@@ -1,9 +1,9 @@
 use byteorder::{BigEndian, ByteOrder};
 use fnv::FnvHasher;
-
 use std::hash::Hasher;
 use std::mem;
 use std::slice;
+use native::zcsi::*;
 
 // FIXME: Currently just deriving Hash, but figure out if this is a performance problem. By default, Rust uses SipHash
 // which is supposed to have reasonable performance characteristics.
@@ -106,12 +106,6 @@ pub fn flow_hash(flow: &Flow) -> usize {
     hasher.write(flow_as_u8(flow));
     hasher.finish() as usize
     // farmhash::hash32(flow_as_u8(flow))
-}
-
-#[link(name = "zcsi")]
-extern "C" {
-    fn crc_hash_native(to_hash: *const u8, size: u32, iv: u32) -> u32;
-    fn ipv4_cksum(payload: *const u8) -> u16;
 }
 
 /// Compute the CRC32 hash for `to_hash`. Note CRC32 is not really a great hash function, it is not particularly

@@ -1,6 +1,5 @@
 use common::*;
 use allocators::*;
-use io::MBuf;
 use headers::MacAddress;
 use config::{NUM_RXD, NUM_TXD, PortConfiguration};
 use std::sync::Arc;
@@ -8,37 +7,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::cmp::min;
 use regex::Regex;
 use std::ffi::CString;
-use std::os::raw::c_char;
-
-// External DPDK calls
-#[link(name = "zcsi")]
-extern "C" {
-    fn init_pmd_port(port: i32,
-                     rxqs: i32,
-                     txqs: i32,
-                     rx_cores: *const i32,
-                     tx_cores: *const i32,
-                     nrxd: i32,
-                     ntxd: i32,
-                     loopback: i32,
-                     tso: i32,
-                     csumoffload: i32)
-                     -> i32;
-    fn free_pmd_port(port: i32) -> i32;
-    fn recv_pkts(port: i32, qid: i32, pkts: *mut *mut MBuf, len: i32) -> i32;
-    fn send_pkts(port: i32, qid: i32, pkts: *mut *mut MBuf, len: i32) -> i32;
-    fn num_pmd_ports() -> i32;
-    fn rte_eth_macaddr_get(port: i32, address: *mut MacAddress);
-    fn init_bess_eth_ring(ifname: *const c_char, core: i32) -> i32;
-    fn init_ovs_eth_ring(iface: i32, core: i32) -> i32;
-    fn find_port_with_pci_address(pciaddr: *const c_char) -> i32;
-    fn attach_pmd_device(dev: *const c_char) -> i32;
-    // FIXME: Generic PMD info
-    fn max_rxqs(port: i32) -> i32;
-    fn max_txqs(port: i32) -> i32;
-}
-
-
+use native::zcsi::*;
 
 struct PmdStats {
     pub stats: AtomicUsize,

@@ -1,12 +1,12 @@
 use common::*;
 use interface::*;
-use io::*;
 use queues::*;
 use std::result;
 use super::act::Act;
 use super::Batch;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use headers::NullHeader;
+use native::zcsi::*;
 
 /// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
 /// receiving packets from DPDK, allocations, etc. As a result many of the actions implemented in other types of batches
@@ -309,11 +309,4 @@ impl Drop for PacketBatch {
     fn drop(&mut self) {
         let _ = self.free_packet_batch();
     }
-}
-
-// Some low level functions that need access to private members.
-#[link(name = "zcsi")]
-extern "C" {
-    fn mbuf_alloc_bulk(array: *mut *mut MBuf, len: u16, cnt: i32) -> i32;
-    fn mbuf_free_bulk(array: *mut *mut MBuf, cnt: i32) -> i32;
 }

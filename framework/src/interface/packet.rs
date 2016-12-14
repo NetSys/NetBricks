@@ -1,18 +1,10 @@
 use common::*;
-use io::MBuf;
 use std::ptr;
 use std::marker::PhantomData;
 use std::slice;
 use headers::{EndOffset, NullHeader};
 use std::mem::size_of;
-
-#[link(name = "zcsi")]
-extern "C" {
-    fn mbuf_alloc() -> *mut MBuf;
-    fn mbuf_free(buf: *mut MBuf);
-    fn mbuf_alloc_bulk(array: *mut *mut MBuf, len: u16, cnt: i32) -> i32;
-}
-
+use native::zcsi::*;
 
 /// A packet is a safe wrapper around mbufs, that can be allocated and manipulated.
 /// We associate a header type with a packet to allow safe insertion of headers.

@@ -1,7 +1,7 @@
 /// A multiproducer single consumer queue for mbufs. The main difference when compared to `std::sync::mpsc` is that this
 /// does not use a linked list (to avoid allocation). The hope is to eventually turn this into something that can carry
 /// `Packets` or sufficient metadata to reconstruct that structure.
-use io::*;
+use native::zcsi::MBuf;
 use interface::Packet;
 use headers::EndOffset;
 use operators::ReceiveQueueGen;
