@@ -3,28 +3,7 @@ use std::ffi::CString;
 use super::METADATA_SLOTS;
 use config::{DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE, NetbricksConfiguration};
 use native::libnuma;
-mod libzcsi {
-    use std::os::raw::c_char;
-    #[link(name = "zcsi")]
-    extern "C" {
-        pub fn init_system_whitelisted(name: *const c_char,
-                                       nlen: i32,
-                                       core: i32,
-                                       whitelist: *mut *const c_char,
-                                       wlcount: i32,
-                                       pool_size: u32,
-                                       cache_size: u32,
-                                       slots: u16)
-                                       -> i32;
-        pub fn init_thread(tid: i32, core: i32) -> i32;
-        pub fn init_secondary(name: *const c_char,
-                              nlen: i32,
-                              core: i32,
-                              vdevs: *mut *const c_char,
-                              vdev_count: i32)
-                              -> i32;
-    }
-}
+use native::zcsi;
 
 /// Initialize the system, whitelisting some set of NICs and allocating mempool of given size.
 fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_size: u32, cache_size: u32) {
@@ -32,7 +11,7 @@ fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_size:
     let pci_cstr: Vec<_> = pci.iter().map(|p| CString::new(&p[..]).unwrap()).collect();
     let mut whitelist: Vec<_> = pci_cstr.iter().map(|p| p.as_ptr()).collect();
     unsafe {
-        let ret = libzcsi::init_system_whitelisted(name_cstr.as_ptr(),
+        let ret = zcsi::init_system_whitelisted(name_cstr.as_ptr(),
                                                    name.len() as i32,
                                                    core,
                                                    whitelist.as_mut_ptr(),
@@ -57,7 +36,7 @@ pub fn init_system_secondary(name: &str, core: i32) {
     let name_cstr = CString::new(name).unwrap();
     let mut vdev_list = vec![];
     unsafe {
-        let ret = libzcsi::init_secondary(name_cstr.as_ptr(),
+        let ret = zcsi::init_secondary(name_cstr.as_ptr(),
                                           name.len() as i32,
                                           core,
                                           vdev_list.as_mut_ptr(),
@@ -109,7 +88,7 @@ fn set_numa_domain() {
 /// Affinitize a pthread to a core and assign a DPDK thread ID.
 pub fn init_thread(tid: i32, core: i32) {
     let numa = unsafe {
-        libzcsi::init_thread(tid, core)
+        zcsi::init_thread(tid, core)
     };
     NUMA_DOMAIN.with(|f| {
         f.set(numa);

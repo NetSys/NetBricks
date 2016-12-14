@@ -46,7 +46,6 @@ extern crate nix;
 mod native;
 pub mod allocators;
 pub mod headers;
-mod io;
 pub mod scheduler;
 pub mod utils;
 pub mod queues;

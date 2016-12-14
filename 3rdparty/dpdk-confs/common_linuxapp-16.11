@@ -54,7 +54,7 @@ CONFIG_RTE_EXEC_ENV_LINUXAPP=y
 ## Note: if your compiler does not support the relevant -march options,
 ## it will be compiled with whatever latest processor the compiler supports!
 ##
-#CONFIG_RTE_MACHINE="native"
+CONFIG_RTE_MACHINE="native"
 #
 ##
 ## define the architecture we compile for.
@@ -109,7 +109,7 @@ CONFIG_RTE_LOG_HISTORY=256
 CONFIG_RTE_LIBEAL_USE_HPET=n
 CONFIG_RTE_EAL_ALLOW_INV_SOCKET_ID=n
 CONFIG_RTE_EAL_ALWAYS_PANIC_ON_ERROR=n
-CONFIG_RTE_EAL_IGB_UIO=n
+CONFIG_RTE_EAL_IGB_UIO=y
 CONFIG_RTE_EAL_VFIO=y
 CONFIG_RTE_MALLOC_DEBUG=n
 
@@ -494,8 +494,8 @@ CONFIG_RTE_PIPELINE_STATS_COLLECT=n
 #
 # Compile librte_kni
 #
-CONFIG_RTE_LIBRTE_KNI=n
-CONFIG_RTE_KNI_KMOD=n
+CONFIG_RTE_LIBRTE_KNI=y
+CONFIG_RTE_KNI_KMOD=y
 CONFIG_RTE_KNI_PREEMPT_DEFAULT=y
 CONFIG_RTE_KNI_KO_DEBUG=n
 CONFIG_RTE_KNI_VHOST=n
