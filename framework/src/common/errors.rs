@@ -1,5 +1,5 @@
 error_chain! {
-    errors {   
+    errors {
         FailedAllocation {
             description("Failed to allocate memory")
             display("Failed to allocate memory")
@@ -71,4 +71,3 @@ error_chain! {
         Io(::std::io::Error);
     }
 }
-

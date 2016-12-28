@@ -88,6 +88,7 @@ fn main() {
                 .unwrap()
                 .parse()
                 .expect("Could not parse master core"),
+            strict: true,
             ..configuration
         }
     } else {
@@ -118,7 +119,7 @@ fn main() {
 
         let cores_str = matches.opt_strs("c");
 
-        let cores: Vec<i32> = cores_str.iter()
+        let mut cores: Vec<i32> = cores_str.iter()
             .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
             .collect();
 
@@ -133,7 +134,8 @@ fn main() {
             let cores = cores_for_port.get(*port).unwrap();
             ports.push(PortConfiguration::new_with_queues(*port, cores, cores))
         }
-        NetbricksConfiguration { ports: ports, ..configuration }
+        cores.dedup();
+        NetbricksConfiguration { cores: cores, ports: ports, ..configuration }
     } else {
         configuration
     };

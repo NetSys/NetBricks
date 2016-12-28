@@ -1,8 +1,6 @@
 use std::fmt;
 pub use self::config_reader::*;
-pub use self::context::*;
 mod config_reader;
-mod context;
 
 /// `NetBricks` control configuration. In theory all applications create one of these, either through the use of
 /// `read_configuration` or manually using args.
@@ -13,6 +11,12 @@ pub struct NetbricksConfiguration {
     pub secondary: bool,
     /// Where should the main thread (for the examples this just sits around and prints packet counts) be run.
     pub primary_core: i32,
+    /// Cores that can be used by NetBricks. Note that currently we will add any cores specified in the ports
+    /// configuration to this list (unless told not to using the next option.
+    pub cores: Vec<i32>,
+    /// Use the core list as a strict list, i.e., error out if any cores with an rxq or txq are not specified on the
+    /// core list. This is set to false by default because of laziness.
+    pub strict: bool,
     /// A set of ports to be initialized.
     pub ports: Vec<PortConfiguration>,
     /// Memory pool size: sizing this pool is a bit complex; too big and you might affect caching behavior, too small
@@ -30,6 +34,8 @@ impl Default for NetbricksConfiguration {
             pool_size: DEFAULT_POOL_SIZE,
             cache_size: DEFAULT_CACHE_SIZE,
             primary_core: 0,
+            cores: Default::default(),
+            strict: false,
             secondary: false,
             ports: vec![],
         }
@@ -46,10 +52,17 @@ impl NetbricksConfiguration {
 impl fmt::Display for NetbricksConfiguration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f,
-                    "Configuration: primary core: {}\n Ports:\n",
+                    "Configuration: name: {} mempool size: {} core cache: {} primary core: {}\n Ports:\n",
+                    self.name,
+                    self.pool_size,
+                    self.cache_size,
                     self.primary_core));
         for port in &self.ports {
             try!(write!(f, "\t{}\n", port))
+        }
+        try!(write!(f, "Cores:\n"));
+        for core in &self.cores {
+            try!(write!(f, "\t{}\n", core))
         }
         write!(f, "")
     }

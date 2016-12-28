@@ -32,8 +32,12 @@ impl Scheduler {
     }
 
     pub fn new_with_channel(channel: Receiver<SchedulerCommand>) -> Scheduler {
+        Scheduler::new_with_channel_and_capacity(channel, DEFAULT_Q_SIZE)
+    }
+
+    pub fn new_with_channel_and_capacity(channel: Receiver<SchedulerCommand>, capacity: usize) -> Scheduler {
         Scheduler {
-            run_q: Vec::with_capacity(DEFAULT_Q_SIZE),
+            run_q: Vec::with_capacity(capacity),
             next_task: 0,
             sched_channel: channel,
         }

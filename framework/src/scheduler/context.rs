@@ -6,8 +6,9 @@ use interface::dpdk::{init_system, init_thread};
 use allocators::CacheAligned;
 use std::sync::Arc;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use scheduler::*;
-use super::NetbricksConfiguration;
+use config::NetbricksConfiguration;
 
 type AlignedPortQueue = CacheAligned<PortQueue>;
 #[derive(Default)]
@@ -68,6 +69,7 @@ impl NetBricksContext {
 pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBricksContext> {
     init_system(configuration);
     let mut ctx: NetBricksContext = Default::default();
+    let mut cores: HashSet<_> = configuration.cores.iter().cloned().collect();
     for port in &configuration.ports {
         if ctx.ports.contains_key(&port.name) {
             println!("Port {} appears twice in specification", port.name);
@@ -99,12 +101,26 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
                                                                      {:?}",
                                                                     rx_q,
                                                                     port.name,
-                                                                    e)).into())
+                                                                    e))
+                            .into())
                     }
                 }
             }
         }
     }
-    ctx.active_cores = ctx.rx_queues.keys().cloned().collect();
+    if configuration.strict {
+        let other_cores: HashSet<_> = ctx.rx_queues.keys().cloned().collect();
+        let core_diff: Vec<_> = other_cores.difference(&cores).map(|c| c.to_string()).collect();
+        if !core_diff.is_empty() {
+            let missing_str = core_diff.join(", ");
+            return Err(ErrorKind::ConfigurationError(format!("Strict configuration selected but core(s) {} appear in \
+                                                              port configuration but not in cores",
+                                                              missing_str))
+                .into());
+        }
+    } else {
+        cores.extend(ctx.rx_queues.keys());
+    };
+    ctx.active_cores = cores.into_iter().collect();
     Ok(ctx)
 }
