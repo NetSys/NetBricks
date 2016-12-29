@@ -1,8 +1,8 @@
 use e2d2::control::IOScheduler;
 use e2d2::control::sctp::*;
+use nix::errno;
 use sctp::*;
 use std::net::SocketAddr;
-use nix::errno;
 
 pub struct ControlListener {
     scheduler: IOScheduler,
