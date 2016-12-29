@@ -184,6 +184,7 @@ deps () {
     else
         echo "Cargo found, not building"
     fi
+    echo "Done with deps"
 }
 
 clean_deps() {
@@ -225,7 +226,7 @@ cargo () {
     fi
     export CARGO_TARGET_DIR="${CARGO_HOME}/target" # Work around the workspace thing.
     make -j
-    make install
+    make install || true
     unset CARGO_TARGET_DIR
     popd
 }
@@ -432,20 +433,23 @@ case $TASK in
         done
         ;;
     fmt_travis)
+        deps
         pushd $BASE_DIR/framework
-        cargo fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+        ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
         popd
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            cargo fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+            ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
             popd
         done
         ;;
     check_manifest)
-        cargo verify-project --manifest-path ${BASE_DIR}/Cargo.toml | grep true
-        cargo verify-project --manifest-path ${BASE_DIR}/framework/Cargo.toml
+        deps
+        echo "Checking ${BASE_DIR}/Cargo.toml" 
+        ${CARGO} verify-project --manifest-path ${BASE_DIR}/Cargo.toml
+        cargo verify-project --manifest-path ${BASE_DIR}/framework/Cargo.toml | grep true
         for example in ${examples[@]}; do
-            cargo verify-project --manifest-path ${BASE_DIR}/${example}/Cargo.toml
+            ${CARGO} verify-project --manifest-path ${BASE_DIR}/${example}/Cargo.toml | grep true
         done
         ;;
     check_examples)
