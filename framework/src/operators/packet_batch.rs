@@ -36,10 +36,10 @@ impl PacketBatch {
     pub fn allocate_batch_with_size(&mut self, len: u16) -> Result<&mut Self> {
         let cnt = self.cnt;
         self.alloc_packet_batch(len, cnt).and_then(|_| Ok(self))
-        //match self.alloc_packet_batch(len, cnt) {
-            //Ok(_) => Ok(self),
-            //Err(_) => Err(ErrorKind::FailedAllocation.into),
-        //}
+        // match self.alloc_packet_batch(len, cnt) {
+        // Ok(_) => Ok(self),
+        // Err(_) => Err(ErrorKind::FailedAllocation.into),
+        // }
     }
 
     /// Allocate `cnt` mbufs. `len` sets the metadata field indicating how much of the mbuf should be considred when

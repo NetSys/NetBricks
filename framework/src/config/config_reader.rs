@@ -146,6 +146,16 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
         }
     };
 
+    // Get name from configuration
+    let name = match toml.get("name") {
+        Some(&Value::String(ref name)) => name.clone(),
+        None => String::from(DEFAULT_NAME),
+        _ => {
+            println!("Could not parse name");
+            return Err(ErrorKind::ConfigurationError(String::from("Could not parse name")).into());
+        }
+    };
+
     // Get primary core from configuration.
     let master_lcore = match toml.get("master_core") {
         Some(&Value::Integer(core)) => core as i32,
@@ -162,15 +172,6 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
         }
     };
 
-    // Get name from configuration
-    let name = match toml.get("name") {
-        Some(&Value::String(ref name)) => name.clone(),
-        None => String::from(DEFAULT_NAME),
-        _ => {
-            println!("Could not parse name");
-            return Err(ErrorKind::ConfigurationError(String::from("Could not parse name")).into());
-        }
-    };
 
     // Parse mempool size
     let pool_size = match toml.get("pool_size") {
@@ -182,6 +183,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
         }
     };
 
+    // Get cache size
     let cache_size = match toml.get("cache_size") {
         Some(&Value::Integer(cache)) => cache as u32,
         None => DEFAULT_CACHE_SIZE,
@@ -191,12 +193,43 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
         }
     };
 
+    // Is process a secondary process
     let secondary = match toml.get("secondary") {
         Some(&Value::Boolean(secondary)) => secondary,
         None => DEFAULT_SECONDARY,
         _ => {
             println!("Could not parse whether this is a secondary process");
             return Err(ErrorKind::ConfigurationError(String::from("Could not parse secondary processor spec")).into());
+        }
+    };
+
+    // Secondary ports to instantiate.
+    let cores = match toml.get("cores") {
+        Some(&Value::Array(ref c)) => {
+            let mut cores = Vec::with_capacity(c.len());
+            for core in c {
+                if let Value::Integer(core) = *core {
+                    cores.push(core as i32)
+                } else {
+                    return Err(ErrorKind::ConfigurationError(format!("Could not parse core spec {}", core)).into());
+                }
+            }
+            cores
+        }
+        None => Vec::with_capacity(0),
+        _ => {
+            println!("Cores is not an array");
+            return Err(ErrorKind::ConfigurationError(String::from("Cores is not an array")).into());
+        }
+    };
+
+    let strict = match toml.get("strict") {
+        Some(&Value::Boolean(l)) => l,
+        None => false,
+        v => {
+            return Err(ErrorKind::ConfigurationError(format!("Could not parse strict spec (should be boolean) {:?}",
+                                                             v))
+                .into())
         }
     };
 
@@ -220,6 +253,8 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
     Ok(NetbricksConfiguration {
         name: name,
         primary_core: master_lcore,
+        cores: cores,
+        strict: strict,
         secondary: secondary,
         pool_size: pool_size,
         cache_size: cache_size,

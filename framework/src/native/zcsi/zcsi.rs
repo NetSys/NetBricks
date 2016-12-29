@@ -20,16 +20,16 @@ extern "C" {
                           vdev_count: i32)
                           -> i32;
     pub fn init_pmd_port(port: i32,
-                     rxqs: i32,
-                     txqs: i32,
-                     rx_cores: *const i32,
-                     tx_cores: *const i32,
-                     nrxd: i32,
-                     ntxd: i32,
-                     loopback: i32,
-                     tso: i32,
-                     csumoffload: i32)
-                     -> i32;
+                         rxqs: i32,
+                         txqs: i32,
+                         rx_cores: *const i32,
+                         tx_cores: *const i32,
+                         nrxd: i32,
+                         ntxd: i32,
+                         loopback: i32,
+                         tso: i32,
+                         csumoffload: i32)
+                         -> i32;
     pub fn free_pmd_port(port: i32) -> i32;
     pub fn recv_pkts(port: i32, qid: i32, pkts: *mut *mut MBuf, len: i32) -> i32;
     pub fn send_pkts(port: i32, qid: i32, pkts: *mut *mut MBuf, len: i32) -> i32;
