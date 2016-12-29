@@ -434,6 +434,8 @@ case $TASK in
         ;;
     fmt_travis)
         deps
+        export PATH="${BIN_DIR}:${PATH}"
+        ${CARGO} install --root ${BIN_DIR} rustfmt
         pushd $BASE_DIR/framework
         ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
         popd
@@ -445,11 +447,18 @@ case $TASK in
         ;;
     check_manifest)
         deps
-        echo "Checking ${BASE_DIR}/Cargo.toml" 
-        ${CARGO} verify-project --manifest-path ${BASE_DIR}/Cargo.toml
-        cargo verify-project --manifest-path ${BASE_DIR}/framework/Cargo.toml | grep true
+        pushd ${BASE_DIR}
+        ${CARGO} verify-project --verbose
+        popd
+
+        pushd ${BASE_DIR}/framework
+        cargo verify-project | grep true
+        popd
+
         for example in ${examples[@]}; do
-            ${CARGO} verify-project --manifest-path ${BASE_DIR}/${example}/Cargo.toml | grep true
+            pushd ${BASE_DIR}/${example}
+            ${CARGO} verify-project | grep true
+            popd
         done
         ;;
     check_examples)
