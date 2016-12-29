@@ -432,21 +432,20 @@ case $TASK in
         done
         ;;
     fmt_travis)
-        deps
         pushd $BASE_DIR/framework
-        ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+        cargo fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
         popd
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+            cargo fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
             popd
         done
         ;;
     check_manifest)
-        ${CARGO} verify-project --manifest-path ${BASE_DIR}/Cargo.toml | grep true
-        ${CARGO} verify-project --manifest-path ${BASE_DIR}/framework/Cargo.toml
+        cargo verify-project --manifest-path ${BASE_DIR}/Cargo.toml | grep true
+        cargo verify-project --manifest-path ${BASE_DIR}/framework/Cargo.toml
         for example in ${examples[@]}; do
-            ${CARGO} verify-project --manifest-path ${BASE_DIR}/${example}/Cargo.toml
+            cargo verify-project --manifest-path ${BASE_DIR}/${example}/Cargo.toml
         done
         ;;
     check_examples)
