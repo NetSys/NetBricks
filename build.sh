@@ -227,6 +227,7 @@ cargo () {
         ./configure --prefix=${TOOLS_BASE}
     fi
     export CARGO_TARGET_DIR="${CARGO_HOME}/target" # Work around the workspace thing.
+    export CFG_DISABLE_LDCONFIG=1 #Do not run ldconfig since this really screws up Travis.
     make -j
     make install || true
     unset CARGO_TARGET_DIR
