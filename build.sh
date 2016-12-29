@@ -454,7 +454,7 @@ case $TASK in
         popd
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${RUSTFMT}fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+            ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
             popd
         done
         ;;
