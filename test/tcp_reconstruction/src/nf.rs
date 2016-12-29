@@ -1,13 +1,13 @@
-use e2d2::utils::Flow;
 use e2d2::headers::*;
-use e2d2::scheduler::*;
 use e2d2::operators::*;
+use e2d2::scheduler::*;
 use e2d2::state::*;
-use std::str;
+use e2d2::utils::Flow;
+use fnv::FnvHasher;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
-use fnv::FnvHasher;
 use std::hash::BuildHasherDefault;
+use std::str;
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
 const BUFFER_SIZE: usize = 2048;
@@ -22,13 +22,7 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>>(parent: T, sched:
         })
         .parse::<IpHeader>()
         .group_by(2,
-                  box move |p| {
-            if p.get_header().protocol() == 6 {
-                0
-            } else {
-                1
-            }
-        },
+                  box move |p| { if p.get_header().protocol() == 6 { 0 } else { 1 } },
                   sched);
     let pipe = groups.get_group(0)
         .unwrap()

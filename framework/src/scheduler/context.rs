@@ -1,14 +1,14 @@
+use allocators::CacheAligned;
 use common::*;
-use std::thread::{self, JoinHandle};
-use std::sync::mpsc::{SyncSender, sync_channel};
+use config::NetbricksConfiguration;
 use interface::{PmdPort, PortQueue};
 use interface::dpdk::{init_system, init_thread};
-use allocators::CacheAligned;
-use std::sync::Arc;
+use scheduler::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use scheduler::*;
-use config::NetbricksConfiguration;
+use std::sync::Arc;
+use std::sync::mpsc::{SyncSender, sync_channel};
+use std::thread::{self, JoinHandle};
 
 type AlignedPortQueue = CacheAligned<PortQueue>;
 #[derive(Default)]

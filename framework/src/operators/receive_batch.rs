@@ -1,11 +1,11 @@
 use allocators::CacheAligned;
 use common::*;
-use interface::PortQueue;
-use super::act::Act;
-use super::Batch;
-use super::packet_batch::PacketBatch;
-use super::iterator::*;
 use headers::NullHeader;
+use interface::PortQueue;
+use super::Batch;
+use super::act::Act;
+use super::iterator::*;
+use super::packet_batch::PacketBatch;
 
 // FIXME: Should we be handling multiple queues and ports here?
 pub struct ReceiveBatch {

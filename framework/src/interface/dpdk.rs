@@ -1,9 +1,9 @@
-use std::cell::Cell;
-use std::ffi::CString;
-use super::METADATA_SLOTS;
 use config::{DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE, NetbricksConfiguration};
 use native::libnuma;
 use native::zcsi;
+use std::cell::Cell;
+use std::ffi::CString;
+use super::METADATA_SLOTS;
 
 /// Initialize the system, whitelisting some set of NICs and allocating mempool of given size.
 fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_size: u32, cache_size: u32) {

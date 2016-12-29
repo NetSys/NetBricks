@@ -1,14 +1,14 @@
+use fnv::FnvHasher;
+use scheduler::Executable;
 /// SCTP Connections.
 use sctp::*;
-use std::net::{SocketAddr, ToSocketAddrs};
-use super::{Available, HUP, IOScheduler, PollHandle, PollScheduler, READ, Token, WRITE};
-use scheduler::Executable;
-use std::marker::PhantomData;
-use std::os::unix::io::AsRawFd;
-use fnv::FnvHasher;
 
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
+use std::marker::PhantomData;
+use std::net::{SocketAddr, ToSocketAddrs};
+use std::os::unix::io::AsRawFd;
+use super::{Available, HUP, IOScheduler, PollHandle, PollScheduler, READ, Token, WRITE};
 
 
 pub trait SctpControlAgent {

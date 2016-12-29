@@ -1,8 +1,8 @@
 use common::*;
-use interface::*;
 use headers::EndOffset;
-use super::act::Act;
+use interface::*;
 use super::Batch;
+use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
 

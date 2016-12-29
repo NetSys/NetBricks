@@ -184,6 +184,8 @@ deps () {
     else
         echo "Cargo found, not building"
     fi
+
+    rust_fmt
     echo "Done with deps"
 }
 
@@ -264,6 +266,24 @@ libunwind () {
     mkdir -p ${TOOLS_BASE}/lib
     cp lib/libunwind.a ${TOOLS_BASE}/lib
     popd
+}
+
+rust_fmt () {
+    RUSTFMT=${BIN_DIR}/cargo-fmt
+    if [ ! -e "${RUSTFMT}" ]; then
+        SYSTEMWIDE=$(type -P "cargo-fmt")
+        if [ -e ${SYSTEMWIDE} ]; then
+            export RUSTFMT=${SYSTEMWIDE}
+            echo "Using system wide rustfmt"
+        else
+            ${CARGO} install --root ${TOOLS_BASE} rustfmt
+            export RUSTFMT=${RUSTFMT}
+            echo "Using in-tree rustfmt"
+        fi
+    else
+        export RUSTFMT=${RUSTFMT}
+        echo "Using in-tree rustfmt"
+    fi
 }
 
 if [ $# -ge 1 ]; then
@@ -423,25 +443,24 @@ case $TASK in
     fmt)
         deps
         pushd $BASE_DIR/framework
-        ${CARGO} fmt || true
+        ${RUSTFMT} fmt || true
         popd
 
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${CARGO} fmt || true
+            ${RUSTFMT} fmt || true
             popd
         done
         ;;
     fmt_travis)
         deps
         export PATH="${BIN_DIR}:${PATH}"
-        ${CARGO} install --root ${BIN_DIR} rustfmt
         pushd $BASE_DIR/framework
-        ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+        ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
         popd
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+            ${RUSTFMT}fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
             popd
         done
         ;;

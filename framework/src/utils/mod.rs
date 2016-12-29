@@ -1,5 +1,5 @@
-pub use self::flow::*;
 pub use self::asm::*;
+pub use self::flow::*;
 mod flow;
 mod asm;
 

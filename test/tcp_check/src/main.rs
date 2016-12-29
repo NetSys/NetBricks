@@ -10,11 +10,11 @@ use e2d2::interface::dpdk::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
 use getopts::Options;
+use self::nf::*;
 use std::collections::HashMap;
 use std::env;
-use std::sync::Arc;
 use std::process;
-use self::nf::*;
+use std::sync::Arc;
 mod nf;
 
 fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32) {

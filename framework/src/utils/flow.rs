@@ -1,9 +1,9 @@
 use byteorder::{BigEndian, ByteOrder};
 use fnv::FnvHasher;
+use native::zcsi::*;
 use std::hash::Hasher;
 use std::mem;
 use std::slice;
-use native::zcsi::*;
 
 // FIXME: Currently just deriving Hash, but figure out if this is a performance problem. By default, Rust uses SipHash
 // which is supposed to have reasonable performance characteristics.

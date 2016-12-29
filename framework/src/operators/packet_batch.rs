@@ -1,12 +1,12 @@
 use common::*;
+use headers::NullHeader;
 use interface::*;
+use native::zcsi::*;
 use queues::*;
 use std::result;
-use super::act::Act;
 use super::Batch;
+use super::act::Act;
 use super::iterator::{BatchIterator, PacketDescriptor};
-use headers::NullHeader;
-use native::zcsi::*;
 
 /// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
 /// receiving packets from DPDK, allocations, etc. As a result many of the actions implemented in other types of batches
@@ -162,11 +162,7 @@ impl PacketBatch {
                     let array_ptr = self.scratch.as_mut_ptr();
                     let ret = mbuf_free_bulk(array_ptr, (len as i32));
                     self.scratch.clear();
-                    if ret == 0 {
-                        Some(len)
-                    } else {
-                        None
-                    }
+                    if ret == 0 { Some(len) } else { None }
                 }
             }
         }
@@ -226,11 +222,7 @@ impl PacketBatch {
                 let ret = mbuf_free_bulk(parray, (self.array.len() as i32));
                 // If free fails, I am not sure we can do much to recover this batch.
                 self.array.set_len(0);
-                if ret == 0 {
-                    Ok(())
-                } else {
-                    Err(())
-                }
+                if ret == 0 { Ok(()) } else { Err(()) }
             }
         }
     }

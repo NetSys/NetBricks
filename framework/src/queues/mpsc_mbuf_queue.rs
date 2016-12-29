@@ -1,17 +1,17 @@
+use headers::EndOffset;
+use interface::Packet;
 /// A multiproducer single consumer queue for mbufs. The main difference when compared to `std::sync::mpsc` is that this
 /// does not use a linked list (to avoid allocation). The hope is to eventually turn this into something that can carry
 /// `Packets` or sufficient metadata to reconstruct that structure.
 use native::zcsi::MBuf;
-use interface::Packet;
-use headers::EndOffset;
 use operators::ReceiveQueueGen;
-use std::cmp::min;
 use std::clone::Clone;
+use std::cmp::min;
 use std::default::Default;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
-use utils::{pause, round_to_power_of_2};
 use super::ReceivableQueue;
+use utils::{pause, round_to_power_of_2};
 
 #[derive(Default)]
 struct QueueMetadata {

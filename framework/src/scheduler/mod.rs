@@ -12,8 +12,8 @@ impl<F> Executable for F
         (*self)()
     }
 }
-pub use self::scheduler::*;
 pub use self::context::*;
+pub use self::scheduler::*;
 
 #[cfg_attr(feature = "dev", allow(module_inception))]
 mod scheduler;

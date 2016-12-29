@@ -1,21 +1,15 @@
 use common::*;
-use utils::*;
 use state::RingBuffer;
 use std::cmp::{max, min};
 use std::u16;
+use utils::*;
 
 /// Results from inserting into `ReorderedBuffer`
 pub enum InsertionResult {
     /// Successfully inserted all the data (`written` should always be the same as the length of the input).
-    Inserted {
-        written: usize,
-        available: usize,
-    },
+    Inserted { written: usize, available: usize },
     /// Inserted some of the data (recorded in `written`) but the buffer is out of space.
-    OutOfMemory {
-        written: usize,
-        available: usize,
-    },
+    OutOfMemory { written: usize, available: usize },
 }
 
 enum State {

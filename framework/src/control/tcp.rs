@@ -1,14 +1,14 @@
+use fnv::FnvHasher;
 /// TCP connection.
 use net2::TcpBuilder;
-use std::net::*;
-use super::{Available, HUP, IOScheduler, PollHandle, PollScheduler, READ, Token, WRITE};
 use scheduler::Executable;
-use std::marker::PhantomData;
-use std::os::unix::io::AsRawFd;
-use fnv::FnvHasher;
 
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
+use std::marker::PhantomData;
+use std::net::*;
+use std::os::unix::io::AsRawFd;
+use super::{Available, HUP, IOScheduler, PollHandle, PollScheduler, READ, Token, WRITE};
 
 pub trait TcpControlAgent {
     fn new(address: SocketAddr, stream: TcpStream, scheduler: IOScheduler) -> Self;

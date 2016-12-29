@@ -1,10 +1,10 @@
 use common::*;
-use interface::PortQueue;
 use interface::Packet;
-use super::iterator::*;
-use super::act::Act;
-use super::Batch;
+use interface::PortQueue;
 use std::marker::PhantomData;
+use super::Batch;
+use super::act::Act;
+use super::iterator::*;
 use super::packet_batch::PacketBatch;
 
 pub type MetadataFn<T, M, M2> = Box<FnMut(&Packet<T, M>) -> M2 + Send>;

@@ -1,14 +1,14 @@
 use headers::EndOffset;
-use queues::*;
-use super::act::Act;
-use super::Batch;
-use scheduler::{Executable, Scheduler};
-use super::ReceiveQueueGen;
 use interface::Packet;
-use super::iterator::*;
-use super::RestoreHeader;
+use queues::*;
+use scheduler::{Executable, Scheduler};
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use super::Batch;
+use super::ReceiveQueueGen;
+use super::RestoreHeader;
+use super::act::Act;
+use super::iterator::*;
 
 pub type GroupFn<T, M> = Box<FnMut(&Packet<T, M>) -> usize + Send>;
 

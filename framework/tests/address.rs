@@ -1,7 +1,7 @@
 extern crate e2d2;
+use e2d2::utils::*;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
-use e2d2::utils::*;
 
 #[test]
 fn address_inline() {

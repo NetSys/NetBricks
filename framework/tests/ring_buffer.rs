@@ -10,9 +10,9 @@ fn alloc_test() {
 #[test]
 fn write_at_offset_test() {
     let mut rb = RingBuffer::new(1).unwrap();
-    let input = vec![1,2,3,4];
+    let input = vec![1, 2, 3, 4];
     rb.write_at_offset(4095, &input[..]);
-    let mut output:Vec<_> = (0..input.len()).map(|_| 0).collect();
+    let mut output: Vec<_> = (0..input.len()).map(|_| 0).collect();
     rb.read_from_offset(4095, &mut output[..]);
     for idx in 0..input.len() {
         assert!(input[idx] == output[idx]);

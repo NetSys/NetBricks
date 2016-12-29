@@ -1,8 +1,8 @@
 use nix::sys::epoll::*;
+use std::default::Default;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::slice;
-use std::default::Default;
 use super::{Available, HUP, NONE, READ, WRITE};
 
 pub type Token = u64;

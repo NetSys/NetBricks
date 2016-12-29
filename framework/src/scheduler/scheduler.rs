@@ -1,7 +1,7 @@
-use std::sync::mpsc::{Receiver, sync_channel};
-use std::sync::Arc;
-use super::Executable;
 use std::default::Default;
+use std::sync::Arc;
+use std::sync::mpsc::{Receiver, sync_channel};
+use super::Executable;
 /// A very simple round-robin scheduler. This should really be more of a DRR scheduler.
 pub struct Scheduler {
     /// The set of runnable items. Note we currently don't have a blocked queue.

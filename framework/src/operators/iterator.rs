@@ -1,7 +1,7 @@
-use std::marker::PhantomData;
 use headers::EndOffset;
-use std::cell::Cell;
 use interface::Packet;
+use std::cell::Cell;
+use std::marker::PhantomData;
 
 pub struct PacketDescriptor<T: EndOffset, M: Sized + Send> {
     pub packet: Packet<T, M>,

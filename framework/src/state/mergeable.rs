@@ -1,11 +1,11 @@
 use fnv::FnvHasher;
+use std::cmp::max;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::hash::BuildHasherDefault;
 use std::ops::AddAssign;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
-use std::cmp::max;
 
 use utils::Flow;
 

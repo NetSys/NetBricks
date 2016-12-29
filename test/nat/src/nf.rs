@@ -1,12 +1,12 @@
 use e2d2::headers::*;
 use e2d2::operators::*;
-use e2d2::utils::*;
 use e2d2::scheduler::*;
+use e2d2::utils::*;
 use fnv::FnvHasher;
-use std::net::Ipv4Addr;
-use std::convert::From;
 use std::collections::HashMap;
+use std::convert::From;
 use std::hash::BuildHasherDefault;
+use std::net::Ipv4Addr;
 
 #[derive(Clone, Default)]
 struct Unit;

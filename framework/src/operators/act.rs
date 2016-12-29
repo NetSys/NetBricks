@@ -1,5 +1,5 @@
-use interface::PortQueue;
 use common::*;
+use interface::PortQueue;
 use super::packet_batch::PacketBatch;
 pub trait Act {
     /// Actually perform whatever needs to be done by this processing node.

@@ -11,13 +11,13 @@ use e2d2::interface::dpdk::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
 use getopts::Options;
+use self::nf::*;
 use std::collections::HashMap;
 use std::env;
-use std::time::Duration;
-use std::thread;
 use std::process;
 use std::sync::Arc;
-use self::nf::*;
+use std::thread;
+use std::time::Duration;
 mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;

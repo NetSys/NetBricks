@@ -1,10 +1,10 @@
 use common::*;
-use std::ptr;
-use std::marker::PhantomData;
-use std::slice;
 use headers::{EndOffset, NullHeader};
-use std::mem::size_of;
 use native::zcsi::*;
+use std::marker::PhantomData;
+use std::mem::size_of;
+use std::ptr;
+use std::slice;
 
 /// A packet is a safe wrapper around mbufs, that can be allocated and manipulated.
 /// We associate a header type with a packet to allow safe insertion of headers.

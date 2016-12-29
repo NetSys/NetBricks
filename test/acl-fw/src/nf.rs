@@ -1,8 +1,8 @@
-use e2d2::utils::{Flow, Ipv4Prefix};
 use e2d2::headers::*;
 use e2d2::operators::*;
-use std::collections::HashSet;
+use e2d2::utils::{Flow, Ipv4Prefix};
 use fnv::FnvHasher;
+use std::collections::HashSet;
 use std::hash::BuildHasherDefault;
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
