@@ -1,7 +1,7 @@
 use e2d2::control::IOScheduler;
 use e2d2::control::sctp::*;
 use sctp::*;
-use std::net::{SocketAddr};
+use std::net::SocketAddr;
 use nix::errno;
 
 pub struct ControlListener {
@@ -13,7 +13,11 @@ impl SctpControlAgent for ControlListener {
     fn new(address: SocketAddr, stream: SctpStream, scheduler: IOScheduler) -> ControlListener {
         println!("New connection from {}", address);
         scheduler.schedule_read();
-        ControlListener { scheduler: scheduler, stream: stream, buffer: (0..1024).map(|_| 0).collect() }
+        ControlListener {
+            scheduler: scheduler,
+            stream: stream,
+            buffer: (0..1024).map(|_| 0).collect(),
+        }
     }
 
     fn handle_read_ready(&mut self) -> bool {
@@ -45,11 +49,11 @@ impl SctpControlAgent for ControlListener {
         };
         schedule
     }
-    
+
     fn handle_write_ready(&mut self) -> bool {
         panic!("No writes expected");
     }
-    
+
     fn handle_hup(&mut self) -> bool {
         println!("Hanging up");
         false

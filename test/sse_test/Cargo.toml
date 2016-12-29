@@ -1,7 +1,0 @@
-[package]
-name = "sse_test"
-version = "0.1.0"
-authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
-
-[dependencies]
-rand = "0.3"

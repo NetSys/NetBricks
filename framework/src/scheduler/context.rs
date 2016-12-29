@@ -97,11 +97,11 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
                         ctx.rx_queues.entry(*core).or_insert_with(|| vec![]).push(q);
                     }
                     Err(e) => {
-                        return Err(ErrorKind::ConfigurationError(format!("Queue {} on port {} could not be initialized \
-                                                                     {:?}",
-                                                                    rx_q,
-                                                                    port.name,
-                                                                    e))
+                        return Err(ErrorKind::ConfigurationError(format!("Queue {} on port {} could not be \
+                                                                          initialized {:?}",
+                                                                         rx_q,
+                                                                         port.name,
+                                                                         e))
                             .into())
                     }
                 }
@@ -113,9 +113,9 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
         let core_diff: Vec<_> = other_cores.difference(&cores).map(|c| c.to_string()).collect();
         if !core_diff.is_empty() {
             let missing_str = core_diff.join(", ");
-            return Err(ErrorKind::ConfigurationError(format!("Strict configuration selected but core(s) {} appear in \
-                                                              port configuration but not in cores",
-                                                              missing_str))
+            return Err(ErrorKind::ConfigurationError(format!("Strict configuration selected but core(s) {} appear \
+                                                              in port configuration but not in cores",
+                                                             missing_str))
                 .into());
         }
     } else {

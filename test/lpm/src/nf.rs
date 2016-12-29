@@ -98,9 +98,9 @@ impl IPLookup {
     }
 }
 
-pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata=EmptyMetadata>>(parent: T,
-                                                    s: &mut Scheduler)
-                                                    -> CompositionBatch {
+pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T,
+                                                                              s: &mut Scheduler)
+                                                                              -> CompositionBatch {
     let mut lpm_table = IPLookup::new();
     lpm_table.insert_ipv4(&Ipv4Addr::new(0, 0, 0, 0), 0, 1);
     lpm_table.insert_ipv4(&Ipv4Addr::new(10, 0, 0, 0), 8, 2);

@@ -1,4 +1,4 @@
-use e2d2::utils::{Ipv4Prefix, Flow};
+use e2d2::utils::{Flow, Ipv4Prefix};
 use e2d2::headers::*;
 use e2d2::operators::*;
 use std::collections::HashSet;
@@ -36,10 +36,8 @@ impl Acl {
     }
 }
 
-pub fn acl_match<T: 'static + Batch<Header = NullHeader>>(parent: T,
-                                                          acls: Vec<Acl>)
-                                                          -> CompositionBatch {
-    let mut flow_cache = HashSet::<Flow, FnvHash>::with_hasher(Default::default()); 
+pub fn acl_match<T: 'static + Batch<Header = NullHeader>>(parent: T, acls: Vec<Acl>) -> CompositionBatch {
+    let mut flow_cache = HashSet::<Flow, FnvHash>::with_hasher(Default::default());
     parent.parse::<MacHeader>()
         .transform(box move |p| {
             p.get_mut_header().swap_addresses();
@@ -52,10 +50,10 @@ pub fn acl_match<T: 'static + Batch<Header = NullHeader>>(parent: T,
                     if !acl.drop {
                         flow_cache.insert(flow);
                     }
-                    return !acl.drop
+                    return !acl.drop;
                 }
             }
-            return false
+            return false;
         })
         .compose()
 }

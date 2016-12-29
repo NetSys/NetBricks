@@ -77,7 +77,11 @@ fn main() {
         let config_file = matches.opt_str("f").unwrap();
         match read_configuration(&config_file[..]) {
             Ok(cfg) => cfg,
-            Err(e) => panic!("Could not parse configuration file {}\n {}", config_file, e.description()),
+            Err(e) => {
+                panic!("Could not parse configuration file {}\n {}",
+                       config_file,
+                       e.description())
+            }
         }
     } else {
         let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
@@ -146,7 +150,8 @@ fn main() {
 
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
-    let _thread: Vec<_> = config.rx_queues.iter()
+    let _thread: Vec<_> = config.rx_queues
+        .iter()
         .map(|(core, ports)| {
             let c = core.clone();
             let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();

@@ -65,7 +65,11 @@ fn main() {
         let config_file = matches.opt_str("f").unwrap();
         match read_configuration(&config_file[..]) {
             Ok(cfg) => cfg,
-            Err(e) => panic!("Could not parse configuration file {}\n {}", config_file, e.description()),
+            Err(e) => {
+                panic!("Could not parse configuration file {}\n {}",
+                       config_file,
+                       e.description())
+            }
         }
     } else {
         let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));

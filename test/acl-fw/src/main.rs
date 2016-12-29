@@ -31,16 +31,14 @@ fn test(ports: Vec<CacheAligned<PortQueue>>, sched: &mut Scheduler) {
                  port.rxq(),
                  port.txq());
     }
-    let acls = vec![
-        Acl{
-            src_ip: Some(Ipv4Prefix::new(0,0)),
-            dst_ip: None,
-            src_port: None,
-            dst_port: None,
-            established: None,
-            drop: false,
-        }
-    ];
+    let acls = vec![Acl {
+                        src_ip: Some(Ipv4Prefix::new(0, 0)),
+                        dst_ip: None,
+                        src_port: None,
+                        dst_port: None,
+                        established: None,
+                        drop: false,
+                    }];
     let pipelines: Vec<_> = ports.iter()
         .map(|port| acl_match(ReceiveBatch::new(port.clone()), acls.clone()).send(port.clone()))
         .collect();
@@ -75,7 +73,11 @@ fn main() {
         let config_file = matches.opt_str("f").unwrap();
         match read_configuration(&config_file[..]) {
             Ok(cfg) => cfg,
-            Err(e) => panic!("Could not parse configuration file {}\n {}", config_file, e.description()),
+            Err(e) => {
+                panic!("Could not parse configuration file {}\n {}",
+                       config_file,
+                       e.description())
+            }
         }
     } else {
         let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));

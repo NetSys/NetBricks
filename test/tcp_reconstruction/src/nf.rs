@@ -56,10 +56,10 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>>(parent: T, sched:
                                             read += avail;
                                         }
                                     }
-                                },
+                                }
                                 InsertionResult::OutOfMemory { written, .. } => {
                                     if written == 0 {
-                                        //println!("Resetting since receiving data that is too far ahead");
+                                        // println!("Resetting since receiving data that is too far ahead");
                                         entry.reset();
                                         entry.seq(seq, p.get_payload());
                                     }
@@ -86,14 +86,14 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>>(parent: T, sched:
                                                 read += avail;
                                             }
                                         }
-                                    },
+                                    }
                                     InsertionResult::OutOfMemory { .. } => {
                                         println!("Too big a packet?");
                                     }
                                 }
                                 e.insert(b);
-                            },
-                            Err(_) => ()
+                            }
+                            Err(_) => (),
                         }
                     }
                 }
