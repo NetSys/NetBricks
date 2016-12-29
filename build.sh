@@ -271,8 +271,11 @@ libunwind () {
 
 rust_fmt () {
     RUSTFMT=${BIN_DIR}/cargo-fmt
+    echo "Checking if ${RUSTFMT} exists"
     if [ ! -e "${RUSTFMT}" ]; then
+        echo "${RUSTFMT} does not exist, checking with type"
         SYSTEMWIDE=$(type -P "cargo-fmt")
+        echo "Found ${SYSTEMWIDE}"
         if [ -e ${SYSTEMWIDE} ]; then
             export RUSTFMT=${SYSTEMWIDE}
             echo "Using system wide rustfmt"
