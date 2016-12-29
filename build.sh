@@ -184,9 +184,6 @@ deps () {
     else
         echo "Cargo found, not building"
     fi
-
-    rust_fmt
-    echo "Done with deps"
 }
 
 clean_deps() {
@@ -227,9 +224,8 @@ cargo () {
         ./configure --prefix=${TOOLS_BASE}
     fi
     export CARGO_TARGET_DIR="${CARGO_HOME}/target" # Work around the workspace thing.
-    export CFG_DISABLE_LDCONFIG=1 #Do not run ldconfig since this really screws up Travis.
     make -j
-    make install || true
+    make install
     unset CARGO_TARGET_DIR
     popd
 }
@@ -267,17 +263,6 @@ libunwind () {
     mkdir -p ${TOOLS_BASE}/lib
     cp lib/libunwind.a ${TOOLS_BASE}/lib
     popd
-}
-
-rust_fmt () {
-    RUSTFMT=${BIN_DIR}/cargo-fmt
-    echo "Checking if ${RUSTFMT} exists"
-    if [ ! -e "${RUSTFMT}" ]; then
-        ${CARGO} install --root ${TOOLS_BASE} rustfmt
-        export RUSTFMT=${RUSTFMT}
-    else
-        export RUSTFMT=${RUSTFMT}
-    fi
 }
 
 if [ $# -ge 1 ]; then
@@ -437,41 +422,31 @@ case $TASK in
     fmt)
         deps
         pushd $BASE_DIR/framework
-        ${RUSTFMT} fmt || true
+        ${CARGO} fmt || true
         popd
 
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${RUSTFMT} fmt || true
+            ${CARGO} fmt || true
             popd
         done
         ;;
     fmt_travis)
         deps
-        export PATH="${BIN_DIR}:${PATH}"
         pushd $BASE_DIR/framework
-        ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+        ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
         popd
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+            ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
             popd
         done
         ;;
     check_manifest)
-        deps
-        pushd ${BASE_DIR}
-        ${CARGO} verify-project --verbose
-        popd
-
-        pushd ${BASE_DIR}/framework
-        cargo verify-project | grep true
-        popd
-
+        ${CARGO} verify-project --manifest-path ${BASE_DIR}/Cargo.toml | grep true
+        ${CARGO} verify-project --manifest-path ${BASE_DIR}/framework/Cargo.toml
         for example in ${examples[@]}; do
-            pushd ${BASE_DIR}/${example}
-            ${CARGO} verify-project | grep true
-            popd
+            ${CARGO} verify-project --manifest-path ${BASE_DIR}/${example}/Cargo.toml
         done
         ;;
     check_examples)
