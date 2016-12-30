@@ -42,6 +42,23 @@ UNWIND_RESULT="${TOOLS_BASE}/lib/libunwind.a"
 NATIVE_LIB_PATH="${BASE_DIR}/native"
 export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
+examples=(
+        test/framework-test
+        test/delay-test
+        test/chain-test
+        test/lpm
+        test/nat
+        test/maglev
+        test/tcp_check
+        test/sctp-test
+        test/config-test
+        test/reset-parse
+        test/tcp_reconstruction
+        test/acl-fw
+        test/packet_generation
+        test/packet_test
+)
+
 rust_build_static() {
     if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
         git clone https://github.com/rust-lang/rust.git \
@@ -119,20 +136,6 @@ native () {
     make -C $BASE_DIR/native install
 }
 
-examples=(
-        test/framework-test
-        test/delay-test
-        test/chain-test
-        test/lpm
-        test/nat
-        test/maglev
-        test/tcp_check
-        test/sctp-test
-        test/config-test
-        test/reset-parse
-        test/tcp_reconstruction
-        test/acl-fw
-)
 
 print_examples () {
     echo "The following examples are available:"
@@ -181,6 +184,9 @@ deps () {
     else
         echo "Cargo found, not building"
     fi
+
+    rust_fmt
+    echo "Done with deps"
 }
 
 clean_deps() {
@@ -221,8 +227,9 @@ cargo () {
         ./configure --prefix=${TOOLS_BASE}
     fi
     export CARGO_TARGET_DIR="${CARGO_HOME}/target" # Work around the workspace thing.
+    export CFG_DISABLE_LDCONFIG=1 #Do not run ldconfig since this really screws up Travis.
     make -j
-    make install
+    make install || true
     unset CARGO_TARGET_DIR
     popd
 }
@@ -260,6 +267,17 @@ libunwind () {
     mkdir -p ${TOOLS_BASE}/lib
     cp lib/libunwind.a ${TOOLS_BASE}/lib
     popd
+}
+
+rust_fmt () {
+    RUSTFMT=${BIN_DIR}/cargo-fmt
+    echo "Checking if ${RUSTFMT} exists"
+    if [ ! -e "${RUSTFMT}" ]; then
+        ${CARGO} install --root ${TOOLS_BASE} rustfmt
+        export RUSTFMT=${RUSTFMT}
+    else
+        export RUSTFMT=${RUSTFMT}
+    fi
 }
 
 if [ $# -ge 1 ]; then
@@ -419,14 +437,45 @@ case $TASK in
     fmt)
         deps
         pushd $BASE_DIR/framework
-        ${CARGO} fmt
+        ${RUSTFMT} fmt || true
         popd
 
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${CARGO} fmt
+            ${RUSTFMT} fmt || true
             popd
         done
+        ;;
+    fmt_travis)
+        deps
+        export PATH="${BIN_DIR}:${PATH}"
+        pushd $BASE_DIR/framework
+        ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+        popd
+        for example in ${examples[@]}; do
+            pushd ${BASE_DIR}/${example}
+            ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+            popd
+        done
+        ;;
+    check_manifest)
+        deps
+        pushd ${BASE_DIR}
+        ${CARGO} verify-project --verbose
+        popd
+
+        pushd ${BASE_DIR}/framework
+        cargo verify-project | grep true
+        popd
+
+        for example in ${examples[@]}; do
+            pushd ${BASE_DIR}/${example}
+            ${CARGO} verify-project | grep true
+            popd
+        done
+        ;;
+    check_examples)
+        python3 scripts/check-examples.py "${examples[@]}"
         ;;
     doc)
         deps
@@ -462,7 +511,8 @@ case $TASK in
         build: Build the project
         build_test: Build a particular test.
         doc: Run rustdoc and produce documentation
-        fmt: Run rustfmt to format text prettily.
+        fmt: Run rustfmt to format code.
+        fmt_travis: Run rustfmt to detect code formatting violations.
         lint: Run clippy to lint the project
         clean: Remove all built files
         dist_clean: Remove all support files

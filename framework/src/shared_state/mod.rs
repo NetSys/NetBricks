@@ -2,11 +2,11 @@
 pub mod directory;
 pub use self::shared_vec::*;
 mod shared_vec;
-use utils::PAGE_SIZE;
 use libc::{self, c_void, close, ftruncate, mmap, munmap, shm_open, shm_unlink};
-use std::io::Error;
 use std::ffi::CString;
+use std::io::Error;
 use std::ptr;
+use utils::PAGE_SIZE;
 
 struct SharedMemory<T> {
     pub mem: *mut T,

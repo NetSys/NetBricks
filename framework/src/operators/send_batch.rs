@@ -1,11 +1,11 @@
-use common::*;
 use allocators::CacheAligned;
-use interface::PortQueue;
-use super::act::Act;
-use super::Batch;
-use super::iterator::*;
-use scheduler::Executable;
+use common::*;
 use headers::NullHeader;
+use interface::PortQueue;
+use scheduler::Executable;
+use super::Batch;
+use super::act::Act;
+use super::iterator::*;
 use super::packet_batch::PacketBatch;
 
 // FIXME: Should we be handling multiple queues and ports here?

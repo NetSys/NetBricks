@@ -1,10 +1,10 @@
 use common::*;
 use interface::PortQueue;
-use super::act::Act;
-use super::Batch;
-use super::iterator::{BatchIterator, PacketDescriptor};
-use std::cmp;
 use scheduler::Executable;
+use std::cmp;
+use super::Batch;
+use super::act::Act;
+use super::iterator::{BatchIterator, PacketDescriptor};
 use super::packet_batch::PacketBatch;
 
 pub struct MergeBatch<T: Batch> {

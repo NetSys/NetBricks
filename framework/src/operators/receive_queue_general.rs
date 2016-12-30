@@ -1,12 +1,12 @@
 /// FIXME: This should replace receive queue eventually.
 use common::*;
-use queues::ReceivableQueue;
-use interface::PortQueue;
-use super::act::Act;
-use super::Batch;
-use super::packet_batch::PacketBatch;
-use super::iterator::*;
 use headers::NullHeader;
+use interface::PortQueue;
+use queues::ReceivableQueue;
+use super::Batch;
+use super::act::Act;
+use super::iterator::*;
+use super::packet_batch::PacketBatch;
 
 pub struct ReceiveQueueGen<T: ReceivableQueue + Send> {
     parent: PacketBatch,

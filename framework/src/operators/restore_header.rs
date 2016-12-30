@@ -1,9 +1,9 @@
 use common::*;
-use interface::*;
 use headers::EndOffset;
+use interface::*;
 use std::marker::PhantomData;
-use super::act::Act;
 use super::Batch;
+use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
 

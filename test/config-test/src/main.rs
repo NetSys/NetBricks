@@ -1,7 +1,7 @@
 extern crate e2d2;
 extern crate getopts;
-use getopts::Options;
 use e2d2::config::*;
+use getopts::Options;
 use std::env;
 use std::process;
 fn main() {

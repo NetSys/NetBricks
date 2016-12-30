@@ -6,20 +6,20 @@ extern crate time;
 extern crate getopts;
 extern crate rand;
 use e2d2::allocators::CacheAligned;
+use e2d2::headers::*;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
 use e2d2::operators::*;
-use e2d2::scheduler::*;
 use e2d2::queues::*;
-use e2d2::headers::*;
+use e2d2::scheduler::*;
 use getopts::Options;
-use std::convert::From;
 use std::collections::HashMap;
+use std::convert::From;
 use std::env;
-use std::time::Duration;
-use std::thread;
 use std::process;
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 mod nf;
 use self::nf::*;
 
@@ -38,7 +38,7 @@ fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32) {
                  port.txq(),
                  core);
     }
-    
+
     let (producer, consumer) = new_mpsc_queue_pair();
     let mut sched = Scheduler::new();
     let pipeline = consumer.send(ports[0].clone());
@@ -69,15 +69,15 @@ fn main() {
 
     let cores_str = matches.opt_strs("c");
     let master_core = matches.opt_str("m")
-                             .unwrap_or_else(|| String::from("0"))
-                             .parse()
-                             .expect("Could not parse master core spec");
+        .unwrap_or_else(|| String::from("0"))
+        .parse()
+        .expect("Could not parse master core spec");
     println!("Using master core {}", master_core);
     let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
 
     let cores: Vec<i32> = cores_str.iter()
-                                   .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
-                                   .collect();
+        .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
+        .collect();
 
 
     fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
@@ -106,12 +106,12 @@ fn main() {
         let cores = cores_for_port.get(*port).unwrap();
         let queues = cores.len() as i32;
         let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
-                           .expect("Could not initialize port");
+            .expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
             queues_by_core.entry(*core)
-                          .or_insert(vec![])
-                          .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
+                .or_insert(vec![])
+                .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
         }
         ports.push(pmd_port);
     }
@@ -121,15 +121,15 @@ fn main() {
     let pkt = unsafe { packet_from_mbuf::<NullHeader>(pkt_mbuf, 0) };
     drop(pkt);
 
-    //const _BATCH: usize = 1 << 10;
-    //const _CHANNEL_SIZE: usize = 256;
+    // const _BATCH: usize = 1 << 10;
+    // const _CHANNEL_SIZE: usize = 256;
     let _thread: Vec<_> = queues_by_core.iter()
-                                        .map(|(core, ports)| {
-                                            let c = core.clone();
-                                            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
-                                            std::thread::spawn(move || recv_thread(p, c))
-                                        })
-                                        .collect();
+        .map(|(core, ports)| {
+            let c = core.clone();
+            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
+            std::thread::spawn(move || recv_thread(p, c))
+        })
+        .collect();
     let mut pkts_so_far = (0, 0);
     let mut last_printed = 0.;
     const MAX_PRINT_INTERVAL: f64 = 30.;

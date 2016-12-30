@@ -6,19 +6,19 @@ extern crate time;
 extern crate getopts;
 extern crate rand;
 use e2d2::allocators::CacheAligned;
+use e2d2::common::*;
+use e2d2::config::*;
 use e2d2::interface::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
-use e2d2::config::*;
-use e2d2::common::*;
 use getopts::Options;
+use self::nf::*;
 use std::collections::HashMap;
 use std::env;
-use std::time::Duration;
-use std::thread;
 use std::process;
 use std::sync::Arc;
-use self::nf::*;
+use std::thread;
+use std::time::Duration;
 mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
@@ -75,7 +75,7 @@ fn main() {
             Err(ref e) => {
                 print_error(e);
                 process::exit(1);
-            },
+            }
         }
     } else {
         let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
@@ -135,52 +135,67 @@ fn main() {
             ports.push(PortConfiguration::new_with_queues(*port, cores, cores))
         }
         cores.dedup();
-        NetbricksConfiguration { cores: cores, ports: ports, ..configuration }
+        NetbricksConfiguration {
+            cores: cores,
+            ports: ports,
+            ..configuration
+        }
     } else {
         configuration
     };
 
     println!("Going to start with configuration {}", configuration);
 
-    let mut config = initialize_system(&configuration).unwrap();
-    config.start_schedulers();
+    // let mut config = initialize_system(&configuration)
+    match initialize_system(&configuration) {
+        Ok(mut config) => {
+            config.start_schedulers();
 
-    let delay:u64 = delay_arg;
-    config.add_pipeline_to_run(Arc::new(move |p, s: &mut Scheduler| test(p, s, delay)));
-    config.execute();
+            let delay: u64 = delay_arg;
+            config.add_pipeline_to_run(Arc::new(move |p, s: &mut Scheduler| test(p, s, delay)));
+            config.execute();
 
-    let mut pkts_so_far = (0, 0);
-    let mut last_printed = 0.;
-    const MAX_PRINT_INTERVAL: f64 = 30.;
-    const PRINT_DELAY: f64 = 15.;
-    let sleep_delay = (PRINT_DELAY / 2.) as u64;
-    let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-    let sleep_time = Duration::from_millis(sleep_delay);
-    println!("0 OVERALL RX 0.00 TX 0.00 CYCLE_PER_DELAY 0 0 0");
-    loop {
-        thread::sleep(sleep_time); // Sleep for a bit
-        let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-        if now - start > PRINT_DELAY {
-            let mut rx = 0;
-            let mut tx = 0;
-            for port in config.ports.values() {
-                for q in 0..port.rxqs() {
-                    let (rp, tp) = port.stats(q);
-                    rx += rp;
-                    tx += tp;
+            let mut pkts_so_far = (0, 0);
+            let mut last_printed = 0.;
+            const MAX_PRINT_INTERVAL: f64 = 30.;
+            const PRINT_DELAY: f64 = 15.;
+            let sleep_delay = (PRINT_DELAY / 2.) as u64;
+            let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
+            let sleep_time = Duration::from_millis(sleep_delay);
+            println!("0 OVERALL RX 0.00 TX 0.00 CYCLE_PER_DELAY 0 0 0");
+            loop {
+                thread::sleep(sleep_time); // Sleep for a bit
+                let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
+                if now - start > PRINT_DELAY {
+                    let mut rx = 0;
+                    let mut tx = 0;
+                    for port in config.ports.values() {
+                        for q in 0..port.rxqs() {
+                            let (rp, tp) = port.stats(q);
+                            rx += rp;
+                            tx += tp;
+                        }
+                    }
+                    let pkts = (rx, tx);
+                    let rx_pkts = pkts.0 - pkts_so_far.0;
+                    if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
+                        println!("{:.2} OVERALL RX {:.2} TX {:.2}",
+                                 now - start,
+                                 rx_pkts as f64 / (now - start),
+                                 (pkts.1 - pkts_so_far.1) as f64 / (now - start));
+                        last_printed = now;
+                        start = now;
+                        pkts_so_far = pkts;
+                    }
                 }
             }
-            let pkts = (rx, tx);
-            let rx_pkts = pkts.0 - pkts_so_far.0;
-            if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
-                println!("{:.2} OVERALL RX {:.2} TX {:.2}",
-                         now - start,
-                         rx_pkts as f64 / (now - start),
-                         (pkts.1 - pkts_so_far.1) as f64 / (now - start));
-                last_printed = now;
-                start = now;
-                pkts_so_far = pkts;
+        }
+        Err(ref e) => {
+            println!("Error: {}", e);
+            if let Some(backtrace) = e.backtrace() {
+                println!("Backtrace: {:?}", backtrace);
             }
+            process::exit(1);
         }
     }
 }

@@ -10,13 +10,13 @@ use e2d2::interface::dpdk::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
 use getopts::Options;
+use self::nf::*;
 use std::collections::HashMap;
 use std::env;
-use std::time::Duration;
-use std::thread;
-use std::sync::Arc;
 use std::process;
-use self::nf::*;
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
@@ -34,8 +34,8 @@ fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32) {
     }
 
     let mut pipelines: Vec<_> = ports.iter()
-                                     .map(|port| lpm(ReceiveBatch::new(port.clone()), &mut sched).send(port.clone()))
-                                     .collect();
+        .map(|port| lpm(ReceiveBatch::new(port.clone()), &mut sched).send(port.clone()))
+        .collect();
     println!("Running {} pipelines", pipelines.len());
     if pipelines.len() > 1 {
         sched.add_task(merge(pipelines))
@@ -66,15 +66,15 @@ fn main() {
 
     let cores_str = matches.opt_strs("c");
     let master_core = matches.opt_str("m")
-                             .unwrap_or_else(|| String::from("0"))
-                             .parse()
-                             .expect("Could not parse master core spec");
+        .unwrap_or_else(|| String::from("0"))
+        .parse()
+        .expect("Could not parse master core spec");
     println!("Using master core {}", master_core);
     let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
 
     let cores: Vec<i32> = cores_str.iter()
-                                   .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
-                                   .collect();
+        .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
+        .collect();
 
 
     fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
@@ -103,12 +103,12 @@ fn main() {
         let cores = cores_for_port.get(*port).unwrap();
         let queues = cores.len() as i32;
         let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
-                           .expect("Could not initialize port");
+            .expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
             queues_by_core.entry(*core)
-                          .or_insert(vec![])
-                          .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
+                .or_insert(vec![])
+                .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
         }
         ports.push(pmd_port);
     }
@@ -116,12 +116,12 @@ fn main() {
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
     let _thread: Vec<_> = queues_by_core.iter()
-                                        .map(|(core, ports)| {
-                                            let c = core.clone();
-                                            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
-                                            std::thread::spawn(move || recv_thread(p, c))
-                                        })
-                                        .collect();
+        .map(|(core, ports)| {
+            let c = core.clone();
+            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
+            std::thread::spawn(move || recv_thread(p, c))
+        })
+        .collect();
     let mut pkts_so_far = (0, 0);
     let mut last_printed = 0.;
     const MAX_PRINT_INTERVAL: f64 = 10.;

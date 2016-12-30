@@ -1,9 +1,9 @@
 use common::*;
-use interface::PortQueue;
-use super::act::Act;
-use super::Batch;
-use super::iterator::*;
 use headers::NullHeader;
+use interface::PortQueue;
+use super::Batch;
+use super::act::Act;
+use super::iterator::*;
 use super::packet_batch::PacketBatch;
 
 pub struct ResetParsingBatch<V>

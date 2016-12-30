@@ -1,30 +1,30 @@
+use allocators::CacheAligned;
+use headers::*;
+use interface::*;
+use scheduler::Scheduler;
 use self::act::Act;
-use self::iterator::BatchIterator;
+pub use self::add_metadata::AddMetadataBatch;
+use self::add_metadata::MetadataFn;
 
 pub use self::composition_batch::CompositionBatch;
 pub use self::deparsed_batch::DeparsedBatch;
 pub use self::filter_batch::FilterBatch;
+
+use self::filter_batch::FilterFn;
+pub use self::group_by::*;
+use self::iterator::BatchIterator;
 pub use self::map_batch::MapBatch;
+use self::map_batch::MapFn;
 pub use self::merge_batch::MergeBatch;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::receive_batch::ReceiveBatch;
 pub use self::receive_queue_general::ReceiveQueueGen;
-pub use self::send_batch::SendBatch;
-pub use self::transform_batch::TransformBatch;
-pub use self::group_by::*;
-pub use self::restore_header::*;
-pub use self::add_metadata::AddMetadataBatch;
-
-use self::filter_batch::FilterFn;
-use self::transform_batch::TransformFn;
-use self::map_batch::MapFn;
-use self::add_metadata::MetadataFn;
 
 pub use self::reset_parse::ResetParsingBatch;
-use interface::*;
-use headers::*;
-use scheduler::Scheduler;
-use allocators::CacheAligned;
+pub use self::restore_header::*;
+pub use self::send_batch::SendBatch;
+pub use self::transform_batch::TransformBatch;
+use self::transform_batch::TransformFn;
 
 #[macro_use]
 mod macros;

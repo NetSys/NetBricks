@@ -2,9 +2,11 @@
 pub use self::epoll::*;
 
 #[cfg(target_os = "linux")]
-#[path="linux/epoll.rs"]mod epoll;
+#[path="linux/epoll.rs"]
+mod epoll;
 pub mod tcp;
-#[cfg(feature="sctp")]pub mod sctp;
+#[cfg(feature="sctp")]
+pub mod sctp;
 
 use std::os::unix::io::RawFd;
 

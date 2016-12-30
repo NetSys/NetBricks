@@ -1,6 +1,6 @@
+use e2d2::common::EmptyMetadata;
 use e2d2::headers::*;
 use e2d2::operators::*;
-use e2d2::common::EmptyMetadata;
 
 #[inline]
 pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T) -> CompositionBatch {
@@ -31,7 +31,7 @@ pub fn chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(
     for _ in 1..len {
         chained = chain_nf(chained);
     }
-    if len % 2 == 0  || pos % 2 == 1{
+    if len % 2 == 0 || pos % 2 == 1 {
         chained.parse::<MacHeader>()
             .transform(box move |pkt| {
                 let mut hdr = pkt.get_mut_header();

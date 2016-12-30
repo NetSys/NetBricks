@@ -1,5 +1,5 @@
-use std::fmt;
 pub use self::config_reader::*;
+use std::fmt;
 mod config_reader;
 
 /// `NetBricks` control configuration. In theory all applications create one of these, either through the use of

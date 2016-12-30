@@ -1,13 +1,13 @@
-use common::*;
 use allocators::*;
-use headers::MacAddress;
+use common::*;
 use config::{NUM_RXD, NUM_TXD, PortConfiguration};
+use headers::MacAddress;
+use native::zcsi::*;
+use regex::Regex;
+use std::cmp::min;
+use std::ffi::CString;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::cmp::min;
-use regex::Regex;
-use std::ffi::CString;
-use native::zcsi::*;
 
 struct PmdStats {
     pub stats: AtomicUsize,

@@ -1,11 +1,11 @@
 use common::*;
 use libc::{self, c_void, ftruncate, mmap, munmap, shm_open, shm_unlink};
+use std::cmp::min;
 use std::ffi::CString;
+use std::io;
+use std::io::Write;
 use std::ptr;
 use std::slice;
-use std::io::Write;
-use std::io;
-use std::cmp::min;
 use uuid::*;
 
 /// A ring buffer which can be used to insert and read ordered data.

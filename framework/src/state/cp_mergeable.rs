@@ -1,10 +1,11 @@
-use twox_hash::XxHash;
+
 
 use std::collections::HashMap;
-use std::hash::BuildHasherDefault;
 use std::collections::hash_map::Iter;
-use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
+use std::hash::BuildHasherDefault;
 use std::ops::AddAssign;
+use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
+use twox_hash::XxHash;
 
 use utils::Flow;
 
@@ -100,14 +101,14 @@ pub fn new_cp_mergeable_store<T: AddAssign<T> + Default + Clone>
      -> (CpMergeableStoreDataPath<T>, Box<CpMergeableStoreControlPlane<T>>) {
     let (sender, receiver) = sync_channel(channel_size);
     (CpMergeableStoreDataPath {
-        cache: Vec::with_capacity(delay),
-        updates: 0,
-        delay: delay,
-        channel: sender,
-    },
+         cache: Vec::with_capacity(delay),
+         updates: 0,
+         delay: delay,
+         channel: sender,
+     },
      box CpMergeableStoreControlPlane {
-        // FIXME: Don't need this to be quite this big?
-        flow_counters: HashMap::with_capacity_and_hasher(VEC_SIZE, Default::default()),
-        channel: receiver,
-    })
+         // FIXME: Don't need this to be quite this big?
+         flow_counters: HashMap::with_capacity_and_hasher(VEC_SIZE, Default::default()),
+         channel: receiver,
+     })
 }

@@ -1,8 +1,8 @@
 use common::*;
-use toml::*;
 use std::fs::File;
 use std::io::Read;
 use super::{NetbricksConfiguration, PortConfiguration};
+use toml::*;
 
 /// Default configuration values
 pub const DEFAULT_POOL_SIZE: u32 = 2048 - 1;

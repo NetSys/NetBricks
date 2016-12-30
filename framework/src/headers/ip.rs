@@ -1,11 +1,11 @@
-use super::EndOffset;
-use std::fmt;
-use std::slice;
-use std::net::Ipv4Addr;
+use byteorder::{BigEndian, ByteOrder};
+use headers::MacHeader;
 use std::convert::From;
 use std::default::Default;
-use headers::MacHeader;
-use byteorder::{BigEndian, ByteOrder};
+use std::fmt;
+use std::net::Ipv4Addr;
+use std::slice;
+use super::EndOffset;
 use utils::Flow;
 
 /// IP header using SSE
