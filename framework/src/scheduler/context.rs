@@ -31,7 +31,7 @@ impl<'a> BarrierHandle<'a> {
     }
 }
 
-/// NetBricksContext contains handles to all schedulers, and provides mechanisms for coordination.
+/// `NetBricksContext` contains handles to all schedulers, and provides mechanisms for coordination.
 #[derive(Default)]
 pub struct NetBricksContext {
     pub ports: HashMap<String, Arc<PmdPort>>,
