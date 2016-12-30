@@ -79,6 +79,24 @@ impl NetBricksContext {
         }
     }
 
+    /// Install a pipeline on a particular core.
+    pub fn add_pipeline_to_core<T: Fn(Vec<AlignedPortQueue>, &mut Scheduler) + Send + Sync + 'static>(&mut self,
+                                                                                                      core: i32,
+                                                                                                      run: Arc<T>)
+                                                                                                      -> Result<()> {
+        if let Some(channel) = self.scheduler_channels.get(&core) {
+            let ports = match self.rx_queues.get(&core) {
+                Some(v) => v.clone(),
+                None => vec![],
+            };
+            let boxed_run = run.clone();
+            channel.send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(ports.clone(), s)))).unwrap();
+            Ok(())
+        } else {
+            Err(ErrorKind::NoRunningSchedulerOnCore(core).into())
+        }
+    }
+
     /// Start scheduling pipelines.
     pub fn execute(&mut self) {
         for (core, channel) in &self.scheduler_channels {
@@ -89,6 +107,7 @@ impl NetBricksContext {
 
     /// Pause all schedulers, the returned `BarrierHandle` can be used to resume.
     pub fn barrier(&mut self) -> BarrierHandle {
+        // TODO: If this becomes a problem, move this to the struct itself; but make sure to fix `stop` appropriately.
         let channels: Vec<_> = self.scheduler_handles.iter().map(|_| sync_channel(0)).collect();
         let receivers = channels.iter().map(|&(_, ref r)| r);
         let senders = channels.iter().map(|&(ref s, _)| s);

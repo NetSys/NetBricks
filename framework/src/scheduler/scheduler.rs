@@ -3,10 +3,17 @@ use std::sync::Arc;
 use std::sync::mpsc::{SyncSender, Receiver, sync_channel, RecvError};
 use std::thread;
 use super::Executable;
+use utils;
+
+struct Runnable {
+    pub task: Box<Executable>,
+    pub cycles: u64,
+}
+
 /// A very simple round-robin scheduler. This should really be more of a DRR scheduler.
 pub struct Scheduler {
     /// The set of runnable items. Note we currently don't have a blocked queue.
-    run_q: Vec<Box<Executable>>,
+    run_q: Vec<Runnable>,
     /// Next task to run.
     next_task: usize,
     /// Channel to communicate and synchronize with scheduler.
@@ -56,7 +63,12 @@ impl Scheduler {
 
     fn handle_request(&mut self, request: SchedulerCommand) {
         match request {
-            SchedulerCommand::Add(ex) => self.run_q.push(ex),
+            SchedulerCommand::Add(ex) => {
+                self.run_q.push(Runnable {
+                    task: ex,
+                    cycles: 0,
+                })
+            }
             SchedulerCommand::Run(f) => f(self),
             SchedulerCommand::Execute => self.execute_loop(),
             SchedulerCommand::Shutdown => {
@@ -88,14 +100,20 @@ impl Scheduler {
 
     /// Add a task to the current scheduler.
     pub fn add_task<T: Executable + 'static>(&mut self, task: T) {
-        self.run_q.push(box task)
+        self.run_q.push(Runnable {
+            task: box task,
+            cycles: 0,
+        })
     }
 
     #[inline]
     fn execute_internal(&mut self) {
         {
             let task = &mut (&mut self.run_q[self.next_task]);
-            task.execute()
+            let begin = utils::rdtsc_unsafe();
+            task.task.execute();
+            let end = utils::rdtsc_unsafe();
+            task.cycles += end - begin;
         }
         let len = self.run_q.len();
         let next = self.next_task + 1;
