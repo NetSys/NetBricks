@@ -15,7 +15,6 @@ script:
     - ./build.sh check_examples
     - ./build.sh fmt_travis 
     - ./build.sh build
-    - ./build.sh lint
     - ./build.sh test
     - ./build.sh build_container 
 install: true
