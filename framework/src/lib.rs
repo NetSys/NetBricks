@@ -18,6 +18,7 @@
 #![cfg_attr(feature = "dev", allow(too_many_arguments))]
 #![cfg_attr(feature = "dev", feature(plugin))]
 #![cfg_attr(feature = "dev", plugin(clippy))]
+#![cfg_attr(feature = "dev", deny(warnings))]
 extern crate libc;
 extern crate byteorder;
 extern crate fnv;

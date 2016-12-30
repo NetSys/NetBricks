@@ -1,6 +1,5 @@
 sudo: required
 language: rust
-cache: cargo
 dist: trusty
 matrix:
     include:
@@ -18,5 +17,4 @@ script:
     - ./build.sh build
     - ./build.sh test
     - ./build.sh build_container 
-    - ./build.sh create_container 
 install: true

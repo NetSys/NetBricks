@@ -1,6 +1,7 @@
 use std::default::Default;
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, sync_channel};
+use std::sync::mpsc::{SyncSender, Receiver, sync_channel, RecvError};
+use std::thread;
 use super::Executable;
 /// A very simple round-robin scheduler. This should really be more of a DRR scheduler.
 pub struct Scheduler {
@@ -8,13 +9,21 @@ pub struct Scheduler {
     run_q: Vec<Box<Executable>>,
     /// Next task to run.
     next_task: usize,
+    /// Channel to communicate and synchronize with scheduler.
     sched_channel: Receiver<SchedulerCommand>,
+    /// Signal scheduler should continue executing tasks.
+    execute_loop: bool,
+    /// Signal scheduler should shutdown.
+    shutdown: bool,
 }
 
+/// Messages that can be sent on the scheduler channel to add or remove tasks.
 pub enum SchedulerCommand {
     Add(Box<Executable + Send>),
     Run(Arc<Fn(&mut Scheduler) + Send + Sync>),
     Execute,
+    Shutdown,
+    Handshake(SyncSender<bool>),
 }
 
 const DEFAULT_Q_SIZE: usize = 256;
@@ -40,6 +49,8 @@ impl Scheduler {
             run_q: Vec::with_capacity(capacity),
             next_task: 0,
             sched_channel: channel,
+            execute_loop: false,
+            shutdown: true,
         }
     }
 
@@ -48,14 +59,31 @@ impl Scheduler {
             SchedulerCommand::Add(ex) => self.run_q.push(ex),
             SchedulerCommand::Run(f) => f(self),
             SchedulerCommand::Execute => self.execute_loop(),
+            SchedulerCommand::Shutdown => {
+                self.execute_loop = false;
+                self.shutdown = true;
+            }
+            SchedulerCommand::Handshake(chan) => {
+                chan.send(true).unwrap(); // Inform context about reaching barrier.
+                thread::park();
+            }
         }
     }
 
     pub fn handle_requests(&mut self) {
-        while let Ok(cmd) = self.sched_channel.recv() {
+        self.shutdown = false;
+        // Note this rather bizarre structure here to get shutting down hooked in.
+        while let Ok(cmd) = {
+            if self.shutdown {
+                Err(RecvError)
+            } else {
+                self.sched_channel.recv()
+            }
+        } {
             self.handle_request(cmd)
         }
-        println!("Scheduler exiting");
+        println!("Scheduler exiting {}",
+                 thread::current().name().unwrap_or_else(|| "unknown-name"));
     }
 
     /// Add a task to the current scheduler.
@@ -82,10 +110,10 @@ impl Scheduler {
     }
 
     /// Run the scheduling loop.
-    // TODO: Add a variable to stop the scheduler (for whatever reason).
     pub fn execute_loop(&mut self) {
+        self.execute_loop = true;
         if !self.run_q.is_empty() {
-            loop {
+            while self.execute_loop {
                 self.execute_internal()
             }
         }
