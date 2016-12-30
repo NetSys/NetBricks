@@ -8,19 +8,41 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::mpsc::{SyncSender, sync_channel};
-use std::thread::{self, JoinHandle};
+use std::thread::{self, JoinHandle, Thread};
 
 type AlignedPortQueue = CacheAligned<PortQueue>;
+
+/// A handle to schedulers paused on a barrier.
+pub struct BarrierHandle<'a> {
+    threads: Vec<&'a Thread>,
+}
+
+impl<'a> BarrierHandle<'a> {
+    /// Release all threads. This consumes the handle as expected.
+    pub fn release(self) {
+        for thread in &self.threads {
+            thread.unpark();
+        }
+    }
+
+    /// Allocate a new BarrierHandle with threads.
+    pub fn with_threads(threads: Vec<&'a Thread>) -> BarrierHandle {
+        BarrierHandle { threads: threads }
+    }
+}
+
+/// NetBricksContext contains handles to all schedulers, and provides mechanisms for coordination.
 #[derive(Default)]
 pub struct NetBricksContext {
     pub ports: HashMap<String, Arc<PmdPort>>,
     pub rx_queues: HashMap<i32, Vec<CacheAligned<PortQueue>>>,
     pub active_cores: Vec<i32>,
-    pub scheduler_channels: HashMap<i32, SyncSender<SchedulerCommand>>,
-    pub scheduler_handles: HashMap<i32, JoinHandle<()>>,
+    scheduler_channels: HashMap<i32, SyncSender<SchedulerCommand>>,
+    scheduler_handles: HashMap<i32, JoinHandle<()>>,
 }
 
 impl NetBricksContext {
+    /// Boot up all schedulers.
     pub fn start_schedulers(&mut self) {
         let cores = self.active_cores.clone();
         for core in &cores {
@@ -44,7 +66,7 @@ impl NetBricksContext {
         self.scheduler_handles.insert(core, join_handle);
     }
 
-
+    /// Run a function (which installs a pipeline) on all schedulers in the system.
     pub fn add_pipeline_to_run<T: Fn(Vec<AlignedPortQueue>, &mut Scheduler) + Send + Sync + 'static>(&mut self,
                                                                                                      run: Arc<T>) {
         for (core, channel) in &self.scheduler_channels {
@@ -57,11 +79,44 @@ impl NetBricksContext {
         }
     }
 
+    /// Start scheduling pipelines.
     pub fn execute(&mut self) {
         for (core, channel) in &self.scheduler_channels {
             channel.send(SchedulerCommand::Execute).unwrap();
             println!("Starting scheduler on {}", core);
         }
+    }
+
+    /// Pause all schedulers, the returned `BarrierHandle` can be used to resume.
+    pub fn barrier(&mut self) -> BarrierHandle {
+        let channels: Vec<_> = self.scheduler_handles.iter().map(|_| sync_channel(0)).collect();
+        let receivers = channels.iter().map(|&(_, ref r)| r);
+        let senders = channels.iter().map(|&(ref s, _)| s);
+        for ((_, channel), sender) in self.scheduler_channels.iter().zip(senders) {
+            channel.send(SchedulerCommand::Handshake(sender.clone())).unwrap();
+        }
+        for receiver in receivers {
+            receiver.recv().unwrap();
+        }
+        BarrierHandle::with_threads(self.scheduler_handles.values().map(|j| j.thread()).collect())
+    }
+
+    /// Stop all schedulers, safely shutting down the system.
+    pub fn stop(&mut self) {
+        for (core, channel) in &self.scheduler_channels {
+            channel.send(SchedulerCommand::Shutdown).unwrap();
+            println!("Issued shutdown for core {}", core);
+        }
+        for (core, join_handle) in self.scheduler_handles.drain() {
+            join_handle.join().unwrap();
+            println!("Core {} has shutdown", core);
+        }
+        println!("System shutdown");
+    }
+
+    /// Shutdown all schedulers.
+    pub fn shutdown(&mut self) {
+        self.stop()
     }
 }
 

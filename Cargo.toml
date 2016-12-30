@@ -2,6 +2,7 @@
 members=["framework",
         "test/framework-test",
         "test/delay-test",
+        "test/shutdown-test",
         "test/chain-test",
         "test/lpm",
         "test/nat",

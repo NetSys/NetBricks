@@ -159,8 +159,10 @@ fn main() {
             let mut last_printed = 0.;
             const MAX_PRINT_INTERVAL: f64 = 30.;
             const PRINT_DELAY: f64 = 15.;
+            const RUN_TIME: f64 = 60.;
             let sleep_delay = (PRINT_DELAY / 2.) as u64;
             let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
+            let system_boot = start;
             let sleep_time = Duration::from_millis(sleep_delay);
             println!("0 OVERALL RX 0.00 TX 0.00 CYCLE_PER_DELAY 0 0 0");
             loop {
@@ -187,6 +189,9 @@ fn main() {
                         start = now;
                         pkts_so_far = pkts;
                     }
+                } else if now - system_boot > RUN_TIME {
+                    context.stop();
+                    break;
                 }
             }
         }

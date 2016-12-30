@@ -42,22 +42,7 @@ UNWIND_RESULT="${TOOLS_BASE}/lib/libunwind.a"
 NATIVE_LIB_PATH="${BASE_DIR}/native"
 export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
-examples=(
-        test/framework-test
-        test/delay-test
-        test/chain-test
-        test/lpm
-        test/nat
-        test/maglev
-        test/tcp_check
-        test/sctp-test
-        test/config-test
-        test/reset-parse
-        test/tcp_reconstruction
-        test/acl-fw
-        test/packet_generation
-        test/packet_test
-)
+source ${BASE_DIR}/examples.sh
 
 rust_build_static() {
     if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
