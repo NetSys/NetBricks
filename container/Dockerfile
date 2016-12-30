@@ -32,6 +32,7 @@ COPY .gitignore /opt/netbricks/.gitignore
 COPY LICENSE.md /opt/netbricks/LICENSE.md
 COPY README.md /opt/netbricks/README.md
 COPY build.sh /opt/netbricks/build.sh
+COPY examples.sh /opt/netbricks/examples.sh
 COPY rustfmt.toml /opt/netbricks/rustfmt.toml
 RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
 ENV PATH /root/.cargo/bin:$PATH
