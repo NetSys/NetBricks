@@ -227,6 +227,7 @@ cargo () {
         ./configure --prefix=${TOOLS_BASE}
     fi
     export CARGO_TARGET_DIR="${CARGO_HOME}/target" # Work around the workspace thing.
+    export CFG_DISABLE_LDCONFIG=1 #Do not run ldconfig since this really screws up Travis.
     make -j
     make install || true
     unset CARGO_TARGET_DIR
@@ -270,19 +271,12 @@ libunwind () {
 
 rust_fmt () {
     RUSTFMT=${BIN_DIR}/cargo-fmt
+    echo "Checking if ${RUSTFMT} exists"
     if [ ! -e "${RUSTFMT}" ]; then
-        SYSTEMWIDE=$(type -P "cargo-fmt")
-        if [ -e ${SYSTEMWIDE} ]; then
-            export RUSTFMT=${SYSTEMWIDE}
-            echo "Using system wide rustfmt"
-        else
-            ${CARGO} install --root ${TOOLS_BASE} rustfmt
-            export RUSTFMT=${RUSTFMT}
-            echo "Using in-tree rustfmt"
-        fi
+        ${CARGO} install --root ${TOOLS_BASE} rustfmt
+        export RUSTFMT=${RUSTFMT}
     else
         export RUSTFMT=${RUSTFMT}
-        echo "Using in-tree rustfmt"
     fi
 }
 
@@ -460,7 +454,7 @@ case $TASK in
         popd
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${RUSTFMT}fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+            ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
             popd
         done
         ;;
