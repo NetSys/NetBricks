@@ -65,6 +65,11 @@ error_chain! {
             description("Configuration error")
             display("Configuration error: {}", description)
         }
+
+        NoRunningSchedulerOnCore(core: i32) {
+            description("No scheduler running on core")
+            display("No scheduler running on core {}", core)
+        }
     }
 
     foreign_links {

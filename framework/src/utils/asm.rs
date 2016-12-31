@@ -26,7 +26,6 @@ pub fn rdtsc_unsafe() -> u64 {
 
 #[inline]
 pub fn rdtscp_unsafe() -> u64 {
-    // Doing the equivalent of a rdtscp manually, for some reason rdtscp is causing a
     let high: u32;
     let low: u32;
     unsafe {
