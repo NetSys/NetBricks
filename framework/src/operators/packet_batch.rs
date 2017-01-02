@@ -255,19 +255,17 @@ impl Act for PacketBatch {
     fn done(&mut self) {}
 
     #[inline]
-    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+    fn send_q(&mut self, port: &RxTxQueue) -> Result<u32> {
         let mut total_sent = 0;
         // FIXME: Make it optionally possible to wait for all packets to be sent.
         while self.available() > 0 {
             unsafe {
-                match port.send(self.packet_ptr(), self.available() as i32)
+                try!(port.send(self.packet_ptr(), self.available() as i32)
                     .and_then(|sent| {
                         self.consume_batch_partial(sent as usize);
+                        total_sent += sent;
                         Ok(sent)
-                    }) {
-                    Ok(sent) => total_sent += sent,
-                    e => return e,
-                }
+                    }));
             }
             break;
         }

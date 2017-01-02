@@ -29,8 +29,12 @@ pub struct PmdPort {
     stats_tx: Vec<Arc<CacheAligned<PmdStats>>>,
 }
 
+pub trait RxTxQueue {
+    fn send(&self, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32>;
+    fn recv(&self, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32>;
+}
+
 #[derive(Clone)]
-#[repr(C)]
 pub struct PortQueue {
     // The Arc cost here should not affect anything, since we are really not doing anything to make it go in and out of
     // scope.
@@ -54,24 +58,9 @@ impl Drop for PmdPort {
 
 /// Represents a single RX/TX queue pair for a port. This is what is needed to send or receive traffic.
 impl PortQueue {
-    /// Send a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
-    /// called).
-    #[inline]
-    pub fn send(&mut self, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
-        let txq = self.txq;
-        self.send_queue(txq, pkts, to_send)
-    }
-
-    /// Receive a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
-    /// called).
-    #[inline]
-    pub fn recv(&self, pkts: *mut *mut MBuf, to_recv: i32) -> Result<u32> {
-        let rxq = self.rxq;
-        self.recv_queue(rxq, pkts, to_recv)
-    }
 
     #[inline]
-    fn send_queue(&mut self, queue: i32, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
+    fn send_queue(&self, queue: i32, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
         unsafe {
             let sent = send_pkts(self.port_id, queue, pkts, to_send);
             let update = self.stats_tx.stats.load(Ordering::Relaxed) + sent as usize;
@@ -96,6 +85,24 @@ impl PortQueue {
 
     pub fn rxq(&self) -> i32 {
         self.rxq
+    }
+}
+
+impl RxTxQueue for PortQueue {
+    /// Send a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
+    /// called).
+    #[inline]
+    fn send(&self, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
+        let txq = self.txq;
+        self.send_queue(txq, pkts, to_send)
+    }
+
+    /// Receive a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
+    /// called).
+    #[inline]
+    fn recv(&self, pkts: *mut *mut MBuf, to_recv: i32) -> Result<u32> {
+        let rxq = self.rxq;
+        self.recv_queue(rxq, pkts, to_recv)
     }
 }
 

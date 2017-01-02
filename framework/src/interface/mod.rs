@@ -1,5 +1,5 @@
 pub use self::packet::*;
-pub use self::pmd::*;
+pub use self::port::*;
 pub mod dpdk;
-mod pmd;
+mod port;
 mod packet;

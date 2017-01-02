@@ -1,7 +1,7 @@
 /// FIXME: This should replace receive queue eventually.
 use common::*;
 use headers::NullHeader;
-use interface::PortQueue;
+use interface::RxTxQueue;
 use queues::ReceivableQueue;
 use super::Batch;
 use super::act::Act;
@@ -70,7 +70,7 @@ impl<T: ReceivableQueue + Send> Act for ReceiveQueueGen<T> {
     }
 
     #[inline]
-    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+    fn send_q(&mut self, port: &RxTxQueue) -> Result<u32> {
         self.parent.send_q(port)
     }
 

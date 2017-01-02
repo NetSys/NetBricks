@@ -1,7 +1,7 @@
 use common::*;
 use headers::EndOffset;
 use interface::Packet;
-use interface::PortQueue;
+use interface::RxTxQueue;
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
@@ -63,7 +63,7 @@ impl<T, V> Act for FilterBatch<T, V>
     }
 
     #[inline]
-    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+    fn send_q(&mut self, port: &RxTxQueue) -> Result<u32> {
         self.parent.send_q(port)
     }
 

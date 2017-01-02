@@ -1,7 +1,7 @@
 use allocators::CacheAligned;
 use common::*;
 use headers::NullHeader;
-use interface::PortQueue;
+use interface::{PortQueue, RxTxQueue};
 use scheduler::Executable;
 use super::Batch;
 use super::act::Act;
@@ -58,7 +58,7 @@ impl<V> Act for SendBatch<V>
         self.parent.act();
         self.parent
             .get_packet_batch()
-            .send_q(&mut self.port)
+            .send_q(&*self.port)
             .and_then(|x| {
                 self.sent += x as u64;
                 Ok(x)
@@ -69,7 +69,7 @@ impl<V> Act for SendBatch<V>
 
     fn done(&mut self) {}
 
-    fn send_q(&mut self, _: &mut PortQueue) -> Result<u32> {
+    fn send_q(&mut self, _: &RxTxQueue) -> Result<u32> {
         panic!("Cannot send a sent packet batch")
     }
 

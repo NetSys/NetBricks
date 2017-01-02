@@ -1,7 +1,7 @@
 use common::*;
 use headers::EndOffset;
 use headers::NullHeader;
-use interface::PortQueue;
+use interface::RxTxQueue;
 use scheduler::Executable;
 use super::Batch;
 use super::act::Act;
