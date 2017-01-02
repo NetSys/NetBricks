@@ -18,7 +18,6 @@ use self::map_batch::MapFn;
 pub use self::merge_batch::MergeBatch;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::receive_batch::ReceiveBatch;
-pub use self::receive_queue_general::ReceiveQueueGen;
 
 pub use self::reset_parse::ResetParsingBatch;
 pub use self::restore_header::*;
@@ -43,7 +42,6 @@ mod receive_batch;
 mod reset_parse;
 mod send_batch;
 mod transform_batch;
-mod receive_queue_general;
 mod restore_header;
 mod add_metadata;
 

@@ -5,7 +5,7 @@ use scheduler::{Executable, Scheduler};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use super::Batch;
-use super::ReceiveQueueGen;
+use super::ReceiveBatch;
 use super::RestoreHeader;
 use super::act::Act;
 use super::iterator::*;
@@ -19,7 +19,7 @@ pub struct GroupBy<T, V>
     _phantom_v: PhantomData<V>,
     groups: usize,
     _phantom_t: PhantomData<T>,
-    consumers: HashMap<usize, ReceiveQueueGen<MpscConsumer>>,
+    consumers: HashMap<usize, ReceiveBatch<MpscConsumer>>,
 }
 
 struct GroupByProducer<T, V>
@@ -81,7 +81,7 @@ impl<T, V> GroupBy<T, V>
         self.groups
     }
 
-    pub fn get_group(&mut self, group: usize) -> Option<RestoreHeader<T, V::Metadata, ReceiveQueueGen<MpscConsumer>>> {
+    pub fn get_group(&mut self, group: usize) -> Option<RestoreHeader<T, V::Metadata, ReceiveBatch<MpscConsumer>>> {
         self.consumers.remove(&group).map(RestoreHeader::new)
     }
 }

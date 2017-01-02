@@ -2,7 +2,7 @@ use common::*;
 use headers::EndOffset;
 use interface::{Packet, PacketRx};
 use native::zcsi::MBuf;
-use operators::ReceiveQueueGen;
+use operators::ReceiveBatch;
 use std::clone::Clone;
 use std::cmp::min;
 use std::default::Default;
@@ -242,14 +242,14 @@ impl PacketRx for MpscConsumer {
     }
 }
 
-pub fn new_mpsc_queue_pair_with_size(size: usize) -> (MpscProducer, ReceiveQueueGen<MpscConsumer>) {
+pub fn new_mpsc_queue_pair_with_size(size: usize) -> (MpscProducer, ReceiveBatch<MpscConsumer>) {
     let mpsc_q = Arc::new(MpscQueue::new(size));
     mpsc_q.reference_producers();
-    (MpscProducer { mpsc_queue: mpsc_q.clone() }, ReceiveQueueGen::new(MpscConsumer { mpsc_queue: mpsc_q }))
+    (MpscProducer { mpsc_queue: mpsc_q.clone() }, ReceiveBatch::new(MpscConsumer { mpsc_queue: mpsc_q }))
 }
 
 const DEFAULT_QUEUE_SIZE: usize = 1024;
 
-pub fn new_mpsc_queue_pair() -> (MpscProducer, ReceiveQueueGen<MpscConsumer>) {
+pub fn new_mpsc_queue_pair() -> (MpscProducer, ReceiveBatch<MpscConsumer>) {
     new_mpsc_queue_pair_with_size(DEFAULT_QUEUE_SIZE)
 }

@@ -8,8 +8,6 @@ use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
 
-// FIXME: Should we be handling multiple queues and ports here?
-// FIXME: Should this really even be a batch?
 pub struct SendBatch<V>
     where V: Batch + BatchIterator + Act
 {
