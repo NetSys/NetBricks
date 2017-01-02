@@ -55,7 +55,7 @@ impl Act for ReceiveBatch {
     fn act(&mut self) {
         self.parent.act();
         self.parent
-            .recv(&mut self.port)
+            .recv(&*self.port)
             .and_then(|x| {
                 self.received += x as u64;
                 Ok(x)

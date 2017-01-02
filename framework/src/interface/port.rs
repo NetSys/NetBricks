@@ -87,9 +87,10 @@ impl PacketTx for PortQueue {
     /// Send a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
     /// called).
     #[inline]
-    fn send(&self, pkts: &mut [*mut MBuf], to_send: i32) -> Result<u32> {
+    fn send(&self, pkts: &mut [*mut MBuf]) -> Result<u32> {
         let txq = self.txq;
-        self.send_queue(txq, pkts.as_mut_ptr(), to_send)
+        let len = pkts.len() as i32;
+        self.send_queue(txq, pkts.as_mut_ptr(), len)
     }
 }
 
@@ -97,9 +98,10 @@ impl PacketRx for PortQueue {
     /// Receive a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
     /// called).
     #[inline]
-    fn recv(&self, pkts: &mut [*mut MBuf], to_recv: i32) -> Result<u32> {
+    fn recv(&self, pkts: &mut [*mut MBuf]) -> Result<u32> {
         let rxq = self.rxq;
-        self.recv_queue(rxq, pkts.as_mut_ptr(), to_recv)
+        let len = pkts.len() as i32;
+        self.recv_queue(rxq, pkts.as_mut_ptr(), len)
     }
 }
 

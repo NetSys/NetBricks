@@ -1,8 +1,6 @@
+use common::*;
 use headers::EndOffset;
-use interface::Packet;
-/// A multiproducer single consumer queue for mbufs. The main difference when compared to `std::sync::mpsc` is that this
-/// does not use a linked list (to avoid allocation). The hope is to eventually turn this into something that can carry
-/// `Packets` or sufficient metadata to reconstruct that structure.
+use interface::{Packet, PacketRx};
 use native::zcsi::MBuf;
 use operators::ReceiveQueueGen;
 use std::clone::Clone;
@@ -10,7 +8,6 @@ use std::cmp::min;
 use std::default::Default;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
-use super::ReceivableQueue;
 use utils::{pause, round_to_power_of_2};
 
 #[derive(Default)]
@@ -19,6 +16,9 @@ struct QueueMetadata {
     pub tail: AtomicUsize,
 }
 
+/// A multiproducer single consumer queue for mbufs. The main difference when compared to `std::sync::mpsc` is that this
+/// does not use a linked list (to avoid allocation). The hope is to eventually turn this into something that can carry
+/// `Packets` or sufficient metadata to reconstruct that structure.
 struct MpscQueue {
     slots: usize, // Must be a power of 2
     mask: usize, // slots - 1
@@ -235,10 +235,10 @@ pub struct MpscConsumer {
     mpsc_queue: Arc<MpscQueue>,
 }
 
-impl ReceivableQueue for MpscConsumer {
+impl PacketRx for MpscConsumer {
     #[inline]
-    fn receive_batch(&self, mbufs: &mut [*mut MBuf]) -> usize {
-        self.mpsc_queue.dequeue(mbufs)
+    fn recv(&self, mbufs: &mut [*mut MBuf]) -> Result<u32> {
+        Ok(self.mpsc_queue.dequeue(mbufs) as u32)
     }
 }
 

@@ -82,9 +82,7 @@ impl Scheduler {
 
     fn handle_request(&mut self, request: SchedulerCommand) {
         match request {
-            SchedulerCommand::Add(ex) => {
-                self.run_q.push(Runnable::from_boxed_task(ex))
-            }
+            SchedulerCommand::Add(ex) => self.run_q.push(Runnable::from_boxed_task(ex)),
             SchedulerCommand::Run(f) => f(self),
             SchedulerCommand::Execute => self.execute_loop(),
             SchedulerCommand::Shutdown => {

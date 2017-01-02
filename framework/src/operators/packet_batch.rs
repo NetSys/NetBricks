@@ -2,7 +2,6 @@ use common::*;
 use headers::NullHeader;
 use interface::*;
 use native::zcsi::*;
-use queues::*;
 use std::result;
 use super::Batch;
 use super::act::Act;
@@ -13,7 +12,6 @@ use super::iterator::{BatchIterator, PacketDescriptor};
 /// ultimately call into this structure.
 pub struct PacketBatch {
     array: Vec<*mut MBuf>,
-    cnt: i32,
     scratch: Vec<*mut MBuf>,
 }
 
@@ -25,17 +23,16 @@ impl PacketBatch {
     pub fn new(cnt: i32) -> PacketBatch {
         PacketBatch {
             array: Vec::<*mut MBuf>::with_capacity(cnt as usize),
-            cnt: cnt,
             scratch: Vec::<*mut MBuf>::with_capacity(cnt as usize),
         }
     }
 
-    /// Allocate `self.cnt` mbufs. `len` here merely sets the extent of the mbuf considered when sending a packet. We
-    /// always allocate mbuf's of the same size.
+    /// Allocate as many mbufs as batch can hold. `len` here merely sets the extent of the mbuf considered when sending
+    /// a packet. We always allocate mbuf's of the same size.
     #[inline]
     pub fn allocate_batch_with_size(&mut self, len: u16) -> Result<&mut Self> {
-        let cnt = self.cnt;
-        self.alloc_packet_batch(len, cnt).and_then(|_| Ok(self))
+        let capacity = self.array.capacity() as i32;
+        self.alloc_packet_batch(len, capacity).and_then(|_| Ok(self))
     }
 
     /// Allocate `cnt` mbufs. `len` sets the metadata field indicating how much of the mbuf should be considred when
@@ -63,15 +60,9 @@ impl PacketBatch {
         self.array.len()
     }
 
-    /// The maximum number of packets that can be allocated in this batch, just returns `self.cnt`.
-    #[inline]
-    pub fn max_size(&self) -> i32 {
-        self.cnt
-    }
-
     /// Receive packets from a PMD port queue.
     #[inline]
-    pub fn recv(&mut self, port: &mut PortQueue) -> Result<u32> {
+    pub fn recv<Rx: PacketRx>(&mut self, port: &Rx) -> Result<u32> {
         unsafe {
             match self.deallocate_batch() {
                 Err(err) => Err(err),
@@ -82,32 +73,13 @@ impl PacketBatch {
 
     // Assumes we have already deallocated batch.
     #[inline]
-    unsafe fn recv_internal(&mut self, port: &mut PortQueue) -> Result<u32> {
-        let size = self.max_size() as i32;
-        match port.recv(self.packet_ptr(), size) {
+    unsafe fn recv_internal<Rx: PacketRx>(&mut self, port: &Rx) -> Result<u32> {
+        match port.recv(self.packet_ptr()) {
             e @ Err(_) => e,
             Ok(recv) => {
                 self.add_to_batch(recv as usize);
                 Ok(recv)
             }
-        }
-    }
-
-    #[inline]
-    pub fn recv_queue<T: ReceivableQueue>(&mut self, queue: &T) -> Result<u32> {
-        match self.deallocate_batch() {
-            Err(err) => Err(err),
-            Ok(_) => self.recv_queue_internal(queue),
-        }
-    }
-
-    #[inline]
-    fn recv_queue_internal<T: ReceivableQueue>(&mut self, queue: &T) -> Result<u32> {
-        unsafe {
-            self.array.set_len(self.cnt as usize); // Try getting as many mbufs as possible.
-            let received = queue.receive_batch(&mut self.array);
-            self.add_to_batch(received); // Record how many we received
-            Ok(received as u32)
         }
     }
 
@@ -259,8 +231,8 @@ impl Act for PacketBatch {
         // FIXME: Make it optionally possible to wait for all packets to be sent.
         while self.available() > 0 {
             unsafe {
-                let available = self.available() as i32;
-                try!(port.send(self.packet_ptr(), available)
+                // let available = self.available() as i32;
+                try!(port.send(self.packet_ptr())
                     .and_then(|sent| {
                         self.consume_batch_partial(sent as usize);
                         total_sent += sent;
@@ -274,7 +246,7 @@ impl Act for PacketBatch {
 
     #[inline]
     fn capacity(&self) -> i32 {
-        self.max_size()
+        self.array.capacity() as i32
     }
 
     #[inline]
