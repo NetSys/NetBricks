@@ -1,20 +1,20 @@
 /// FIXME: This should replace receive queue eventually.
 use common::*;
 use headers::NullHeader;
-use interface::RxTxQueue;
+use interface::PacketTx;
 use queues::ReceivableQueue;
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
 
-pub struct ReceiveQueueGen<T: ReceivableQueue + Send> {
+pub struct ReceiveQueueGen<T: ReceivableQueue> {
     parent: PacketBatch,
     queue: T,
     pub received: u64,
 }
 
-impl<T: ReceivableQueue + Send> ReceiveQueueGen<T> {
+impl<T: ReceivableQueue> ReceiveQueueGen<T> {
     pub fn new_with_parent(parent: PacketBatch, queue: T) -> ReceiveQueueGen<T> {
         ReceiveQueueGen {
             parent: parent,
@@ -33,9 +33,9 @@ impl<T: ReceivableQueue + Send> ReceiveQueueGen<T> {
     }
 }
 
-impl<T: ReceivableQueue + Send> Batch for ReceiveQueueGen<T> {}
+impl<T: ReceivableQueue> Batch for ReceiveQueueGen<T> {}
 
-impl<T: ReceivableQueue + Send> BatchIterator for ReceiveQueueGen<T> {
+impl<T: ReceivableQueue> BatchIterator for ReceiveQueueGen<T> {
     type Header = NullHeader;
     type Metadata = EmptyMetadata;
     #[inline]
@@ -50,7 +50,7 @@ impl<T: ReceivableQueue + Send> BatchIterator for ReceiveQueueGen<T> {
 }
 
 /// Internal interface for packets.
-impl<T: ReceivableQueue + Send> Act for ReceiveQueueGen<T> {
+impl<T: ReceivableQueue> Act for ReceiveQueueGen<T> {
     #[inline]
     fn act(&mut self) {
         self.parent.act();
@@ -70,7 +70,7 @@ impl<T: ReceivableQueue + Send> Act for ReceiveQueueGen<T> {
     }
 
     #[inline]
-    fn send_q(&mut self, port: &RxTxQueue) -> Result<u32> {
+    fn send_q(&mut self, port: &PacketTx) -> Result<u32> {
         self.parent.send_q(port)
     }
 

@@ -1,6 +1,6 @@
 use common::*;
 use headers::NullHeader;
-use interface::RxTxQueue;
+use interface::PacketTx;
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;

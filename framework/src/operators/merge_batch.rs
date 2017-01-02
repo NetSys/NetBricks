@@ -1,5 +1,5 @@
 use common::*;
-use interface::RxTxQueue;
+use interface::PacketTx;
 use scheduler::Executable;
 use std::cmp;
 use super::Batch;
@@ -57,7 +57,7 @@ impl<T: Batch> Act for MergeBatch<T> {
     }
 
     #[inline]
-    fn send_q(&mut self, port: &RxTxQueue) -> Result<u32> {
+    fn send_q(&mut self, port: &PacketTx) -> Result<u32> {
         self.parents[self.which].send_q(port)
     }
 

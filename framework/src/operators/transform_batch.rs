@@ -1,7 +1,7 @@
 use common::*;
 use headers::EndOffset;
 use interface::Packet;
-use interface::RxTxQueue;
+use interface::PacketTx;
 use std::marker::PhantomData;
 use super::Batch;
 use super::act::Act;
@@ -82,7 +82,7 @@ impl<T, V> Act for TransformBatch<T, V>
     }
 
     #[inline]
-    fn send_q(&mut self, port: &RxTxQueue) -> Result<u32> {
+    fn send_q(&mut self, port: &PacketTx) -> Result<u32> {
         self.parent.send_q(port)
     }
 

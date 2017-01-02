@@ -1,6 +1,6 @@
 use common::*;
 use interface::Packet;
-use interface::RxTxQueue;
+use interface::PacketTx;
 use std::marker::PhantomData;
 use super::Batch;
 use super::act::Act;
@@ -83,7 +83,7 @@ impl<M, V> Act for AddMetadataBatch<M, V>
     }
 
     #[inline]
-    fn send_q(&mut self, port: &RxTxQueue) -> Result<u32> {
+    fn send_q(&mut self, port: &PacketTx) -> Result<u32> {
         self.parent.send_q(port)
     }
 

@@ -1,7 +1,7 @@
 use allocators::CacheAligned;
 use common::*;
 use headers::NullHeader;
-use interface::{PortQueue, RxTxQueue};
+use interface::{PortQueue, PacketTx};
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
@@ -70,7 +70,7 @@ impl Act for ReceiveBatch {
     }
 
     #[inline]
-    fn send_q(&mut self, port: &RxTxQueue) -> Result<u32> {
+    fn send_q(&mut self, port: &PacketTx) -> Result<u32> {
         self.parent.send_q(port)
     }
 

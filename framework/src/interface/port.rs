@@ -8,6 +8,7 @@ use std::cmp::min;
 use std::ffi::CString;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use super::{PacketTx, PacketRx};
 
 struct PmdStats {
     pub stats: AtomicUsize,
@@ -27,11 +28,6 @@ pub struct PmdPort {
     txqs: i32,
     stats_rx: Vec<Arc<CacheAligned<PmdStats>>>,
     stats_tx: Vec<Arc<CacheAligned<PmdStats>>>,
-}
-
-pub trait RxTxQueue {
-    fn send(&self, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32>;
-    fn recv(&self, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32>;
 }
 
 #[derive(Clone)]
@@ -58,7 +54,6 @@ impl Drop for PmdPort {
 
 /// Represents a single RX/TX queue pair for a port. This is what is needed to send or receive traffic.
 impl PortQueue {
-
     #[inline]
     fn send_queue(&self, queue: i32, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
         unsafe {
@@ -88,21 +83,23 @@ impl PortQueue {
     }
 }
 
-impl RxTxQueue for PortQueue {
+impl PacketTx for PortQueue {
     /// Send a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
     /// called).
     #[inline]
-    fn send(&self, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
+    fn send(&self, pkts: &mut [*mut MBuf], to_send: i32) -> Result<u32> {
         let txq = self.txq;
-        self.send_queue(txq, pkts, to_send)
+        self.send_queue(txq, pkts.as_mut_ptr(), to_send)
     }
+}
 
+impl PacketRx for PortQueue {
     /// Receive a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
     /// called).
     #[inline]
-    fn recv(&self, pkts: *mut *mut MBuf, to_recv: i32) -> Result<u32> {
+    fn recv(&self, pkts: &mut [*mut MBuf], to_recv: i32) -> Result<u32> {
         let rxq = self.rxq;
-        self.recv_queue(rxq, pkts, to_recv)
+        self.recv_queue(rxq, pkts.as_mut_ptr(), to_recv)
     }
 }
 
