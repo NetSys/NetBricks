@@ -493,7 +493,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
 
         let should_copy = if payload_size < copy_len {
             let increment = copy_len - payload_size;
-            self.increase_payload_size(increment)
+            payload_size + self.increase_payload_size(increment)
         } else {
             copy_len
         };

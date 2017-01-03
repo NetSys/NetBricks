@@ -25,7 +25,16 @@ else
     DPDK="${DPDK_HOME}/build/lib/libdpdk.a"
 fi
 
-CARGO="${TOOLS_BASE}/bin/cargo"
+if [ ! -z ${SYSTEM_CARGO} ]; then
+    export CARGO=`which cargo`
+    if [ ! -e ${CARGO} ]; then
+        echo "Asked to use preinstalled Cargo, but Cargo was not found"
+        exit 0
+    fi
+    echo "Using Cargo from ${CARGO}"
+else
+    export CARGO="${TOOLS_BASE}/bin/cargo"
+fi
 CARGO_HOME="${TOOLS_BASE}/cargo"
 
 MUSL_DOWNLOAD_PATH="${DOWNLOAD_DIR}/musl.tar.gz"
@@ -490,21 +499,28 @@ case $TASK in
         echo "export LD_LIBRARY_PATH=\"${NATIVE_LIB_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}\""
         ;;
     *)
-        echo "./build.sh <Command>
-        Where command is one of
-        deps: Build dependencies
-        build: Build the project
-        build_test: Build a particular test.
-        doc: Run rustdoc and produce documentation
-        fmt: Run rustfmt to format code.
-        fmt_travis: Run rustfmt to detect code formatting violations.
-        lint: Run clippy to lint the project
-        clean: Remove all built files
-        dist_clean: Remove all support files
-        env: Environment variables, run as eval \`./build.sh env\`.
-        run: Run one of the examples.
-        debug: Debug one of the examples.
-        ctr_dpdk: Copy DPDK from container
-        "
+        cat <<endhelp
+./build.sh <Command>
+      Where command is one of
+          deps: Build dependencies
+          sctp: Check if sctp library is present.
+          build: Build the project (this includes framework and all tests).
+          build_fmwk: Just build framework.
+          build_test: Build a particular test.
+          create_container: Build the NetBricks container.
+          ctr_dpdk: Copy DPDK from container
+          build_container: Build NetBricks within a container.
+          test: Run unit tests.
+          run: Run one of the examples (Must specify example name and arguments).
+          debug: Debug one of the examples (Must specify example name and examples).
+          doc: Run rustdoc and produce documentation
+          update_rust: Pull and update Cargo.
+          fmt: Run rustfmt to format code.
+          fmt_travis: Run rustfmt to detect code formatting violations.
+          lint: Run clippy to lint the project
+          clean: Remove all built files
+          dist_clean: Remove all support files
+          env: Environment variables, run as eval \`./build.sh env\`.
+endhelp
         ;;
 esac

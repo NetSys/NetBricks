@@ -5,9 +5,28 @@ use std::thread;
 use super::Executable;
 use utils;
 
+/// Used to keep stats about each pipeline and eventually grant tokens, etc.
 struct Runnable {
     pub task: Box<Executable>,
     pub cycles: u64,
+    pub last_run: u64,
+}
+
+impl Runnable {
+    pub fn from_task<T: Executable + 'static>(task: T) -> Runnable {
+        Runnable {
+            task: box task,
+            cycles: 0,
+            last_run: utils::rdtsc_unsafe(),
+        }
+    }
+    pub fn from_boxed_task(task: Box<Executable>) -> Runnable {
+        Runnable {
+            task: task,
+            cycles: 0,
+            last_run: utils::rdtsc_unsafe(),
+        }
+    }
 }
 
 /// A very simple round-robin scheduler. This should really be more of a DRR scheduler.
@@ -63,12 +82,7 @@ impl Scheduler {
 
     fn handle_request(&mut self, request: SchedulerCommand) {
         match request {
-            SchedulerCommand::Add(ex) => {
-                self.run_q.push(Runnable {
-                    task: ex,
-                    cycles: 0,
-                })
-            }
+            SchedulerCommand::Add(ex) => self.run_q.push(Runnable::from_boxed_task(ex)),
             SchedulerCommand::Run(f) => f(self),
             SchedulerCommand::Execute => self.execute_loop(),
             SchedulerCommand::Shutdown => {
@@ -100,10 +114,7 @@ impl Scheduler {
 
     /// Add a task to the current scheduler.
     pub fn add_task<T: Executable + 'static>(&mut self, task: T) {
-        self.run_q.push(Runnable {
-            task: box task,
-            cycles: 0,
-        })
+        self.run_q.push(Runnable::from_task(task))
     }
 
     #[inline]
@@ -114,6 +125,7 @@ impl Scheduler {
             task.task.execute();
             let end = utils::rdtsc_unsafe();
             task.cycles += end - begin;
+            task.last_run = end;
         }
         let len = self.run_q.len();
         let next = self.next_task + 1;

@@ -1,41 +1,39 @@
-use allocators::CacheAligned;
 use common::*;
 use headers::NullHeader;
-use interface::PortQueue;
+use interface::{PacketRx, PacketTx};
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
 
-// FIXME: Should we be handling multiple queues and ports here?
-pub struct ReceiveBatch {
+pub struct ReceiveBatch<T: PacketRx> {
     parent: PacketBatch,
-    port: CacheAligned<PortQueue>,
+    queue: T,
     pub received: u64,
 }
 
-impl ReceiveBatch {
-    pub fn new_with_parent(parent: PacketBatch, port: CacheAligned<PortQueue>) -> ReceiveBatch {
+impl<T: PacketRx> ReceiveBatch<T> {
+    pub fn new_with_parent(parent: PacketBatch, queue: T) -> ReceiveBatch<T> {
         ReceiveBatch {
             parent: parent,
-            port: port,
+            queue: queue,
             received: 0,
         }
     }
 
-    pub fn new(port: CacheAligned<PortQueue>) -> ReceiveBatch {
+    pub fn new(queue: T) -> ReceiveBatch<T> {
         ReceiveBatch {
             parent: PacketBatch::new(32),
-            port: port,
+            queue: queue,
             received: 0,
         }
 
     }
 }
 
-impl Batch for ReceiveBatch {}
+impl<T: PacketRx> Batch for ReceiveBatch<T> {}
 
-impl BatchIterator for ReceiveBatch {
+impl<T: PacketRx> BatchIterator for ReceiveBatch<T> {
     type Header = NullHeader;
     type Metadata = EmptyMetadata;
     #[inline]
@@ -50,17 +48,17 @@ impl BatchIterator for ReceiveBatch {
 }
 
 /// Internal interface for packets.
-impl Act for ReceiveBatch {
+impl<T: PacketRx> Act for ReceiveBatch<T> {
     #[inline]
     fn act(&mut self) {
         self.parent.act();
         self.parent
-            .recv(&mut self.port)
+            .recv(&self.queue)
             .and_then(|x| {
                 self.received += x as u64;
                 Ok(x)
             })
-            .expect("Receive failed");
+            .expect("Receive failure");
     }
 
     #[inline]
@@ -70,7 +68,7 @@ impl Act for ReceiveBatch {
     }
 
     #[inline]
-    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+    fn send_q(&mut self, port: &PacketTx) -> Result<u32> {
         self.parent.send_q(port)
     }
 

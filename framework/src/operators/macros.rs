@@ -40,7 +40,7 @@ macro_rules! act {
         }
 
         #[inline]
-        fn send_q(&mut self, port: &mut PortQueue) -> Result<u32> {
+        fn send_q(&mut self, port: &PacketTx) -> Result<u32> {
             self.parent.send_q(port)
         }
 

@@ -1,4 +1,3 @@
-use allocators::CacheAligned;
 use headers::*;
 use interface::*;
 use scheduler::Scheduler;
@@ -18,7 +17,6 @@ use self::map_batch::MapFn;
 pub use self::merge_batch::MergeBatch;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::receive_batch::ReceiveBatch;
-pub use self::receive_queue_general::ReceiveQueueGen;
 
 pub use self::reset_parse::ResetParsingBatch;
 pub use self::restore_header::*;
@@ -43,7 +41,6 @@ mod receive_batch;
 mod reset_parse;
 mod send_batch;
 mod transform_batch;
-mod receive_queue_general;
 mod restore_header;
 mod add_metadata;
 
@@ -74,10 +71,10 @@ pub trait Batch: BatchIterator + Act + Send {
     }
 
     /// Send this batch out a particular port and queue.
-    fn send(self, port: CacheAligned<PortQueue>) -> SendBatch<Self>
+    fn send<Port: PacketTx>(self, port: Port) -> SendBatch<Port, Self>
         where Self: Sized
     {
-        SendBatch::<Self>::new(self, port)
+        SendBatch::<Port, Self>::new(self, port)
     }
 
     /// Erase type information. This is essential to allow different kinds of types to be collected together, as done

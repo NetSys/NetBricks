@@ -1,5 +1,5 @@
 use common::*;
-use interface::PortQueue;
+use interface::PacketTx;
 use super::packet_batch::PacketBatch;
 pub trait Act {
     /// Actually perform whatever needs to be done by this processing node.
@@ -11,7 +11,7 @@ pub trait Act {
     fn done(&mut self);
 
     #[inline]
-    fn send_q(&mut self, port: &mut PortQueue) -> Result<u32>;
+    fn send_q(&mut self, port: &PacketTx) -> Result<u32>;
 
     #[inline]
     fn capacity(&self) -> i32;
