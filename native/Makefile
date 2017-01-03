@@ -78,6 +78,8 @@ $(PROD): $(OBJS)
 
 clean:
 	rm -f $(DEPS) $(PROD) $(PROD_STATIC) *.o
+	rm -f $(INSTALL_PATH)/$(PROD)
+	rmdir $(INSTALL_PATH)
 
 tags:
 	@ctags -R *

@@ -15,3 +15,5 @@ pub trait PacketRx: Send {
 pub trait PacketTx: Send {
     fn send(&self, pkts: &mut [*mut MBuf]) -> Result<u32>;
 }
+
+pub trait PacketRxTx: PacketRx + PacketTx {}

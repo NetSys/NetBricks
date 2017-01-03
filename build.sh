@@ -159,6 +159,7 @@ clean () {
         popd
     done
     make clean -C ${BASE_DIR}/native
+    rm -rf ${BASE_DIR}/target 
 }
 
 UNWIND_BUILD="${TOOLS_BASE}"/libunwind
