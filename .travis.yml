@@ -1,5 +1,7 @@
 sudo: required
 language: rust
+rust:
+    - nightly
 dist: trusty
 matrix:
     include:
