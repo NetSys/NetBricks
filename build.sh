@@ -53,6 +53,7 @@ NATIVE_LIB_PATH="${BASE_DIR}/native"
 export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 source ${BASE_DIR}/examples.sh
+REQUIRE_RUSTFMT=0
 
 rust_build_static() {
     if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
@@ -184,7 +185,9 @@ deps () {
         echo "Cargo found, not building"
     fi
 
-    rust_fmt
+    if [ ${REQUIRE_RUSTFMT} -ne 0 ]; then
+        rust_fmt
+    fi
     echo "Done with deps"
 }
 
@@ -270,7 +273,7 @@ libunwind () {
 
 rust_fmt () {
     RUSTFMT=${BIN_DIR}/cargo-fmt
-    echo "Checking if ${RUSTFMT} exists"
+    echo "Checking if ${RUSTFMT} exists (${REQUIRE_RUSTFMT})"
     if [ ! -e "${RUSTFMT}" ]; then
         ${CARGO} install --root ${TOOLS_BASE} rustfmt
         export RUSTFMT=${RUSTFMT}
@@ -287,6 +290,7 @@ fi
 
 case $TASK in
     deps)
+        REQUIRE_RUSTFMT=1
         deps
         ;;
     enable_symbols)
@@ -391,6 +395,12 @@ case $TASK in
             ${BASE_DIR}/build-container
         docker push apanda/netbricks-build:latest
         ;;
+    ctr_test)
+        docker pull apanda/netbricks-build:latest
+        docker run -t -v /lib/modules:/lib/modules \
+            -v /lib/modules/`uname -r`/build:/lib/modules/`uname -r`/build -v ${BASE_DIR}:/opt/netbricks \
+             apanda/netbricks-build:latest /opt/netbricks/build.sh test
+        ;;
     test)
         pushd $BASE_DIR/framework
         ${CARGO} test --release
@@ -437,6 +447,7 @@ case $TASK in
         cargo_build
         ;;
     fmt)
+        REQUIRE_RUSTFMT=1
         deps
         pushd $BASE_DIR/framework
         ${RUSTFMT} fmt || true
