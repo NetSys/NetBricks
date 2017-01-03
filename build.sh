@@ -26,7 +26,8 @@ else
 fi
 
 if [ ! -z ${SYSTEM_CARGO} ]; then
-    export CARGO=`which cargo`
+    CARGO_LOC=`which cargo`
+    export CARGO=${CARGO_PATH-"${CARGO_LOC}"}
     if [ ! -e ${CARGO} ]; then
         echo "Asked to use preinstalled Cargo, but Cargo was not found"
         exit 0
@@ -213,7 +214,7 @@ cargo_clone () {
     fi
 }
 
-cargo () {
+cargo_build () {
     # Build cargo
     pushd $CARGO_HOME
     git submodule update --init
@@ -375,11 +376,15 @@ case $TASK in
         docker cp ${ctr}:/opt/netbricks/3rdparty/dpdk $result
         docker rm ${ctr}
         ;;
+    _build_container)
+        curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+        PATH="$HOME/.cargo/bin:$PATH" ${BASE_DIR}/build.sh build
+        ;;
     build_container)
         docker pull apanda/netbricks-build:latest
         docker run -t -v /lib/modules:/lib/modules \
             -v /lib/modules/`uname -r`/build:/lib/modules/`uname -r`/build -v ${BASE_DIR}:/opt/netbricks \
-             apanda/netbricks-build:latest /opt/netbricks/build.sh
+             apanda/netbricks-build:latest /opt/netbricks/build.sh _build_container
         ;;
     update_container)
         docker build -f ${BASE_DIR}/build-container/Dockerfile -t apanda/netbricks-build:latest \
@@ -387,8 +392,6 @@ case $TASK in
         docker push apanda/netbricks-build:latest
         ;;
     test)
-        deps
-        native
         pushd $BASE_DIR/framework
         ${CARGO} test --release
         popd
@@ -431,7 +434,7 @@ case $TASK in
         _BUILD_UPDATE_=1
         rust
         cargo_clone
-        cargo
+        cargo_build
         ;;
     fmt)
         deps
@@ -446,7 +449,7 @@ case $TASK in
         done
         ;;
     _fmt_travis)
-        cargo_clone
+        echo "Running _fmt_travis"
         pushd $BASE_DIR/framework
         ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
         popd
@@ -458,7 +461,7 @@ case $TASK in
         ;;
     fmt_travis)
         docker pull apanda/netbricks-build:latest
-        docker run -t -v /lib/modules:/lib/modules \
+        docker run -t  -v /lib/modules:/lib/modules \
             -v /lib/modules/`uname -r`/build:/lib/modules/`uname -r`/build -v ${BASE_DIR}:/opt/netbricks \
              apanda/netbricks-build:latest /opt/netbricks/build.sh _fmt_travis
         ;;

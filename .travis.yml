@@ -19,5 +19,5 @@ script:
     - ./build.sh check_examples
     - ./build.sh fmt_travis 
     - ./build.sh build_container 
-    - ./build.sh test
+    - sudo ./build.sh test
 install: true
