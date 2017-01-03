@@ -173,8 +173,12 @@ deps () {
 
     rust
 
+    if [ ! -e ${CARGO_HOME}/cargo.toml ]; then
+        cargo_clone
+    fi
+
     if [ ! -e $CARGO ]; then
-        cargo
+        cargo_build
     else
         echo "Cargo found, not building"
     fi
@@ -199,7 +203,7 @@ dpdk () {
     proc="$(nproc)"
 }
 
-cargo () {
+cargo_clone () {
     if [ ! -e $CARGO_HOME ]; then
         git clone https://github.com/apanda/cargo $CARGO_HOME
     else
@@ -207,12 +211,12 @@ cargo () {
         git pull
         popd
     fi
+}
+
+cargo () {
     # Build cargo
-    if [ ! -e $CARGO_HOME/src/rust-installer/gen-installer.sh ]; then
-        git clone https://github.com/rust-lang/rust-installer.git \
-            $CARGO_HOME/src/rust-installer
-    fi
     pushd $CARGO_HOME
+    git submodule update --init
     if [ ! -z ${RUST_STATIC} ]; then
         echo "Rust static is ${RUST_STATIC}, building with that"
         ./configure --prefix=${TOOLS_BASE} \
@@ -366,21 +370,21 @@ case $TASK in
             echo "build.sh ctr_dpdk dir"
             exit 1
         fi
-        result="$( readlink -f $1 )" 
+        result="$( readlink -f $1 )"
         ctr="$( docker create netbricks:vswitch )"
         docker cp ${ctr}:/opt/netbricks/3rdparty/dpdk $result
         docker rm ${ctr}
         ;;
     build_container)
-        clean
-        clean_deps
-        echo "Building container for NetBricks"
-        docker build -f container/Dockerfile -t netbricks:latest ${BASE_DIR}
-        echo "Done building container as netbricks:latest"
-        echo "Creating new copy"
-        ctr="$( docker create netbricks:latest )"
-        docker cp ${ctr}:/opt/netbricks/target target
-        docker rm ${ctr}
+        docker pull apanda/netbricks-build:latest
+        docker run -t -v /lib/modules:/lib/modules \
+            -v /lib/modules/`uname -r`/build:/lib/modules/`uname -r`/build -v ${BASE_DIR}:/opt/netbricks \
+             apanda/netbricks-build:latest /opt/netbricks/build.sh
+        ;;
+    update_container)
+        docker build -f ${BASE_DIR}/build-container/Dockerfile -t apanda/netbricks-build:latest \
+            ${BASE_DIR}/build-container
+        docker push apanda/netbricks-build:latest
         ;;
     test)
         deps
@@ -426,6 +430,7 @@ case $TASK in
     update_rust)
         _BUILD_UPDATE_=1
         rust
+        cargo_clone
         cargo
         ;;
     fmt)
@@ -440,17 +445,22 @@ case $TASK in
             popd
         done
         ;;
-    fmt_travis)
-        deps
-        export PATH="${BIN_DIR}:${PATH}"
+    _fmt_travis)
+        cargo_clone
         pushd $BASE_DIR/framework
-        ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+        ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
         popd
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+            ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
             popd
         done
+        ;;
+    fmt_travis)
+        docker pull apanda/netbricks-build:latest
+        docker run -t -v /lib/modules:/lib/modules \
+            -v /lib/modules/`uname -r`/build:/lib/modules/`uname -r`/build -v ${BASE_DIR}:/opt/netbricks \
+             apanda/netbricks-build:latest /opt/netbricks/build.sh _fmt_travis
         ;;
     check_manifest)
         deps
@@ -459,7 +469,7 @@ case $TASK in
         popd
 
         pushd ${BASE_DIR}/framework
-        cargo verify-project | grep true
+        ${CARGO} verify-project | grep true
         popd
 
         for example in ${examples[@]}; do
@@ -515,6 +525,7 @@ case $TASK in
           debug: Debug one of the examples (Must specify example name and examples).
           doc: Run rustdoc and produce documentation
           update_rust: Pull and update Cargo.
+          update_container: Update and push container used for build.
           fmt: Run rustfmt to format code.
           fmt_travis: Run rustfmt to detect code formatting violations.
           lint: Run clippy to lint the project
