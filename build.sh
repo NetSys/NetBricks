@@ -25,7 +25,16 @@ else
     DPDK="${DPDK_HOME}/build/lib/libdpdk.a"
 fi
 
-CARGO="${TOOLS_BASE}/bin/cargo"
+if [ ! -z ${SYSTEM_CARGO} ]; then
+    export CARGO=`which cargo`
+    if [ ! -e ${CARGO} ]; then
+        echo "Asked to use preinstalled Cargo, but Cargo was not found"
+        exit 0
+    fi
+    echo "Using Cargo from ${CARGO}"
+else
+    export CARGO="${TOOLS_BASE}/bin/cargo"
+fi
 CARGO_HOME="${TOOLS_BASE}/cargo"
 
 MUSL_DOWNLOAD_PATH="${DOWNLOAD_DIR}/musl.tar.gz"

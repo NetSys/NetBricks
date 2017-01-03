@@ -1,25 +1,26 @@
-use allocators::CacheAligned;
 use common::*;
 use headers::NullHeader;
-use interface::{PortQueue, PacketTx};
+use interface::PacketTx;
 use scheduler::Executable;
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
 
-pub struct SendBatch<V>
-    where V: Batch + BatchIterator + Act
+pub struct SendBatch<Port, V>
+    where Port: PacketTx,
+          V: Batch + BatchIterator + Act
 {
-    port: CacheAligned<PortQueue>,
+    port: Port,
     parent: V,
     pub sent: u64,
 }
 
-impl<V> SendBatch<V>
-    where V: Batch + BatchIterator + Act
+impl<Port, V> SendBatch<Port, V>
+    where Port: PacketTx,
+          V: Batch + BatchIterator + Act
 {
-    pub fn new(parent: V, port: CacheAligned<PortQueue>) -> SendBatch<V> {
+    pub fn new(parent: V, port: Port) -> SendBatch<Port, V> {
         SendBatch {
             port: port,
             sent: 0,
@@ -28,10 +29,11 @@ impl<V> SendBatch<V>
     }
 }
 
-impl<V> Batch for SendBatch<V> where V: Batch + BatchIterator + Act {}
+impl<Port, V> Batch for SendBatch<Port, V> where Port: PacketTx, V: Batch + BatchIterator + Act {}
 
-impl<V> BatchIterator for SendBatch<V>
-    where V: Batch + BatchIterator + Act
+impl<Port, V> BatchIterator for SendBatch<Port, V>
+    where Port: PacketTx,
+          V: Batch + BatchIterator + Act
 {
     type Header = NullHeader;
     type Metadata = EmptyMetadata;
@@ -47,8 +49,9 @@ impl<V> BatchIterator for SendBatch<V>
 }
 
 /// Internal interface for packets.
-impl<V> Act for SendBatch<V>
-    where V: Batch + BatchIterator + Act
+impl<Port, V> Act for SendBatch<Port, V>
+    where Port: PacketTx,
+          V: Batch + BatchIterator + Act
 {
     #[inline]
     fn act(&mut self) {
@@ -56,7 +59,7 @@ impl<V> Act for SendBatch<V>
         self.parent.act();
         self.parent
             .get_packet_batch()
-            .send_q(&*self.port)
+            .send_q(&self.port)
             .and_then(|x| {
                 self.sent += x as u64;
                 Ok(x)
@@ -91,8 +94,9 @@ impl<V> Act for SendBatch<V>
     }
 }
 
-impl<V> Executable for SendBatch<V>
-    where V: Batch + BatchIterator + Act
+impl<Port, V> Executable for SendBatch<Port, V>
+    where Port: PacketTx,
+          V: Batch + BatchIterator + Act
 {
     #[inline]
     fn execute(&mut self) {

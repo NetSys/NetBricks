@@ -1,4 +1,3 @@
-use allocators::CacheAligned;
 use headers::*;
 use interface::*;
 use scheduler::Scheduler;
@@ -72,10 +71,10 @@ pub trait Batch: BatchIterator + Act + Send {
     }
 
     /// Send this batch out a particular port and queue.
-    fn send(self, port: CacheAligned<PortQueue>) -> SendBatch<Self>
+    fn send<Port: PacketTx>(self, port: Port) -> SendBatch<Port, Self>
         where Self: Sized
     {
-        SendBatch::<Self>::new(self, port)
+        SendBatch::<Port, Self>::new(self, port)
     }
 
     /// Erase type information. This is essential to allow different kinds of types to be collected together, as done
