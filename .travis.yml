@@ -1,9 +1,13 @@
 sudo: required
 language: rust
+rust:
+    - nightly
 dist: trusty
 matrix:
     include:
         - rust: nightly
+env:
+    - SYSTEM_CARGO=1
 before_install:
     - sudo apt-get update -qq
     - sudo apt-get install -qq apt-utils build-essential pciutils linux-headers-`uname -r` python python3  libssl-dev 
@@ -14,7 +18,6 @@ services:
 script:
     - ./build.sh check_examples
     - ./build.sh fmt_travis 
-    - ./build.sh build
-    - ./build.sh test
     - ./build.sh build_container 
+    - ./build.sh ctr_test
 install: true

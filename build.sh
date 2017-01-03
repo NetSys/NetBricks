@@ -26,7 +26,8 @@ else
 fi
 
 if [ ! -z ${SYSTEM_CARGO} ]; then
-    export CARGO=`which cargo`
+    CARGO_LOC=`which cargo`
+    export CARGO=${CARGO_PATH-"${CARGO_LOC}"}
     if [ ! -e ${CARGO} ]; then
         echo "Asked to use preinstalled Cargo, but Cargo was not found"
         exit 0
@@ -52,6 +53,7 @@ NATIVE_LIB_PATH="${BASE_DIR}/native"
 export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 source ${BASE_DIR}/examples.sh
+REQUIRE_RUSTFMT=0
 
 rust_build_static() {
     if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
@@ -173,13 +175,19 @@ deps () {
 
     rust
 
+    if [ ! -e ${CARGO_HOME}/cargo.toml ]; then
+        cargo_clone
+    fi
+
     if [ ! -e $CARGO ]; then
-        cargo
+        cargo_build
     else
         echo "Cargo found, not building"
     fi
 
-    rust_fmt
+    if [ ${REQUIRE_RUSTFMT} -ne 0 ]; then
+        rust_fmt
+    fi
     echo "Done with deps"
 }
 
@@ -199,7 +207,7 @@ dpdk () {
     proc="$(nproc)"
 }
 
-cargo () {
+cargo_clone () {
     if [ ! -e $CARGO_HOME ]; then
         git clone https://github.com/apanda/cargo $CARGO_HOME
     else
@@ -207,12 +215,12 @@ cargo () {
         git pull
         popd
     fi
+}
+
+cargo_build () {
     # Build cargo
-    if [ ! -e $CARGO_HOME/src/rust-installer/gen-installer.sh ]; then
-        git clone https://github.com/rust-lang/rust-installer.git \
-            $CARGO_HOME/src/rust-installer
-    fi
     pushd $CARGO_HOME
+    git submodule update --init
     if [ ! -z ${RUST_STATIC} ]; then
         echo "Rust static is ${RUST_STATIC}, building with that"
         ./configure --prefix=${TOOLS_BASE} \
@@ -265,7 +273,7 @@ libunwind () {
 
 rust_fmt () {
     RUSTFMT=${BIN_DIR}/cargo-fmt
-    echo "Checking if ${RUSTFMT} exists"
+    echo "Checking if ${RUSTFMT} exists (${REQUIRE_RUSTFMT})"
     if [ ! -e "${RUSTFMT}" ]; then
         ${CARGO} install --root ${TOOLS_BASE} rustfmt
         export RUSTFMT=${RUSTFMT}
@@ -282,6 +290,7 @@ fi
 
 case $TASK in
     deps)
+        REQUIRE_RUSTFMT=1
         deps
         ;;
     enable_symbols)
@@ -366,25 +375,33 @@ case $TASK in
             echo "build.sh ctr_dpdk dir"
             exit 1
         fi
-        result="$( readlink -f $1 )" 
+        result="$( readlink -f $1 )"
         ctr="$( docker create netbricks:vswitch )"
         docker cp ${ctr}:/opt/netbricks/3rdparty/dpdk $result
         docker rm ${ctr}
         ;;
+    _build_container)
+        curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+        PATH="$HOME/.cargo/bin:$PATH" ${BASE_DIR}/build.sh build
+        ;;
     build_container)
-        clean
-        clean_deps
-        echo "Building container for NetBricks"
-        docker build -f container/Dockerfile -t netbricks:latest ${BASE_DIR}
-        echo "Done building container as netbricks:latest"
-        echo "Creating new copy"
-        ctr="$( docker create netbricks:latest )"
-        docker cp ${ctr}:/opt/netbricks/target target
-        docker rm ${ctr}
+        docker pull apanda/netbricks-build:latest
+        docker run -t -v /lib/modules:/lib/modules \
+            -v /lib/modules/`uname -r`/build:/lib/modules/`uname -r`/build -v ${BASE_DIR}:/opt/netbricks \
+             apanda/netbricks-build:latest /opt/netbricks/build.sh _build_container
+        ;;
+    update_container)
+        docker build -f ${BASE_DIR}/build-container/Dockerfile -t apanda/netbricks-build:latest \
+            ${BASE_DIR}/build-container
+        docker push apanda/netbricks-build:latest
+        ;;
+    ctr_test)
+        docker pull apanda/netbricks-build:latest
+        docker run -t -v /lib/modules:/lib/modules \
+            -v /lib/modules/`uname -r`/build:/lib/modules/`uname -r`/build -v ${BASE_DIR}:/opt/netbricks \
+             apanda/netbricks-build:latest /opt/netbricks/build.sh test
         ;;
     test)
-        deps
-        native
         pushd $BASE_DIR/framework
         ${CARGO} test --release
         popd
@@ -426,9 +443,11 @@ case $TASK in
     update_rust)
         _BUILD_UPDATE_=1
         rust
-        cargo
+        cargo_clone
+        cargo_build
         ;;
     fmt)
+        REQUIRE_RUSTFMT=1
         deps
         pushd $BASE_DIR/framework
         ${RUSTFMT} fmt || true
@@ -440,17 +459,22 @@ case $TASK in
             popd
         done
         ;;
-    fmt_travis)
-        deps
-        export PATH="${BIN_DIR}:${PATH}"
+    _fmt_travis)
+        echo "Running _fmt_travis"
         pushd $BASE_DIR/framework
-        ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+        ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
         popd
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
+            ${CARGO} fmt -- --config-path ${BASE_DIR}/.travis --write-mode=diff
             popd
         done
+        ;;
+    fmt_travis)
+        docker pull apanda/netbricks-build:latest
+        docker run -t  -v /lib/modules:/lib/modules \
+            -v /lib/modules/`uname -r`/build:/lib/modules/`uname -r`/build -v ${BASE_DIR}:/opt/netbricks \
+             apanda/netbricks-build:latest /opt/netbricks/build.sh _fmt_travis
         ;;
     check_manifest)
         deps
@@ -459,7 +483,7 @@ case $TASK in
         popd
 
         pushd ${BASE_DIR}/framework
-        cargo verify-project | grep true
+        ${CARGO} verify-project | grep true
         popd
 
         for example in ${examples[@]}; do
@@ -515,6 +539,7 @@ case $TASK in
           debug: Debug one of the examples (Must specify example name and examples).
           doc: Run rustdoc and produce documentation
           update_rust: Pull and update Cargo.
+          update_container: Update and push container used for build.
           fmt: Run rustfmt to format code.
           fmt_travis: Run rustfmt to detect code formatting violations.
           lint: Run clippy to lint the project
