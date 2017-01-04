@@ -5,7 +5,6 @@ extern crate fnv;
 extern crate time;
 extern crate getopts;
 extern crate rand;
-use e2d2::allocators::CacheAligned;
 use e2d2::common::*;
 use e2d2::config::*;
 use e2d2::interface::*;
@@ -15,6 +14,7 @@ use getopts::Options;
 use self::nf::*;
 use std::collections::HashMap;
 use std::env;
+use std::fmt::Display;
 use std::process;
 use std::sync::Arc;
 use std::thread;
@@ -23,13 +23,9 @@ mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn test(ports: Vec<CacheAligned<PortQueue>>, sched: &mut Scheduler, delay_arg: u64) {
+fn test<T: PacketRx + PacketTx + Display + Clone + 'static>(ports: Vec<T>, sched: &mut Scheduler, delay_arg: u64) {
     for port in &ports {
-        println!("Receiving port {} rxq {} txq {} w/ delay {}",
-                 port.port.mac_address(),
-                 port.rxq(),
-                 port.txq(),
-                 delay_arg);
+        println!("Receiving port {} w/ delay {}", port, delay_arg);
     }
 
     let pipelines: Vec<_> = ports.iter()
@@ -54,6 +50,7 @@ fn main() {
     opts.optopt("m", "master", "Master core", "master");
     opts.optopt("d", "delay", "Delay cycles", "cycles");
     opts.optopt("f", "configuration", "Configuration file", "path");
+    opts.optflag("t", "test", "Test mode do not use real ports");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
@@ -107,6 +104,8 @@ fn main() {
         configuration
     };
 
+    let phy_ports = !matches.opt_present("test");
+
     fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
         let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
         for (port, core) in ports.iter().zip(cores.iter()) {
@@ -152,7 +151,11 @@ fn main() {
             context.start_schedulers();
 
             let delay: u64 = delay_arg;
-            context.add_pipeline_to_run(Arc::new(move |p, s: &mut Scheduler| test(p, s, delay)));
+            if phy_ports {
+                context.add_pipeline_to_run(Arc::new(move |p, s: &mut Scheduler| test(p, s, delay)));
+            } else {
+                context.add_test_pipeline(Arc::new(move |p, s: &mut Scheduler| test(p, s, delay)));
+            }
             context.execute();
 
             let mut pkts_so_far = (0, 0);
@@ -169,9 +172,17 @@ fn main() {
                 if now - start > PRINT_DELAY {
                     let mut rx = 0;
                     let mut tx = 0;
-                    for port in context.ports.values() {
-                        for q in 0..port.rxqs() {
-                            let (rp, tp) = port.stats(q);
+                    if phy_ports {
+                        for port in context.ports.values() {
+                            for q in 0..port.rxqs() {
+                                let (rp, tp) = port.stats(q);
+                                rx += rp;
+                                tx += tp;
+                            }
+                        }
+                    } else {
+                        for port in context.virtual_ports.values() {
+                            let (rp, tp) = port.stats();
                             rx += rp;
                             tx += tp;
                         }

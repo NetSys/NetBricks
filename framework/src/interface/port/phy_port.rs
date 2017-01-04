@@ -6,6 +6,7 @@ use native::zcsi::*;
 use regex::Regex;
 use std::cmp::min;
 use std::ffi::CString;
+use std::fmt;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use super::PortStats;
@@ -43,6 +44,18 @@ impl Drop for PmdPort {
                 free_pmd_port(self.port);
             }
         }
+    }
+}
+
+/// Print information about PortQueue
+impl fmt::Display for PortQueue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,
+               "port: {} ({}) rxq: {} txq: {}",
+               self.port.mac_address(),
+               self.port_id,
+               self.rxq,
+               self.txq)
     }
 }
 
