@@ -7,36 +7,30 @@ use regex::Regex;
 use std::cmp::min;
 use std::ffi::CString;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use super::{PacketTx, PacketRx};
+use std::sync::atomic::Ordering;
+use super::PortStats;
+use super::super::{PacketTx, PacketRx};
 
-struct PmdStats {
-    pub stats: AtomicUsize,
-}
-
-impl PmdStats {
-    pub fn new() -> CacheAligned<PmdStats> {
-        CacheAligned::allocate(PmdStats { stats: AtomicUsize::new(0) })
-    }
-}
-
+/// A DPDK based PMD port. Send and receive should not be called directly on this structure but on the port queue
+/// structure instead.
 pub struct PmdPort {
     connected: bool,
     should_close: bool,
     port: i32,
     rxqs: i32,
     txqs: i32,
-    stats_rx: Vec<Arc<CacheAligned<PmdStats>>>,
-    stats_tx: Vec<Arc<CacheAligned<PmdStats>>>,
+    stats_rx: Vec<Arc<CacheAligned<PortStats>>>,
+    stats_tx: Vec<Arc<CacheAligned<PortStats>>>,
 }
 
+/// A port queue represents a single queue for a physical port, and should be used to send and receive data.
 #[derive(Clone)]
 pub struct PortQueue {
     // The Arc cost here should not affect anything, since we are really not doing anything to make it go in and out of
     // scope.
     pub port: Arc<PmdPort>,
-    stats_rx: Arc<CacheAligned<PmdStats>>,
-    stats_tx: Arc<CacheAligned<PmdStats>>,
+    stats_rx: Arc<CacheAligned<PortStats>>,
+    stats_tx: Arc<CacheAligned<PortStats>>,
     port_id: i32,
     txq: i32,
     rxq: i32,
@@ -105,20 +99,6 @@ impl PacketRx for PortQueue {
     }
 }
 
-impl PacketRx for CacheAligned<PortQueue> {
-    #[inline]
-    fn recv(&self, pkts: &mut [*mut MBuf]) -> Result<u32> {
-        PortQueue::recv(&*self, pkts)
-    }
-}
-
-impl PacketTx for CacheAligned<PortQueue> {
-    #[inline]
-    fn send(&self, pkts: &mut [*mut MBuf]) -> Result<u32> {
-        PortQueue::send(&*self, pkts)
-    }
-}
-
 // Utility function to go from Rust bools to C ints. Allowing match bools since this looks nicer to me.
 #[cfg_attr(feature = "dev", allow(match_bool))]
 #[inline]
@@ -135,15 +115,18 @@ impl PmdPort {
         unsafe { num_pmd_ports() }
     }
 
+    /// Find a port ID given a PCI-E string.
     pub fn find_port_id(pcie: &str) -> i32 {
         let pcie_cstr = CString::new(pcie).unwrap();
         unsafe { find_port_with_pci_address(pcie_cstr.as_ptr()) }
     }
 
+    /// Number of configured RXQs.
     pub fn rxqs(&self) -> i32 {
         self.rxqs
     }
 
+    /// Number of configured TXQs.
     pub fn txqs(&self) -> i32 {
         self.txqs
     }
@@ -218,8 +201,8 @@ impl PmdPort {
                     rxqs: actual_rxqs,
                     txqs: actual_txqs,
                     should_close: true,
-                    stats_rx: (0..rxqs).map(|_| Arc::new(PmdStats::new())).collect(),
-                    stats_tx: (0..txqs).map(|_| Arc::new(PmdStats::new())).collect(),
+                    stats_rx: (0..rxqs).map(|_| Arc::new(PortStats::new())).collect(),
+                    stats_tx: (0..txqs).map(|_| Arc::new(PortStats::new())).collect(),
                 }))
             } else {
                 Err(ErrorKind::FailedToInitializePort(port).into())
@@ -245,8 +228,8 @@ impl PmdPort {
                 rxqs: 1,
                 txqs: 1,
                 should_close: false,
-                stats_rx: vec![Arc::new(PmdStats::new())],
-                stats_tx: vec![Arc::new(PmdStats::new())],
+                stats_rx: vec![Arc::new(PortStats::new())],
+                stats_tx: vec![Arc::new(PortStats::new())],
             }))
         } else {
             Err(ErrorKind::FailedToInitializePort(port).into())
@@ -265,8 +248,8 @@ impl PmdPort {
                         rxqs: 1,
                         txqs: 1,
                         should_close: false,
-                        stats_rx: vec![Arc::new(PmdStats::new())],
-                        stats_tx: vec![Arc::new(PmdStats::new())],
+                        stats_rx: vec![Arc::new(PortStats::new())],
+                        stats_tx: vec![Arc::new(PortStats::new())],
                     }))
                 } else {
                     Err(ErrorKind::FailedToInitializePort(port).into())
@@ -314,11 +297,12 @@ impl PmdPort {
             rxqs: 0,
             txqs: 0,
             should_close: false,
-            stats_rx: vec![Arc::new(PmdStats::new())],
-            stats_tx: vec![Arc::new(PmdStats::new())],
+            stats_rx: vec![Arc::new(PortStats::new())],
+            stats_tx: vec![Arc::new(PortStats::new())],
         }))
     }
 
+    /// Create a new port from a `PortConfiguration`.
     pub fn new_port_from_configuration(port_config: &PortConfiguration) -> Result<Arc<PmdPort>> {
         PmdPort::new_port_with_queues_descriptors_offloads(&port_config.name[..],
                                                            port_config.rx_queues.len() as i32,

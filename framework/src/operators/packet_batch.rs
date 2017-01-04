@@ -74,6 +74,8 @@ impl PacketBatch {
     // Assumes we have already deallocated batch.
     #[inline]
     unsafe fn recv_internal<Rx: PacketRx>(&mut self, port: &Rx) -> Result<u32> {
+        let capacity = self.array.capacity();
+        self.add_to_batch(capacity);
         match port.recv(self.packet_ptr()) {
             e @ Err(_) => e,
             Ok(recv) => {
