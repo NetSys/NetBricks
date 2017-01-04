@@ -387,7 +387,7 @@ case $TASK in
         ;;
     build_container)
         docker pull apanda/netbricks-build:latest
-        docker run -t -v /lib:/lib \
+        docker run -t -v /lib/modules:/lib/modules \
             -v /usr/src:/usr/src -v ${BASE_DIR}:/opt/netbricks \
              apanda/netbricks-build:latest /opt/netbricks/build.sh _build_container
         ;;
