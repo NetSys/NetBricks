@@ -1,6 +1,7 @@
 use allocators::*;
 use common::*;
 use native::zcsi::*;
+use std::fmt;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use super::PortStats;
@@ -15,6 +16,12 @@ pub struct VirtualPort {
 pub struct VirtualQueue {
     stats_rx: Arc<CacheAligned<PortStats>>,
     stats_tx: Arc<CacheAligned<PortStats>>,
+}
+
+impl fmt::Display for VirtualQueue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "virtual queue")
+    }
 }
 
 impl PacketTx for VirtualQueue {

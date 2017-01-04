@@ -1,5 +1,6 @@
 use alloc::heap::{allocate, deallocate};
 use std::mem::size_of;
+use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::ptr::{self, Unique};
 
@@ -52,5 +53,13 @@ impl<T: Sized> Clone for CacheAligned<T>
             ptr::copy(self.ptr.get() as *const T, alloc, 1);
             CacheAligned { ptr: Unique::new(alloc) }
         }
+    }
+}
+
+impl<T: Sized> fmt::Display for CacheAligned<T>
+    where T: fmt::Display
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        T::fmt(&*self, f)
     }
 }
