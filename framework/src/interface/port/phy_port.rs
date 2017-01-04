@@ -99,20 +99,6 @@ impl PacketRx for PortQueue {
     }
 }
 
-impl<T: PacketRx> PacketRx for CacheAligned<T> {
-    #[inline]
-    fn recv(&self, pkts: &mut [*mut MBuf]) -> Result<u32> {
-        T::recv(&*self, pkts)
-    }
-}
-
-impl<T: PacketTx> PacketTx for CacheAligned<T> {
-    #[inline]
-    fn send(&self, pkts: &mut [*mut MBuf]) -> Result<u32> {
-        T::send(&*self, pkts)
-    }
-}
-
 // Utility function to go from Rust bools to C ints. Allowing match bools since this looks nicer to me.
 #[cfg_attr(feature = "dev", allow(match_bool))]
 #[inline]

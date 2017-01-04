@@ -1,7 +1,7 @@
 use allocators::CacheAligned;
 use common::*;
 use config::NetbricksConfiguration;
-use interface::{PmdPort, PortQueue};
+use interface::{PmdPort, PortQueue, VirtualQueue, VirtualPort};
 use interface::dpdk::{init_system, init_thread};
 use scheduler::*;
 use std::collections::HashMap;
@@ -11,6 +11,7 @@ use std::sync::mpsc::{SyncSender, sync_channel};
 use std::thread::{self, JoinHandle, Thread};
 
 type AlignedPortQueue = CacheAligned<PortQueue>;
+type AlignedVirtualQueue = CacheAligned<VirtualQueue>;
 
 /// A handle to schedulers paused on a barrier.
 pub struct BarrierHandle<'a> {
@@ -37,6 +38,7 @@ pub struct NetBricksContext {
     pub ports: HashMap<String, Arc<PmdPort>>,
     pub rx_queues: HashMap<i32, Vec<CacheAligned<PortQueue>>>,
     pub active_cores: Vec<i32>,
+    pub virtual_ports: HashMap<i32, Arc<VirtualPort>>,
     scheduler_channels: HashMap<i32, SyncSender<SchedulerCommand>>,
     scheduler_handles: HashMap<i32, JoinHandle<()>>,
 }
@@ -76,6 +78,35 @@ impl NetBricksContext {
             };
             let boxed_run = run.clone();
             channel.send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(ports.clone(), s)))).unwrap();
+        }
+    }
+
+    pub fn add_test_pipeline<T: Fn(Vec<AlignedVirtualQueue>, &mut Scheduler) + Send + Sync + 'static>(&mut self,
+                                                                                                      run: Arc<T>) {
+        for (core, channel) in &self.scheduler_channels {
+            let port = self.virtual_ports.entry(*core).or_insert(VirtualPort::new(1).unwrap());
+            let boxed_run = run.clone();
+            let queue = port.new_virtual_queue(1).unwrap();
+            channel.send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(vec![queue.clone()], s))))
+                .unwrap();
+        }
+    }
+
+    pub fn add_test_pipeline_to_core<T: Fn(Vec<AlignedVirtualQueue>, &mut Scheduler) + Send + Sync + 'static>
+        (&mut self,
+         core: i32,
+         run: Arc<T>)
+         -> Result<()> {
+
+        if let Some(channel) = self.scheduler_channels.get(&core) {
+            let port = self.virtual_ports.entry(core).or_insert(VirtualPort::new(1).unwrap());
+            let boxed_run = run.clone();
+            let queue = port.new_virtual_queue(1).unwrap();
+            channel.send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(vec![queue.clone()], s))))
+                .unwrap();
+            Ok(())
+        } else {
+            Err(ErrorKind::NoRunningSchedulerOnCore(core).into())
         }
     }
 
@@ -126,6 +157,14 @@ impl NetBricksContext {
             channel.send(SchedulerCommand::Shutdown).unwrap();
             println!("Issued shutdown for core {}", core);
         }
+        for (core, join_handle) in self.scheduler_handles.drain() {
+            join_handle.join().unwrap();
+            println!("Core {} has shutdown", core);
+        }
+        println!("System shutdown");
+    }
+
+    pub fn wait(&mut self) {
         for (core, join_handle) in self.scheduler_handles.drain() {
             join_handle.join().unwrap();
             println!("Core {} has shutdown", core);

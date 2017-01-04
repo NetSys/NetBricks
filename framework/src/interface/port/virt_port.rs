@@ -11,6 +11,7 @@ pub struct VirtualPort {
     stats_tx: Arc<CacheAligned<PortStats>>,
 }
 
+#[derive(Clone)]
 pub struct VirtualQueue {
     stats_rx: Arc<CacheAligned<PortStats>>,
     stats_tx: Arc<CacheAligned<PortStats>>,
@@ -35,12 +36,11 @@ impl PacketRx for VirtualQueue {
     #[inline]
     fn recv(&self, pkts: &mut [*mut MBuf]) -> Result<u32> {
         let len = pkts.len() as i32;
-        let alloc = unsafe {
-            mbuf_alloc_bulk(pkts.as_mut_ptr(), 60, len)
-        };
-        let update = self.stats_rx.stats.load(Ordering::Relaxed) + alloc as usize;
+        let status = unsafe { mbuf_alloc_bulk(pkts.as_mut_ptr(), 60, len) };
+        let alloced = if status == 0 { len } else { 0 };
+        let update = self.stats_rx.stats.load(Ordering::Relaxed) + alloced as usize;
         self.stats_rx.stats.store(update, Ordering::Relaxed);
-        Ok(alloc as u32)
+        Ok(alloced as u32)
     }
 }
 
@@ -57,5 +57,10 @@ impl VirtualPort {
             stats_rx: self.stats_rx.clone(),
             stats_tx: self.stats_tx.clone(),
         }))
+    }
+
+    /// Get stats for an RX/TX queue pair.
+    pub fn stats(&self) -> (usize, usize) {
+        (self.stats_rx.stats.load(Ordering::Relaxed), self.stats_tx.stats.load(Ordering::Relaxed))
     }
 }
