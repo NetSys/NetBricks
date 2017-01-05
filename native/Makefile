@@ -77,9 +77,9 @@ $(PROD): $(OBJS)
 -include $(DEPS)
 
 clean:
-	rm -f $(DEPS) $(PROD) $(PROD_STATIC) *.o
-	rm -f $(INSTALL_PATH)/$(PROD)
-	rmdir $(INSTALL_PATH)
+	rm -f $(DEPS) $(PROD) $(PROD_STATIC) *.o || true
+	rm -f $(INSTALL_PATH)/$(PROD) || true
+	rmdir $(INSTALL_PATH) || true
 
 tags:
 	@ctags -R *
