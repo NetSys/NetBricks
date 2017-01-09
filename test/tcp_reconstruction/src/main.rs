@@ -23,7 +23,7 @@ mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn test(ports: Vec<CacheAligned<PortQueue>>, sched: &mut Scheduler) {
+fn test<S: Scheduler + Sized>(ports: Vec<CacheAligned<PortQueue>>, sched: &mut S) {
     for port in &ports {
         println!("Receiving port {} rxq {} txq {}",
                  port.port.mac_address(),
@@ -36,7 +36,7 @@ fn test(ports: Vec<CacheAligned<PortQueue>>, sched: &mut Scheduler) {
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
-        sched.add_task(pipeline);
+        sched.add_task(pipeline).unwrap();
     }
 }
 
@@ -137,7 +137,7 @@ fn main() {
     let mut config = initialize_system(&configuration).unwrap();
     config.start_schedulers();
 
-    config.add_pipeline_to_run(Arc::new(move |p, s: &mut Scheduler| test(p, s)));
+    config.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s)));
     config.execute();
 
     let mut pkts_so_far = (0, 0);

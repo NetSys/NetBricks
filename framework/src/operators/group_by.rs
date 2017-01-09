@@ -56,7 +56,11 @@ impl<T, V> GroupBy<T, V>
     where T: EndOffset + 'static,
           V: Batch + BatchIterator<Header = T> + Act + 'static
 {
-    pub fn new(parent: V, groups: usize, group_fn: GroupFn<T, V::Metadata>, sched: &mut Scheduler) -> GroupBy<T, V> {
+    pub fn new<S: Scheduler + Sized>(parent: V,
+                                     groups: usize,
+                                     group_fn: GroupFn<T, V::Metadata>,
+                                     sched: &mut S)
+                                     -> GroupBy<T, V> {
         let mut producers = Vec::with_capacity(groups);
         let mut consumers = HashMap::with_capacity(groups);
         for i in 0..groups {
@@ -65,10 +69,11 @@ impl<T, V> GroupBy<T, V>
             consumers.insert(i, consumer);
         }
         sched.add_task(GroupByProducer {
-            parent: parent,
-            group_fn: group_fn,
-            producers: producers,
-        });
+                parent: parent,
+                group_fn: group_fn,
+                producers: producers,
+            })
+            .unwrap();
         GroupBy {
             _phantom_v: PhantomData,
             groups: groups,

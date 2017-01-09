@@ -23,7 +23,10 @@ mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn test<T: PacketRx + PacketTx + Display + Clone + 'static>(ports: Vec<T>, sched: &mut Scheduler, delay_arg: u64) {
+fn test<T, S>(ports: Vec<T>, sched: &mut S, delay_arg: u64)
+    where T: PacketRx + PacketTx + Display + Clone + 'static,
+          S: Scheduler + Sized
+{
     for port in &ports {
         println!("Receiving port {} w/ delay {}", port, delay_arg);
     }
@@ -33,7 +36,7 @@ fn test<T: PacketRx + PacketTx + Display + Clone + 'static>(ports: Vec<T>, sched
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
-        sched.add_task(pipeline);
+        sched.add_task(pipeline).unwrap();
     }
 }
 
@@ -152,9 +155,9 @@ fn main() {
 
             let delay: u64 = delay_arg;
             if phy_ports {
-                context.add_pipeline_to_run(Arc::new(move |p, s: &mut Scheduler| test(p, s, delay)));
+                context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s, delay)));
             } else {
-                context.add_test_pipeline(Arc::new(move |p, s: &mut Scheduler| test(p, s, delay)));
+                context.add_test_pipeline(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s, delay)));
             }
             context.execute();
 
