@@ -4,6 +4,8 @@ use scheduler::Scheduler;
 use self::act::Act;
 pub use self::add_metadata::AddMetadataBatch;
 use self::add_metadata::MetadataFn;
+pub use self::add_metadata_mut::MutableAddMetadataBatch;
+use self::add_metadata_mut::MutableMetadataFn;
 
 pub use self::composition_batch::CompositionBatch;
 pub use self::deparsed_batch::DeparsedBatch;
@@ -43,6 +45,7 @@ mod send_batch;
 mod transform_batch;
 mod restore_header;
 mod add_metadata;
+mod add_metadata_mut;
 
 /// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
 /// the precise batch being processed will be determined by the scheduling policy used.
@@ -68,6 +71,14 @@ pub trait Batch: BatchIterator + Act + Send {
         where Self: Sized
     {
         AddMetadataBatch::new(self, generator)
+    }
+
+    fn metadata_mut<M: Sized + Send>(self,
+                                     generator: MutableMetadataFn<Self::Header, Self::Metadata, M>)
+                                     -> MutableAddMetadataBatch<M, Self>
+        where Self: Sized
+    {
+        MutableAddMetadataBatch::new(self, generator)
     }
 
     /// Send this batch out a particular port and queue.
