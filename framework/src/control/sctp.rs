@@ -33,6 +33,11 @@ impl<T: SctpControlAgent> Executable for SctpControlServer<T> {
     fn execute(&mut self) {
         self.schedule();
     }
+
+    #[inline]
+    fn dependencies(&mut self) -> Vec<usize> {
+        vec![]
+    }
 }
 
 // FIXME: Add one-to-many SCTP support?

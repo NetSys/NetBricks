@@ -12,6 +12,7 @@ mod context;
 
 pub trait Executable {
     fn execute(&mut self);
+    fn dependencies(&mut self) -> Vec<usize>;
 }
 
 impl<F> Executable for F
@@ -20,6 +21,14 @@ impl<F> Executable for F
     fn execute(&mut self) {
         (*self)()
     }
+
+    fn dependencies(&mut self) -> Vec<usize> {
+        vec![]
+    }
+}
+
+pub trait Scheduler {
+    fn add_task<T: Executable + 'static>(&mut self, task: T) -> Result<usize> where Self: Sized;
 }
 
 pub trait Scheduler {

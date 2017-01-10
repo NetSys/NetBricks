@@ -16,6 +16,7 @@ members=["framework",
         "test/tcp_reconstruction",
         "test/acl-fw",
         "test/embedded-scheduler-test",
+        "test/embedded-scheduler-dependency-test",
         "3rdparty/tools/cargo"]
 [profile.release]
 opt-level = 3

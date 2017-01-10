@@ -121,8 +121,6 @@ fn main() {
     let pkt = unsafe { packet_from_mbuf::<NullHeader>(pkt_mbuf, 0) };
     drop(pkt);
 
-    // const _BATCH: usize = 1 << 10;
-    // const _CHANNEL_SIZE: usize = 256;
     let _thread: Vec<_> = queues_by_core.iter()
         .map(|(core, ports)| {
             let c = core.clone();

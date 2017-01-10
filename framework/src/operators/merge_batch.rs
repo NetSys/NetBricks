@@ -88,4 +88,9 @@ impl<T: Batch> Executable for MergeBatch<T> {
         self.act();
         self.done();
     }
+
+    #[inline]
+    fn dependencies(&mut self) -> Vec<usize> {
+        self.get_packet_batch().get_parent_task().clone()
+    }
 }
