@@ -40,11 +40,11 @@ fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32) {
     }
 
     let (producer, consumer) = new_mpsc_queue_pair();
-    let mut sched = Scheduler::new();
+    let mut sched = StandaloneScheduler::new();
     let pipeline = consumer.send(ports[0].clone());
     let creator = PacketCreator::new(producer);
-    sched.add_task(creator);
-    sched.add_task(pipeline);
+    sched.add_task(creator).unwrap();
+    sched.add_task(pipeline).unwrap();
     sched.execute_loop();
 }
 

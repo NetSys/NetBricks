@@ -45,13 +45,13 @@ fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32, delay_arg: u64) {
         .map(|port| delay(ReceiveBatch::new(port.clone()), delay_arg).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
-    let mut sched = Scheduler::new();
+    let mut sched = StandaloneScheduler::new();
     for pipeline in pipelines {
-        sched.add_task(pipeline);
+        sched.add_task(pipeline).unwrap();
     }
     let addr = SocketAddrV4::new(Ipv4Addr::from_str("0.0.0.0").unwrap(), 8001);
     let control = SctpControlServer::<ControlListener>::new_streaming(SocketAddr::V4(addr));
-    sched.add_task(control);
+    sched.add_task(control).unwrap();
     sched.execute_loop();
 }
 

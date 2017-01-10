@@ -1,5 +1,4 @@
 use allocators::CacheAligned;
-use common::*;
 use config::NetbricksConfiguration;
 use interface::{PmdPort, PortQueue, VirtualQueue, VirtualPort};
 use interface::dpdk::{init_system, init_thread};
@@ -61,7 +60,7 @@ impl NetBricksContext {
             .spawn(move || {
                 init_thread(core, core);
                 // Other init?
-                let mut sched = Scheduler::new_with_channel(receiver);
+                let mut sched = StandaloneScheduler::new_with_channel(receiver);
                 sched.handle_requests()
             })
             .unwrap();
@@ -69,8 +68,9 @@ impl NetBricksContext {
     }
 
     /// Run a function (which installs a pipeline) on all schedulers in the system.
-    pub fn add_pipeline_to_run<T: Fn(Vec<AlignedPortQueue>, &mut Scheduler) + Send + Sync + 'static>(&mut self,
-                                                                                                     run: Arc<T>) {
+    pub fn add_pipeline_to_run<T>(&mut self, run: Arc<T>)
+        where T: Fn(Vec<AlignedPortQueue>, &mut StandaloneScheduler) + Send + Sync + 'static
+    {
         for (core, channel) in &self.scheduler_channels {
             let ports = match self.rx_queues.get(core) {
                 Some(v) => v.clone(),
@@ -81,8 +81,9 @@ impl NetBricksContext {
         }
     }
 
-    pub fn add_test_pipeline<T: Fn(Vec<AlignedVirtualQueue>, &mut Scheduler) + Send + Sync + 'static>(&mut self,
-                                                                                                      run: Arc<T>) {
+    pub fn add_test_pipeline<T>(&mut self, run: Arc<T>)
+        where T: Fn(Vec<AlignedVirtualQueue>, &mut StandaloneScheduler) + Send + Sync + 'static
+    {
         for (core, channel) in &self.scheduler_channels {
             let port = self.virtual_ports.entry(*core).or_insert(VirtualPort::new(1).unwrap());
             let boxed_run = run.clone();
@@ -92,7 +93,7 @@ impl NetBricksContext {
         }
     }
 
-    pub fn add_test_pipeline_to_core<T: Fn(Vec<AlignedVirtualQueue>, &mut Scheduler) + Send + Sync + 'static>
+    pub fn add_test_pipeline_to_core<T: Fn(Vec<AlignedVirtualQueue>, &mut StandaloneScheduler) + Send + Sync + 'static>
         (&mut self,
          core: i32,
          run: Arc<T>)
@@ -111,10 +112,11 @@ impl NetBricksContext {
     }
 
     /// Install a pipeline on a particular core.
-    pub fn add_pipeline_to_core<T: Fn(Vec<AlignedPortQueue>, &mut Scheduler) + Send + Sync + 'static>(&mut self,
-                                                                                                      core: i32,
-                                                                                                      run: Arc<T>)
-                                                                                                      -> Result<()> {
+    pub fn add_pipeline_to_core<T: Fn(Vec<AlignedPortQueue>, &mut StandaloneScheduler) + Send + Sync + 'static>
+        (&mut self,
+         core: i32,
+         run: Arc<T>)
+         -> Result<()> {
         if let Some(channel) = self.scheduler_channels.get(&core) {
             let ports = match self.rx_queues.get(&core) {
                 Some(v) => v.clone(),

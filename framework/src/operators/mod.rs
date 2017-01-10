@@ -137,11 +137,11 @@ pub trait Batch: BatchIterator + Act + Send {
         DeparsedBatch::<Self>::new(self)
     }
 
-    fn group_by(self,
-                groups: usize,
-                group_f: GroupFn<Self::Header, Self::Metadata>,
-                sched: &mut Scheduler)
-                -> GroupBy<Self::Header, Self>
+    fn group_by<S: Scheduler + Sized>(self,
+                                      groups: usize,
+                                      group_f: GroupFn<Self::Header, Self::Metadata>,
+                                      sched: &mut S)
+                                      -> GroupBy<Self::Header, Self>
         where Self: Sized
     {
         GroupBy::<Self::Header, Self>::new(self, groups, group_f, sched)

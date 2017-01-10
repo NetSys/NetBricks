@@ -39,9 +39,9 @@ fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32, delay_arg: u64) {
         .map(|port| delay(ReceiveBatch::new(port.clone()), delay_arg).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
-    let mut sched = Scheduler::new();
+    let mut sched = StandaloneScheduler::new();
     for pipeline in pipelines {
-        sched.add_task(pipeline);
+        sched.add_task(pipeline).unwrap();
     }
     sched.execute_loop();
 }
