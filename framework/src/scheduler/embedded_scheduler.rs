@@ -5,11 +5,16 @@ use super::Executable;
 /// Used to keep stats about each pipeline and eventually grant tokens, etc.
 struct Runnable {
     pub task: Box<Executable>,
+    pub dependencies: Vec<usize>,
 }
 
 impl Runnable {
-    pub fn from_task<T: Executable + 'static>(task: T) -> Runnable {
-        Runnable { task: box task }
+    pub fn from_task<T: Executable + 'static>(mut task: T) -> Runnable {
+        let deps = task.dependencies();
+        Runnable {
+            task: box task,
+            dependencies: deps,
+        }
     }
 }
 
@@ -43,6 +48,13 @@ impl EmbeddedScheduler {
 
     /// Run specified task.
     pub fn exec_task(&mut self, task_id: usize) {
+        {
+            let len = self.tasks[task_id - 1].dependencies.len();
+            for dep in 0..len {
+                let dep_task = self.tasks[task_id - 1].dependencies[dep];
+                self.exec_task(dep_task)
+            }
+        }
         self.tasks[task_id - 1].task.execute();
     }
 }

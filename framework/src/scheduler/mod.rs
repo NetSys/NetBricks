@@ -12,6 +12,7 @@ mod context;
 
 pub trait Executable {
     fn execute(&mut self);
+    fn dependencies(&mut self) -> Vec<usize>;
 }
 
 impl<F> Executable for F
@@ -19,6 +20,10 @@ impl<F> Executable for F
 {
     fn execute(&mut self) {
         (*self)()
+    }
+
+    fn dependencies(&mut self) -> Vec<usize> {
+        vec![]
     }
 }
 

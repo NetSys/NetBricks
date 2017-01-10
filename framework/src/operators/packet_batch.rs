@@ -13,6 +13,7 @@ use super::iterator::{BatchIterator, PacketDescriptor};
 pub struct PacketBatch {
     array: Vec<*mut MBuf>,
     scratch: Vec<*mut MBuf>,
+    parent_tasks: Vec<usize>,
 }
 
 // *mut MBuf is not send by default.
@@ -24,7 +25,18 @@ impl PacketBatch {
         PacketBatch {
             array: Vec::<*mut MBuf>::with_capacity(cnt as usize),
             scratch: Vec::<*mut MBuf>::with_capacity(cnt as usize),
+            parent_tasks: vec![],
         }
+    }
+
+    #[inline]
+    pub fn add_parent_task(&mut self, task: usize) {
+        self.parent_tasks.push(task);
+    }
+
+    #[inline]
+    pub fn get_parent_task(&self) -> &Vec<usize> {
+        &self.parent_tasks
     }
 
     /// Allocate as many mbufs as batch can hold. `len` here merely sets the extent of the mbuf considered when sending
