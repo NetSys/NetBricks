@@ -30,7 +30,3 @@ impl<F> Executable for F
 pub trait Scheduler {
     fn add_task<T: Executable + 'static>(&mut self, task: T) -> Result<usize> where Self: Sized;
 }
-
-pub trait Scheduler {
-    fn add_task<T: Executable + 'static>(&mut self, task: T) -> Result<usize> where Self: Sized;
-}
