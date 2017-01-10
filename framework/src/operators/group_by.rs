@@ -20,6 +20,7 @@ pub struct GroupBy<T, V>
     groups: usize,
     _phantom_t: PhantomData<T>,
     consumers: HashMap<usize, ReceiveBatch<MpscConsumer>>,
+    task: usize,
 }
 
 struct GroupByProducer<T, V>
@@ -49,6 +50,11 @@ impl<T, V> Executable for GroupByProducer<T, V>
         self.parent.get_packet_batch().clear_packets();
         self.parent.done();
     }
+
+    #[inline]
+    fn dependencies(&mut self) -> Vec<usize> {
+        self.parent.get_packet_batch().get_parent_task().clone()
+    }
 }
 
 #[cfg_attr(feature = "dev", allow(len_without_is_empty))]
@@ -68,7 +74,7 @@ impl<T, V> GroupBy<T, V>
             producers.push(prod);
             consumers.insert(i, consumer);
         }
-        sched.add_task(GroupByProducer {
+        let task = sched.add_task(GroupByProducer {
                 parent: parent,
                 group_fn: group_fn,
                 producers: producers,
@@ -79,6 +85,7 @@ impl<T, V> GroupBy<T, V>
             groups: groups,
             _phantom_t: PhantomData,
             consumers: consumers,
+            task: task,
         }
     }
 
@@ -87,6 +94,14 @@ impl<T, V> GroupBy<T, V>
     }
 
     pub fn get_group(&mut self, group: usize) -> Option<RestoreHeader<T, V::Metadata, ReceiveBatch<MpscConsumer>>> {
-        self.consumers.remove(&group).map(RestoreHeader::new)
+        match self.consumers.remove(&group) {
+            Some(mut p) => {
+                {
+                    p.get_packet_batch().add_parent_task(self.task)
+                };
+                Some(RestoreHeader::new(p))
+            }
+            None => None,
+        }
     }
 }

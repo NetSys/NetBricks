@@ -106,4 +106,9 @@ impl<Port, V> Executable for SendBatch<Port, V>
     fn execute(&mut self) {
         self.act()
     }
+
+    #[inline]
+    fn dependencies(&mut self) -> Vec<usize> {
+        self.get_packet_batch().get_parent_task().clone()
+    }
 }

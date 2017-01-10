@@ -32,6 +32,11 @@ impl<T: TcpControlAgent> Executable for TcpControlServer<T> {
     fn execute(&mut self) {
         self.schedule();
     }
+
+    #[inline]
+    fn dependencies(&mut self) -> Vec<usize> {
+        vec![]
+    }
 }
 
 impl<T: TcpControlAgent> TcpControlServer<T> {
