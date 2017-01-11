@@ -300,7 +300,7 @@ case $TASK in
         find_sctp
 
         pushd $BASE_DIR/framework
-        if [ ${SCTP_PRESENT} -eq 1 ]--verbose ; then
+        if [ ${SCTP_PRESENT} -eq 1 ]; then
             ${CARGO} build --release --features "sctp"
         else
             ${CARGO} build --release
