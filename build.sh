@@ -25,18 +25,13 @@ else
     DPDK="${DPDK_HOME}/build/lib/libdpdk.a"
 fi
 
-if [ ! -z ${SYSTEM_CARGO} ]; then
-    CARGO_LOC=`which cargo`
-    export CARGO=${CARGO_PATH-"${CARGO_LOC}"}
-    if [ ! -e ${CARGO} ]; then
-        echo "Asked to use preinstalled Cargo, but Cargo was not found"
-        exit 0
-    fi
-    echo "Using Cargo from ${CARGO}"
-else
-    export CARGO="${TOOLS_BASE}/bin/cargo"
+CARGO_LOC=`which cargo`
+export CARGO=${CARGO_PATH-"${CARGO_LOC}"}
+if [ ! -e ${CARGO} ]; then
+    echo "Could not find a preinstalled Cargo"
+    exit 0
 fi
-CARGO_HOME="${TOOLS_BASE}/cargo"
+echo "Using Cargo from ${CARGO}"
 
 MUSL_DOWNLOAD_PATH="${DOWNLOAD_DIR}/musl.tar.gz"
 MUSL_RESULT="${EXT_BASE}/musl"
@@ -54,6 +49,7 @@ export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 source ${BASE_DIR}/examples.sh
 REQUIRE_RUSTFMT=0
+export RUSTFLAGS="-C target-cpu=native"
 
 rust_build_static() {
     if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
@@ -176,16 +172,6 @@ deps () {
 
     rust
 
-    if [ ! -e ${CARGO_HOME}/cargo.toml ]; then
-        cargo_clone
-    fi
-
-    if [ ! -e $CARGO ]; then
-        cargo_build
-    else
-        echo "Cargo found, not building"
-    fi
-
     if [ ${REQUIRE_RUSTFMT} -ne 0 ]; then
         rust_fmt
     fi
@@ -206,35 +192,6 @@ clean_deps() {
 dpdk () {
     $BASE_DIR/3rdparty/get-dpdk.sh ${DOWNLOAD_DIR}
     proc="$(nproc)"
-}
-
-cargo_clone () {
-    if [ ! -e $CARGO_HOME ]; then
-        git clone https://github.com/apanda/cargo $CARGO_HOME
-    else
-        pushd $CARGO_HOME
-        git pull
-        popd
-    fi
-}
-
-cargo_build () {
-    # Build cargo
-    pushd $CARGO_HOME
-    git submodule update --init
-    if [ ! -z ${RUST_STATIC} ]; then
-        echo "Rust static is ${RUST_STATIC}, building with that"
-        ./configure --prefix=${TOOLS_BASE} \
-            --local-rust-root=${TOOLS_BASE}
-    else
-        ./configure --prefix=${TOOLS_BASE}
-    fi
-    export CARGO_TARGET_DIR="${CARGO_HOME}/target" # Work around the workspace thing.
-    export CFG_DISABLE_LDCONFIG=1 #Do not run ldconfig since this really screws up Travis.
-    make -j
-    make install || true
-    unset CARGO_TARGET_DIR
-    popd
 }
 
 musl () {
@@ -343,7 +300,7 @@ case $TASK in
         find_sctp
 
         pushd $BASE_DIR/framework
-        if [ ${SCTP_PRESENT} -eq 1 ]; then
+        if [ ${SCTP_PRESENT} -eq 1 ]--verbose ; then
             ${CARGO} build --release --features "sctp"
         else
             ${CARGO} build --release
