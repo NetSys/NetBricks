@@ -19,6 +19,6 @@ export examples=(
         test/packet_test
         test/embedded-scheduler-test
         test/embedded-scheduler-dependency-test
-	test/bessmod
+        test/bessmod
 )
 
