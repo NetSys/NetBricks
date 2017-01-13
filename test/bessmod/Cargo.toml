@@ -1,0 +1,24 @@
+[package]
+name = "bessmod"
+version = "0.1.0"
+authors = ["Sangjin Han <sangjin@eecs.berkeley.edu>"]
+
+[[bin]]
+name = "bessmod"
+path = "src/main.rs"
+
+[lib]
+name = "bessnb"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+e2d2 = { path = "../../framework", features = ["performance"] }
+time = ">=0.1.0"
+getopts = "*"
+rand = "0.3"
+fnv = "*"
+
+[features]
+default = []
+print = []
