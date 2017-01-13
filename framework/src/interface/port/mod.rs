@@ -4,9 +4,11 @@ use interface::{PacketRx, PacketTx};
 use native::zcsi::MBuf;
 pub use self::phy_port::*;
 pub use self::virt_port::*;
+pub use self::cb_port::*;
 use std::sync::atomic::AtomicUsize;
 mod phy_port;
 mod virt_port;
+mod cb_port;
 
 /// Statistics for PMD port.
 struct PortStats {
