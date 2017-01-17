@@ -1,11 +1,12 @@
-use std;
+
 
 use e2d2::common::*;
 use e2d2::interface::*;
+use e2d2::native::zcsi::mbuf::MBuf;
 use e2d2::operators::*;
 use e2d2::scheduler::embedded_scheduler::*;
-use e2d2::native::zcsi::mbuf::MBuf;
 use nf;
+use std;
 
 #[repr(C)]
 pub struct BessGate {
@@ -61,7 +62,10 @@ fn send(cookie: &Cookie, pkts: &mut [*mut MBuf]) -> Result<u32> {
 }
 
 #[no_mangle]
-pub extern "C" fn init_mod(num_gates: usize, rx_bufs: *mut *mut BessGate, tx_bufs: *mut *mut BessGate) -> *mut NetbricksBessMod {
+pub extern "C" fn init_mod(num_gates: usize,
+                           rx_bufs: *mut *mut BessGate,
+                           tx_bufs: *mut *mut BessGate)
+                           -> *mut NetbricksBessMod {
     let mut sched = EmbeddedScheduler::new();
     let port = CallbackPort::new(num_gates as i32, recv, send).unwrap();
 

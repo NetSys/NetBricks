@@ -22,9 +22,11 @@ const GATE_PKT_QUEUE: usize = 32;
 fn alloc_gates(num_gates: usize) -> Vec<bessnb::BessGate> {
     let mut gates = Vec::<bessnb::BessGate>::new();
 
-    for _ in 0..num_gates{
+    for _ in 0..num_gates {
         let mut pkts = Vec::<*mut mbuf::MBuf>::with_capacity(GATE_PKT_QUEUE);
-        unsafe { pkts.set_len(GATE_PKT_QUEUE); }
+        unsafe {
+            pkts.set_len(GATE_PKT_QUEUE);
+        }
 
         let buf = bessnb::BessGate {
             capacity: GATE_PKT_QUEUE,
@@ -78,7 +80,9 @@ fn main() {
         tx_gate_ptrs.push(&mut tx_gates[i]);
     }
 
-    let ctx = bessnb::init_mod(gate_arg, rx_gate_ptrs.as_mut_ptr(), tx_gate_ptrs.as_mut_ptr());
+    let ctx = bessnb::init_mod(gate_arg,
+                               rx_gate_ptrs.as_mut_ptr(),
+                               tx_gate_ptrs.as_mut_ptr());
 
     let mut pkts_so_far = (0, 0);
     let start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
