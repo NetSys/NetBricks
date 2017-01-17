@@ -80,10 +80,10 @@ impl Maglev {
     }
 }
 
-pub fn maglev<T: 'static + Batch<Header = NullHeader>>(parent: T,
-                                                       s: &mut Scheduler,
-                                                       backends: &[&str])
-                                                       -> CompositionBatch {
+pub fn maglev<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(parent: T,
+                                                                             s: &mut S,
+                                                                             backends: &[&str])
+                                                                             -> CompositionBatch {
     let ct = backends.len();
     let lut = Maglev::new(backends, 65537);
     let mut cache = HashMap::<usize, usize, FnvHash>::with_hasher(Default::default());

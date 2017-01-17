@@ -24,7 +24,7 @@ const CONVERSION_FACTOR: f64 = 1000000000.;
 
 fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32) {
     init_thread(core, core);
-    let mut sched = Scheduler::new();
+    let mut sched = StandaloneScheduler::new();
     println!("Receiving started");
     for port in &ports {
         println!("Receiving port {} rxq {} txq {} on core {}",
@@ -44,9 +44,9 @@ fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32) {
         .collect();
     println!("Running {} pipelines", pipelines.len());
     if pipelines.len() > 1 {
-        sched.add_task(merge(pipelines))
+        sched.add_task(merge(pipelines)).unwrap()
     } else {
-        sched.add_task(pipelines.pop().unwrap())
+        sched.add_task(pipelines.pop().unwrap()).unwrap()
     };
     sched.execute_loop();
 }

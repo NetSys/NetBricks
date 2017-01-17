@@ -19,7 +19,9 @@ First obtain Rust nightly. I use [rustup](https://rustup.rs), in which case the 
 
 ```
 curl https://sh.rustup.rs -sSf | sh  # Install rustup
+source $HOME/.cargo/env
 rustup install nightly
+rustup default nightly
 ```
 
 Then clone this repository and run `build.sh`
@@ -42,10 +44,10 @@ export RUST_STATIC=1
 
 Dependencies
 ------------
-Building NetBricks requires `libcurl` with support for `gnutls`. On Debian these dependencies can be installed using:
+Building NetBricks requires the following dependency packages (on Debian):
 
 ```
-apt-get install libgnutls30 libgnutls-openssl-dev libcurl4-gnutls-dev
+apt-get install libgnutls30 libgnutls-openssl-dev libcurl4-gnutls-dev libnuma-dev
 ```
 
 NetBricks also supports using SCTP as a control protocol. SCTP support requires the use of `libsctp` (this is an

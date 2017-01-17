@@ -45,11 +45,11 @@ impl PacketCreator {
 
 impl Executable for PacketCreator {
     fn execute(&mut self) {
-        // let mut parray = new_packet_array(16);
-        // let mut vec:Vec<Packet<IpHeader>> = parray.drain(..).map(|p| self.initialize_packet(p)).collect();
-        // self.producer.enqueue(&mut vec);
         for _ in 0..16 {
             self.producer.enqueue_one(self.create_packet());
         }
+    }
+    fn dependencies(&mut self) -> Vec<usize> {
+        vec![]
     }
 }

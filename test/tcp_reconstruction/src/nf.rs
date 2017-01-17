@@ -13,7 +13,9 @@ type FnvHash = BuildHasherDefault<FnvHasher>;
 const BUFFER_SIZE: usize = 2048;
 const PRINT_SIZE: usize = 256;
 
-pub fn reconstruction<T: 'static + Batch<Header = NullHeader>>(parent: T, sched: &mut Scheduler) -> CompositionBatch {
+pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(parent: T,
+                                                                                     sched: &mut S)
+                                                                                     -> CompositionBatch {
     let mut cache = HashMap::<Flow, ReorderedBuffer, FnvHash>::with_hasher(Default::default());
     let mut read_buf: Vec<u8> = (0..PRINT_SIZE).map(|_| 0).collect();
     let mut groups = parent.parse::<MacHeader>()
