@@ -4,36 +4,37 @@ use e2d2::common::*;
 use e2d2::interface::*;
 use e2d2::operators::*;
 use e2d2::scheduler::embedded_scheduler::*;
-use e2d2::native::zcsi::*;
+use e2d2::native::zcsi::mbuf::MBuf;
 use nf;
 
 #[repr(C)]
-pub struct PacketBuf {
+pub struct BessGate {
     pub capacity: usize,
     pub cnt: usize,
-    pub pkts: *mut *mut mbuf::MBuf,
+    pub pkts: *mut *mut MBuf,
 }
 
-#[derive(Clone)]
-struct Cookie {
-    qid: i32,
-    rx_buf: *mut PacketBuf,
-    tx_buf: *mut PacketBuf,
-}
-
-unsafe impl Send for Cookie {}
-unsafe impl Sync for Cookie {}
-
+#[repr(C)]
 pub struct NetbricksBessMod {
     sched: EmbeddedScheduler,
     task_ids: Vec<usize>,
     port: std::sync::Arc<CallbackPort<Cookie>>,
 }
 
+#[derive(Clone)]
+struct Cookie {
+    qid: usize,
+    rx_buf: *mut BessGate,
+    tx_buf: *mut BessGate,
+}
+
+unsafe impl Send for Cookie {}
+unsafe impl Sync for Cookie {}
+
 #[inline]
-fn recv(cookie: &Cookie, pkts: &mut [*mut mbuf::MBuf]) -> Result<u32> {
+fn recv(cookie: &Cookie, pkts: &mut [*mut MBuf]) -> Result<u32> {
     unsafe {
-        let ref mut rx_buf = *cookie.rx_buf;
+        let rx_buf = &mut *cookie.rx_buf;
         let cnt = rx_buf.cnt;
 
         std::ptr::copy_nonoverlapping(rx_buf.pkts, pkts.as_mut_ptr(), cnt);
@@ -44,9 +45,9 @@ fn recv(cookie: &Cookie, pkts: &mut [*mut mbuf::MBuf]) -> Result<u32> {
 }
 
 #[inline]
-fn send(cookie: &Cookie, pkts: &mut [*mut mbuf::MBuf]) -> Result<u32> {
+fn send(cookie: &Cookie, pkts: &mut [*mut MBuf]) -> Result<u32> {
     unsafe {
-        let ref mut tx_buf = *cookie.tx_buf;
+        let tx_buf = &mut *cookie.tx_buf;
         let cnt = pkts.len();
         let to_copy = std::cmp::min(cnt, tx_buf.capacity - tx_buf.cnt);
 
@@ -55,32 +56,41 @@ fn send(cookie: &Cookie, pkts: &mut [*mut mbuf::MBuf]) -> Result<u32> {
                                       to_copy);
         tx_buf.cnt += to_copy;
 
-        if cnt > to_copy {
-            mbuf_free_bulk(pkts.as_mut_ptr().offset(to_copy as isize),
-                           (cnt - to_copy) as i32);
-        }
-
         Ok(cnt as u32)
     }
 }
 
 #[no_mangle]
-pub extern fn init_mod(rx_buf: *mut PacketBuf, tx_buf: *mut PacketBuf) -> *mut NetbricksBessMod {
-    let cookie = Cookie {
-        qid: 0,
-        rx_buf: rx_buf,
-        tx_buf: tx_buf,
-    };
-
+pub extern "C" fn init_mod(num_gates: usize, rx_bufs: *mut *mut BessGate, tx_bufs: *mut *mut BessGate) -> *mut NetbricksBessMod {
     let mut sched = EmbeddedScheduler::new();
-    let port = CallbackPort::new(1, recv, send).unwrap();
-    let queue = port.new_callback_queue(cookie).unwrap();
+    let port = CallbackPort::new(num_gates as i32, recv, send).unwrap();
+
+    let mut gates = Vec::new();
+
+    for qid in 0..num_gates {
+        let cookie;
+
+        unsafe {
+            cookie = Cookie {
+                qid: qid,
+                rx_buf: (*rx_bufs.offset(qid as isize)),
+                tx_buf: (*tx_bufs.offset(qid as isize)),
+            };
+        }
+
+        gates.push(port.new_callback_queue(cookie).unwrap());
+    }
 
     let mut task_ids = Vec::<usize>::new();
 
-    // Replace this with your own pipeline. Repeat --------------------------
-    let id = sched.add_task(nf::delay(ReceiveBatch::new(queue.clone()), 1).send(queue.clone()));
-    task_ids.push(id.unwrap());
+    // With a given "gates", register your pipelines as necessary -----------
+    // Collect task IDs returned by sched.add_task(). Below is an example.
+    for gate in gates {
+        let rx_gate = gate.clone();
+        let tx_gate = gate.clone();
+        let id = sched.add_task(nf::delay(ReceiveBatch::new(rx_gate), 1).send(tx_gate));
+        task_ids.push(id.unwrap());
+    }
     // ----------------------------------------------------------------------
 
     let ctx = Box::new(NetbricksBessMod {
@@ -93,7 +103,7 @@ pub extern fn init_mod(rx_buf: *mut PacketBuf, tx_buf: *mut PacketBuf) -> *mut N
 }
 
 #[no_mangle]
-pub extern fn deinit_mod(_ctx: *mut NetbricksBessMod) {
+pub extern "C" fn deinit_mod(_ctx: *mut NetbricksBessMod) {
     unsafe {
         let ctx = Box::from_raw(_ctx);
         drop(ctx);      // unnecessary, just to avoid 'unused variable' warning
@@ -101,7 +111,7 @@ pub extern fn deinit_mod(_ctx: *mut NetbricksBessMod) {
 }
 
 #[no_mangle]
-pub extern fn run_once(_ctx: *mut NetbricksBessMod) {
+pub extern "C" fn run_once(_ctx: *mut NetbricksBessMod) {
     let ctx: &mut NetbricksBessMod = unsafe { _ctx.as_mut().unwrap() };
 
     for id in &ctx.task_ids {
@@ -110,7 +120,7 @@ pub extern fn run_once(_ctx: *mut NetbricksBessMod) {
 }
 
 #[no_mangle]
-pub extern fn get_stats(_ctx: *mut NetbricksBessMod) -> (usize, usize) {
+pub extern "C" fn get_stats(_ctx: *mut NetbricksBessMod) -> (usize, usize) {
     let ctx: &mut NetbricksBessMod = unsafe { _ctx.as_mut().unwrap() };
     ctx.port.stats()
 }

@@ -13,11 +13,30 @@ use getopts::Options;
 use std::env;
 use std::process;
 
+pub mod bessnb;
 mod nf;
-mod bessnb;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
-const BATCH_SIZE: usize = 32;
+const GATE_PKT_QUEUE: usize = 32;
+
+fn alloc_gates(num_gates: usize) -> Vec<bessnb::BessGate> {
+    let mut gates = Vec::<bessnb::BessGate>::new();
+
+    for _ in 0..num_gates{
+        let mut pkts = Vec::<*mut mbuf::MBuf>::with_capacity(GATE_PKT_QUEUE);
+        unsafe { pkts.set_len(GATE_PKT_QUEUE); }
+
+        let buf = bessnb::BessGate {
+            capacity: GATE_PKT_QUEUE,
+            cnt: 0,
+            pkts: pkts.as_mut_ptr(),
+        };
+
+        gates.push(buf);
+    }
+
+    gates
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -25,7 +44,7 @@ fn main() {
     let mut opts = Options::new();
 
     opts.optflag("h", "help", "print this help menu");
-    opts.optopt("d", "delay", "Delay cycles", "cycles");
+    opts.optopt("g", "gate", "# of input/output gates", "gates");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -37,10 +56,10 @@ fn main() {
         process::exit(0)
     }
 
-    let delay_arg: u32 = matches.opt_str("d")
-        .unwrap_or_else(|| String::from("100"))
+    let gate_arg: usize = matches.opt_str("g")
+        .unwrap_or_else(|| String::from("1"))
         .parse()
-        .expect("Could not parse delay");
+        .expect("Could not parse gate");
 
     let name = "bessmod";
     let configuration = NetbricksConfiguration::new_with_name(&name[..]);
@@ -49,53 +68,50 @@ fn main() {
     dpdk::init_system(&configuration);
 
 
+    let mut rx_gates = alloc_gates(gate_arg);
+    let mut tx_gates = alloc_gates(gate_arg);
+
+    let mut rx_gate_ptrs = Vec::<*mut bessnb::BessGate>::new();
+    let mut tx_gate_ptrs = Vec::<*mut bessnb::BessGate>::new();
+    for i in 0..gate_arg {
+        rx_gate_ptrs.push(&mut rx_gates[i]);
+        tx_gate_ptrs.push(&mut tx_gates[i]);
+    }
+
+    let ctx = bessnb::init_mod(gate_arg, rx_gate_ptrs.as_mut_ptr(), tx_gate_ptrs.as_mut_ptr());
+
     let mut pkts_so_far = (0, 0);
     let start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
 
-    println!("0 OVERALL RX 0.00 TX 0.00 CYCLE_PER_DELAY 0 0 0");
+    println!("0 OVERALL RX 0.00 TX 0.00");
 
-    let mut rx_pkts = Vec::<*mut mbuf::MBuf>::with_capacity(BATCH_SIZE);
-    unsafe {
-        rx_pkts.set_len(BATCH_SIZE);
-    }
-
-    let mut rx_buf = bessnb::PacketBuf {
-        capacity: BATCH_SIZE,
-        cnt: 0,
-        pkts: rx_pkts.as_mut_ptr(),
-    };
-
-    let mut tx_pkts = Vec::<*mut mbuf::MBuf>::with_capacity(BATCH_SIZE);
-    unsafe {
-        tx_pkts.set_len(BATCH_SIZE);
-    }
-
-    let mut tx_buf = bessnb::PacketBuf {
-        capacity: BATCH_SIZE,
-        cnt: 0,
-        pkts: tx_pkts.as_mut_ptr(),
-    };
-
-    let ctx = unsafe { bessnb::init_mod(&mut rx_buf, &mut tx_buf).as_mut().unwrap() };
-
+    // Run the processing loop in the current thread, as if we are BESS
     let mut last = start;
     loop {
+        // feed the module with a randomly chosen input gate
         unsafe {
-            mbuf_alloc_bulk(rx_buf.pkts, 60, BATCH_SIZE as i32);
-            rx_buf.cnt = BATCH_SIZE;
+            let i = rand::random::<usize>() % gate_arg;
+            assert!(rx_gates[i].cnt == 0);
+            let ret = mbuf_alloc_bulk(rx_gates[i].pkts, 60, GATE_PKT_QUEUE as i32);
+            assert!(ret == 0, "Packet allocation failed");
+            rx_gates[i].cnt = GATE_PKT_QUEUE;
         }
+
         bessnb::run_once(ctx);
+
+        // flush all output gates
         unsafe {
-            if tx_buf.cnt > 0 {
-                mbuf_free_bulk(tx_pkts.as_mut_ptr(), tx_buf.cnt as i32);
+            for i in 0..gate_arg {
+                if tx_gates[i].cnt > 0 {
+                    mbuf_free_bulk(tx_gates[i].pkts, tx_gates[i].cnt as i32);
+                }
+                tx_gates[i].cnt = 0;
             }
-            tx_buf.cnt = 0;
         }
 
         let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
         if now - last > 1. {
-            let (rx, tx) = bessnb::get_stats(ctx);
-            let pkts = (rx, tx);
+            let pkts = bessnb::get_stats(ctx);
             let rx_pkts = pkts.0 - pkts_so_far.0;
             let tx_pkts = pkts.1 - pkts_so_far.1;
 
