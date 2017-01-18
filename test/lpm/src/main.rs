@@ -28,8 +28,7 @@ fn test<T, S>(ports: Vec<T>, sched: &mut S)
 {
     println!("Receiving started");
     for port in &ports {
-        println!("Receiving port {}",
-                 port);
+        println!("Receiving port {}", port);
     }
 
     let pipelines: Vec<_> = ports.iter()
@@ -62,7 +61,7 @@ fn main() {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
         process::exit(0)
     }
-    
+
     let configuration = if matches.opt_present("f") {
         let config_file = matches.opt_str("f").unwrap();
         match read_configuration(&config_file[..]) {
