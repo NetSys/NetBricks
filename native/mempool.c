@@ -312,10 +312,10 @@ int mbuf_alloc_bulk(mbuf_array_t array, uint16_t len, int cnt)
 int mbuf_free_bulk(mbuf_array_t array, int cnt)
 {
 	struct rte_mempool *_pool = array[0]->pool;
+	uint16_t priv_size = rte_pktmbuf_priv_size(_pool);
 
-	/* broadcast */
-	// Offset contains two copies of sizeof(struct rte_mbuf)
-	__m128i offset = _mm_set1_epi64x(sizeof(struct rte_mbuf));
+	// Offset contains 'struct rte_mbuf' and priv section (metadata)
+	__m128i offset = _mm_set1_epi64x(sizeof(struct rte_mbuf) + priv_size);
 	// Mask for byte 1-3 (inlusive)
 	__m128i info_mask = _mm_set1_epi64x(0x00ffffff00000000UL);
 	// consts for comparison
@@ -335,12 +335,12 @@ int mbuf_free_bulk(mbuf_array_t array, int cnt)
 		__m128i vcmp1, vcmp2, vcmp3;
 
 		// Pack two mbuf pointers into one _m128i
-		__m128i mbuf_ptrs = gather_m128i(mbuf1, mbuf0);
+		__m128i mbuf_ptrs = _mm_set_epi64x(
+				(uintptr_t)mbuf1, (uintptr_t)mbuf0);
 
 		// Buffer addresses
 		buf_addrs_actual = gather_m128i(&mbuf0->buf_addr, &mbuf1->buf_addr);
-		// Do buffers begin right after mbufs (checking if buffers
-		// are indirect).
+		// Checking if buffers are not indirect.
 		buf_addrs_derived = _mm_add_epi64(mbuf_ptrs, offset);
 
 		/* refcnt and nb_segs must be 1 */
