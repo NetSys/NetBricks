@@ -86,9 +86,7 @@ fn set_numa_domain() {
 /// Affinitize a pthread to a core and assign a DPDK thread ID.
 pub fn init_thread(tid: i32, core: i32) {
     let numa = unsafe { zcsi::init_thread(tid, core) };
-    NUMA_DOMAIN.with(|f| {
-        f.set(numa);
-    });
+    NUMA_DOMAIN.with(|f| { f.set(numa); });
     if numa == -1 {
         println!("No NUMA information found, support disabled");
     } else {
