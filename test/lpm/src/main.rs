@@ -4,17 +4,16 @@ extern crate fnv;
 extern crate time;
 extern crate getopts;
 extern crate rand;
-use e2d2::allocators::CacheAligned;
 use e2d2::common::*;
 use e2d2::config::*;
 use e2d2::interface::*;
-use e2d2::interface::dpdk::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
 use getopts::Options;
 use self::nf::*;
 use std::collections::HashMap;
 use std::env;
+use std::fmt::Display;
 use std::process;
 use std::sync::Arc;
 use std::thread;
@@ -23,21 +22,22 @@ mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
-fn test(ports: Vec<T>, sched: &mut Scheduler) {
+fn test<T, S>(ports: Vec<T>, sched: &mut S)
+    where T: PacketRx + PacketTx + Display + Clone + 'static,
+          S: Scheduler + Sized
+{
     println!("Receiving started");
     for port in &ports {
-        println!("Receiving port {} rxq {} txq {}",
-                 port.port.mac_address(),
-                 port.rxq(),
-                 port.txq());
+        println!("Receiving port {}",
+                 port);
     }
 
     let pipelines: Vec<_> = ports.iter()
-        .map(|port| lpm(ReceiveBatch::new(port.clone())).send(port.clone()))
+        .map(|port| lpm(ReceiveBatch::new(port.clone()), sched).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
-        sched.add_task(pipeline);
+        sched.add_task(pipeline).unwrap();
     }
 }
 
@@ -151,9 +151,9 @@ fn main() {
             context.start_schedulers();
 
             if phy_ports {
-                context.add_pipeline_to_run(Arc::new(move |p, s: &mut Scheduler| test(p, s)));
+                context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s)));
             } else {
-                context.add_test_pipeline(Arc::new(move |p, s: &mut Scheduler| test(p, s)));
+                context.add_test_pipeline(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s)));
             }
             context.execute();
 
