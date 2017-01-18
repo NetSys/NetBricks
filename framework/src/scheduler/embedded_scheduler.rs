@@ -1,6 +1,6 @@
 use common::*;
 use std::default::Default;
-use super::Executable;
+use super::{Executable, Scheduler};
 
 /// Used to keep stats about each pipeline and eventually grant tokens, etc.
 struct Runnable {
@@ -34,16 +34,18 @@ impl Default for EmbeddedScheduler {
     }
 }
 
+impl Scheduler for EmbeddedScheduler {
+    /// Add a task, and return a handle allowing the task to be run.
+    fn add_task<T: Executable + 'static>(&mut self, task: T) -> Result<usize> {
+        self.tasks.push(Runnable::from_task(task));
+        Ok(self.tasks.len())
+    }
+}
+
 impl EmbeddedScheduler {
     /// Create a new Bess scheduler.
     pub fn new() -> EmbeddedScheduler {
         EmbeddedScheduler { tasks: Vec::with_capacity(DEFAULT_TASKQ_SIZE) }
-    }
-
-    /// Add a task, and return a handle allowing the task to be run.
-    pub fn add_task<T: Executable + 'static>(&mut self, task: T) -> Result<usize> {
-        self.tasks.push(Runnable::from_task(task));
-        Ok(self.tasks.len())
     }
 
     /// Run specified task.
