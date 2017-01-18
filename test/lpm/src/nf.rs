@@ -75,8 +75,7 @@ impl IPLookup {
                     self.tbl24[addr >> 8] = ((ctlb >> 8) as u16) | OVERFLOW_MASK;
                     self.current_tbl_long += 256;
                 } else {
-                    let base = ((t24entry & (!OVERFLOW_MASK)) as usize) << 8;
-                    let start = base + (addr & 0xff);
+                    let start = (((t24entry & (!OVERFLOW_MASK)) as usize) << 8) + (addr & 0xff);
                     let end = start + (1 << (32 - i));
                     for j in start..end {
                         self.tbl_long[j] = *v;
@@ -91,7 +90,7 @@ impl IPLookup {
         let addr = ip as usize;
         let t24entry = self.tbl24[addr >> 8];
         if (t24entry & OVERFLOW_MASK) > 0 {
-            let index = ((t24entry & !OVERFLOW_MASK) as usize) << 8 + (addr & 0xff);
+            let index = (((t24entry & !OVERFLOW_MASK) as usize) << 8) + (addr & 0xff);
             self.tbl_long[index]
         } else {
             t24entry
