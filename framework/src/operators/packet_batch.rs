@@ -277,6 +277,11 @@ impl Act for PacketBatch {
     fn get_packet_batch(&mut self) -> &mut PacketBatch {
         self
     }
+
+    #[inline]
+    fn get_task_dependencies(&self) -> Vec<usize> {
+        self.get_parent_task().clone()
+    }
 }
 
 impl Batch for PacketBatch {}

@@ -6,6 +6,7 @@ export examples=(
         test/shutdown-test
         test/chain-test
         test/lpm
+        test/lpm-embedded
         test/nat
         test/maglev
         test/tcp_check

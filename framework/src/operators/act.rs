@@ -27,4 +27,8 @@ pub trait Act {
 
     #[inline]
     fn get_packet_batch(&mut self) -> &mut PacketBatch;
+
+    /// Get tasks that feed produce packets for this batch. We use this in the embedded scheduler.
+    #[inline]
+    fn get_task_dependencies(&self) -> Vec<usize>;
 }

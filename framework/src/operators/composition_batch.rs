@@ -52,6 +52,6 @@ impl Executable for CompositionBatch {
 
     #[inline]
     fn dependencies(&mut self) -> Vec<usize> {
-        self.get_packet_batch().get_parent_task().clone()
+        self.get_task_dependencies()
     }
 }
