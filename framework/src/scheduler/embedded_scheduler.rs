@@ -38,6 +38,7 @@ impl Scheduler for EmbeddedScheduler {
     /// Add a task, and return a handle allowing the task to be run.
     fn add_task<T: Executable + 'static>(&mut self, task: T) -> Result<usize> {
         self.tasks.push(Runnable::from_task(task));
+        println!("Adding task {}", self.tasks.len()); 
         Ok(self.tasks.len())
     }
 }
@@ -58,5 +59,21 @@ impl EmbeddedScheduler {
             }
         }
         self.tasks[task_id - 1].task.execute();
+    }
+
+    fn display_dependencies_internal(&self, task_id: usize, depth: usize) {
+        {
+            let len = self.tasks[task_id - 1].dependencies.len();
+            for dep in 0..len {
+                let dep_task = self.tasks[task_id - 1].dependencies[dep];
+                self.display_dependencies_internal(dep_task, depth + 1)
+            }
+        }
+        println!("{} Task {}", depth, task_id);
+    }
+
+    /// For debugging purposes
+    pub fn display_dependencies(&mut self, task_id: usize) {
+        self.display_dependencies_internal(task_id, 0)
     }
 }

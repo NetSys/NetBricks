@@ -53,7 +53,7 @@ impl<T, V> Executable for GroupByProducer<T, V>
 
     #[inline]
     fn dependencies(&mut self) -> Vec<usize> {
-        self.parent.get_packet_batch().get_parent_task().clone()
+        self.parent.get_task_dependencies()
     }
 }
 

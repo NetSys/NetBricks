@@ -88,6 +88,11 @@ impl<T, V> Act for MapBatch<T, V>
     fn get_packet_batch(&mut self) -> &mut PacketBatch {
         self.parent.get_packet_batch()
     }
+
+    #[inline]
+    fn get_task_dependencies(&self) -> Vec<usize> {
+        self.parent.get_task_dependencies()
+    }
 }
 
 impl<T, V> BatchIterator for MapBatch<T, V>

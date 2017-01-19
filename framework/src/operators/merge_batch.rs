@@ -80,6 +80,19 @@ impl<T: Batch> Act for MergeBatch<T> {
     fn get_packet_batch(&mut self) -> &mut PacketBatch {
         self.parents[self.which].get_packet_batch()
     }
+
+    #[inline]
+    fn get_task_dependencies(&self) -> Vec<usize> {
+        let mut deps = Vec::with_capacity(self.parents.len()); // Might actually need to be larger, will get resized
+        for parent in &self.parents {
+            deps.extend(parent.get_task_dependencies().iter())
+        };
+        // We need to eliminate duplicate tasks. Fortunately this is not called on the critical path so it is fine to do
+        // it this way.
+        deps.sort();
+        deps.dedup();
+        deps
+    }
 }
 
 impl<T: Batch> Executable for MergeBatch<T> {
@@ -91,6 +104,6 @@ impl<T: Batch> Executable for MergeBatch<T> {
 
     #[inline]
     fn dependencies(&mut self) -> Vec<usize> {
-        self.get_packet_batch().get_parent_task().clone()
+        self.get_task_dependencies()
     }
 }

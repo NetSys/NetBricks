@@ -91,4 +91,9 @@ impl<T: PacketRx> Act for ReceiveBatch<T> {
     fn get_packet_batch(&mut self) -> &mut PacketBatch {
         &mut self.parent
     }
+
+    #[inline]
+    fn get_task_dependencies(&self) -> Vec<usize> {
+        self.parent.get_task_dependencies()
+    }
 }
