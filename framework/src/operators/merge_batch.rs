@@ -86,7 +86,7 @@ impl<T: Batch> Act for MergeBatch<T> {
         let mut deps = Vec::with_capacity(self.parents.len()); // Might actually need to be larger, will get resized
         for parent in &self.parents {
             deps.extend(parent.get_task_dependencies().iter())
-        };
+        }
         // We need to eliminate duplicate tasks. Fortunately this is not called on the critical path so it is fine to do
         // it this way.
         deps.sort();

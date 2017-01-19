@@ -15,13 +15,15 @@ mod nf;
 fn main() {
     let name = String::from("recv");
     let configuration = NetbricksConfiguration::new_with_name(&name[..]);
-    let configuration = NetbricksConfiguration { primary_core : 0, ..configuration };
+    let configuration = NetbricksConfiguration { primary_core: 0, ..configuration };
     match initialize_system(&configuration) {
         Ok(_) => {
             let port = VirtualPort::new(1).unwrap();
             let mut sched = embedded_scheduler::EmbeddedScheduler::new();
-            let pipeline0 = lpm(ReceiveBatch::new(port.new_virtual_queue(1).unwrap()), &mut sched);
-            let pipeline1 = lpm(ReceiveBatch::new(port.new_virtual_queue(1).unwrap()), &mut sched);
+            let pipeline0 = lpm(ReceiveBatch::new(port.new_virtual_queue(1).unwrap()),
+                                &mut sched);
+            let pipeline1 = lpm(ReceiveBatch::new(port.new_virtual_queue(1).unwrap()),
+                                &mut sched);
             let task = sched.add_task(merge(vec![pipeline0, pipeline1])).unwrap();
             println!("Dependencies for task {}", task);
             sched.display_dependencies(task);
