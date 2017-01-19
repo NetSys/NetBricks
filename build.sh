@@ -25,11 +25,11 @@ else
     DPDK="${DPDK_HOME}/build/lib/libdpdk.a"
 fi
 
-CARGO_LOC=`which cargo`
+CARGO_LOC=`which cargo || true`
 export CARGO=${CARGO_PATH-"${CARGO_LOC}"}
-if [ ! -e ${CARGO} ]; then
-    echo "Could not find a preinstalled Cargo"
-    exit 0
+if [ -z ${CARGO} ] || [ ! -e ${CARGO} ]; then
+    echo "Could not find a preinstalled Cargo in PATH. Set CARGO_PATH if necessary."
+    exit 1
 fi
 echo "Using Cargo from ${CARGO}"
 
