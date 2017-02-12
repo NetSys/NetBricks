@@ -128,9 +128,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
         Ok(toml) => toml,
         Err(error) => {
             println!("Parse error: {} in file: {}", error, filename);
-            return Err(ErrorKind::ConfigurationError(format!("Experienced {} parse errors in spec.",
-                                                             error))
-                .into());
+            return Err(ErrorKind::ConfigurationError(format!("Experienced {} parse errors in spec.", error)).into());
         }
     };
 
