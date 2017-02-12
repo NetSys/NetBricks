@@ -2,7 +2,7 @@ use common::*;
 use std::fs::File;
 use std::io::Read;
 use super::{NetbricksConfiguration, PortConfiguration};
-use toml::*;
+use toml::{self, Value};
 
 /// Default configuration values
 pub const DEFAULT_POOL_SIZE: u32 = 2048 - 1;
@@ -124,24 +124,12 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
 /// `filename` is used for error reporting purposes, and is otherwise meaningless.
 pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Result<NetbricksConfiguration> {
     // Parse string for TOML file.
-    let mut parser = Parser::new(configuration);
-    let toml = match parser.parse() {
-        Some(toml) => toml,
-        None => {
-            for err in &parser.errors {
-                // FIXME: Change to logging
-                let (loline, locol) = parser.to_linecol(err.lo);
-                let (hiline, hicol) = parser.to_linecol(err.hi);
-                println!("Parse error error: {} file {} location {}:{} -- {}:{}",
-                         err.desc,
-                         filename,
-                         loline,
-                         locol,
-                         hicol,
-                         hiline);
-            }
+    let toml = match toml::de::from_str::<Value>(configuration) {
+        Ok(toml) => toml,
+        Err(error) => {
+            println!("Parse error: {} in file: {}", error, filename);
             return Err(ErrorKind::ConfigurationError(format!("Experienced {} parse errors in spec.",
-                                                             parser.errors.len()))
+                                                             error))
                 .into());
         }
     };
