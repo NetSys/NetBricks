@@ -39,9 +39,7 @@ impl Acl {
 pub fn acl_match<T: 'static + Batch<Header = NullHeader>>(parent: T, acls: Vec<Acl>) -> CompositionBatch {
     let mut flow_cache = HashSet::<Flow, FnvHash>::with_hasher(Default::default());
     parent.parse::<MacHeader>()
-        .transform(box move |p| {
-            p.get_mut_header().swap_addresses();
-        })
+        .transform(box move |p| { p.get_mut_header().swap_addresses(); })
         .parse::<IpHeader>()
         .filter(box move |p| {
             let flow = p.get_header().flow().unwrap();

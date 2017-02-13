@@ -19,12 +19,10 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Si
     let mut cache = HashMap::<Flow, ReorderedBuffer, FnvHash>::with_hasher(Default::default());
     let mut read_buf: Vec<u8> = (0..PRINT_SIZE).map(|_| 0).collect();
     let mut groups = parent.parse::<MacHeader>()
-        .transform(box move |p| {
-            p.get_mut_header().swap_addresses();
-        })
+        .transform(box move |p| { p.get_mut_header().swap_addresses(); })
         .parse::<IpHeader>()
         .group_by(2,
-                  box move |p| { if p.get_header().protocol() == 6 { 0 } else { 1 } },
+                  box move |p| if p.get_header().protocol() == 6 { 0 } else { 1 },
                   sched);
     let pipe = groups.get_group(0)
         .unwrap()
@@ -70,8 +68,7 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Si
                     Entry::Vacant(e) => {
                         match ReorderedBuffer::new(BUFFER_SIZE) {
                             Ok(mut b) => {
-                                if !p.get_header().syn_flag() {
-                                }
+                                if !p.get_header().syn_flag() {}
                                 let result = b.seq(seq, p.get_payload());
                                 match result {
                                     InsertionResult::Inserted { available, .. } => {
