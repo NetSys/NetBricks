@@ -17,15 +17,8 @@ impl PollHandle {
     }
 
     pub fn schedule_read_rawfd(&self, fd: RawFd, token: Token) {
-        let mut kind = EpollEventKind::empty();
-        kind.insert(EPOLLIN); // Want to receive input
-        kind.insert(EPOLLET); // Edge triggered.
-        kind.insert(EPOLLONESHOT); // One shot
-        let event = EpollEvent {
-            events: kind,
-            data: token,
-        };
-        epoll_ctl(self.epoll_fd, EpollOp::EpollCtlMod, fd, &event).unwrap();
+        let mut event = EpollEvent::new(EPOLLIN | EPOLLET | EPOLLONESHOT, token);
+        epoll_ctl(self.epoll_fd, EpollOp::EpollCtlMod, fd, &mut event).unwrap();
     }
 
     pub fn schedule_write<Fd: AsRawFd>(&self, file: &Fd, token: Token) {
@@ -33,15 +26,8 @@ impl PollHandle {
     }
 
     pub fn schedule_write_rawfd(&self, fd: RawFd, token: Token) {
-        let mut kind = EpollEventKind::empty();
-        kind.insert(EPOLLOUT); // Want to receive input
-        kind.insert(EPOLLET); // Edge triggered.
-        kind.insert(EPOLLONESHOT); // One shot
-        let event = EpollEvent {
-            events: kind,
-            data: token,
-        };
-        epoll_ctl(self.epoll_fd, EpollOp::EpollCtlMod, fd, &event).unwrap();
+        let mut event = EpollEvent::new(EPOLLOUT | EPOLLET | EPOLLONESHOT, token);
+        epoll_ctl(self.epoll_fd, EpollOp::EpollCtlMod, fd, &mut event).unwrap();
     }
 
     /// This assumes file is already set to be non-blocking. This must also be called only the first time round.
@@ -50,14 +36,8 @@ impl PollHandle {
     }
 
     pub fn new_io_fd(&self, fd: RawFd, token: Token) {
-        let mut kind = EpollEventKind::empty();
-        kind.insert(EPOLLET); // Edge triggered.
-        kind.insert(EPOLLONESHOT); // One shot
-        let event = EpollEvent {
-            events: kind,
-            data: token,
-        };
-        epoll_ctl(self.epoll_fd, EpollOp::EpollCtlAdd, fd, &event).unwrap();
+        let mut event = EpollEvent::new(EPOLLET | EPOLLONESHOT, token);
+        epoll_ctl(self.epoll_fd, EpollOp::EpollCtlAdd, fd, &mut event).unwrap();
     }
 }
 
@@ -87,7 +67,7 @@ impl PollScheduler {
     }
 
     #[inline]
-    fn epoll_kind_to_available(&self, kind: &EpollEventKind) -> Available {
+    fn epoll_kind_to_available(&self, kind: &EpollFlags) -> Available {
         let mut available = NONE;
         if kind.contains(EPOLLIN) {
             available |= READ
@@ -112,6 +92,6 @@ impl PollScheduler {
                 unsafe { self.ready_tokens.set_len(self.events) };
                 self.ready_tokens.pop()
             }
-            .map(|t| (t.data, self.epoll_kind_to_available(&t.events)))
+            .map(|t| (t.data(), self.epoll_kind_to_available(&t.events())))
     }
 }
