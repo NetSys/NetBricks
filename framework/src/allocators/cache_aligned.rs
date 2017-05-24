@@ -16,7 +16,7 @@ pub struct CacheAligned<T: Sized> {
 impl<T: Sized> Drop for CacheAligned<T> {
     fn drop(&mut self) {
         unsafe {
-            deallocate(*self.ptr as *mut u8, size_of::<T>(), 64);
+            deallocate(self.ptr.as_ptr() as *mut u8, size_of::<T>(), 64);
         }
     }
 }
@@ -24,13 +24,13 @@ impl<T: Sized> Drop for CacheAligned<T> {
 impl<T: Sized> Deref for CacheAligned<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { self.ptr.get() }
+        unsafe { self.ptr.as_ref() }
     }
 }
 
 impl<T: Sized> DerefMut for CacheAligned<T> {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { self.ptr.get_mut() }
+        unsafe { self.ptr.as_mut() }
     }
 }
 
@@ -50,7 +50,7 @@ impl<T: Sized> Clone for CacheAligned<T>
     fn clone(&self) -> CacheAligned<T> {
         unsafe {
             let alloc = allocate_cache_line(size_of::<T>()) as *mut T;
-            ptr::copy(self.ptr.get() as *const T, alloc, 1);
+            ptr::copy(self.ptr.as_ptr() as *const T, alloc, 1);
             CacheAligned { ptr: Unique::new(alloc) }
         }
     }
