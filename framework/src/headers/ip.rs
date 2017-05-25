@@ -1,3 +1,4 @@
+use super::EndOffset;
 use byteorder::{BigEndian, ByteOrder};
 use headers::MacHeader;
 use std::convert::From;
@@ -5,7 +6,6 @@ use std::default::Default;
 use std::fmt;
 use std::net::Ipv4Addr;
 use std::slice;
-use super::EndOffset;
 use utils::Flow;
 
 /// IP header using SSE
@@ -70,20 +70,20 @@ impl IpHeader {
         let protocol = self.protocol();
         let src_ip = self.src();
         let dst_ip = self.dst();
-        if protocol == 6 || protocol == 17 {
+        if (protocol == 6 || protocol == 17) && self.payload_size(0) >= 32 {
             unsafe {
                 let self_as_u8 = (self as *const IpHeader) as *const u8;
-                let port_as_u8 = self_as_u8.offset(self.length() as isize);
+                let port_as_u8 = self_as_u8.offset(self.offset() as isize);
                 let port_slice = slice::from_raw_parts(port_as_u8, 32);
                 let dst_port = BigEndian::read_u16(&port_slice[..16]);
                 let src_port = BigEndian::read_u16(&port_slice[16..]);
                 Some(Flow {
-                    src_ip: src_ip,
-                    dst_ip: dst_ip,
-                    src_port: src_port,
-                    dst_port: dst_port,
-                    proto: protocol,
-                })
+                         src_ip: src_ip,
+                         dst_ip: dst_ip,
+                         src_port: src_port,
+                         dst_port: dst_port,
+                         proto: protocol,
+                     })
             }
         } else {
             None

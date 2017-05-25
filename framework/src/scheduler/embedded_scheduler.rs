@@ -1,6 +1,6 @@
+use super::{Executable, Scheduler};
 use common::*;
 use std::default::Default;
-use super::{Executable, Scheduler};
 
 /// Used to keep stats about each pipeline and eventually grant tokens, etc.
 struct Runnable {

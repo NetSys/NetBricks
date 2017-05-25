@@ -1,11 +1,11 @@
-use common::*;
-use interface::PacketTx;
-use scheduler::Executable;
-use std::cmp;
 use super::Batch;
 use super::act::Act;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use super::packet_batch::PacketBatch;
+use common::*;
+use interface::PacketTx;
+use scheduler::Executable;
+use std::cmp;
 
 pub struct MergeBatch<T: Batch> {
     parents: Vec<T>,
@@ -63,7 +63,9 @@ impl<T: Batch> Act for MergeBatch<T> {
 
     #[inline]
     fn capacity(&self) -> i32 {
-        self.parents.iter().fold(0, |acc, x| cmp::max(acc, x.capacity()))
+        self.parents
+            .iter()
+            .fold(0, |acc, x| cmp::max(acc, x.capacity()))
     }
 
     #[inline]

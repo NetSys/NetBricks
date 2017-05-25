@@ -1,14 +1,14 @@
+use super::Batch;
+use super::ReceiveBatch;
+use super::RestoreHeader;
+use super::act::Act;
+use super::iterator::*;
 use headers::EndOffset;
 use interface::Packet;
 use queues::*;
 use scheduler::{Executable, Scheduler};
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use super::Batch;
-use super::ReceiveBatch;
-use super::RestoreHeader;
-use super::act::Act;
-use super::iterator::*;
 
 pub type GroupFn<T, M> = Box<FnMut(&Packet<T, M>) -> usize + Send>;
 
@@ -74,11 +74,12 @@ impl<T, V> GroupBy<T, V>
             producers.push(prod);
             consumers.insert(i, consumer);
         }
-        let task = sched.add_task(GroupByProducer {
-                parent: parent,
-                group_fn: group_fn,
-                producers: producers,
-            })
+        let task = sched
+            .add_task(GroupByProducer {
+                          parent: parent,
+                          group_fn: group_fn,
+                          producers: producers,
+                      })
             .unwrap();
         GroupBy {
             _phantom_v: PhantomData,

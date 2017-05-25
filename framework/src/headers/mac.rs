@@ -1,9 +1,9 @@
+use super::EndOffset;
 use headers::NullHeader;
 use std::default::Default;
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
-use super::EndOffset;
 
 #[derive(Debug, Default)]
 #[repr(C, packed)]

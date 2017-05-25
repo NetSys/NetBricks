@@ -1,6 +1,6 @@
+use super::{SharedMemory, open_shared};
 use std::mem::size_of;
 use std::sync::atomic::*;
-use super::{SharedMemory, open_shared};
 use utils::PAGE_SIZE;
 /// A directory of shared structures.
 
@@ -81,7 +81,9 @@ impl Directory {
     pub fn end_snapshot(&mut self) {
         unsafe {
             let version = (*self.head).current_version.load(Ordering::Acquire);
-            (*self.head).committed_version.store(version, Ordering::Release);
+            (*self.head)
+                .committed_version
+                .store(version, Ordering::Release);
         }
     }
 }

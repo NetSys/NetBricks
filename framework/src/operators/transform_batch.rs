@@ -1,12 +1,12 @@
+use super::Batch;
+use super::act::Act;
+use super::iterator::*;
+use super::packet_batch::PacketBatch;
 use common::*;
 use headers::EndOffset;
 use interface::Packet;
 use interface::PacketTx;
 use std::marker::PhantomData;
-use super::Batch;
-use super::act::Act;
-use super::iterator::*;
-use super::packet_batch::PacketBatch;
 
 pub type TransformFn<T, M> = Box<FnMut(&mut Packet<T, M>) + Send>;
 

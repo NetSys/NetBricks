@@ -1,3 +1,4 @@
+use super::{Available, HUP, IOScheduler, PollHandle, PollScheduler, READ, Token, WRITE};
 use fnv::FnvHasher;
 /// TCP connection.
 use net2::TcpBuilder;
@@ -8,7 +9,6 @@ use std::hash::BuildHasherDefault;
 use std::marker::PhantomData;
 use std::net::*;
 use std::os::unix::io::AsRawFd;
-use super::{Available, HUP, IOScheduler, PollHandle, PollScheduler, READ, Token, WRITE};
 
 pub trait TcpControlAgent {
     fn new(address: SocketAddr, stream: TcpStream, scheduler: IOScheduler) -> Self;
@@ -88,12 +88,11 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
                     self.next_token += 1;
                     stream.set_nonblocking(true).unwrap();
                     let stream_fd = stream.as_raw_fd();
-                    self.connections.insert(token,
-                                            T::new(addr,
-                                                   stream,
-                                                   IOScheduler::new(self.scheduler.new_poll_handle(),
-                                                                    stream_fd,
-                                                                    token)));
+                    self.connections
+                        .insert(token,
+                                T::new(addr,
+                                       stream,
+                                       IOScheduler::new(self.scheduler.new_poll_handle(), stream_fd, token)));
                     // Add to some sort of hashmap.
                 }
                 Err(_) => {
@@ -103,7 +102,8 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
         } else {
             // FIXME: Report something.
         }
-        self.handle.schedule_read(&self.listener, self.listener_token);
+        self.handle
+            .schedule_read(&self.listener, self.listener_token);
     }
 
     fn handle_data(&mut self, token: Token, available: Available) {

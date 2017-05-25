@@ -1,5 +1,5 @@
-use std::fmt;
 use super::EndOffset;
+use std::fmt;
 
 #[derive(Debug, Default)]
 #[repr(C, packed)]

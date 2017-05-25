@@ -53,12 +53,12 @@ const IHL_TO_BYTE_FACTOR: usize = 4; // IHL is in terms of number of 32-bit word
 pub fn ipv4_extract_flow(bytes: &[u8]) -> Option<Flow> {
     let port_start = (bytes[0] & 0xf) as usize * IHL_TO_BYTE_FACTOR;
     Some(Flow {
-        proto: bytes[9],
-        src_ip: BigEndian::read_u32(&bytes[12..16]),
-        dst_ip: BigEndian::read_u32(&bytes[16..20]),
-        src_port: BigEndian::read_u16(&bytes[(port_start)..(port_start + 2)]),
-        dst_port: BigEndian::read_u16(&bytes[(port_start + 2)..(port_start + 4)]),
-    })
+             proto: bytes[9],
+             src_ip: BigEndian::read_u32(&bytes[12..16]),
+             dst_ip: BigEndian::read_u32(&bytes[16..20]),
+             src_port: BigEndian::read_u16(&bytes[(port_start)..(port_start + 2)]),
+             dst_port: BigEndian::read_u16(&bytes[(port_start + 2)..(port_start + 4)]),
+         })
 }
 
 impl Flow {

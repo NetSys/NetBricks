@@ -54,7 +54,10 @@ impl MBuf {
 
     #[inline]
     pub fn data_address(&self, offset: usize) -> *mut u8 {
-        unsafe { self.buf_addr.offset(self.data_off as isize + offset as isize) }
+        unsafe {
+            self.buf_addr
+                .offset(self.data_off as isize + offset as isize)
+        }
     }
 
     /// Returns the total allocated size of this mbuf segment.

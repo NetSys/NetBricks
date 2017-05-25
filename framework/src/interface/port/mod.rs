@@ -1,9 +1,9 @@
+pub use self::phy_port::*;
+pub use self::virt_port::*;
 use allocators::*;
 use common::*;
 use interface::{PacketRx, PacketTx};
 use native::zcsi::MBuf;
-pub use self::phy_port::*;
-pub use self::virt_port::*;
 use std::sync::atomic::AtomicUsize;
 mod phy_port;
 mod virt_port;

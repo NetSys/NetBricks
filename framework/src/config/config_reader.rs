@@ -1,7 +1,7 @@
+use super::{NetbricksConfiguration, PortConfiguration};
 use common::*;
 use std::fs::File;
 use std::io::Read;
-use super::{NetbricksConfiguration, PortConfiguration};
 use toml::{self, Value};
 
 /// Default configuration values
@@ -26,7 +26,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
             None => NUM_RXD,
             v => {
                 return Err(ErrorKind::ConfigurationError(format!("Could not parse number of rx descriptors {:?}", v))
-                    .into())
+                               .into())
             }
         };
 
@@ -35,7 +35,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
             None => NUM_TXD,
             v => {
                 return Err(ErrorKind::ConfigurationError(format!("Could not parse number of tx descriptors {:?}", v))
-                    .into())
+                               .into())
             }
         };
 
@@ -64,7 +64,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
             return Err(ErrorKind::ConfigurationError(format!("cores specified along with rx_cores and/or tx_cores \
                                                               for port {}",
                                                              name))
-                .into());
+                               .into());
         }
 
         fn read_queue(queue: &Value) -> Result<Vec<i32>> {
@@ -76,7 +76,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                             qs.push(core as i32)
                         } else {
                             return Err(ErrorKind::ConfigurationError(format!("Could not parse queue spec {:?}", q))
-                                .into());
+                                           .into());
                         };
                     }
                     Ok(qs)
@@ -105,15 +105,15 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
         };
 
         Ok(PortConfiguration {
-            name: name,
-            rx_queues: rx_queues,
-            tx_queues: tx_queues,
-            rxd: rxd,
-            txd: txd,
-            loopback: loopback,
-            csum: csum,
-            tso: tso,
-        })
+               name: name,
+               rx_queues: rx_queues,
+               tx_queues: tx_queues,
+               rxd: rxd,
+               txd: txd,
+               loopback: loopback,
+               csum: csum,
+               tso: tso,
+           })
     } else {
         Err(ErrorKind::ConfigurationError(String::from("Could not understand port spec")).into())
     }
@@ -215,7 +215,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
         v => {
             return Err(ErrorKind::ConfigurationError(format!("Could not parse strict spec (should be boolean) {:?}",
                                                              v))
-                .into())
+                               .into())
         }
     };
 
@@ -237,15 +237,15 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
     };
 
     Ok(NetbricksConfiguration {
-        name: name,
-        primary_core: master_lcore,
-        cores: cores,
-        strict: strict,
-        secondary: secondary,
-        pool_size: pool_size,
-        cache_size: cache_size,
-        ports: ports,
-    })
+           name: name,
+           primary_core: master_lcore,
+           cores: cores,
+           strict: strict,
+           secondary: secondary,
+           pool_size: pool_size,
+           cache_size: cache_size,
+           ports: ports,
+       })
 }
 
 /// Read a configuration file and create a `NetbricksConfiguration` structure.

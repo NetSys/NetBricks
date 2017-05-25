@@ -1,11 +1,11 @@
+use super::PortStats;
+use super::super::{PacketTx, PacketRx};
 use allocators::*;
 use common::*;
 use native::zcsi::*;
 use std::fmt;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-use super::PortStats;
-use super::super::{PacketTx, PacketRx};
 
 pub struct VirtualPort {
     stats_rx: Arc<CacheAligned<PortStats>>,
@@ -54,16 +54,16 @@ impl PacketRx for VirtualQueue {
 impl VirtualPort {
     pub fn new(_queues: i32) -> Result<Arc<VirtualPort>> {
         Ok(Arc::new(VirtualPort {
-            stats_rx: Arc::new(PortStats::new()),
-            stats_tx: Arc::new(PortStats::new()),
-        }))
+                        stats_rx: Arc::new(PortStats::new()),
+                        stats_tx: Arc::new(PortStats::new()),
+                    }))
     }
 
     pub fn new_virtual_queue(&self, _queue: i32) -> Result<CacheAligned<VirtualQueue>> {
         Ok(CacheAligned::allocate(VirtualQueue {
-            stats_rx: self.stats_rx.clone(),
-            stats_tx: self.stats_tx.clone(),
-        }))
+                                      stats_rx: self.stats_rx.clone(),
+                                      stats_tx: self.stats_tx.clone(),
+                                  }))
     }
 
     /// Get stats for an RX/TX queue pair.

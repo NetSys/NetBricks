@@ -56,13 +56,14 @@ impl NetBricksContext {
         let builder = thread::Builder::new();
         let (sender, receiver) = sync_channel(0);
         self.scheduler_channels.insert(core, sender);
-        let join_handle = builder.name(format!("sched-{}", core).into())
+        let join_handle = builder
+            .name(format!("sched-{}", core).into())
             .spawn(move || {
-                init_thread(core, core);
-                // Other init?
-                let mut sched = StandaloneScheduler::new_with_channel(receiver);
-                sched.handle_requests()
-            })
+                       init_thread(core, core);
+                       // Other init?
+                       let mut sched = StandaloneScheduler::new_with_channel(receiver);
+                       sched.handle_requests()
+                   })
             .unwrap();
         self.scheduler_handles.insert(core, join_handle);
     }
@@ -77,7 +78,9 @@ impl NetBricksContext {
                 None => vec![],
             };
             let boxed_run = run.clone();
-            channel.send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(ports.clone(), s)))).unwrap();
+            channel
+                .send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(ports.clone(), s))))
+                .unwrap();
         }
     }
 
@@ -85,10 +88,13 @@ impl NetBricksContext {
         where T: Fn(Vec<AlignedVirtualQueue>, &mut StandaloneScheduler) + Send + Sync + 'static
     {
         for (core, channel) in &self.scheduler_channels {
-            let port = self.virtual_ports.entry(*core).or_insert(VirtualPort::new(1).unwrap());
+            let port = self.virtual_ports
+                .entry(*core)
+                .or_insert(VirtualPort::new(1).unwrap());
             let boxed_run = run.clone();
             let queue = port.new_virtual_queue(1).unwrap();
-            channel.send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(vec![queue.clone()], s))))
+            channel
+                .send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(vec![queue.clone()], s))))
                 .unwrap();
         }
     }
@@ -100,10 +106,13 @@ impl NetBricksContext {
          -> Result<()> {
 
         if let Some(channel) = self.scheduler_channels.get(&core) {
-            let port = self.virtual_ports.entry(core).or_insert(VirtualPort::new(1).unwrap());
+            let port = self.virtual_ports
+                .entry(core)
+                .or_insert(VirtualPort::new(1).unwrap());
             let boxed_run = run.clone();
             let queue = port.new_virtual_queue(1).unwrap();
-            channel.send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(vec![queue.clone()], s))))
+            channel
+                .send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(vec![queue.clone()], s))))
                 .unwrap();
             Ok(())
         } else {
@@ -123,7 +132,9 @@ impl NetBricksContext {
                 None => vec![],
             };
             let boxed_run = run.clone();
-            channel.send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(ports.clone(), s)))).unwrap();
+            channel
+                .send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(ports.clone(), s))))
+                .unwrap();
             Ok(())
         } else {
             Err(ErrorKind::NoRunningSchedulerOnCore(core).into())
@@ -141,16 +152,24 @@ impl NetBricksContext {
     /// Pause all schedulers, the returned `BarrierHandle` can be used to resume.
     pub fn barrier(&mut self) -> BarrierHandle {
         // TODO: If this becomes a problem, move this to the struct itself; but make sure to fix `stop` appropriately.
-        let channels: Vec<_> = self.scheduler_handles.iter().map(|_| sync_channel(0)).collect();
+        let channels: Vec<_> = self.scheduler_handles
+            .iter()
+            .map(|_| sync_channel(0))
+            .collect();
         let receivers = channels.iter().map(|&(_, ref r)| r);
         let senders = channels.iter().map(|&(ref s, _)| s);
         for ((_, channel), sender) in self.scheduler_channels.iter().zip(senders) {
-            channel.send(SchedulerCommand::Handshake(sender.clone())).unwrap();
+            channel
+                .send(SchedulerCommand::Handshake(sender.clone()))
+                .unwrap();
         }
         for receiver in receivers {
             receiver.recv().unwrap();
         }
-        BarrierHandle::with_threads(self.scheduler_handles.values().map(|j| j.thread()).collect())
+        BarrierHandle::with_threads(self.scheduler_handles
+                                        .values()
+                                        .map(|j| j.thread())
+                                        .collect())
     }
 
     /// Stop all schedulers, safely shutting down the system.
@@ -189,7 +208,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
         if ctx.ports.contains_key(&port.name) {
             println!("Port {} appears twice in specification", port.name);
             return Err(ErrorKind::ConfigurationError(format!("Port {} appears twice in specification", port.name))
-                .into());
+                           .into());
         } else {
             match PmdPort::new_port_from_configuration(port) {
                 Ok(p) => {
@@ -199,7 +218,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
                     return Err(ErrorKind::ConfigurationError(format!("Port {} could not be initialized {:?}",
                                                                      port.name,
                                                                      e))
-                        .into())
+                                       .into())
                 }
             }
 
@@ -217,7 +236,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
                                                                          rx_q,
                                                                          port.name,
                                                                          e))
-                            .into())
+                                           .into())
                     }
                 }
             }
@@ -225,13 +244,16 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
     }
     if configuration.strict {
         let other_cores: HashSet<_> = ctx.rx_queues.keys().cloned().collect();
-        let core_diff: Vec<_> = other_cores.difference(&cores).map(|c| c.to_string()).collect();
+        let core_diff: Vec<_> = other_cores
+            .difference(&cores)
+            .map(|c| c.to_string())
+            .collect();
         if !core_diff.is_empty() {
             let missing_str = core_diff.join(", ");
             return Err(ErrorKind::ConfigurationError(format!("Strict configuration selected but core(s) {} appear \
                                                               in port configuration but not in cores",
                                                              missing_str))
-                .into());
+                               .into());
         }
     } else {
         cores.extend(ctx.rx_queues.keys());

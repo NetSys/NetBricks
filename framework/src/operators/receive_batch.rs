@@ -1,10 +1,10 @@
-use common::*;
-use headers::NullHeader;
-use interface::{PacketRx, PacketTx};
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
+use common::*;
+use headers::NullHeader;
+use interface::{PacketRx, PacketTx};
 
 pub struct ReceiveBatch<T: PacketRx> {
     parent: PacketBatch,
@@ -55,9 +55,9 @@ impl<T: PacketRx> Act for ReceiveBatch<T> {
         self.parent
             .recv(&self.queue)
             .and_then(|x| {
-                self.received += x as u64;
-                Ok(x)
-            })
+                          self.received += x as u64;
+                          Ok(x)
+                      })
             .expect("Receive failure");
     }
 

@@ -45,7 +45,9 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreDataPath<T> {
         self.updates += 1;
         if self.updates >= self.delay {
             self.updates = 0;
-            if self.channel.try_send(self.cache.drain(0..).collect()).is_ok() {
+            if self.channel
+                   .try_send(self.cache.drain(0..).collect())
+                   .is_ok() {
                 ()
             }
         }
@@ -55,7 +57,9 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreDataPath<T> {
 impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreControlPlane<T> {
     fn update_internal(&mut self, v: Vec<(Flow, T)>) {
         for (flow, c) in v {
-            *(self.flow_counters.entry(flow).or_insert_with(Default::default)) += c;
+            *(self.flow_counters
+                  .entry(flow)
+                  .or_insert_with(Default::default)) += c;
         }
     }
 
@@ -89,7 +93,9 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreControlPlane<T> {
     /// Remove an entry from the table.
     #[inline]
     pub fn remove(&mut self, flow: &Flow) -> T {
-        self.flow_counters.remove(flow).unwrap_or_else(Default::default)
+        self.flow_counters
+            .remove(flow)
+            .unwrap_or_else(Default::default)
     }
 }
 
@@ -107,8 +113,8 @@ pub fn new_cp_mergeable_store<T: AddAssign<T> + Default + Clone>
          channel: sender,
      },
      box CpMergeableStoreControlPlane {
-         // FIXME: Don't need this to be quite this big?
-         flow_counters: HashMap::with_capacity_and_hasher(VEC_SIZE, Default::default()),
-         channel: receiver,
-     })
+             // FIXME: Don't need this to be quite this big?
+             flow_counters: HashMap::with_capacity_and_hasher(VEC_SIZE, Default::default()),
+             channel: receiver,
+         })
 }

@@ -1,6 +1,3 @@
-use headers::*;
-use interface::*;
-use scheduler::Scheduler;
 use self::act::Act;
 pub use self::add_metadata::AddMetadataBatch;
 use self::add_metadata::MetadataFn;
@@ -25,6 +22,9 @@ pub use self::restore_header::*;
 pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
 use self::transform_batch::TransformFn;
+use headers::*;
+use interface::*;
+use scheduler::Scheduler;
 
 #[macro_use]
 mod macros;

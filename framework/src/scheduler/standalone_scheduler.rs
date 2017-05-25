@@ -1,9 +1,9 @@
+use super::{Scheduler, Executable};
 use common::*;
 use std::default::Default;
 use std::sync::Arc;
 use std::sync::mpsc::{SyncSender, Receiver, sync_channel, RecvError};
 use std::thread;
-use super::{Scheduler, Executable};
 use utils;
 
 /// Used to keep stats about each pipeline and eventually grant tokens, etc.
@@ -109,12 +109,12 @@ impl StandaloneScheduler {
         self.shutdown = false;
         // Note this rather bizarre structure here to get shutting down hooked in.
         while let Ok(cmd) = {
-            if self.shutdown {
-                Err(RecvError)
-            } else {
-                self.sched_channel.recv()
-            }
-        } {
+                  if self.shutdown {
+                      Err(RecvError)
+                  } else {
+                      self.sched_channel.recv()
+                  }
+              } {
             self.handle_request(cmd)
         }
         println!("Scheduler exiting {}",

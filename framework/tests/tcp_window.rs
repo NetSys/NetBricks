@@ -116,7 +116,9 @@ fn test_out_of_order_insertion() {
     let data1 = ": hamburger";
     let data2 = " american";
     if let InsertionResult::Inserted { written, available } =
-        ro.add_data(base_seq.wrapping_add(data0.len() as u32).wrapping_add(data1.len() as u32),
+        ro.add_data(base_seq
+                        .wrapping_add(data0.len() as u32)
+                        .wrapping_add(data1.len() as u32),
                     data2.as_bytes()) {
         assert!(written == data2.len());
         assert!(available == data0.len());
@@ -164,7 +166,9 @@ fn test_state_change() {
     let data1 = ": hamburger";
     let data2 = " american";
     let data3 = " (w/fries)";
-    let data2_seq = base_seq.wrapping_add(data0.len() as u32).wrapping_add(data1.len() as u32);
+    let data2_seq = base_seq
+        .wrapping_add(data0.len() as u32)
+        .wrapping_add(data1.len() as u32);
     if let InsertionResult::Inserted { written, available } = ro.add_data(data2_seq, data2.as_bytes()) {
         assert!(written == data2.len());
         assert!(available == data0.len(),
@@ -189,7 +193,8 @@ fn test_state_change() {
     }
 
     if let InsertionResult::Inserted { written, available } =
-        ro.add_data(base_seq.wrapping_add(data0.len() as u32)
+        ro.add_data(base_seq
+                        .wrapping_add(data0.len() as u32)
                         .wrapping_add(data1.len() as u32)
                         .wrapping_add(data2.len() as u32),
                     data3.as_bytes()) {
