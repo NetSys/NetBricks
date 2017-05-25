@@ -70,7 +70,7 @@ impl IpHeader {
         let protocol = self.protocol();
         let src_ip = self.src();
         let dst_ip = self.dst();
-        if (protocol == 6 || protocol == 17) && self.payload_size() >= 32 {
+        if (protocol == 6 || protocol == 17) && self.payload_size(0) >= 32 {
             unsafe {
                 let self_as_u8 = (self as *const IpHeader) as *const u8;
                 let port_as_u8 = self_as_u8.offset(self.offset() as isize);

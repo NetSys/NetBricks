@@ -1,5 +1,4 @@
 use super::EndOffset;
-use super::EndOffset;
 use headers::NullHeader;
 use std::default::Default;
 use std::fmt;
