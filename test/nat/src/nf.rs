@@ -28,7 +28,8 @@ pub fn nat<T: 'static + Batch<Header = NullHeader>>(parent: T,
     let mut next_port = 1024;
     const MIN_PORT: u16 = 1024;
     const MAX_PORT: u16 = 65535;
-    let pipeline = parent.parse::<MacHeader>()
+    let pipeline = parent
+        .parse::<MacHeader>()
         .transform(box move |pkt| {
             // let hdr = pkt.get_mut_header();
             let payload = pkt.get_mut_payload();

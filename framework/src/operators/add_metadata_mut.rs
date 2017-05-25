@@ -1,11 +1,11 @@
-use common::*;
-use interface::Packet;
-use interface::PacketTx;
-use std::marker::PhantomData;
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
+use common::*;
+use interface::Packet;
+use interface::PacketTx;
+use std::marker::PhantomData;
 
 pub type MutableMetadataFn<T, M, M2> = Box<FnMut(&mut Packet<T, M>) -> M2 + Send>;
 
@@ -53,7 +53,9 @@ impl<M, V> BatchIterator for MutableAddMetadataBatch<M, V>
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<V::Header, M>> {
-        self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.reinterpret_metadata() })
+        self.parent
+            .next_payload(idx)
+            .map(|p| PacketDescriptor { packet: p.packet.reinterpret_metadata() })
     }
 }
 

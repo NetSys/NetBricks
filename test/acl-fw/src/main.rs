@@ -5,6 +5,7 @@ extern crate fnv;
 extern crate time;
 extern crate getopts;
 extern crate rand;
+use self::nf::*;
 use e2d2::allocators::CacheAligned;
 use e2d2::config::*;
 use e2d2::interface::*;
@@ -12,7 +13,6 @@ use e2d2::operators::*;
 use e2d2::scheduler::*;
 use e2d2::utils::Ipv4Prefix;
 use getopts::Options;
-use self::nf::*;
 use std::collections::HashMap;
 use std::env;
 use std::error::Error;
@@ -39,7 +39,8 @@ fn test<S: Scheduler + Sized>(ports: Vec<CacheAligned<PortQueue>>, sched: &mut S
                         established: None,
                         drop: false,
                     }];
-    let pipelines: Vec<_> = ports.iter()
+    let pipelines: Vec<_> = ports
+        .iter()
         .map(|port| acl_match(ReceiveBatch::new(port.clone()), acls.clone()).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
@@ -86,7 +87,8 @@ fn main() {
 
     let configuration = if matches.opt_present("m") {
         NetbricksConfiguration {
-            primary_core: matches.opt_str("m")
+            primary_core: matches
+                .opt_str("m")
                 .unwrap()
                 .parse()
                 .expect("Could not parse master core"),
@@ -97,13 +99,19 @@ fn main() {
     };
 
     let configuration = if matches.opt_present("secondary") {
-        NetbricksConfiguration { secondary: true, ..configuration }
+        NetbricksConfiguration {
+            secondary: true,
+            ..configuration
+        }
     } else {
         configuration
     };
 
     let configuration = if matches.opt_present("primary") {
-        NetbricksConfiguration { secondary: false, ..configuration }
+        NetbricksConfiguration {
+            secondary: false,
+            ..configuration
+        }
     } else {
         configuration
     };
@@ -111,7 +119,10 @@ fn main() {
     fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
         let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
         for (port, core) in ports.iter().zip(cores.iter()) {
-            cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
+            cores_for_port
+                .entry(port.clone())
+                .or_insert(vec![])
+                .push(*core)
         }
         cores_for_port
     }
@@ -120,8 +131,13 @@ fn main() {
 
         let cores_str = matches.opt_strs("c");
 
-        let cores: Vec<i32> = cores_str.iter()
-            .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
+        let cores: Vec<i32> = cores_str
+            .iter()
+            .map(|n: &String| {
+                     n.parse()
+                         .ok()
+                         .expect(&format!("Core cannot be parsed {}", n))
+                 })
             .collect();
 
 
@@ -135,7 +151,10 @@ fn main() {
             let cores = cores_for_port.get(*port).unwrap();
             ports.push(PortConfiguration::new_with_queues(*port, cores, cores))
         }
-        NetbricksConfiguration { ports: ports, ..configuration }
+        NetbricksConfiguration {
+            ports: ports,
+            ..configuration
+        }
     } else {
         configuration
     };

@@ -34,7 +34,10 @@ impl PacketCreator {
 
     #[inline]
     fn initialize_packet(&self, pkt: Packet<NullHeader, EmptyMetadata>) -> Packet<IpHeader, EmptyMetadata> {
-        pkt.push_header(&self.mac).unwrap().push_header(&self.ip).unwrap()
+        pkt.push_header(&self.mac)
+            .unwrap()
+            .push_header(&self.ip)
+            .unwrap()
     }
 
     #[inline]

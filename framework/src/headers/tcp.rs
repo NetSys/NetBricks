@@ -1,7 +1,7 @@
+use super::EndOffset;
 use headers::IpHeader;
 use std::default::Default;
 use std::fmt;
-use super::EndOffset;
 
 #[derive(Debug, Default)]
 #[repr(C, packed)]

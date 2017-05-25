@@ -1,11 +1,11 @@
-use common::*;
-use headers::EndOffset;
-use interface::Packet;
-use interface::PacketTx;
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
+use common::*;
+use headers::EndOffset;
+use interface::Packet;
+use interface::PacketTx;
 
 pub type FilterFn<T, M> = Box<FnMut(&Packet<T, M>) -> bool + Send>;
 
@@ -46,13 +46,18 @@ impl<T, V> Act for FilterBatch<T, V>
         self.parent.act();
         // Filter during the act
         let iter = PayloadEnumerator::<T, V::Metadata>::new(&mut self.parent);
-        while let Some(ParsedDescriptor { mut packet, index: idx }) = iter.next(&mut self.parent) {
+        while let Some(ParsedDescriptor {
+                           mut packet,
+                           index: idx,
+                       }) = iter.next(&mut self.parent) {
             if !(self.filter)(&mut packet) {
                 self.remove.push(idx)
             }
         }
         if !self.remove.is_empty() {
-            self.parent.drop_packets(&self.remove[..]).expect("Filtering was performed incorrectly");
+            self.parent
+                .drop_packets(&self.remove[..])
+                .expect("Filtering was performed incorrectly");
         }
         self.remove.clear();
     }

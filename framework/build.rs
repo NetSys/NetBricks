@@ -1,6 +1,6 @@
 use std::env;
-use std::io::prelude::*;
 use std::fs::File;
+use std::io::prelude::*;
 use std::path::Path;
 
 #[allow(dead_code)]
@@ -10,15 +10,18 @@ fn parse_ld_archive(ar: &Path) -> Vec<String> {
     f.read_to_string(&mut content).unwrap();
     if "GROUP" == &content[0..5] {
         println!("Found group");
-        let open_idx = content.find("(").unwrap_or_else(|| {content.len()});
+        let open_idx = content.find("(").unwrap_or_else(|| content.len());
         let remove_open = content[open_idx + 1..].trim();
-        let end_idx = remove_open.find(")").unwrap_or_else(|| {remove_open.len()});
+        let end_idx = remove_open.find(")").unwrap_or_else(|| remove_open.len());
         let remaining = remove_open[..end_idx].trim();
         println!("Remaining is {}", remaining);
-        remaining.split_whitespace().map(|s| {
-            let end = s.len() - 2;
-            String::from(&s[3..end])
-        }).collect()
+        remaining
+            .split_whitespace()
+            .map(|s| {
+                     let end = s.len() - 2;
+                     String::from(&s[3..end])
+                 })
+            .collect()
     } else {
         panic!("Could not find a group");
     }
@@ -41,19 +44,25 @@ fn write_external_link(libs: &Vec<String>) {
 fn main() {
     // Get the directory where we are building.
     let dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let dpdk_path = Path::new(&dir).parent().unwrap()
-                                   .join("3rdparty")
-                                   .join("dpdk")
-                                   .join("build")
-                                   .join("lib");
-    let native_path = Path::new(&dir).parent().unwrap()
-                                     .join("target")
-                                     .join("native");
+    let dpdk_path = Path::new(&dir)
+        .parent()
+        .unwrap()
+        .join("3rdparty")
+        .join("dpdk")
+        .join("build")
+        .join("lib");
+    let native_path = Path::new(&dir)
+        .parent()
+        .unwrap()
+        .join("target")
+        .join("native");
     //println!("DPDK {:?}", dpdk_path.to_str());
     // Send current directory as -L
-    println!("cargo:rustc-link-search=native={}", dpdk_path.to_str().unwrap());
+    println!("cargo:rustc-link-search=native={}",
+             dpdk_path.to_str().unwrap());
     if dpdk_path.join("libdpdk.so").exists() {
         println!("cargo:rustc-link-lib=dpdk");
     }
-    println!("cargo:rustc-link-search=native={}", native_path.to_str().unwrap());
+    println!("cargo:rustc-link-search=native={}",
+             native_path.to_str().unwrap());
 }

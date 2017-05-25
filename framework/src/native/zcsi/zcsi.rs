@@ -1,6 +1,6 @@
+use super::MBuf;
 use headers::MacAddress;
 use std::os::raw::c_char;
-use super::MBuf;
 #[link(name = "zcsi")]
 extern "C" {
     pub fn init_system_whitelisted(name: *const c_char,

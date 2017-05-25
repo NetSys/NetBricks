@@ -53,7 +53,9 @@ impl SegmentList {
     /// Create a segement list expecting that we will need no more than `length` segments.
     pub fn new(length: usize) -> SegmentList {
         SegmentList {
-            storage: (0..(length as isize)).map(|i| Segment::new(i, 0, 0)).collect(),
+            storage: (0..(length as isize))
+                .map(|i| Segment::new(i, 0, 0))
+                .collect(),
             available: (0..(length as isize)).collect(),
             head: -1,
             tail: -1,
@@ -138,7 +140,9 @@ impl SegmentList {
         // already have been checked).
         let mut next = self.storage[idx as usize].next;
         while next != -1 {
-            let end = self.storage[idx as usize].seq.wrapping_add(self.storage[idx as usize].length as u32);
+            let end = self.storage[idx as usize]
+                .seq
+                .wrapping_add(self.storage[idx as usize].length as u32);
             if end >= self.storage[next as usize].seq {
                 // We have at least some overlap, and should merge.
                 let merge_len = self.storage[next as usize].length as usize -
@@ -327,13 +331,13 @@ impl ReorderedBuffer {
         let pages = round_to_power_of_2(page_aligned_size / PAGE_SIZE);
         let ring_buffer = try!{RingBuffer::new(pages)};
         Ok(ReorderedBuffer {
-            data: ring_buffer,
-            buffer_size: page_aligned_size,
-            state: State::Closed,
-            head_seq: 0,
-            tail_seq: 0,
-            segment_list: SegmentList::new(segment_size), // Assuming we don't receive small chunks.
-        })
+               data: ring_buffer,
+               buffer_size: page_aligned_size,
+               state: State::Closed,
+               head_seq: 0,
+               tail_seq: 0,
+               segment_list: SegmentList::new(segment_size), // Assuming we don't receive small chunks.
+           })
     }
 
 
@@ -462,7 +466,9 @@ impl ReorderedBuffer {
             self.tail_seq = self.tail_seq.wrapping_add(written as u32);
             {
                 // Insert into segment list.
-                let segment = self.segment_list.insert_segment(seq, written as u16).unwrap();
+                let segment = self.segment_list
+                    .insert_segment(seq, written as u16)
+                    .unwrap();
                 // Since we are writing to the beginning, this must always be the head.
                 assert!(self.segment_list.is_head(segment));
                 // Compute the end of the segment, this might in fact be larger than size

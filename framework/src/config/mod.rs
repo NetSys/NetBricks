@@ -45,7 +45,10 @@ impl Default for NetbricksConfiguration {
 impl NetbricksConfiguration {
     /// Create a `NetbricksConfiguration` with a name.
     pub fn new_with_name(name: &str) -> NetbricksConfiguration {
-        NetbricksConfiguration { name: String::from(name), ..Default::default() }
+        NetbricksConfiguration {
+            name: String::from(name),
+            ..Default::default()
+        }
     }
 }
 
@@ -106,7 +109,10 @@ impl Default for PortConfiguration {
 
 impl PortConfiguration {
     pub fn new_with_name(name: &str) -> PortConfiguration {
-        PortConfiguration { name: String::from(name), ..Default::default() }
+        PortConfiguration {
+            name: String::from(name),
+            ..Default::default()
+        }
     }
 
     pub fn new_with_queues(name: &str, rx_queues: &[i32], tx_queues: &[i32]) -> PortConfiguration {

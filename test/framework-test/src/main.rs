@@ -23,19 +23,20 @@ const CONVERSION_FACTOR: f64 = 1000000000.;
 
 fn monitor<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T,
                                     mut monitoring_cache: MergeableStoreDP<isize>)
-                                    -> CompositionBatch {
-    parent.parse::<MacHeader>()
+-> CompositionBatch{
+    parent
+        .parse::<MacHeader>()
         .transform(box |pkt| {
-            let hdr = pkt.get_mut_header();
-            hdr.swap_addresses();
-        })
+                           let hdr = pkt.get_mut_header();
+                           hdr.swap_addresses();
+                       })
         .parse::<IpHeader>()
         .transform(box move |pkt| {
-            let hdr = pkt.get_mut_header();
-            let ttl = hdr.ttl();
-            hdr.set_ttl(ttl + 1);
-            monitoring_cache.update(hdr.flow().unwrap(), 1);
-        })
+                           let hdr = pkt.get_mut_header();
+                           let ttl = hdr.ttl();
+                           hdr.set_ttl(ttl + 1);
+                           monitoring_cache.update(hdr.flow().unwrap(), 1);
+                       })
         .compose()
 }
 
@@ -43,13 +44,14 @@ fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32, counter: Mergeabl
     init_thread(core, core);
     println!("Receiving started");
 
-    let pipelines: Vec<_> = ports.iter()
+    let pipelines: Vec<_> = ports
+        .iter()
         .map(|port| {
-            let ctr = counter.clone();
-            monitor(ReceiveBatch::new(port.clone()), ctr)
-                .send(port.clone())
-                .compose()
-        })
+                 let ctr = counter.clone();
+                 monitor(ReceiveBatch::new(port.clone()), ctr)
+                     .send(port.clone())
+                     .compose()
+             })
         .collect();
     println!("Running {} pipelines", pipelines.len());
     let mut combined = merge(pipelines);
@@ -78,22 +80,31 @@ fn main() {
     }
 
     let cores_str = matches.opt_strs("c");
-    let master_core = matches.opt_str("m")
+    let master_core = matches
+        .opt_str("m")
         .unwrap_or_else(|| String::from("0"))
         .parse()
         .expect("Could not parse master core spec");
     println!("Using master core {}", master_core);
     let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
 
-    let cores: Vec<i32> = cores_str.iter()
-        .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
+    let cores: Vec<i32> = cores_str
+        .iter()
+        .map(|n: &String| {
+                 n.parse()
+                     .ok()
+                     .expect(&format!("Core cannot be parsed {}", n))
+             })
         .collect();
 
 
     fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
         let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
         for (port, core) in ports.iter().zip(cores.iter()) {
-            cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
+            cores_for_port
+                .entry(port.clone())
+                .or_insert(vec![])
+                .push(*core)
         }
         cores_for_port
     }
@@ -119,7 +130,8 @@ fn main() {
             .expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
-            queues_by_core.entry(*core)
+            queues_by_core
+                .entry(*core)
                 .or_insert(vec![])
                 .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
         }
@@ -129,13 +141,14 @@ fn main() {
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
     let mut consumer = MergeableStoreCP::new();
-    let _thread: Vec<_> = queues_by_core.iter()
+    let _thread: Vec<_> = queues_by_core
+        .iter()
         .map(|(core, ports)| {
-            let c = core.clone();
-            let mon = consumer.dp_store();
-            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
-            std::thread::spawn(move || recv_thread(p, c, mon))
-        })
+                 let c = core.clone();
+                 let mon = consumer.dp_store();
+                 let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
+                 std::thread::spawn(move || recv_thread(p, c, mon))
+             })
         .collect();
     let mut pkts_so_far = (0, 0);
     let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;

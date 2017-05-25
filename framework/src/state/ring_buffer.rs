@@ -102,14 +102,14 @@ impl RingBuffer {
         libc::close(fd);
 
         Ok(RingBuffer {
-            head: 0,
-            tail: 0,
-            size: bytes,
-            mask: bytes - 1,
-            bottom_map: bottom,
-            top_map: address,
-            buf: address as *mut u8,
-        })
+               head: 0,
+               tail: 0,
+               size: bytes,
+               mask: bytes - 1,
+               bottom_map: bottom,
+               top_map: address,
+               buf: address as *mut u8,
+           })
     }
 
     /// Create a new wrapping ring buffer. The ring buffer size is specified in page size (4KB) and must be a power of
@@ -164,14 +164,17 @@ impl RingBuffer {
     /// Write data at an offset of the buffer. Do not use this function if you use `write_at_tail`/`read_from_head`.
     #[inline]
     pub fn write_at_offset(&mut self, offset: usize, data: &[u8]) -> usize {
-        self.mut_slice_at_offset(offset, data.len()).write(data).unwrap()
+        self.mut_slice_at_offset(offset, data.len())
+            .write(data)
+            .unwrap()
     }
 
     /// Read data from offset of the buffer. Do not use if using `write_at_tail`/`read_from_head`
     #[inline]
     pub fn read_from_offset(&mut self, offset: usize, mut data: &mut [u8]) -> usize {
         let write_size = min(data.len(), self.size);
-        data.write(self.slice_at_offset(offset, write_size)).unwrap()
+        data.write(self.slice_at_offset(offset, write_size))
+            .unwrap()
     }
 
     /// Write data at the end of the buffer. The amount of data written might be smaller than input.
@@ -184,7 +187,9 @@ impl RingBuffer {
         }
         let offset = self.tail & self.mask;
         self.seek_tail(write);
-        self.unsafe_mut_slice_at_offset(offset, write).write(&data[0..write]).unwrap()
+        self.unsafe_mut_slice_at_offset(offset, write)
+            .write(&data[0..write])
+            .unwrap()
     }
 
     /// Write at an offset from the tail, useful when dealing with out-of-order data. Note, the caller is responsible
@@ -199,7 +204,9 @@ impl RingBuffer {
             let available_at_offset = self.mask.wrapping_add(self.head).wrapping_sub(offset_tail);
             let write = min(data.len(), available_at_offset);
             let index = offset_tail & self.mask;
-            self.unsafe_mut_slice_at_offset(index, write).write(&data[0..write]).unwrap()
+            self.unsafe_mut_slice_at_offset(index, write)
+                .write(&data[0..write])
+                .unwrap()
         }
     }
 
@@ -221,7 +228,9 @@ impl RingBuffer {
         let offset = self.read_offset();
         let to_read = min(self.available(), data.len());
         self.head = self.head.wrapping_add(min(increment, to_read));
-        (&mut data[0..to_read]).write(self.unsafe_slice_at_offset(offset, to_read)).unwrap()
+        (&mut data[0..to_read])
+            .write(self.unsafe_slice_at_offset(offset, to_read))
+            .unwrap()
     }
 
     /// Read from the buffer, incrementing the read head. Returns bytes read.

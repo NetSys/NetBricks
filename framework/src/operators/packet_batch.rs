@@ -1,11 +1,11 @@
+use super::Batch;
+use super::act::Act;
+use super::iterator::{BatchIterator, PacketDescriptor};
 use common::*;
 use headers::NullHeader;
 use interface::*;
 use native::zcsi::*;
 use std::result;
-use super::Batch;
-use super::act::Act;
-use super::iterator::{BatchIterator, PacketDescriptor};
 
 /// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
 /// receiving packets from DPDK, allocations, etc. As a result many of the actions implemented in other types of batches
@@ -44,7 +44,8 @@ impl PacketBatch {
     #[inline]
     pub fn allocate_batch_with_size(&mut self, len: u16) -> Result<&mut Self> {
         let capacity = self.array.capacity() as i32;
-        self.alloc_packet_batch(len, capacity).and_then(|_| Ok(self))
+        self.alloc_packet_batch(len, capacity)
+            .and_then(|_| Ok(self))
     }
 
     /// Allocate `cnt` mbufs. `len` sets the metadata field indicating how much of the mbuf should be considred when
@@ -247,11 +248,11 @@ impl Act for PacketBatch {
             unsafe {
                 // let available = self.available() as i32;
                 try!(port.send(self.packet_ptr())
-                    .and_then(|sent| {
-                        self.consume_batch_partial(sent as usize);
-                        total_sent += sent;
-                        Ok(sent)
-                    }));
+                         .and_then(|sent| {
+                                       self.consume_batch_partial(sent as usize);
+                                       total_sent += sent;
+                                       Ok(sent)
+                                   }));
             }
             break;
         }

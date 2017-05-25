@@ -1,12 +1,12 @@
+use super::Batch;
+use super::act::Act;
+use super::iterator::{BatchIterator, PacketDescriptor};
+use super::packet_batch::PacketBatch;
 use common::*;
 use headers::EndOffset;
 use headers::NullHeader;
 use interface::PacketTx;
 use scheduler::Executable;
-use super::Batch;
-use super::act::Act;
-use super::iterator::{BatchIterator, PacketDescriptor};
-use super::packet_batch::PacketBatch;
 
 /// `CompositionBatch` allows multiple NFs to be combined. A composition batch resets the packet pointer so that each NF
 /// can treat packets as originating from the NF itself.

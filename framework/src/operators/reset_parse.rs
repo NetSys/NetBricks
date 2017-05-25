@@ -1,10 +1,10 @@
-use common::*;
-use headers::NullHeader;
-use interface::PacketTx;
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
+use common::*;
+use headers::NullHeader;
+use interface::PacketTx;
 
 pub struct ResetParsingBatch<V>
     where V: Batch + BatchIterator + Act

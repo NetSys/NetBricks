@@ -1,3 +1,5 @@
+use super::PortStats;
+use super::super::{PacketTx, PacketRx};
 use allocators::*;
 use common::*;
 use config::{NUM_RXD, NUM_TXD, PortConfiguration};
@@ -9,8 +11,6 @@ use std::ffi::CString;
 use std::fmt;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-use super::PortStats;
-use super::super::{PacketTx, PacketRx};
 
 /// A DPDK based PMD port. Send and receive should not be called directly on this structure but on the port queue
 /// structure instead.
@@ -151,13 +151,13 @@ impl PmdPort {
             Err(ErrorKind::BadTxQueue(port.port, txq).into())
         } else {
             Ok(CacheAligned::allocate(PortQueue {
-                port: port.clone(),
-                port_id: port.port,
-                txq: txq,
-                rxq: rxq,
-                stats_rx: port.stats_rx[rxq as usize].clone(),
-                stats_tx: port.stats_tx[txq as usize].clone(),
-            }))
+                                          port: port.clone(),
+                                          port_id: port.port,
+                                          txq: txq,
+                                          rxq: rxq,
+                                          stats_rx: port.stats_rx[rxq as usize].clone(),
+                                          stats_tx: port.stats_tx[txq as usize].clone(),
+                                      }))
         }
     }
 
@@ -209,14 +209,14 @@ impl PmdPort {
             };
             if ret == 0 {
                 Ok(Arc::new(PmdPort {
-                    connected: true,
-                    port: port,
-                    rxqs: actual_rxqs,
-                    txqs: actual_txqs,
-                    should_close: true,
-                    stats_rx: (0..rxqs).map(|_| Arc::new(PortStats::new())).collect(),
-                    stats_tx: (0..txqs).map(|_| Arc::new(PortStats::new())).collect(),
-                }))
+                                connected: true,
+                                port: port,
+                                rxqs: actual_rxqs,
+                                txqs: actual_txqs,
+                                should_close: true,
+                                stats_rx: (0..rxqs).map(|_| Arc::new(PortStats::new())).collect(),
+                                stats_tx: (0..txqs).map(|_| Arc::new(PortStats::new())).collect(),
+                            }))
             } else {
                 Err(ErrorKind::FailedToInitializePort(port).into())
             }
@@ -236,14 +236,14 @@ impl PmdPort {
         // FIXME: Can we really not close?
         if port >= 0 {
             Ok(Arc::new(PmdPort {
-                connected: true,
-                port: port,
-                rxqs: 1,
-                txqs: 1,
-                should_close: false,
-                stats_rx: vec![Arc::new(PortStats::new())],
-                stats_tx: vec![Arc::new(PortStats::new())],
-            }))
+                            connected: true,
+                            port: port,
+                            rxqs: 1,
+                            txqs: 1,
+                            should_close: false,
+                            stats_rx: vec![Arc::new(PortStats::new())],
+                            stats_tx: vec![Arc::new(PortStats::new())],
+                        }))
         } else {
             Err(ErrorKind::FailedToInitializePort(port).into())
         }
@@ -256,14 +256,14 @@ impl PmdPort {
                 let port = unsafe { init_ovs_eth_ring(iface, core) };
                 if port >= 0 {
                     Ok(Arc::new(PmdPort {
-                        connected: true,
-                        port: port,
-                        rxqs: 1,
-                        txqs: 1,
-                        should_close: false,
-                        stats_rx: vec![Arc::new(PortStats::new())],
-                        stats_tx: vec![Arc::new(PortStats::new())],
-                    }))
+                                    connected: true,
+                                    port: port,
+                                    rxqs: 1,
+                                    txqs: 1,
+                                    should_close: false,
+                                    stats_rx: vec![Arc::new(PortStats::new())],
+                                    stats_tx: vec![Arc::new(PortStats::new())],
+                                }))
                 } else {
                     Err(ErrorKind::FailedToInitializePort(port).into())
                 }
@@ -297,7 +297,7 @@ impl PmdPort {
                                     loopback,
                                     tso,
                                     csumoffload)
-                .chain_err(|| ErrorKind::BadDev(String::from(spec)))
+                    .chain_err(|| ErrorKind::BadDev(String::from(spec)))
         } else {
             Err(ErrorKind::BadDev(String::from(spec)).into())
         }
@@ -305,14 +305,14 @@ impl PmdPort {
 
     fn null_port() -> Result<Arc<PmdPort>> {
         Ok(Arc::new(PmdPort {
-            connected: false,
-            port: 0,
-            rxqs: 0,
-            txqs: 0,
-            should_close: false,
-            stats_rx: vec![Arc::new(PortStats::new())],
-            stats_tx: vec![Arc::new(PortStats::new())],
-        }))
+                        connected: false,
+                        port: 0,
+                        rxqs: 0,
+                        txqs: 0,
+                        should_close: false,
+                        stats_rx: vec![Arc::new(PortStats::new())],
+                        stats_tx: vec![Arc::new(PortStats::new())],
+                    }))
     }
 
     /// Create a new port from a `PortConfiguration`.

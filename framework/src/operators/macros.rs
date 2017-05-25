@@ -1,18 +1,18 @@
 //macro_rules! batch {
-    //($name : ident,  [ $($parts: ident : $pty: ty),* ], [$($defid : ident : $val : expr),*]) => {
-        //impl<T, V> $name<T, V>
-            //where T: EndOffset,
-            //V:Batch + BatchIterator + Act {
-            //#[inline]
-            //pub fn new($( $parts : $pty ),*) -> $name<T, V> {
-                //$name{ $( $parts: $parts ),*, $($defid : $val),* }
-            //}
-        //}
-        //batch_no_new!{$name}
-    //};
-    //($name: ident, [ $($parts: ident : $pty: ty),* ]) => {
-        //batch!{$name, [$($parts:$pty),*], []}
-    //}
+//($name : ident,  [ $($parts: ident : $pty: ty),* ], [$($defid : ident : $val : expr),*]) => {
+//impl<T, V> $name<T, V>
+//where T: EndOffset,
+//V:Batch + BatchIterator + Act {
+//#[inline]
+//pub fn new($( $parts : $pty ),*) -> $name<T, V> {
+//$name{ $( $parts: $parts ),*, $($defid : $val),* }
+//}
+//}
+//batch_no_new!{$name}
+//};
+//($name: ident, [ $($parts: ident : $pty: ty),* ]) => {
+//batch!{$name, [$($parts:$pty),*], []}
+//}
 //}
 
 macro_rules! batch_no_new {

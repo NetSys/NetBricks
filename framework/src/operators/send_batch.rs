@@ -1,11 +1,11 @@
-use common::*;
-use headers::NullHeader;
-use interface::PacketTx;
-use scheduler::Executable;
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
+use common::*;
+use headers::NullHeader;
+use interface::PacketTx;
+use scheduler::Executable;
 
 pub struct SendBatch<Port, V>
     where Port: PacketTx,
@@ -65,9 +65,9 @@ impl<Port, V> Act for SendBatch<Port, V>
             .get_packet_batch()
             .send_q(&self.port)
             .and_then(|x| {
-                self.sent += x as u64;
-                Ok(x)
-            })
+                          self.sent += x as u64;
+                          Ok(x)
+                      })
             .expect("Send failed");
         self.parent.done();
     }

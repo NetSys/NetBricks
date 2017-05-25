@@ -4,13 +4,13 @@ extern crate fnv;
 extern crate time;
 extern crate getopts;
 extern crate rand;
+use self::nf::*;
 use e2d2::allocators::CacheAligned;
 use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
 use getopts::Options;
-use self::nf::*;
 use std::collections::HashMap;
 use std::env;
 use std::net::Ipv4Addr;
@@ -34,13 +34,14 @@ fn recv_thread(ports: Vec<CacheAligned<PortQueue>>, core: i32) {
                  core);
     }
 
-    let mut pipelines: Vec<_> = ports.iter()
+    let mut pipelines: Vec<_> = ports
+        .iter()
         .map(|port| {
-            nat(ReceiveBatch::new(port.clone()),
-                &mut sched,
-                &Ipv4Addr::new(10, 0, 0, 1))
-                .send(port.clone())
-        })
+                 nat(ReceiveBatch::new(port.clone()),
+                     &mut sched,
+                     &Ipv4Addr::new(10, 0, 0, 1))
+                         .send(port.clone())
+             })
         .collect();
     println!("Running {} pipelines", pipelines.len());
     if pipelines.len() > 1 {
@@ -71,22 +72,31 @@ fn main() {
     }
 
     let cores_str = matches.opt_strs("c");
-    let master_core = matches.opt_str("m")
+    let master_core = matches
+        .opt_str("m")
         .unwrap_or_else(|| String::from("0"))
         .parse()
         .expect("Could not parse master core spec");
     println!("Using master core {}", master_core);
     let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
 
-    let cores: Vec<i32> = cores_str.iter()
-        .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
+    let cores: Vec<i32> = cores_str
+        .iter()
+        .map(|n: &String| {
+                 n.parse()
+                     .ok()
+                     .expect(&format!("Core cannot be parsed {}", n))
+             })
         .collect();
 
 
     fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
         let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
         for (port, core) in ports.iter().zip(cores.iter()) {
-            cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
+            cores_for_port
+                .entry(port.clone())
+                .or_insert(vec![])
+                .push(*core)
         }
         cores_for_port
     }
@@ -112,7 +122,8 @@ fn main() {
             .expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
-            queues_by_core.entry(*core)
+            queues_by_core
+                .entry(*core)
                 .or_insert(vec![])
                 .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
         }
@@ -122,12 +133,13 @@ fn main() {
 
     const _BATCH: usize = 1 << 10;
     const _CHANNEL_SIZE: usize = 256;
-    let _thread: Vec<_> = queues_by_core.iter()
+    let _thread: Vec<_> = queues_by_core
+        .iter()
         .map(|(core, ports)| {
-            let c = core.clone();
-            let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
-            std::thread::spawn(move || recv_thread(p, c))
-        })
+                 let c = core.clone();
+                 let p: Vec<_> = ports.iter().map(|p| p.clone()).collect();
+                 std::thread::spawn(move || recv_thread(p, c))
+             })
         .collect();
     let mut pkts_so_far = (0, 0);
     let mut last_printed = 0.;

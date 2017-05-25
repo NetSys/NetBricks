@@ -1,10 +1,10 @@
-use common::*;
-use headers::EndOffset;
-use interface::*;
 use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
+use common::*;
+use headers::EndOffset;
+use interface::*;
 
 pub struct DeparsedBatch<V>
     where V: Batch + BatchIterator + Act
@@ -35,7 +35,9 @@ impl<V> BatchIterator for DeparsedBatch<V>
     type Header = <<V as BatchIterator>::Header as EndOffset>::PreviousHeader;
     type Metadata = <V as BatchIterator>::Metadata;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<Self::Header, Self::Metadata>> {
-        self.parent.next_payload(idx).map(|p| PacketDescriptor { packet: p.packet.deparse_header_stack().unwrap() })
+        self.parent
+            .next_payload(idx)
+            .map(|p| PacketDescriptor { packet: p.packet.deparse_header_stack().unwrap() })
     }
 
     #[inline]

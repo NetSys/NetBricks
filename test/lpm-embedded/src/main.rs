@@ -4,18 +4,21 @@ extern crate fnv;
 extern crate time;
 extern crate getopts;
 extern crate rand;
+use self::nf::*;
 use e2d2::config::*;
 use e2d2::interface::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
-use self::nf::*;
 use std::process;
 mod nf;
 
 fn main() {
     let name = String::from("recv");
     let configuration = NetbricksConfiguration::new_with_name(&name[..]);
-    let configuration = NetbricksConfiguration { primary_core: 0, ..configuration };
+    let configuration = NetbricksConfiguration {
+        primary_core: 0,
+        ..configuration
+    };
     match initialize_system(&configuration) {
         Ok(_) => {
             let port = VirtualPort::new(1).unwrap();

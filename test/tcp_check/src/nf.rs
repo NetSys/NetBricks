@@ -3,7 +3,8 @@ use e2d2::operators::*;
 
 #[inline]
 pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
-    parent.parse::<MacHeader>()
+    parent
+        .parse::<MacHeader>()
         .map(box |pkt| {
             println!("hdr {}", pkt.get_header());
             let payload = pkt.get_payload();
@@ -28,7 +29,7 @@ pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Composition
         })
         .parse::<UdpHeader>()
         .map(box |pkt| {
-            println!("UDP header {}", pkt.get_header());
-        })
+                     println!("UDP header {}", pkt.get_header());
+                 })
         .compose()
 }

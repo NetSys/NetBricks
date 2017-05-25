@@ -209,16 +209,19 @@ pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>, S:
     lpm_table.insert_ipv4(&Ipv4Addr::new(95, 215, 103, 88), 32, 1);
     lpm_table.insert_ipv4(&Ipv4Addr::new(5, 167, 65, 50), 32, 1);
     lpm_table.construct_table();
-    let mut groups = parent.parse::<MacHeader>()
+    let mut groups = parent
+        .parse::<MacHeader>()
         .transform(box |p| p.get_mut_header().swap_addresses())
         .parse::<IpHeader>()
         .group_by(3,
                   box move |pkt| {
-                      let hdr = pkt.get_header();
-                      lpm_table.lookup_entry(hdr.src()) as usize
-                  },
+                          let hdr = pkt.get_header();
+                          lpm_table.lookup_entry(hdr.src()) as usize
+                      },
                   s);
-    let pipeline =
-        merge(vec![groups.get_group(0).unwrap(), groups.get_group(1).unwrap(), groups.get_group(2).unwrap()]).compose();
+    let pipeline = merge(vec![groups.get_group(0).unwrap(),
+                              groups.get_group(1).unwrap(),
+                              groups.get_group(2).unwrap()])
+            .compose();
     pipeline
 }
