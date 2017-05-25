@@ -1,6 +1,8 @@
 use headers::NullHeader;
 use std::default::Default;
 use std::fmt;
+use std::hash::Hash;
+use std::hash::Hasher;
 use super::EndOffset;
 
 #[derive(Debug, Default)]
@@ -45,6 +47,20 @@ impl Clone for MacAddress {
     }
     fn clone_from(&mut self, source: &MacAddress) {
         self.addr.copy_from_slice(&source.addr)
+    }
+}
+
+impl PartialEq for MacAddress {
+    fn eq(&self, other: &MacAddress) -> bool {
+        self.addr == other.addr
+    }
+}
+
+impl Eq for MacAddress {}
+
+impl Hash for MacAddress {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.addr.hash(state);
     }
 }
 
