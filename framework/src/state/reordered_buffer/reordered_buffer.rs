@@ -325,7 +325,7 @@ impl ReorderedBuffer {
     }
 
     /// Create a new buffer with space for `buffer_size` bytes and a segment list with `segment_size` elements. The
-    /// later should be adjusted to reflect the expected number of out of order segments at a time.
+    /// latter should be adjusted to reflect the expected number of out-of-order segments at a time.
     pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> Result<ReorderedBuffer> {
         let page_aligned_size = round_to_pages(buffer_size);
         let pages = round_to_power_of_2(page_aligned_size / PAGE_SIZE);
@@ -361,7 +361,7 @@ impl ReorderedBuffer {
         }
     }
 
-    /// Add data at a give sequence number.
+    /// Add data at a given sequence number.
     pub fn add_data(&mut self, seq: u32, data: &[u8]) -> InsertionResult {
         match self.state {
             State::Connected => {
@@ -380,7 +380,7 @@ impl ReorderedBuffer {
         }
     }
 
-    /// Read data from the buffer. The amount of data read is limited by the amount of in-order-data available at the
+    /// Read data from the buffer. The amount of data read is limited by the amount of in-order data available at the
     /// moment.
     pub fn read_data(&mut self, mut data: &mut [u8]) -> usize {
         match self.state {
