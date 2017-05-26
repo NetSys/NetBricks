@@ -168,6 +168,14 @@ fn test_out_of_order_insertion() {
                "Read does not match expected, read: {}, expected: {}",
                read,
                format!("{}{}{}", data0, data1, data2));
+
+    let data3 = [0, 1, 2];
+    if let InsertionResult::Inserted { written, available } = ro.add_data(base_seq - 6, &data3) {
+        assert_eq!(written, 0);
+        assert_eq!(available, 0);
+    } else {
+        panic!("Writing data3 failed");
+    }
 }
 
 /// Test that things work fine once state is changed.
