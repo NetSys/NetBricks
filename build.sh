@@ -145,10 +145,6 @@ clean () {
     ${CARGO} clean || true
     popd
 
-    pushd $BASE_DIR/test/framework-test
-    ${CARGO} clean || true
-    popd
-
     for example in ${examples[@]}; do
         pushd ${BASE_DIR}/$example
         ${CARGO} clean || true
