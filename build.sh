@@ -25,13 +25,20 @@ else
     DPDK="${DPDK_HOME}/build/lib/libdpdk.a"
 fi
 
+if [ "${NB_DEBUG:-0}" -eq 1 ]; then
+  CARGO_BUILD_FLAGS=""
+else
+  CARGO_BUILD_FLAGS="--release"
+fi
+
+
 CARGO_LOC=`which cargo || true`
 export CARGO=${CARGO_PATH-"${CARGO_LOC}"}
 if [ -z ${CARGO} ] || [ ! -e ${CARGO} ]; then
     echo "Could not find a preinstalled Cargo in PATH. Set CARGO_PATH if necessary."
     exit 1
 fi
-echo "Using Cargo from ${CARGO}"
+echo "Using Cargo from ${CARGO} and with the following build flags: '${CARGO_BUILD_FLAGS}'"
 
 MUSL_DOWNLOAD_PATH="${DOWNLOAD_DIR}/musl.tar.gz"
 MUSL_RESULT="${EXT_BASE}/musl"
@@ -273,7 +280,7 @@ case $TASK in
             echo "No Cargo.toml, not valid"
         fi
         pushd ${BASE_DIR}/test/${build_dir}
-            ${CARGO} build --release
+            ${CARGO} build ${CARGO_BUILD_FLAGS}
         popd
         ;;
     build_fmwk)
@@ -282,9 +289,9 @@ case $TASK in
         find_sctp
         pushd $BASE_DIR/framework
         if [ ${SCTP_PRESENT} -eq 1 ]; then
-            ${CARGO} build --release --features "sctp"
+            ${CARGO} build ${CARGO_BUILD_FLAGS} --features "sctp"
         else
-            ${CARGO} build --release
+            ${CARGO} build ${CARGO_BUILD_FLAGS}
         fi
         popd
         ;;
@@ -297,9 +304,9 @@ case $TASK in
 
         pushd $BASE_DIR/framework
         if [ ${SCTP_PRESENT} -eq 1 ]; then
-            ${CARGO} build --release --features "sctp"
+          ${CARGO} build ${CARGO_BUILD_FLAGS} --features "sctp"
         else
-            ${CARGO} build --release
+            ${CARGO} build ${CARGO_BUILD_FLAGS}
         fi
         popd
 
@@ -307,12 +314,12 @@ case $TASK in
             if [[ ${example} == *sctp* ]]; then
                 if [ ${SCTP_PRESENT} -eq 1 ]; then
                     pushd ${BASE_DIR}/${example}
-                    ${CARGO} build --release
+                    ${CARGO} build ${CARGO_BUILD_FLAGS}
                     popd
                 fi
             else
                 pushd ${BASE_DIR}/${example}
-                ${CARGO} build --release
+                ${CARGO} build ${CARGO_BUILD_FLAGS}
                 popd
             fi
         done
@@ -358,7 +365,7 @@ case $TASK in
     test)
         pushd $BASE_DIR/framework
         export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
-        ${CARGO} test --release
+        ${CARGO} test ${CARGO_BUILD_FLAGS}
         popd
         ;;
     run)
@@ -463,7 +470,7 @@ case $TASK in
         pushd $BASE_DIR/framework
         ${CARGO} clean
         ${CARGO} update # Clippy breaks with new compilers
-        ${CARGO} build --features dev
+        ${CARGO} build --features dev ${CARGO_BUILD_FLAGS}
         popd
         ;;
     dist_clean)
