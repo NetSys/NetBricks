@@ -392,15 +392,15 @@ case $TASK in
         fi
         cmd=$1
         shift
-        executable=${BASE_DIR}/target/release/$cmd
+        executable=${BASE_DIR}/target/debug/$cmd
         if [ ! -e ${executable} ]; then
             echo "${executable} not found, building"
-            ${BASE_DIR}/${BUILD_SCRIPT} build
+            NB_DEBUG=1 ${BASE_DIR}/${BUILD_SCRIPT} build_test "$cmd"
         fi
         export PATH="${BIN_DIR}:${PATH}"
         export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
-            rust-gdb --args ${BASE_DIR}/target/release/$cmd "$@"
+            RUST_BACKTRACE="1" rust-gdb --args ${executable} "$@"
         ;;
     update_rust)
         _BUILD_UPDATE_=1
