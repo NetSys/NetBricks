@@ -25,3 +25,7 @@ target/
 *.rs.bk
 *.o
 *.so
+
+# Vim files
+*.vi
+*.swp
