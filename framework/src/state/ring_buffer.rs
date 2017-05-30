@@ -20,15 +20,13 @@ unsafe impl Send for RingBuffer {}
 
 #[cfg_attr(feature = "dev", allow(len_without_is_empty))]
 impl RingBuffer {
-    /// Create a new wrapping ring buffer. The ring buffer size is specified in page size (4KB) and must be a power of
+    /// Create a new wrapping ring buffer. The ring buffer size is specified in bytes and must be a power of
     /// 2.
-    pub fn new(pages: usize) -> Result<RingBuffer> {
-        if pages & (pages - 1) != 0 {
+    pub fn new(bytes: usize) -> Result<RingBuffer> {
+        if bytes & (bytes - 1) != 0 {
             // We need pages to be a power of 2.
-            return Err(ErrorKind::InvalidRingSize(pages).into());
+            return Err(ErrorKind::InvalidRingSize(bytes).into());
         }
-
-        let bytes = pages << 12;
 
         Ok(RingBuffer {
                head: 0,
@@ -172,7 +170,7 @@ mod tests {
 
     #[test]
     fn test_io_simple() {
-        let mut buf = RingBuffer::new(2).unwrap();
+        let mut buf = RingBuffer::new(32).unwrap();
         let mut data: Vec<u8> = vec![42, 43, 44];
 
         buf.wrapped_write(2, &mut data);
@@ -192,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_io_wrapped() {
-        let mut buf = RingBuffer::new(8).unwrap();
+        let mut buf = RingBuffer::new(128).unwrap();
         let size = buf.size;
         let mut data: Vec<u8> = vec![42, 43, 44, 45, 46];
 

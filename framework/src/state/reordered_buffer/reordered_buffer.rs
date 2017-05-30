@@ -327,12 +327,11 @@ impl ReorderedBuffer {
     /// Create a new buffer with space for `buffer_size` bytes and a segment list with `segment_size` elements. The
     /// latter should be adjusted to reflect the expected number of out-of-order segments at a time.
     pub fn new_with_segments(buffer_size: usize, segment_size: usize) -> Result<ReorderedBuffer> {
-        let page_aligned_size = round_to_pages(buffer_size);
-        let pages = round_to_power_of_2(page_aligned_size / PAGE_SIZE);
-        let ring_buffer = try!{RingBuffer::new(pages)};
+        let rounded_bytes = round_to_power_of_2(buffer_size);
+        let ring_buffer = try!{RingBuffer::new(rounded_bytes)};
         Ok(ReorderedBuffer {
                data: ring_buffer,
-               buffer_size: page_aligned_size,
+               buffer_size: rounded_bytes,
                state: State::Closed,
                head_seq: 0,
                tail_seq: 0,

@@ -9,7 +9,7 @@ fn alloc_test() {
 
 #[test]
 fn write_at_offset_test() {
-    let mut rb = RingBuffer::new(1).unwrap();
+    let mut rb = RingBuffer::new(4096).unwrap();
     let input = vec![1, 2, 3, 4];
     rb.write_at_offset(4095, &input[..]);
     let mut output: Vec<_> = (0..input.len()).map(|_| 0).collect();
@@ -21,7 +21,7 @@ fn write_at_offset_test() {
 
 #[test]
 fn read_write_tail_test() {
-    let mut rb = RingBuffer::new(1).unwrap();
+    let mut rb = RingBuffer::new(4096).unwrap();
     let input: Vec<_> = (0..8192).map(|i| (i & 0xff) as u8).collect();
     let written = rb.write_at_tail(&input[..]);
     assert!(written == 4095);
