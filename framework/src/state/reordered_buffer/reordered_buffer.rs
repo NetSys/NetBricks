@@ -499,8 +499,7 @@ impl ReorderedBuffer {
             }
         } else if self.tail_seq >= seq {
             let offset = (self.tail_seq - seq) as usize;
-            let remaining = data.len() - offset;
-            if remaining > 0 {
+            if data.len() > offset {
                 let tail_seq = self.tail_seq;
                 self.out_of_order_insert(tail_seq, &data[offset..])
             } else {
