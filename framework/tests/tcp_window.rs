@@ -59,9 +59,9 @@ fn round_to_power_of_2_test() {
 fn creation_test() {
     let mut i = 32;
     while i <= 1073741824 {
-        let ro = ReorderedBuffer::new(i).unwrap();
+        let ro = ReorderedBuffer::new(i - 1).unwrap();
         drop(ro);
-        let ro = ReorderedBuffer::new(i + 1).unwrap();
+        let ro = ReorderedBuffer::new(i).unwrap();
         drop(ro);
         i *= 2;
     }
