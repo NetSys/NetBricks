@@ -38,7 +38,7 @@ fn test<S: Scheduler + Sized>(ports: Vec<CacheAligned<PortQueue>>, sched: &mut S
 }
 
 fn main() {
-    let mut opts = basic_opts();
+    let opts = basic_opts();
 
     let args: Vec<String> = env::args().collect();
     let matches = match opts.parse(&args[1..]) {
