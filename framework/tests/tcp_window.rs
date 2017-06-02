@@ -60,8 +60,10 @@ fn creation_test() {
     let mut i = 32;
     while i <= 1073741824 {
         let ro = ReorderedBuffer::new(i).unwrap();
+        assert_eq!(i, ro.buffer_size());
         drop(ro);
         let ro = ReorderedBuffer::new(i + 1).unwrap();
+        assert_eq!(i * 2, ro.buffer_size());
         drop(ro);
         i *= 2;
     }
