@@ -29,3 +29,6 @@ target/
 # Vim files
 *.vi
 *.swp
+
+# cscope
+cscope*
