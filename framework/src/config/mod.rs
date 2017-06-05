@@ -1,6 +1,8 @@
 pub use self::config_reader::*;
+pub use self::flag_reader::*;
 use std::fmt;
 mod config_reader;
+mod flag_reader;
 
 /// `NetBricks` control configuration. In theory all applications create one of these, either through the use of
 /// `read_configuration` or manually using args.

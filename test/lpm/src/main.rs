@@ -5,13 +5,10 @@ extern crate time;
 extern crate getopts;
 extern crate rand;
 use self::nf::*;
-use e2d2::common::*;
 use e2d2::config::*;
 use e2d2::interface::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
-use getopts::Options;
-use std::collections::HashMap;
 use std::env;
 use std::fmt::Display;
 use std::process;
@@ -42,124 +39,16 @@ fn test<T, S>(ports: Vec<T>, sched: &mut S)
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let program = args[0].clone();
-    let mut opts = Options::new();
-    opts.optflag("h", "help", "print this help menu");
-    opts.optflag("", "secondary", "run as a secondary process");
-    opts.optflag("", "primary", "run as a primary process");
-    opts.optopt("n", "name", "name to use for the current process", "name");
-    opts.optmulti("p", "port", "Port to use", "[type:]id");
-    opts.optmulti("c", "core", "Core to use", "core");
-    opts.optopt("m", "master", "Master core", "master");
-    opts.optopt("f", "configuration", "Configuration file", "path");
+    let mut opts = basic_opts();
     opts.optflag("t", "test", "Test mode do not use real ports");
+
+    let args: Vec<String> = env::args().collect();
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
     };
-    if matches.opt_present("h") {
-        print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
-        process::exit(0)
-    }
-
-    let configuration = if matches.opt_present("f") {
-        let config_file = matches.opt_str("f").unwrap();
-        match read_configuration(&config_file[..]) {
-            Ok(cfg) => cfg,
-            Err(ref e) => {
-                print_error(e);
-                process::exit(1);
-            }
-        }
-    } else {
-        let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
-        NetbricksConfiguration::new_with_name(&name[..])
-    };
-
-
-    let configuration = if matches.opt_present("m") {
-        NetbricksConfiguration {
-            primary_core: matches
-                .opt_str("m")
-                .unwrap()
-                .parse()
-                .expect("Could not parse master core"),
-            strict: true,
-            ..configuration
-        }
-    } else {
-        configuration
-    };
-
-
-    let configuration = if matches.opt_present("secondary") {
-        NetbricksConfiguration {
-            secondary: true,
-            ..configuration
-        }
-    } else {
-        configuration
-    };
-
-    let configuration = if matches.opt_present("primary") {
-        NetbricksConfiguration {
-            secondary: false,
-            ..configuration
-        }
-    } else {
-        configuration
-    };
-
+    let configuration = read_matches(&matches, &opts);
     let phy_ports = !matches.opt_present("test");
-
-    fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
-        let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
-        for (port, core) in ports.iter().zip(cores.iter()) {
-            cores_for_port
-                .entry(port.clone())
-                .or_insert(vec![])
-                .push(*core)
-        }
-        cores_for_port
-    }
-
-
-    let configuration = if matches.opt_present("c") {
-
-        let cores_str = matches.opt_strs("c");
-
-        let mut cores: Vec<i32> = cores_str
-            .iter()
-            .map(|n: &String| {
-                     n.parse()
-                         .ok()
-                         .expect(&format!("Core cannot be parsed {}", n))
-                 })
-            .collect();
-
-
-        let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
-
-        let ports_to_activate: Vec<_> = cores_for_port.keys().collect();
-
-        let mut ports = Vec::with_capacity(ports_to_activate.len());
-
-        for port in &ports_to_activate {
-            let cores = cores_for_port.get(*port).unwrap();
-            ports.push(PortConfiguration::new_with_queues(*port, cores, cores))
-        }
-        cores.dedup();
-        NetbricksConfiguration {
-            cores: cores,
-            ports: ports,
-            ..configuration
-        }
-    } else {
-        configuration
-    };
-
-    println!("Going to start with configuration {}", configuration);
 
     match initialize_system(&configuration) {
         Ok(mut context) => {

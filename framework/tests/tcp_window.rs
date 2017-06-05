@@ -61,8 +61,11 @@ fn creation_test() {
     while i <= 1073741824 / 2 {
         // /2 so test passes on host with 1024MB Hugepages
         let ro = ReorderedBuffer::new(i).unwrap();
+        assert_eq!(i, ro.buffer_size());
         drop(ro);
+
         let ro = ReorderedBuffer::new(i + 1).unwrap(); // alloc next power of 2
+        assert_eq!(i * 2, ro.buffer_size());
         drop(ro);
         i *= 2;
     }

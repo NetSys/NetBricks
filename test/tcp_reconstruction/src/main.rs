@@ -11,11 +11,7 @@ use e2d2::config::*;
 use e2d2::interface::*;
 use e2d2::operators::*;
 use e2d2::scheduler::*;
-use getopts::Options;
-use std::collections::HashMap;
 use std::env;
-use std::error::Error;
-use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -42,116 +38,14 @@ fn test<S: Scheduler + Sized>(ports: Vec<CacheAligned<PortQueue>>, sched: &mut S
 }
 
 fn main() {
+    let opts = basic_opts();
+
     let args: Vec<String> = env::args().collect();
-    let program = args[0].clone();
-    let mut opts = Options::new();
-    opts.optflag("h", "help", "print this help menu");
-    opts.optflag("", "secondary", "run as a secondary process");
-    opts.optflag("", "primary", "run as a primary process");
-    opts.optopt("n", "name", "name to use for the current process", "name");
-    opts.optmulti("p", "port", "Port to use", "[type:]id");
-    opts.optmulti("c", "core", "Core to use", "core");
-    opts.optopt("m", "master", "Master core", "master");
-    opts.optopt("f", "configuration", "Configuration file", "path");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
     };
-    if matches.opt_present("h") {
-        print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
-        process::exit(0)
-    }
-
-    let configuration = if matches.opt_present("f") {
-        let config_file = matches.opt_str("f").unwrap();
-        match read_configuration(&config_file[..]) {
-            Ok(cfg) => cfg,
-            Err(e) => {
-                panic!("Could not parse configuration file {}\n {}",
-                       config_file,
-                       e.description())
-            }
-        }
-    } else {
-        let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
-        NetbricksConfiguration::new_with_name(&name[..])
-    };
-
-    let configuration = if matches.opt_present("m") {
-        NetbricksConfiguration {
-            primary_core: matches
-                .opt_str("m")
-                .unwrap()
-                .parse()
-                .expect("Could not parse master core"),
-            ..configuration
-        }
-    } else {
-        configuration
-    };
-
-    let configuration = if matches.opt_present("secondary") {
-        NetbricksConfiguration {
-            secondary: true,
-            ..configuration
-        }
-    } else {
-        configuration
-    };
-
-    let configuration = if matches.opt_present("primary") {
-        NetbricksConfiguration {
-            secondary: false,
-            ..configuration
-        }
-    } else {
-        configuration
-    };
-
-    fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
-        let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
-        for (port, core) in ports.iter().zip(cores.iter()) {
-            cores_for_port
-                .entry(port.clone())
-                .or_insert(vec![])
-                .push(*core)
-        }
-        cores_for_port
-    }
-
-    let configuration = if matches.opt_present("c") {
-
-        let cores_str = matches.opt_strs("c");
-
-        let cores: Vec<i32> = cores_str
-            .iter()
-            .map(|n: &String| {
-                     n.parse()
-                         .ok()
-                         .expect(&format!("Core cannot be parsed {}", n))
-                 })
-            .collect();
-
-
-        let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
-
-        let ports_to_activate: Vec<_> = cores_for_port.keys().collect();
-
-        let mut ports = Vec::with_capacity(ports_to_activate.len());
-
-        for port in &ports_to_activate {
-            let cores = cores_for_port.get(*port).unwrap();
-            ports.push(PortConfiguration::new_with_queues(*port, cores, cores))
-        }
-        NetbricksConfiguration {
-            ports: ports,
-            ..configuration
-        }
-    } else {
-        configuration
-    };
-
-    println!("Going to start with configuration {}", configuration);
+    let configuration = read_matches(&matches, &opts);
 
     let mut config = initialize_system(&configuration).unwrap();
     config.start_schedulers();
