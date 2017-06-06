@@ -13,7 +13,8 @@ mod null_header;
 pub trait EndOffset: Send {
     type PreviousHeader: EndOffset;
 
-    /// Offset returns the number of bytes to skip to get to the next header.
+    /// Offset returns the number of bytes to skip to get to the next header, relative to the start
+    /// of the mbuf.
     fn offset(&self) -> usize;
 
     /// Returns the size of this header in bytes.

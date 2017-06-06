@@ -241,6 +241,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         }
     }
 
+    /// Return the offset of the payload relative to the header.
     #[inline]
     fn payload_offset(&self) -> usize {
         unsafe { (*self.header()).offset() }
@@ -258,7 +259,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
 
     #[inline]
     fn payload_size(&self) -> usize {
-        self.data_len() - self.offset()
+        self.data_len() - self.offset() - self.payload_offset()
     }
 
     #[inline]
