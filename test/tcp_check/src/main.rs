@@ -46,7 +46,8 @@ fn main() {
         Err(f) => panic!(f.to_string()),
     };
 
-    let configuration = read_matches(&matches, &opts);
+    let mut configuration = read_matches(&matches, &opts);
+    configuration.pool_size = 512; // Travis allocates at most 512 hugepages.
 
     match initialize_system(&configuration) {
         Ok(mut context) => {

@@ -364,6 +364,10 @@ case $TASK in
         export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         ${CARGO} test --release
         popd
+
+        pushd $BASE_DIR/test/tcp_payload
+        ./check.sh
+        popd
         ;;
     run)
         shift

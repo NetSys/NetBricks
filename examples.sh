@@ -19,5 +19,6 @@ export examples=(
         test/packet_test
         test/embedded-scheduler-test
         test/embedded-scheduler-dependency-test
+        test/tcp_payload
 )
 
