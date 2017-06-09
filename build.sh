@@ -208,7 +208,7 @@ musl () {
 }
 
 libunwind () {
-    curl http://llvm.org/releases/3.7.0/llvm-3.7.0.src.tar.xz \
+    curl -L http://llvm.org/releases/3.7.0/llvm-3.7.0.src.tar.xz \
         -o "${LLVM_DOWNLOAD_PATH}"
     mkdir -p ${LLVM_RESULT}
     tar xf "${LLVM_DOWNLOAD_PATH}" \
@@ -216,7 +216,7 @@ libunwind () {
     UNWIND_DOWNLOAD="${DOWNLOAD_DIR}"/unwind.tar.gz
     UNWIND_DIR="${LLVM_RESULT}/projects/libunwind"
     mkdir -p ${UNWIND_DIR}
-    curl http://llvm.org/releases/3.7.0/libunwind-3.7.0.src.tar.xz \
+    curl -L http://llvm.org/releases/3.7.0/libunwind-3.7.0.src.tar.xz \
         -o "${UNWIND_DOWNLOAD}"
     tar xf "${UNWIND_DOWNLOAD}" -C "${UNWIND_DIR}" --strip-components=1
     mkdir -p "${UNWIND_BUILD}"
