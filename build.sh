@@ -357,7 +357,7 @@ case $TASK in
         docker pull apanda/netbricks-build:latest
         docker run -t -v /lib/modules:/lib/modules \
             -v /lib/modules/`uname -r`/build:/lib/modules/`uname -r`/build -v ${BASE_DIR}:/opt/netbricks \
-             apanda/netbricks-build:latest /opt/netbricks/build.sh test
+            -v /mnt/huge:/mnt/huge apanda/netbricks-build:latest /opt/netbricks/build.sh test
         ;;
     test)
         pushd $BASE_DIR/framework
