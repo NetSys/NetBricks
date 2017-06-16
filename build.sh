@@ -365,9 +365,11 @@ case $TASK in
         ${CARGO} test --release
         popd
 
-        pushd $BASE_DIR/test/tcp_payload
-        ./check.sh
-        popd
+        for testname in tcp_payload macswap; do
+          pushd $BASE_DIR/test/$testname
+          ./check.sh
+          popd
+        done
         ;;
     run)
         shift
