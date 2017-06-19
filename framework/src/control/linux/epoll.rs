@@ -83,15 +83,14 @@ impl PollScheduler {
 
     pub fn get_token_noblock(&mut self) -> Option<(Token, Available)> {
         if self.events > 0 {
-                self.events -= 1;
-                self.ready_tokens.pop()
-            } else {
-                let dest =
-                    unsafe { slice::from_raw_parts_mut(self.ready_tokens.as_mut_ptr(), self.ready_tokens.capacity()) };
-                self.events = epoll_wait(self.epoll_fd, dest, 0).unwrap();
-                unsafe { self.ready_tokens.set_len(self.events) };
-                self.ready_tokens.pop()
-            }
-            .map(|t| (t.data(), self.epoll_kind_to_available(&t.events())))
+            self.events -= 1;
+            self.ready_tokens.pop()
+        } else {
+            let dest =
+                unsafe { slice::from_raw_parts_mut(self.ready_tokens.as_mut_ptr(), self.ready_tokens.capacity()) };
+            self.events = epoll_wait(self.epoll_fd, dest, 0).unwrap();
+            unsafe { self.ready_tokens.set_len(self.events) };
+            self.ready_tokens.pop()
+        }.map(|t| (t.data(), self.epoll_kind_to_available(&t.events())))
     }
 }

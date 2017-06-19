@@ -44,8 +44,9 @@ impl PacketBatch {
     #[inline]
     pub fn allocate_batch_with_size(&mut self, len: u16) -> Result<&mut Self> {
         let capacity = self.array.capacity() as i32;
-        self.alloc_packet_batch(len, capacity)
-            .and_then(|_| Ok(self))
+        self.alloc_packet_batch(len, capacity).and_then(
+            |_| Ok(self),
+        )
     }
 
     /// Allocate `cnt` mbufs. `len` sets the metadata field indicating how much of the mbuf should be considred when
@@ -221,7 +222,9 @@ impl BatchIterator for PacketBatch {
     type Metadata = EmptyMetadata;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
         if idx < self.array.len() {
-            Some(PacketDescriptor { packet: packet_from_mbuf_no_free::<NullHeader>(self.array[idx], 0) })
+            Some(PacketDescriptor {
+                packet: packet_from_mbuf_no_free::<NullHeader>(self.array[idx], 0),
+            })
         } else {
             None
         }
@@ -247,12 +250,11 @@ impl Act for PacketBatch {
         while self.available() > 0 {
             unsafe {
                 // let available = self.available() as i32;
-                try!(port.send(self.packet_ptr())
-                         .and_then(|sent| {
-                                       self.consume_batch_partial(sent as usize);
-                                       total_sent += sent;
-                                       Ok(sent)
-                                   }));
+                try!(port.send(self.packet_ptr()).and_then(|sent| {
+                    self.consume_batch_partial(sent as usize);
+                    total_sent += sent;
+                    Ok(sent)
+                }));
             }
             break;
         }

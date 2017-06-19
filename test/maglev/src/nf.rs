@@ -36,8 +36,12 @@ impl Maglev {
         let xx_hasher: XxHashFactory = Default::default();
         backends
             .iter()
-            .map(|n| Maglev::offset_skip_for_name(n, &fnv_hasher, &xx_hasher, lsize))
-            .map(|(offset, skip)| (0..lsize).map(|j| (offset + j * skip) % lsize).collect())
+            .map(|n| {
+                Maglev::offset_skip_for_name(n, &fnv_hasher, &xx_hasher, lsize)
+            })
+            .map(|(offset, skip)| {
+                (0..lsize).map(|j| (offset + j * skip) % lsize).collect()
+            })
             .collect()
     }
 
@@ -81,28 +85,31 @@ impl Maglev {
     }
 }
 
-pub fn maglev<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(parent: T,
-                                                                             s: &mut S,
-                                                                             backends: &[&str])
-                                                                             -> CompositionBatch {
+pub fn maglev<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
+    parent: T,
+    s: &mut S,
+    backends: &[&str],
+) -> CompositionBatch {
     let ct = backends.len();
     let lut = Maglev::new(backends, 65537);
     let mut cache = HashMap::<usize, usize, FnvHash>::with_hasher(Default::default());
     let mut groups = parent
         .parse::<MacHeader>()
         .transform(box move |pkt| {
-                           assert!(pkt.refcnt() == 1);
-                           let mut hdr = pkt.get_mut_header();
-                           hdr.swap_addresses();
-                       })
-        .group_by(ct,
-                  box move |pkt| {
-                          let payload = pkt.get_payload();
-                          let hash = ipv4_flow_hash(payload, 0);
-                          let out = cache.entry(hash).or_insert_with(|| lut.lookup(hash));
-                          *out
-                      },
-                  s);
+            assert!(pkt.refcnt() == 1);
+            let mut hdr = pkt.get_mut_header();
+            hdr.swap_addresses();
+        })
+        .group_by(
+            ct,
+            box move |pkt| {
+                let payload = pkt.get_payload();
+                let hash = ipv4_flow_hash(payload, 0);
+                let out = cache.entry(hash).or_insert_with(|| lut.lookup(hash));
+                *out
+            },
+            s,
+        );
     let pipeline = merge((0..ct).map(|i| groups.get_group(i).unwrap()).collect());
     pipeline.compose()
 }

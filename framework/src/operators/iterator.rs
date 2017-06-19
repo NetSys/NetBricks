@@ -30,8 +30,9 @@ pub trait BatchIterator {
 
 /// A struct containing the parsed information returned by the `PayloadEnumerator`.
 pub struct ParsedDescriptor<T, M>
-    where T: EndOffset,
-          M: Sized + Send
+where
+    T: EndOffset,
+    M: Sized + Send,
 {
     pub index: usize,
     pub packet: Packet<T, M>,
@@ -41,8 +42,9 @@ pub struct ParsedDescriptor<T, M>
 /// bytes. The expectation is therefore that the user can operate on bytes, or make appropriate adjustments as
 /// necessary.
 pub struct PayloadEnumerator<T, M>
-    where T: EndOffset,
-          M: Sized + Send
+where
+    T: EndOffset,
+    M: Sized + Send,
 {
     // Was originally using a cell here so we didn't have to borrow the iterator mutably. I think at this point, given
     // that the batch is not stored in the iterator this might be a moot point, but it does allow the iterator to be
@@ -53,8 +55,9 @@ pub struct PayloadEnumerator<T, M>
 }
 
 impl<T, M> PayloadEnumerator<T, M>
-    where T: EndOffset,
-          M: Sized + Send
+where
+    T: EndOffset,
+    M: Sized + Send,
 {
     /// Create a new iterator.
     #[inline]
@@ -79,9 +82,9 @@ impl<T, M> PayloadEnumerator<T, M>
                 // Switch to providing packets
                 self.idx.set(original_idx + 1);
                 Some(ParsedDescriptor {
-                         index: original_idx,
-                         packet: packet,
-                     })
+                    index: original_idx,
+                    packet: packet,
+                })
             }
             None => None,
         }

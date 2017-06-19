@@ -55,9 +55,9 @@ impl<T: PacketRx> Act for ReceiveBatch<T> {
         self.parent
             .recv(&self.queue)
             .and_then(|x| {
-                          self.received += x as u64;
-                          Ok(x)
-                      })
+                self.received += x as u64;
+                Ok(x)
+            })
             .expect("Receive failure");
     }
 

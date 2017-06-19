@@ -10,7 +10,7 @@ use utils::Flow;
 
 /// IP header using SSE
 #[derive(Debug, Default)]
-#[repr(C,packed)]
+#[repr(C, packed)]
 pub struct IpHeader {
     version_to_len: u32,
     id_to_foffset: u32,
@@ -23,16 +23,18 @@ impl fmt::Display for IpHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let src = Ipv4Addr::from(self.src());
         let dst = Ipv4Addr::from(self.dst());
-        write!(f,
-               "{} > {} version: {} ihl: {} len: {} ttl: {} proto: {} csum: {}",
-               src,
-               dst,
-               self.version(),
-               self.ihl(),
-               self.length(),
-               self.ttl(),
-               self.protocol(),
-               self.csum())
+        write!(
+            f,
+            "{} > {} version: {} ihl: {} len: {} ttl: {} proto: {} csum: {}",
+            src,
+            dst,
+            self.version(),
+            self.ihl(),
+            self.length(),
+            self.ttl(),
+            self.protocol(),
+            self.csum()
+        )
     }
 }
 
@@ -78,12 +80,12 @@ impl IpHeader {
                 let dst_port = BigEndian::read_u16(&port_slice[..2]);
                 let src_port = BigEndian::read_u16(&port_slice[2..]);
                 Some(Flow {
-                         src_ip: src_ip,
-                         dst_ip: dst_ip,
-                         src_port: src_port,
-                         dst_port: dst_port,
-                         proto: protocol,
-                     })
+                    src_ip: src_ip,
+                    dst_ip: dst_ip,
+                    src_port: src_port,
+                    dst_port: dst_port,
+                    proto: protocol,
+                })
             }
         } else {
             None

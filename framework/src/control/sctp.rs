@@ -62,8 +62,10 @@ impl<T: SctpControlAgent> SctpControlServer<T> {
     }
 
     fn listen(&mut self) {
-        self.handle
-            .schedule_read(&self.listener, self.listener_token);
+        self.handle.schedule_read(
+            &self.listener,
+            self.listener_token,
+        );
     }
 
     pub fn schedule(&mut self) {
@@ -87,11 +89,14 @@ impl<T: SctpControlAgent> SctpControlServer<T> {
                     self.next_token += 1;
                     let _ = stream.set_nonblocking(true).unwrap();
                     let stream_fd = stream.as_raw_fd();
-                    self.connections
-                        .insert(token,
-                                T::new(addr,
-                                       stream,
-                                       IOScheduler::new(self.scheduler.new_poll_handle(), stream_fd, token)));
+                    self.connections.insert(
+                        token,
+                        T::new(
+                            addr,
+                            stream,
+                            IOScheduler::new(self.scheduler.new_poll_handle(), stream_fd, token),
+                        ),
+                    );
                     // Add to some sort of hashmap.
                 }
                 Err(_) => {

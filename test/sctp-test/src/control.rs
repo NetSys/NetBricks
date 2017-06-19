@@ -23,26 +23,27 @@ impl SctpControlAgent for ControlListener {
     fn handle_read_ready(&mut self) -> bool {
         let mut schedule = true;
         while {
-                  let read = self.stream.recvmsg(&mut self.buffer[..]);
-                  match read {
-                      Ok((size, stream)) => {
-                          println!("Received message on stream {} of size {}", stream, size);
-                          true
-                      }
-                      Err(e) => {
-                          if let Some(e) = e.raw_os_error() {
-                              if errno::from_i32(e) != errno::Errno::EAGAIN {
-                                  schedule = false;
-                              } else {
-                                  schedule = true;
-                              }
-                          } else {
-                              schedule = false;
-                          }
-                          false
-                      }
-                  }
-              } {}
+            let read = self.stream.recvmsg(&mut self.buffer[..]);
+            match read {
+                Ok((size, stream)) => {
+                    println!("Received message on stream {} of size {}", stream, size);
+                    true
+                }
+                Err(e) => {
+                    if let Some(e) = e.raw_os_error() {
+                        if errno::from_i32(e) != errno::Errno::EAGAIN {
+                            schedule = false;
+                        } else {
+                            schedule = true;
+                        }
+                    } else {
+                        schedule = false;
+                    }
+                    false
+                }
+            }
+        }
+        {}
         if schedule {
             self.scheduler.schedule_read();
         };

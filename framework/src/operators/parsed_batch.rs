@@ -8,29 +8,33 @@ use interface::*;
 use std::marker::PhantomData;
 
 pub struct ParsedBatch<T, V>
-    where T: EndOffset<PreviousHeader = V::Header>,
-          V: Batch + BatchIterator + Act
+where
+    T: EndOffset<PreviousHeader = V::Header>,
+    V: Batch + BatchIterator + Act,
 {
     parent: V,
     phantom: PhantomData<T>,
 }
 
 impl<T, V> Act for ParsedBatch<T, V>
-    where T: EndOffset<PreviousHeader = V::Header>,
-          V: Batch + BatchIterator + Act
+where
+    T: EndOffset<PreviousHeader = V::Header>,
+    V: Batch + BatchIterator + Act,
 {
     act!{}
 }
 
 impl<T, V> Batch for ParsedBatch<T, V>
-    where V: Batch + BatchIterator + Act,
-          T: EndOffset<PreviousHeader = V::Header>
+where
+    V: Batch + BatchIterator + Act,
+    T: EndOffset<PreviousHeader = V::Header>,
 {
 }
 
 impl<T, V> ParsedBatch<T, V>
-    where V: Batch + BatchIterator + Act,
-          T: EndOffset<PreviousHeader = V::Header>
+where
+    V: Batch + BatchIterator + Act,
+    T: EndOffset<PreviousHeader = V::Header>,
 {
     #[inline]
     pub fn new(parent: V) -> ParsedBatch<T, V> {
@@ -42,15 +46,16 @@ impl<T, V> ParsedBatch<T, V>
 }
 
 impl<T, V> BatchIterator for ParsedBatch<T, V>
-    where V: Batch + BatchIterator + Act,
-          T: EndOffset<PreviousHeader = V::Header>
+where
+    V: Batch + BatchIterator + Act,
+    T: EndOffset<PreviousHeader = V::Header>,
 {
     type Header = T;
     type Metadata = V::Metadata;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T, V::Metadata>> {
-        self.parent
-            .next_payload(idx)
-            .map(|p| PacketDescriptor { packet: p.packet.parse_header() })
+        self.parent.next_payload(idx).map(|p| {
+            PacketDescriptor { packet: p.packet.parse_header() }
+        })
     }
 
     #[inline]

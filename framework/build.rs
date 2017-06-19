@@ -18,9 +18,9 @@ fn parse_ld_archive(ar: &Path) -> Vec<String> {
         remaining
             .split_whitespace()
             .map(|s| {
-                     let end = s.len() - 2;
-                     String::from(&s[3..end])
-                 })
+                let end = s.len() - 2;
+                String::from(&s[3..end])
+            })
             .collect()
     } else {
         panic!("Could not find a group");
@@ -51,18 +51,20 @@ fn main() {
         .join("dpdk")
         .join("build")
         .join("lib");
-    let native_path = Path::new(&dir)
-        .parent()
-        .unwrap()
-        .join("target")
-        .join("native");
+    let native_path = Path::new(&dir).parent().unwrap().join("target").join(
+        "native",
+    );
     //println!("DPDK {:?}", dpdk_path.to_str());
     // Send current directory as -L
-    println!("cargo:rustc-link-search=native={}",
-             dpdk_path.to_str().unwrap());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        dpdk_path.to_str().unwrap()
+    );
     if dpdk_path.join("libdpdk.so").exists() {
         println!("cargo:rustc-link-lib=dpdk");
     }
-    println!("cargo:rustc-link-search=native={}",
-             native_path.to_str().unwrap());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        native_path.to_str().unwrap()
+    );
 }

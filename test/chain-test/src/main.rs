@@ -20,20 +20,25 @@ mod nf;
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S, chain_len: u32, chain_pos: u32)
-    where T: PacketRx + PacketTx + Display + Clone + 'static,
-          S: Scheduler + Sized
+where
+    T: PacketRx + PacketTx + Display + Clone + 'static,
+    S: Scheduler + Sized,
 {
     println!("Receiving started");
     for port in &ports {
-        println!("Receiving port {} on chain len {} pos {}",
-                 port,
-                 chain_len,
-                 chain_pos);
+        println!(
+            "Receiving port {} on chain len {} pos {}",
+            port,
+            chain_len,
+            chain_pos
+        );
     }
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| chain(ReceiveBatch::new(port.clone()), chain_len, chain_pos).send(port.clone()))
+        .map(|port| {
+            chain(ReceiveBatch::new(port.clone()), chain_len, chain_pos).send(port.clone())
+        })
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
@@ -44,10 +49,12 @@ fn test<T, S>(ports: Vec<T>, sched: &mut S, chain_len: u32, chain_pos: u32)
 fn main() {
     let mut opts = basic_opts();
     opts.optopt("l", "chain", "Chain length", "length");
-    opts.optopt("j",
-                "position",
-                "Chain position (when externally chained)",
-                "position");
+    opts.optopt(
+        "j",
+        "position",
+        "Chain position (when externally chained)",
+        "position",
+    );
     let args: Vec<String> = env::args().collect();
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -70,8 +77,9 @@ fn main() {
     match initialize_system(&configuration) {
         Ok(mut context) => {
             context.start_schedulers();
-            context
-                .add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s, chain_len, chain_pos)));
+            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| {
+                test(p, s, chain_len, chain_pos)
+            }));
             context.execute();
 
             let mut pkts_so_far = (0, 0);
@@ -98,10 +106,12 @@ fn main() {
                     let pkts = (rx, tx);
                     let rx_pkts = pkts.0 - pkts_so_far.0;
                     if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
-                        println!("{:.2} OVERALL RX {:.2} TX {:.2}",
-                                 now - start,
-                                 rx_pkts as f64 / (now - start),
-                                 (pkts.1 - pkts_so_far.1) as f64 / (now - start));
+                        println!(
+                            "{:.2} OVERALL RX {:.2} TX {:.2}",
+                            now - start,
+                            rx_pkts as f64 / (now - start),
+                            (pkts.1 - pkts_so_far.1) as f64 / (now - start)
+                        );
                         last_printed = now;
                         start = now;
                         pkts_so_far = pkts;

@@ -7,13 +7,15 @@ use headers::NullHeader;
 use interface::PacketTx;
 
 pub struct ResetParsingBatch<V>
-    where V: Batch + BatchIterator + Act
+where
+    V: Batch + BatchIterator + Act,
 {
     parent: V,
 }
 
 impl<V> ResetParsingBatch<V>
-    where V: Batch + BatchIterator + Act
+where
+    V: Batch + BatchIterator + Act,
 {
     pub fn new(parent: V) -> ResetParsingBatch<V> {
         ResetParsingBatch { parent: parent }
@@ -21,7 +23,8 @@ impl<V> ResetParsingBatch<V>
 }
 
 impl<V> BatchIterator for ResetParsingBatch<V>
-    where V: Batch + BatchIterator + Act
+where
+    V: Batch + BatchIterator + Act,
 {
     type Header = NullHeader;
     type Metadata = EmptyMetadata;
@@ -41,9 +44,14 @@ impl<V> BatchIterator for ResetParsingBatch<V>
 
 /// Internal interface for packets.
 impl<V> Act for ResetParsingBatch<V>
-    where V: Batch + BatchIterator + Act
+where
+    V: Batch + BatchIterator + Act,
 {
     act!{}
 }
 
-impl<V> Batch for ResetParsingBatch<V> where V: Batch + BatchIterator + Act {}
+impl<V> Batch for ResetParsingBatch<V>
+where
+    V: Batch + BatchIterator + Act,
+{
+}

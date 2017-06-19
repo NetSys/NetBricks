@@ -29,12 +29,12 @@ impl RingBuffer {
         }
 
         Ok(RingBuffer {
-               head: 0,
-               tail: 0,
-               size: bytes,
-               mask: bytes - 1,
-               vec: vec![0; bytes],
-           })
+            head: 0,
+            tail: 0,
+            size: bytes,
+            mask: bytes - 1,
+            vec: vec![0; bytes],
+        })
     }
 
     /// Reads data from self.vec, wrapping around the end of the Vec if necessary. Returns the

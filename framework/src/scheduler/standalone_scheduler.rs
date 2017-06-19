@@ -109,16 +109,19 @@ impl StandaloneScheduler {
         self.shutdown = false;
         // Note this rather bizarre structure here to get shutting down hooked in.
         while let Ok(cmd) = {
-                  if self.shutdown {
-                      Err(RecvError)
-                  } else {
-                      self.sched_channel.recv()
-                  }
-              } {
+            if self.shutdown {
+                Err(RecvError)
+            } else {
+                self.sched_channel.recv()
+            }
+        }
+        {
             self.handle_request(cmd)
         }
-        println!("Scheduler exiting {}",
-                 thread::current().name().unwrap_or_else(|| "unknown-name"));
+        println!(
+            "Scheduler exiting {}",
+            thread::current().name().unwrap_or_else(|| "unknown-name")
+        );
     }
 
     #[inline]

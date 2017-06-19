@@ -15,8 +15,9 @@ pub struct CompositionBatch {
 }
 
 impl CompositionBatch {
-    pub fn new<T: EndOffset, M: Sized + Send, V: 'static + Batch<Header = T, Metadata = M>>(parent: V)
-                                                                                            -> CompositionBatch {
+    pub fn new<T: EndOffset, M: Sized + Send, V: 'static + Batch<Header = T, Metadata = M>>(
+        parent: V,
+    ) -> CompositionBatch {
         CompositionBatch { parent: box parent.reset() }
     }
 }
