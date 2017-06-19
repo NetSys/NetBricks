@@ -12,42 +12,44 @@ static const struct rte_eth_conf default_eth_conf = {
     .lpbk_mode = 0,
     .rxmode =
         {
-         .mq_mode = ETH_MQ_RX_RSS,    /* Use RSS without DCB or VMDQ */
-         .max_rx_pkt_len = 0,         /* valid only if jumbo is on */
-         .split_hdr_size = 0,         /* valid only if HS is on */
-         .header_split = 0,           /* Header Split off */
-         .hw_ip_checksum = HW_RXCSUM, /* IP checksum offload */
-         .hw_vlan_filter = 0,         /* VLAN filtering */
-         .hw_vlan_strip = 0,          /* VLAN strip */
-         .hw_vlan_extend = 0,         /* Extended VLAN */
-         .jumbo_frame = 0,            /* Jumbo Frame support */
-         .hw_strip_crc = 1,           /* CRC stripped by hardware */
+            .mq_mode        = ETH_MQ_RX_RSS, /* Use RSS without DCB or VMDQ */
+            .max_rx_pkt_len = 0,             /* valid only if jumbo is on */
+            .split_hdr_size = 0,             /* valid only if HS is on */
+            .header_split   = 0,             /* Header Split off */
+            .hw_ip_checksum = HW_RXCSUM,     /* IP checksum offload */
+            .hw_vlan_filter = 0,             /* VLAN filtering */
+            .hw_vlan_strip  = 0,             /* VLAN strip */
+            .hw_vlan_extend = 0,             /* Extended VLAN */
+            .jumbo_frame    = 0,             /* Jumbo Frame support */
+            .hw_strip_crc   = 1,             /* CRC stripped by hardware */
         },
     .txmode =
         {
-         .mq_mode = ETH_MQ_TX_NONE, /* Disable DCB and VMDQ */
+            .mq_mode = ETH_MQ_TX_NONE, /* Disable DCB and VMDQ */
         },
     /* FIXME: Find supported RSS hashes from rte_eth_dev_get_info */
     .rx_adv_conf.rss_conf =
         {
-         .rss_hf = ETH_RSS_IP | ETH_RSS_UDP | ETH_RSS_TCP | ETH_RSS_SCTP, .rss_key = NULL,
+            .rss_hf = ETH_RSS_IP | ETH_RSS_UDP | ETH_RSS_TCP | ETH_RSS_SCTP, .rss_key = NULL,
         },
     /* No flow director */
     .fdir_conf =
         {
-         .mode = RTE_FDIR_MODE_NONE,
+            .mode = RTE_FDIR_MODE_NONE,
         },
     /* No interrupt */
     .intr_conf =
         {
-         .lsc = 0,
+            .lsc = 0,
         },
 };
 
-int num_pmd_ports() { return rte_eth_dev_count(); }
+int num_pmd_ports() {
+    return rte_eth_dev_count();
+}
 
 int get_pmd_ports(struct rte_eth_dev_info* info, int len) {
-    int num_ports = rte_eth_dev_count();
+    int num_ports   = rte_eth_dev_count();
     int num_entries = MIN(num_ports, len);
     for (int i = 0; i < num_entries; i++) {
         memset(&info[i], 0, sizeof(struct rte_eth_dev_info));
@@ -57,30 +59,30 @@ int get_pmd_ports(struct rte_eth_dev_info* info, int len) {
 }
 
 int get_rte_eth_dev_info(int dev, struct rte_eth_dev_info* info) {
-	if (dev >= rte_eth_dev_count()) {
-		return -ENODEV;
-	} else {
-		rte_eth_dev_info_get(dev, info);
-		return 0;
-	}
+    if (dev >= rte_eth_dev_count()) {
+        return -ENODEV;
+    } else {
+        rte_eth_dev_info_get(dev, info);
+        return 0;
+    }
 }
 
 int max_rxqs(int dev) {
-	struct rte_eth_dev_info info;
-	if (get_rte_eth_dev_info(dev, &info) != 0) {
-		return -ENODEV;
-	} else {
-		return info.max_rx_queues;
-	}
+    struct rte_eth_dev_info info;
+    if (get_rte_eth_dev_info(dev, &info) != 0) {
+        return -ENODEV;
+    } else {
+        return info.max_rx_queues;
+    }
 }
 
 int max_txqs(int dev) {
-	struct rte_eth_dev_info info;
-	if (get_rte_eth_dev_info(dev, &info) != 0) {
-		return -ENODEV;
-	} else {
-		return info.max_tx_queues;
-	}
+    struct rte_eth_dev_info info;
+    if (get_rte_eth_dev_info(dev, &info) != 0) {
+        return -ENODEV;
+    } else {
+        return info.max_tx_queues;
+    }
 }
 
 void enumerate_pmd_ports() {
@@ -94,8 +96,8 @@ void enumerate_pmd_ports() {
         memset(&dev_info, 0, sizeof(dev_info));
         rte_eth_dev_info_get(i, &dev_info);
 
-        printf("DPDK port_id %d (%s)   RXQ %hu TXQ %hu  ", i, dev_info.driver_name, dev_info.max_rx_queues,
-               dev_info.max_tx_queues);
+        printf("DPDK port_id %d (%s)   RXQ %hu TXQ %hu  ", i, dev_info.driver_name,
+               dev_info.max_rx_queues, dev_info.max_tx_queues);
 
         if (dev_info.pci_dev) {
             printf("%04hx:%02hhx:%02hhx.%02hhx %04hx:%04hx  ", dev_info.pci_dev->addr.domain,
@@ -107,8 +109,8 @@ void enumerate_pmd_ports() {
     }
 }
 
-int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[], int nrxd, int ntxd, int loopback,
-                  int tso, int csumoffload) {
+int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[], int nrxd, int ntxd,
+                  int loopback, int tso, int csumoffload) {
     struct rte_eth_dev_info dev_info = {};
     struct rte_eth_conf eth_conf;
     struct rte_eth_rxconf eth_rxconf;
@@ -123,7 +125,7 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[], 
         return -ENODEV;
     }
 
-    eth_conf = default_eth_conf;
+    eth_conf           = default_eth_conf;
     eth_conf.lpbk_mode = !(!loopback);
 
     /* Use defaut rx/tx configuration as provided by PMD drivers,
@@ -134,11 +136,11 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[], 
     /* Drop packets when no descriptors are available */
     eth_rxconf.rx_drop_en = 1;
 
-    eth_txconf = dev_info.default_txconf;
-    tso = !(!tso);
-    csumoffload = !(!csumoffload);
-    eth_txconf.txq_flags =
-        ETH_TXQ_FLAGS_NOVLANOFFL | ETH_TXQ_FLAGS_NOMULTSEGS * (1 - tso) | ETH_TXQ_FLAGS_NOXSUMS * (1 - csumoffload);
+    eth_txconf           = dev_info.default_txconf;
+    tso                  = !(!tso);
+    csumoffload          = !(!csumoffload);
+    eth_txconf.txq_flags = ETH_TXQ_FLAGS_NOVLANOFFL | ETH_TXQ_FLAGS_NOMULTSEGS * (1 - tso) |
+                           ETH_TXQ_FLAGS_NOXSUMS * (1 - csumoffload);
 
     ret = rte_eth_dev_configure(port, rxqs, txqs, &eth_conf);
     if (ret != 0) {
@@ -182,8 +184,8 @@ void free_pmd_port(int port) {
 
 int recv_pkts(int port, int qid, mbuf_array_t pkts, int len) {
     int ret = rte_eth_rx_burst(port, qid, (struct rte_mbuf**)pkts, len);
-    /* Removed prefetching since the benefit in performance for single core was
-     * outweighed by the loss in performance with several cores. */
+/* Removed prefetching since the benefit in performance for single core was
+ * outweighed by the loss in performance with several cores. */
 #if 0
     for (int i = 0; i < ret; i++) {
         rte_prefetch0(rte_pktmbuf_mtod(pkts[i], void*));
@@ -235,18 +237,19 @@ int find_port_with_pci_address(const char* pci) {
     return (int)port_id;
 }
 
-/* Attach a device with a given name (useful when attaching virtual devices). Returns either the port number of the
+/* Attach a device with a given name (useful when attaching virtual devices). Returns either the
+   port number of the
    device or an error if not found. */
 int attach_pmd_device(const char* devname) {
-	uint8_t port = 0;
-	printf("Devname: \"%s\"\n", devname);
-	int error = rte_eth_dev_attach(devname, &port);
+    uint8_t port = 0;
+    printf("Devname: \"%s\"\n", devname);
+    int error = rte_eth_dev_attach(devname, &port);
 
-	if (error != 0) {
-		// Could not attach
-		return -ENODEV;
-	}
-	return (int)port;
+    if (error != 0) {
+        // Could not attach
+        return -ENODEV;
+    }
+    return (int)port;
 }
 
 /* FIXME: Add function to modify RSS hash function using

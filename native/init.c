@@ -19,11 +19,10 @@
 #define MAX_ARGS 128
 
 static inline void bind_to_domain(int socket_id) {
-    struct bitmask* numa_bitmask =
-        numa_bitmask_setbit(numa_bitmask_clearall(numa_bitmask_alloc(numa_num_possible_nodes())), socket_id);
+    struct bitmask* numa_bitmask = numa_bitmask_setbit(
+        numa_bitmask_clearall(numa_bitmask_alloc(numa_num_possible_nodes())), socket_id);
     numa_bind(numa_bitmask);
 }
-
 
 /* Taken from SoftNIC (dpdk.c) */
 /* Get NUMA count */
@@ -52,16 +51,16 @@ fail:
     return 1;
 }
 
-static void add_arg(int *rte_argc, char **rte_argv, char* s) {
-  if (*rte_argc >= MAX_ARGS) {
-    fprintf(stderr, "init_eal exceeded max number of args!");
-    return;
-  }
-  rte_argv[(*rte_argc)++] = s;
+static void add_arg(int* rte_argc, char** rte_argv, char* s) {
+    if (*rte_argc >= MAX_ARGS) {
+        fprintf(stderr, "init_eal exceeded max number of args!");
+        return;
+    }
+    rte_argv[(*rte_argc)++] = s;
 }
 
-static int init_eal(char* name, int secondary, int core, int mempool_size, char* whitelist[], int wl_count, char* vdevs[],
-                    int vdev_count) {
+static int init_eal(char* name, int secondary, int core, int mempool_size, char* whitelist[],
+                    int wl_count, char* vdevs[], int vdev_count) {
     /* As opposed to SoftNIC, this call only initializes the master thread.
      * We cannot rely on threads launched by DPDK within ZCSI, the threads
      * must be launched by the runtime */
@@ -74,7 +73,7 @@ static int init_eal(char* name, int secondary, int core, int mempool_size, char*
     char opt_socket_mem[1024];
 
     int numa_count = get_numa_count();
-    int socket_id = 0;
+    int socket_id  = 0;
 
     int ret;
     int i;
@@ -93,7 +92,8 @@ static int init_eal(char* name, int secondary, int core, int mempool_size, char*
     sprintf(opt_lcore_bitmap, "0x%x", (1u << core));
 
     sprintf(opt_socket_mem, "%d", mempool_size);
-    for (i = 1; i < numa_count; i++) sprintf(opt_socket_mem + strlen(opt_socket_mem), ",%d", mempool_size);
+    for (i = 1; i < numa_count; i++)
+        sprintf(opt_socket_mem + strlen(opt_socket_mem), ",%d", mempool_size);
 
     add_arg(&rte_argc, rte_argv, "lzcsi");
     if (secondary) {
@@ -139,9 +139,9 @@ static int init_eal(char* name, int secondary, int core, int mempool_size, char*
     }
 
     /* Change lcore ID */
-    RTE_PER_LCORE(_lcore_id) = tid;
+    RTE_PER_LCORE(_lcore_id)     = tid;
     RTE_PER_LCORE(_mempool_core) = core;
-    socket_id = rte_lcore_to_socket_id(core);
+    socket_id                    = rte_lcore_to_socket_id(core);
     if (numa_available() != -1) {
         bind_to_domain(socket_id);
     }
@@ -149,7 +149,9 @@ static int init_eal(char* name, int secondary, int core, int mempool_size, char*
     return ret;
 }
 
-static void init_timer() { rte_timer_subsystem_init(); }
+static void init_timer() {
+    rte_timer_subsystem_init();
+}
 
 #define MAX_NAME_LEN 256
 int init_secondary(const char* name, int nlen, int core, char* vdevs[], int vdev_count) {
@@ -199,7 +201,7 @@ RTE_DECLARE_PER_LCORE(unsigned, _socket_id);
 int init_thread(int tid, int core) {
     /* Among other things this affinitizes the thread */
     rte_cpuset_t cpuset;
-    int socket_id = rte_lcore_to_socket_id(core);
+    int socket_id   = rte_lcore_to_socket_id(core);
     int numa_active = numa_available();
     CPU_ZERO(&cpuset);
     CPU_SET(core, &cpuset);
@@ -210,7 +212,7 @@ int init_thread(int tid, int core) {
     init_mempool_core(core);
 
     /* Set thread ID correctly */
-    RTE_PER_LCORE(_lcore_id) = tid;
+    RTE_PER_LCORE(_lcore_id)     = tid;
     RTE_PER_LCORE(_mempool_core) = core;
     return numa_active == -1 ? numa_active : socket_id;
 }
