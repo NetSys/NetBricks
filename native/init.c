@@ -13,6 +13,7 @@
 
 #include "mempool.h"
 #define NUM_PFRAMES (2048 - 1)  // Number of pframes in the mempool
+#define MEMPOOL_SIZE 1024       // Default mempool size
 #define CACHE_SIZE 32           // Size of per-core mempool cache
 
 static inline void bind_to_domain(int socket_id) {
@@ -49,7 +50,7 @@ fail:
     return 1;
 }
 
-static int init_eal(char* name, int secondary, int core, char* whitelist[], int wl_count, char* vdevs[],
+static int init_eal(char* name, int secondary, int core, int mempool_size, char* whitelist[], int wl_count, char* vdevs[],
                     int vdev_count) {
     /* As opposed to SoftNIC, this call only initializes the master thread.
      * We cannot rely on threads launched by DPDK within ZCSI, the threads
@@ -62,8 +63,6 @@ static int init_eal(char* name, int secondary, int core, char* whitelist[], int 
     char opt_master_lcore[1024];
     char opt_lcore_bitmap[1024];
     char opt_socket_mem[1024];
-
-    const char* socket_mem = "1024";
 
     int numa_count = get_numa_count();
     int socket_id = 0;
@@ -84,8 +83,8 @@ static int init_eal(char* name, int secondary, int core, char* whitelist[], int 
      * could hack around this another way, but this seems more reasonable.*/
     sprintf(opt_lcore_bitmap, "0x%x", (1u << core));
 
-    sprintf(opt_socket_mem, "%s", socket_mem);
-    for (i = 1; i < numa_count; i++) sprintf(opt_socket_mem + strlen(opt_socket_mem), ",%s", socket_mem);
+    sprintf(opt_socket_mem, "%d", mempool_size);
+    for (i = 1; i < numa_count; i++) sprintf(opt_socket_mem + strlen(opt_socket_mem), ",%d", mempool_size);
 
     rte_argv[rte_argc++] = "lzcsi";
     if (secondary) {
@@ -154,7 +153,7 @@ int init_secondary(const char* name, int nlen, int core, char* vdevs[], int vdev
     clean_name[nlen] = '\0';
 
     init_timer();
-    if ((ret = init_eal(clean_name, 1, core, NULL, 0, vdevs, vdev_count)) < 0) {
+    if ((ret = init_eal(clean_name, 1, core, MEMPOOL_SIZE, NULL, 0, vdevs, vdev_count)) < 0) {
         return ret;
     }
     return find_secondary_mempool();
@@ -171,7 +170,7 @@ int init_system_whitelisted(const char* name, int nlen, int core, char* whitelis
     clean_name[nlen] = '\0';
 
     init_timer();
-    if ((ret = init_eal(clean_name, 0, core, whitelist, wlcount, NULL, 0)) < 0) {
+    if ((ret = init_eal(clean_name, 0, core, mempool_size, whitelist, wlcount, NULL, 0)) < 0) {
         return ret;
     }
     return init_mempool(core, mempool_size, mcache_size, slots);
