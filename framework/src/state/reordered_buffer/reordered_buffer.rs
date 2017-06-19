@@ -140,13 +140,14 @@ impl SegmentList {
         // already have been checked).
         let mut next = self.storage[idx as usize].next;
         while next != -1 {
-            let end = self.storage[idx as usize]
-                .seq
-                .wrapping_add(self.storage[idx as usize].length as u32);
+            let end = self.storage[idx as usize].seq.wrapping_add(
+                self.storage[idx as usize].length as
+                    u32,
+            );
             if end >= self.storage[next as usize].seq {
                 // We have at least some overlap, and should merge.
                 let merge_len = self.storage[next as usize].length as usize -
-                                (end - self.storage[next as usize].seq) as usize;
+                    (end - self.storage[next as usize].seq) as usize;
                 let new_len = merge_len as usize + self.storage[idx as usize].length as usize;
                 if new_len <= u16::MAX as usize {
                     self.storage[idx as usize].length = new_len as u16;
@@ -330,13 +331,13 @@ impl ReorderedBuffer {
         let rounded_bytes = round_to_power_of_2(buffer_size);
         let ring_buffer = try!{RingBuffer::new(rounded_bytes)};
         Ok(ReorderedBuffer {
-               data: ring_buffer,
-               buffer_size: rounded_bytes,
-               state: State::Closed,
-               head_seq: 0,
-               tail_seq: 0,
-               segment_list: SegmentList::new(segment_size), // Assuming we don't receive small chunks.
-           })
+            data: ring_buffer,
+            buffer_size: rounded_bytes,
+            state: State::Closed,
+            head_seq: 0,
+            tail_seq: 0,
+            segment_list: SegmentList::new(segment_size), // Assuming we don't receive small chunks.
+        })
     }
 
 

@@ -1,7 +1,7 @@
 use libc::c_void;
 use std::cmp::{Eq, PartialEq};
 
-#[link(name="numa")]
+#[link(name = "numa")]
 #[allow(dead_code)]
 extern "C" {
     /// Check if NUMA support is enabled. Returns -1 if not enabled, in which case other functions will
@@ -104,7 +104,9 @@ impl Eq for Bitmask {}
 impl Bitmask {
     pub unsafe fn allocate_node_mask() -> Bitmask {
         Bitmask {
-            bitmask: wrapped::numa_bitmask_clearall(wrapped::numa_bitmask_alloc(numa_num_possible_nodes() as u32)),
+            bitmask: wrapped::numa_bitmask_clearall(wrapped::numa_bitmask_alloc(
+                numa_num_possible_nodes() as u32,
+            )),
         }
     }
 

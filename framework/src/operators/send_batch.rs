@@ -8,8 +8,9 @@ use interface::PacketTx;
 use scheduler::Executable;
 
 pub struct SendBatch<Port, V>
-    where Port: PacketTx,
-          V: Batch + BatchIterator + Act
+where
+    Port: PacketTx,
+    V: Batch + BatchIterator + Act,
 {
     port: Port,
     parent: V,
@@ -17,8 +18,9 @@ pub struct SendBatch<Port, V>
 }
 
 impl<Port, V> SendBatch<Port, V>
-    where Port: PacketTx,
-          V: Batch + BatchIterator + Act
+where
+    Port: PacketTx,
+    V: Batch + BatchIterator + Act,
 {
     pub fn new(parent: V, port: Port) -> SendBatch<Port, V> {
         SendBatch {
@@ -30,14 +32,16 @@ impl<Port, V> SendBatch<Port, V>
 }
 
 impl<Port, V> Batch for SendBatch<Port, V>
-    where Port: PacketTx,
-          V: Batch + BatchIterator + Act
+where
+    Port: PacketTx,
+    V: Batch + BatchIterator + Act,
 {
 }
 
 impl<Port, V> BatchIterator for SendBatch<Port, V>
-    where Port: PacketTx,
-          V: Batch + BatchIterator + Act
+where
+    Port: PacketTx,
+    V: Batch + BatchIterator + Act,
 {
     type Header = NullHeader;
     type Metadata = EmptyMetadata;
@@ -54,8 +58,9 @@ impl<Port, V> BatchIterator for SendBatch<Port, V>
 
 /// Internal interface for packets.
 impl<Port, V> Act for SendBatch<Port, V>
-    where Port: PacketTx,
-          V: Batch + BatchIterator + Act
+where
+    Port: PacketTx,
+    V: Batch + BatchIterator + Act,
 {
     #[inline]
     fn act(&mut self) {
@@ -65,9 +70,9 @@ impl<Port, V> Act for SendBatch<Port, V>
             .get_packet_batch()
             .send_q(&self.port)
             .and_then(|x| {
-                          self.sent += x as u64;
-                          Ok(x)
-                      })
+                self.sent += x as u64;
+                Ok(x)
+            })
             .expect("Send failed");
         self.parent.done();
     }
@@ -104,8 +109,9 @@ impl<Port, V> Act for SendBatch<Port, V>
 }
 
 impl<Port, V> Executable for SendBatch<Port, V>
-    where Port: PacketTx,
-          V: Batch + BatchIterator + Act
+where
+    Port: PacketTx,
+    V: Batch + BatchIterator + Act,
 {
     #[inline]
     fn execute(&mut self) {

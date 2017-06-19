@@ -8,9 +8,10 @@ use interface::*;
 use std::marker::PhantomData;
 
 pub struct RestoreHeader<T, M, V>
-    where T: EndOffset + 'static,
-          M: Sized + Send,
-          V: Batch + BatchIterator + Act
+where
+    T: EndOffset + 'static,
+    M: Sized + Send,
+    V: Batch + BatchIterator + Act,
 {
     parent: V,
     _phantom_t: PhantomData<T>,
@@ -18,24 +19,27 @@ pub struct RestoreHeader<T, M, V>
 }
 
 impl<T, M, V> Act for RestoreHeader<T, M, V>
-    where T: EndOffset + 'static,
-          M: Sized + Send,
-          V: Batch + BatchIterator + Act
+where
+    T: EndOffset + 'static,
+    M: Sized + Send,
+    V: Batch + BatchIterator + Act,
 {
     act!{}
 }
 
 impl<T, M, V> Batch for RestoreHeader<T, M, V>
-    where V: Batch + BatchIterator + Act,
-          M: Sized + Send,
-          T: EndOffset + 'static
+where
+    V: Batch + BatchIterator + Act,
+    M: Sized + Send,
+    T: EndOffset + 'static,
 {
 }
 
 impl<T, M, V> RestoreHeader<T, M, V>
-    where V: Batch + BatchIterator + Act,
-          M: Sized + Send,
-          T: EndOffset + 'static
+where
+    V: Batch + BatchIterator + Act,
+    M: Sized + Send,
+    T: EndOffset + 'static,
 {
     #[inline]
     pub fn new(parent: V) -> RestoreHeader<T, M, V> {
@@ -48,16 +52,17 @@ impl<T, M, V> RestoreHeader<T, M, V>
 }
 
 impl<T, M, V> BatchIterator for RestoreHeader<T, M, V>
-    where V: Batch + BatchIterator + Act,
-          M: Sized + Send,
-          T: EndOffset + 'static
+where
+    V: Batch + BatchIterator + Act,
+    M: Sized + Send,
+    T: EndOffset + 'static,
 {
     type Header = T;
     type Metadata = M;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T, M>> {
-        self.parent
-            .next_payload(idx)
-            .map(|p| PacketDescriptor { packet: p.packet.restore_saved_header().unwrap() })
+        self.parent.next_payload(idx).map(|p| {
+            PacketDescriptor { packet: p.packet.restore_saved_header().unwrap() }
+        })
     }
 
     #[inline]

@@ -40,22 +40,26 @@ macro_rules! write_or_return {
 
 impl fmt::Display for TcpHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write_or_return!(f,
-                         "tcp src_port {} dst_port {} seq {} ack {} data_offset {} flags ",
-                         self.src_port(),
-                         self.dst_port(),
-                         self.seq_num(),
-                         self.ack_num(),
-                         self.data_offset());
+        write_or_return!(
+            f,
+            "tcp src_port {} dst_port {} seq {} ack {} data_offset {} flags ",
+            self.src_port(),
+            self.dst_port(),
+            self.seq_num(),
+            self.ack_num(),
+            self.data_offset()
+        );
         let ret = self.fmt_flags(f);
         if ret.is_err() {
             return ret;
         }
-        write!(f,
-               "cwnd {} csum {} urgent {}",
-               self.window_size(),
-               self.checksum(),
-               self.urgent())
+        write!(
+            f,
+            "cwnd {} csum {} urgent {}",
+            self.window_size(),
+            self.checksum(),
+            self.urgent()
+        )
 
     }
 }

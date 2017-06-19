@@ -32,7 +32,8 @@ impl<T: Sized + 'static> Borrow<[T]> for SharedVec<T> {
 
 impl<T: Sized + Hash + 'static> Hash for SharedVec<T> {
     fn hash<H>(&self, state: &mut H)
-        where H: Hasher
+    where
+        H: Hasher,
     {
         self.vec.hash(state)
     }

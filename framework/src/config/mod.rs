@@ -56,12 +56,14 @@ impl NetbricksConfiguration {
 
 impl fmt::Display for NetbricksConfiguration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f,
-                    "Configuration: name: {} mempool size: {} core cache: {} primary core: {}\n Ports:\n",
-                    self.name,
-                    self.pool_size,
-                    self.cache_size,
-                    self.primary_core));
+        try!(write!(
+            f,
+            "Configuration: name: {} mempool size: {} core cache: {} primary core: {}\n Ports:\n",
+            self.name,
+            self.pool_size,
+            self.cache_size,
+            self.primary_core
+        ));
         for port in &self.ports {
             try!(write!(f, "\t{}\n", port))
         }
@@ -132,15 +134,17 @@ impl fmt::Display for PortConfiguration {
         let rx_queue_str = rx_queues_str_vec.join(" ");
         let tx_queues_str_vec: Vec<_> = self.tx_queues.iter().map(|q| q.to_string()).collect();
         let tx_queue_str = tx_queues_str_vec.join(" ");
-        write!(f,
-               "Port {} RXQ_Count: {} RX_Queues: [ {} ] TXQ_Count: {} TX_Queues: {} RXD: {} TXD: {} Loopback {}",
-               self.name,
-               self.rx_queues.len(),
-               rx_queue_str,
-               self.tx_queues.len(),
-               tx_queue_str,
-               self.rxd,
-               self.txd,
-               self.loopback)
+        write!(
+            f,
+            "Port {} RXQ_Count: {} RX_Queues: [ {} ] TXQ_Count: {} TX_Queues: {} RXD: {} TXD: {} Loopback {}",
+            self.name,
+            self.rx_queues.len(),
+            rx_queue_str,
+            self.tx_queues.len(),
+            tx_queue_str,
+            self.rxd,
+            self.txd,
+            self.loopback
+        )
     }
 }

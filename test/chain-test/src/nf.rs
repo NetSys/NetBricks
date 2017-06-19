@@ -7,27 +7,28 @@ pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata
     parent
         .parse::<MacHeader>()
         .transform(box move |pkt| {
-                           let mut hdr = pkt.get_mut_header();
-                           hdr.swap_addresses();
-                       })
+            let mut hdr = pkt.get_mut_header();
+            hdr.swap_addresses();
+        })
         .parse::<IpHeader>()
         .transform(box |pkt| {
-                           let h = pkt.get_mut_header();
-                           let ttl = h.ttl();
-                           h.set_ttl(ttl - 1);
-                       })
+            let h = pkt.get_mut_header();
+            let ttl = h.ttl();
+            h.set_ttl(ttl - 1);
+        })
         .filter(box |pkt| {
-                        let h = pkt.get_header();
-                        h.ttl() != 0
-                    })
+            let h = pkt.get_header();
+            h.ttl() != 0
+        })
         .compose()
 }
 
 #[inline]
-pub fn chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T,
-                                                                                len: u32,
-                                                                                pos: u32)
-                                                                                -> CompositionBatch {
+pub fn chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(
+    parent: T,
+    len: u32,
+    pos: u32,
+) -> CompositionBatch {
     let mut chained = chain_nf(parent);
     for _ in 1..len {
         chained = chain_nf(chained);
@@ -36,9 +37,9 @@ pub fn chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(
         chained
             .parse::<MacHeader>()
             .transform(box move |pkt| {
-                               let mut hdr = pkt.get_mut_header();
-                               hdr.swap_addresses();
-                           })
+                let mut hdr = pkt.get_mut_header();
+                hdr.swap_addresses();
+            })
             .compose()
     } else {
         chained

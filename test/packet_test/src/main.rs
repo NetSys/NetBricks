@@ -21,14 +21,17 @@ mod nf;
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
-    where T: PacketRx + PacketTx + Display + Clone + 'static,
-          S: Scheduler + Sized
+where
+    T: PacketRx + PacketTx + Display + Clone + 'static,
+    S: Scheduler + Sized,
 {
     println!("Receiving started");
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| delay(ReceiveBatch::new(port.clone())).send(port.clone()))
+        .map(|port| {
+            delay(ReceiveBatch::new(port.clone())).send(port.clone())
+        })
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
@@ -76,10 +79,12 @@ fn main() {
                     let pkts = (rx, tx);
                     let rx_pkts = pkts.0 - pkts_so_far.0;
                     if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
-                        println!("{:.2} OVERALL RX {:.2} TX {:.2}",
-                                 now - start,
-                                 rx_pkts as f64 / (now - start),
-                                 (pkts.1 - pkts_so_far.1) as f64 / (now - start));
+                        println!(
+                            "{:.2} OVERALL RX {:.2} TX {:.2}",
+                            now - start,
+                            rx_pkts as f64 / (now - start),
+                            (pkts.1 - pkts_so_far.1) as f64 / (now - start)
+                        );
                         last_printed = now;
                         start = now;
                         pkts_so_far = pkts;

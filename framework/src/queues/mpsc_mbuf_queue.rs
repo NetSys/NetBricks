@@ -94,9 +94,9 @@ impl MpscQueue {
         let producer_head = self.producer.head.load(Ordering::Acquire);
         let consumer_tail = self.consumer.tail.load(Ordering::Acquire);
 
-        let free = self.mask
-            .wrapping_add(consumer_tail)
-            .wrapping_sub(producer_head);
+        let free = self.mask.wrapping_add(consumer_tail).wrapping_sub(
+            producer_head,
+        );
         let insert = min(free, len);
 
         if insert > 0 {
@@ -122,26 +122,29 @@ impl MpscQueue {
         let mut consumer_tail;
         // First try and reserve memory by incrementing producer head.
         while {
-                  producer_head = self.producer.head.load(Ordering::Acquire);
-                  consumer_tail = self.consumer.tail.load(Ordering::Acquire);
-                  let free = self.mask
-                      .wrapping_add(consumer_tail)
-                      .wrapping_sub(producer_head);
-                  insert = min(free, len);
-                  if insert == 0 {
-                      // Short circuit, no insertion
-                      false // This is the same as break in this construct.
-                  } else {
-                      let producer_next = producer_head.wrapping_add(insert);
-                      self.producer
-                          .head
-                          .compare_exchange(producer_head,
-                                            producer_next,
-                                            Ordering::AcqRel,
-                                            Ordering::Relaxed)
-                          .is_err()
-                  }
-              } {}
+            producer_head = self.producer.head.load(Ordering::Acquire);
+            consumer_tail = self.consumer.tail.load(Ordering::Acquire);
+            let free = self.mask.wrapping_add(consumer_tail).wrapping_sub(
+                producer_head,
+            );
+            insert = min(free, len);
+            if insert == 0 {
+                // Short circuit, no insertion
+                false // This is the same as break in this construct.
+            } else {
+                let producer_next = producer_head.wrapping_add(insert);
+                self.producer
+                    .head
+                    .compare_exchange(
+                        producer_head,
+                        producer_next,
+                        Ordering::AcqRel,
+                        Ordering::Relaxed,
+                    )
+                    .is_err()
+            }
+        }
+        {}
 
         if insert > 0 {
             // If we successfully reserved memory, write to memory.
@@ -151,9 +154,10 @@ impl MpscQueue {
             // Before committing we wait for any preceding writes to finish (this is important since we assume buffer is
             // always available upto commit point.
             while {
-                      let producer_tail = self.producer.tail.load(Ordering::Acquire);
-                      producer_tail != producer_head
-                  } {
+                let producer_tail = self.producer.tail.load(Ordering::Acquire);
+                producer_tail != producer_head
+            }
+            {
                 pause(); // Pausing is a nice thing to do during spin locks
             }
             // Once this has been achieved, update tail. Any conflicting updates will wait on the previous spin lock.
@@ -249,7 +253,10 @@ impl PacketRx for MpscConsumer {
 pub fn new_mpsc_queue_pair_with_size(size: usize) -> (MpscProducer, ReceiveBatch<MpscConsumer>) {
     let mpsc_q = Arc::new(MpscQueue::new(size));
     mpsc_q.reference_producers();
-    (MpscProducer { mpsc_queue: mpsc_q.clone() }, ReceiveBatch::new(MpscConsumer { mpsc_queue: mpsc_q }))
+    (
+        MpscProducer { mpsc_queue: mpsc_q.clone() },
+        ReceiveBatch::new(MpscConsumer { mpsc_queue: mpsc_q }),
+    )
 }
 
 const DEFAULT_QUEUE_SIZE: usize = 1024;

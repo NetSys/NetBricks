@@ -23,10 +23,14 @@ fn main() {
         Ok(_) => {
             let port = VirtualPort::new(1).unwrap();
             let mut sched = embedded_scheduler::EmbeddedScheduler::new();
-            let pipeline0 = lpm(ReceiveBatch::new(port.new_virtual_queue(1).unwrap()),
-                                &mut sched);
-            let pipeline1 = lpm(ReceiveBatch::new(port.new_virtual_queue(1).unwrap()),
-                                &mut sched);
+            let pipeline0 = lpm(
+                ReceiveBatch::new(port.new_virtual_queue(1).unwrap()),
+                &mut sched,
+            );
+            let pipeline1 = lpm(
+                ReceiveBatch::new(port.new_virtual_queue(1).unwrap()),
+                &mut sched,
+            );
             let task = sched.add_task(merge(vec![pipeline0, pipeline1])).unwrap();
             println!("Dependencies for task {}", task);
             sched.display_dependencies(task);

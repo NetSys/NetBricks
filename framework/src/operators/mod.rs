@@ -60,30 +60,36 @@ pub fn merge<T: Batch>(batches: Vec<T>) -> MergeBatch<T> {
 pub trait Batch: BatchIterator + Act + Send {
     /// Parse the payload as header of type.
     fn parse<T: EndOffset<PreviousHeader = Self::Header>>(self) -> ParsedBatch<T, Self>
-        where Self: Sized
+    where
+        Self: Sized,
     {
         ParsedBatch::<T, Self>::new(self)
     }
 
-    fn metadata<M: Sized + Send>(self,
-                                 generator: MetadataFn<Self::Header, Self::Metadata, M>)
-                                 -> AddMetadataBatch<M, Self>
-        where Self: Sized
+    fn metadata<M: Sized + Send>(
+        self,
+        generator: MetadataFn<Self::Header, Self::Metadata, M>,
+    ) -> AddMetadataBatch<M, Self>
+    where
+        Self: Sized,
     {
         AddMetadataBatch::new(self, generator)
     }
 
-    fn metadata_mut<M: Sized + Send>(self,
-                                     generator: MutableMetadataFn<Self::Header, Self::Metadata, M>)
-                                     -> MutableAddMetadataBatch<M, Self>
-        where Self: Sized
+    fn metadata_mut<M: Sized + Send>(
+        self,
+        generator: MutableMetadataFn<Self::Header, Self::Metadata, M>,
+    ) -> MutableAddMetadataBatch<M, Self>
+    where
+        Self: Sized,
     {
         MutableAddMetadataBatch::new(self, generator)
     }
 
     /// Send this batch out a particular port and queue.
     fn send<Port: PacketTx>(self, port: Port) -> SendBatch<Port, Self>
-        where Self: Sized
+    where
+        Self: Sized,
     {
         SendBatch::<Port, Self>::new(self, port)
     }
@@ -95,14 +101,16 @@ pub trait Batch: BatchIterator + Act + Send {
     /// This causes some performance degradation: operations called through composition batches rely on indirect calls
     /// which affect throughput.
     fn compose(self) -> CompositionBatch
-        where Self: Sized + 'static
+    where
+        Self: Sized + 'static,
     {
         CompositionBatch::new(self)
     }
 
     /// Transform a header field.
     fn transform(self, transformer: TransformFn<Self::Header, Self::Metadata>) -> TransformBatch<Self::Header, Self>
-        where Self: Sized
+    where
+        Self: Sized,
     {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }
@@ -110,21 +118,24 @@ pub trait Batch: BatchIterator + Act + Send {
     /// Map over a set of header fields. Map and transform primarily differ in map being immutable. Immutability
     /// provides some optimization opportunities not otherwise available.
     fn map(self, transformer: MapFn<Self::Header, Self::Metadata>) -> MapBatch<Self::Header, Self>
-        where Self: Sized
+    where
+        Self: Sized,
     {
         MapBatch::<Self::Header, Self>::new(self, transformer)
     }
 
     /// Filter out packets, any packets for which `filter_f` returns false are dropped from the batch.
     fn filter(self, filter_f: FilterFn<Self::Header, Self::Metadata>) -> FilterBatch<Self::Header, Self>
-        where Self: Sized
+    where
+        Self: Sized,
     {
         FilterBatch::<Self::Header, Self>::new(self, filter_f)
     }
 
     /// Reset the packet pointer to 0. This is identical to composition except for using static dispatch.
     fn reset(self) -> ResetParsingBatch<Self>
-        where Self: Sized
+    where
+        Self: Sized,
     {
         ResetParsingBatch::<Self>::new(self)
     }
@@ -132,17 +143,20 @@ pub trait Batch: BatchIterator + Act + Send {
     /// Deparse, i.e., remove the last parsed header. Note the assumption here is that T = the last header parsed
     /// (which we cannot statically enforce since we loose reference to that header).
     fn deparse(self) -> DeparsedBatch<Self>
-        where Self: Sized
+    where
+        Self: Sized,
     {
         DeparsedBatch::<Self>::new(self)
     }
 
-    fn group_by<S: Scheduler + Sized>(self,
-                                      groups: usize,
-                                      group_f: GroupFn<Self::Header, Self::Metadata>,
-                                      sched: &mut S)
-                                      -> GroupBy<Self::Header, Self>
-        where Self: Sized
+    fn group_by<S: Scheduler + Sized>(
+        self,
+        groups: usize,
+        group_f: GroupFn<Self::Header, Self::Metadata>,
+        sched: &mut S,
+    ) -> GroupBy<Self::Header, Self>
+    where
+        Self: Sized,
     {
         GroupBy::<Self::Header, Self>::new(self, groups, group_f, sched)
     }

@@ -114,40 +114,40 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader, EmptyMetadata>> 
 impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     // --------------------- Not using packet offsets ------------------------------------------------------
     #[inline]
-    #[cfg(not(feature="packet_offset"))]
+    #[cfg(not(feature = "packet_offset"))]
     fn header(&self) -> *mut T {
         self.header
     }
 
     #[inline]
-    #[cfg(not(feature="packet_offset"))]
+    #[cfg(not(feature = "packet_offset"))]
     fn header_u8(&self) -> *mut u8 {
         self.header as *mut u8
     }
 
 
     #[inline]
-    #[cfg(not(feature="packet_offset"))]
+    #[cfg(not(feature = "packet_offset"))]
     fn offset(&self) -> usize {
         self.offset
     }
 
     // ----------------- Using packet offsets -------------------------------------------------------------
     #[inline]
-    #[cfg(feature="packet_offset")]
+    #[cfg(feature = "packet_offset")]
     fn header(&self) -> *mut T {
         self.read_header()
     }
 
     #[inline]
-    #[cfg(feature="packet_offset")]
+    #[cfg(feature = "packet_offset")]
     fn header_u8(&self) -> *mut u8 {
         MBuf::read_metadata_slot(self.mbuf, HEADER_SLOT) as *mut u8
     }
 
 
     #[inline]
-    #[cfg(feature="packet_offset")]
+    #[cfg(feature = "packet_offset")]
     fn offset(&self) -> usize {
         self.read_offset()
     }

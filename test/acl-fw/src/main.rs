@@ -22,22 +22,28 @@ const CONVERSION_FACTOR: f64 = 1000000000.;
 
 fn test<S: Scheduler + Sized>(ports: Vec<CacheAligned<PortQueue>>, sched: &mut S) {
     for port in &ports {
-        println!("Receiving port {} rxq {} txq {}",
-                 port.port.mac_address(),
-                 port.rxq(),
-                 port.txq());
+        println!(
+            "Receiving port {} rxq {} txq {}",
+            port.port.mac_address(),
+            port.rxq(),
+            port.txq()
+        );
     }
-    let acls = vec![Acl {
-                        src_ip: Some(Ipv4Prefix::new(0, 0)),
-                        dst_ip: None,
-                        src_port: None,
-                        dst_port: None,
-                        established: None,
-                        drop: false,
-                    }];
+    let acls = vec![
+        Acl {
+            src_ip: Some(Ipv4Prefix::new(0, 0)),
+            dst_ip: None,
+            src_port: None,
+            dst_port: None,
+            established: None,
+            drop: false,
+        },
+    ];
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| acl_match(ReceiveBatch::new(port.clone()), acls.clone()).send(port.clone()))
+        .map(|port| {
+            acl_match(ReceiveBatch::new(port.clone()), acls.clone()).send(port.clone())
+        })
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
@@ -85,10 +91,12 @@ fn main() {
             let pkts = (rx, tx);
             let rx_pkts = pkts.0 - pkts_so_far.0;
             if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
-                println!("{:.2} OVERALL RX {:.2} TX {:.2}",
-                         now - start,
-                         rx_pkts as f64 / (now - start),
-                         (pkts.1 - pkts_so_far.1) as f64 / (now - start));
+                println!(
+                    "{:.2} OVERALL RX {:.2} TX {:.2}",
+                    now - start,
+                    rx_pkts as f64 / (now - start),
+                    (pkts.1 - pkts_so_far.1) as f64 / (now - start)
+                );
                 last_printed = now;
                 start = now;
                 pkts_so_far = pkts;

@@ -20,9 +20,9 @@ fn main() {
         process::exit(0)
     }
 
-    let cfg = matches
-        .opt_str("config")
-        .expect("No configuration supplied, rendering this meaningless");
+    let cfg = matches.opt_str("config").expect(
+        "No configuration supplied, rendering this meaningless",
+    );
     let sched_cfg = read_configuration(&cfg[..]).expect("Could not parse configuration");
     println!("Read configuration {}", sched_cfg)
 }

@@ -21,19 +21,21 @@ mod nf;
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
-    where T: PacketRx + PacketTx + Display + Clone + 'static,
-          S: Scheduler + Sized
+where
+    T: PacketRx + PacketTx + Display + Clone + 'static,
+    S: Scheduler + Sized,
 {
     println!("Receiving started");
 
     let mut pipelines: Vec<_> = ports
         .iter()
         .map(|port| {
-                 nat(ReceiveBatch::new(port.clone()),
-                     sched,
-                     &Ipv4Addr::new(10, 0, 0, 1))
-                         .send(port.clone())
-             })
+            nat(
+                ReceiveBatch::new(port.clone()),
+                sched,
+                &Ipv4Addr::new(10, 0, 0, 1),
+            ).send(port.clone())
+        })
         .collect();
     println!("Running {} pipelines", pipelines.len());
     if pipelines.len() > 1 {
@@ -76,10 +78,12 @@ fn main() {
                         }
                     }
                     let pkts = (rx, tx);
-                    println!("{:.2} OVERALL RX {:.2} TX {:.2}",
-                             now - start,
-                             (pkts.0 - pkts_so_far.0) as f64 / (now - start),
-                             (pkts.1 - pkts_so_far.1) as f64 / (now - start));
+                    println!(
+                        "{:.2} OVERALL RX {:.2} TX {:.2}",
+                        now - start,
+                        (pkts.0 - pkts_so_far.0) as f64 / (now - start),
+                        (pkts.1 - pkts_so_far.1) as f64 / (now - start)
+                    );
                     start = now;
                     pkts_so_far = pkts;
                 }
