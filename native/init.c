@@ -16,6 +16,8 @@
 #define MEMPOOL_SIZE 1024       // Default mempool size
 #define CACHE_SIZE 32           // Size of per-core mempool cache
 
+#define MAX_ARGS 128
+
 static inline void bind_to_domain(int socket_id) {
     struct bitmask* numa_bitmask =
         numa_bitmask_setbit(numa_bitmask_clearall(numa_bitmask_alloc(numa_num_possible_nodes())), socket_id);
@@ -50,6 +52,14 @@ fail:
     return 1;
 }
 
+static void add_arg(int *rte_argc, char **rte_argv, char* s) {
+  if (*rte_argc >= MAX_ARGS) {
+    fprintf(stderr, "init_eal exceeded max number of args!");
+    return;
+  }
+  rte_argv[(*rte_argc)++] = s;
+}
+
 static int init_eal(char* name, int secondary, int core, int mempool_size, char* whitelist[], int wl_count, char* vdevs[],
                     int vdev_count) {
     /* As opposed to SoftNIC, this call only initializes the master thread.
@@ -57,8 +67,7 @@ static int init_eal(char* name, int secondary, int core, int mempool_size, char*
      * must be launched by the runtime */
     int rte_argc = 0;
 
-    /* FIXME: Make sure number of arguments is not exceeded */
-    char* rte_argv[128];
+    char* rte_argv[MAX_ARGS];
 
     char opt_master_lcore[1024];
     char opt_lcore_bitmap[1024];
@@ -86,39 +95,39 @@ static int init_eal(char* name, int secondary, int core, int mempool_size, char*
     sprintf(opt_socket_mem, "%d", mempool_size);
     for (i = 1; i < numa_count; i++) sprintf(opt_socket_mem + strlen(opt_socket_mem), ",%d", mempool_size);
 
-    rte_argv[rte_argc++] = "lzcsi";
+    add_arg(&rte_argc, rte_argv, "lzcsi");
     if (secondary) {
-        rte_argv[rte_argc++] = "--proc-type";
-        rte_argv[rte_argc++] = "secondary";
+        add_arg(&rte_argc, rte_argv, "--proc-type");
+        add_arg(&rte_argc, rte_argv, "secondary");
     }
-    rte_argv[rte_argc++] = "--file-prefix";
-    rte_argv[rte_argc++] = name;
-    rte_argv[rte_argc++] = "-c";
-    rte_argv[rte_argc++] = opt_lcore_bitmap;
+    add_arg(&rte_argc, rte_argv, "--file-prefix");
+    add_arg(&rte_argc, rte_argv, name);
+    add_arg(&rte_argc, rte_argv, "-c");
+    add_arg(&rte_argc, rte_argv, opt_lcore_bitmap);
 
     for (int i = 0; i < wl_count; i++) {
-        rte_argv[rte_argc++] = "-w";
-        rte_argv[rte_argc++] = whitelist[i];
+        add_arg(&rte_argc, rte_argv, "-w");
+        add_arg(&rte_argc, rte_argv, whitelist[i]);
     }
     for (int i = 0; i < vdev_count; i++) {
-        rte_argv[rte_argc++] = "--vdev";
-        rte_argv[rte_argc++] = vdevs[i];
+        add_arg(&rte_argc, rte_argv, "--vdev");
+        add_arg(&rte_argc, rte_argv, vdevs[i]);
     }
 
     /* This just makes sure that by default everything is blacklisted */
-    rte_argv[rte_argc++] = "-w";
-    rte_argv[rte_argc++] = "99:99.0";
+    add_arg(&rte_argc, rte_argv, "-w");
+    add_arg(&rte_argc, rte_argv, "99:99.0");
 
-    rte_argv[rte_argc++] = "--master-lcore";
-    rte_argv[rte_argc++] = opt_master_lcore;
+    add_arg(&rte_argc, rte_argv, "--master-lcore");
+    add_arg(&rte_argc, rte_argv, opt_master_lcore);
 
-    rte_argv[rte_argc++] = "-n";
+    add_arg(&rte_argc, rte_argv, "-n");
     /* number of memory channels (Sandy Bridge) */
-    rte_argv[rte_argc++] = "4";  // Number of memory channels on
+    add_arg(&rte_argc, rte_argv, "4");  // Number of memory channels on
     // Sandy Bridge.
-    rte_argv[rte_argc++] = "--socket-mem";
-    rte_argv[rte_argc++] = opt_socket_mem;
-    rte_argv[rte_argc] = NULL;
+    add_arg(&rte_argc, rte_argv, "--socket-mem");
+    add_arg(&rte_argc, rte_argv, opt_socket_mem);
+    add_arg(&rte_argc, rte_argv, NULL);
 
     /* reset getopt() */
     optind = 0;
