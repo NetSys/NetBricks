@@ -1,0 +1,18 @@
+BasedOnStyle: google
+IndentWidth: 4
+
+AlignAfterOpenBracket: true
+AlignConsecutiveAssignments: true
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+BinPackArguments: true
+BinPackParameters: true
+ColumnLimit: 100
+DerivePointerAlignment: true
+PenaltyExcessCharacter: 1
+SpaceBeforeParens: ControlStatements
+TabWidth: 4
+UseTab: Never
