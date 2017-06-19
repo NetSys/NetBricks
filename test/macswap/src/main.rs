@@ -19,8 +19,9 @@ use std::time::Duration;
 mod nf;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
-    where T: PacketRx + PacketTx + Display + Clone + 'static,
-          S: Scheduler + Sized
+where
+    T: PacketRx + PacketTx + Display + Clone + 'static,
+    S: Scheduler + Sized,
 {
     for port in &ports {
         println!("Receiving port {}", port);
@@ -28,7 +29,9 @@ fn test<T, S>(ports: Vec<T>, sched: &mut S)
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| macswap(ReceiveBatch::new(port.clone())).send(port.clone()))
+        .map(|port| {
+            macswap(ReceiveBatch::new(port.clone())).send(port.clone())
+        })
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
@@ -38,11 +41,13 @@ fn test<T, S>(ports: Vec<T>, sched: &mut S)
 
 fn main() {
     let mut opts = basic_opts();
-    opts.optopt("",
-                "dur",
-                "Test duration",
-                "If this option is set to a nonzero value, then the \
-                test will exit after X seconds.");
+    opts.optopt(
+        "",
+        "dur",
+        "Test duration",
+        "If this option is set to a nonzero value, then the \
+                test will exit after X seconds.",
+    );
 
     let args: Vec<String> = env::args().collect();
     let matches = match opts.parse(&args[1..]) {

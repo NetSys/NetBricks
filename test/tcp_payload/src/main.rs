@@ -20,7 +20,9 @@ mod nf;
 fn test<S: Scheduler + Sized>(ports: Vec<CacheAligned<PortQueue>>, sched: &mut S) {
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| reconstruction(ReceiveBatch::new(port.clone()), sched).send(port.clone()))
+        .map(|port| {
+            reconstruction(ReceiveBatch::new(port.clone()), sched).send(port.clone())
+        })
         .collect();
     for pipeline in pipelines {
         sched.add_task(pipeline).unwrap();
