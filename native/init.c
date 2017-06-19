@@ -127,7 +127,7 @@ static int init_eal(char* name, int secondary, int core, int mempool_size, char*
     // Sandy Bridge.
     add_arg(&rte_argc, rte_argv, "--socket-mem");
     add_arg(&rte_argc, rte_argv, opt_socket_mem);
-    add_arg(&rte_argc, rte_argv, NULL);
+    rte_argv[rte_argc] = NULL;
 
     /* reset getopt() */
     optind = 0;
