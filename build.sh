@@ -380,7 +380,7 @@ case $TASK in
         export PATH="${BIN_DIR}:${PATH}"
         export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
-            ${BASE_DIR}/target/release/$cmd "$@"
+            $executable "$@"
         ;;
     debug)
         shift
@@ -397,7 +397,7 @@ case $TASK in
         export PATH="${BIN_DIR}:${PATH}"
         export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
-            rust-gdb --args ${BASE_DIR}/target/release/$cmd "$@"
+            rust-gdb --args $executable "$@"
         ;;
     update_rust)
         _BUILD_UPDATE_=1
