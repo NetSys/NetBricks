@@ -42,10 +42,9 @@ impl<T: TcpControlAgent> Executable for TcpControlServer<T> {
 impl<T: TcpControlAgent> TcpControlServer<T> {
     pub fn new(address: SocketAddr) -> TcpControlServer<T> {
         let socket = match address {
-                SocketAddr::V4(_) => TcpBuilder::new_v4(),
-                SocketAddr::V6(_) => TcpBuilder::new_v6(),
-            }
-            .unwrap();
+            SocketAddr::V4(_) => TcpBuilder::new_v4(),
+            SocketAddr::V6(_) => TcpBuilder::new_v6(),
+        }.unwrap();
         let _ = socket.reuse_address(true).unwrap();
         // FIXME: Change 1024 to a parameter
         let listener = socket.bind(address).unwrap().listen(1024).unwrap();
@@ -88,11 +87,14 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
                     self.next_token += 1;
                     stream.set_nonblocking(true).unwrap();
                     let stream_fd = stream.as_raw_fd();
-                    self.connections
-                        .insert(token,
-                                T::new(addr,
-                                       stream,
-                                       IOScheduler::new(self.scheduler.new_poll_handle(), stream_fd, token)));
+                    self.connections.insert(
+                        token,
+                        T::new(
+                            addr,
+                            stream,
+                            IOScheduler::new(self.scheduler.new_poll_handle(), stream_fd, token),
+                        ),
+                    );
                     // Add to some sort of hashmap.
                 }
                 Err(_) => {
@@ -102,8 +104,10 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
         } else {
             // FIXME: Report something.
         }
-        self.handle
-            .schedule_read(&self.listener, self.listener_token);
+        self.handle.schedule_read(
+            &self.listener,
+            self.listener_token,
+        );
     }
 
     fn handle_data(&mut self, token: Token, available: Available) {

@@ -81,9 +81,10 @@ impl Directory {
     pub fn end_snapshot(&mut self) {
         unsafe {
             let version = (*self.head).current_version.load(Ordering::Acquire);
-            (*self.head)
-                .committed_version
-                .store(version, Ordering::Release);
+            (*self.head).committed_version.store(
+                version,
+                Ordering::Release,
+            );
         }
     }
 }

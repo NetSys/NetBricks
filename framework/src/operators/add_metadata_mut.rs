@@ -10,8 +10,9 @@ use std::marker::PhantomData;
 pub type MutableMetadataFn<T, M, M2> = Box<FnMut(&mut Packet<T, M>) -> M2 + Send>;
 
 pub struct MutableAddMetadataBatch<M, V>
-    where M: Send + Sized,
-          V: Batch + BatchIterator + Act
+where
+    M: Send + Sized,
+    V: Batch + BatchIterator + Act,
 {
     parent: V,
     generator: MutableMetadataFn<V::Header, V::Metadata, M>,
@@ -20,8 +21,9 @@ pub struct MutableAddMetadataBatch<M, V>
 }
 
 impl<M, V> MutableAddMetadataBatch<M, V>
-    where M: Send + Sized,
-          V: Batch + BatchIterator + Act
+where
+    M: Send + Sized,
+    V: Batch + BatchIterator + Act,
 {
     pub fn new(parent: V, generator: MutableMetadataFn<V::Header, V::Metadata, M>) -> MutableAddMetadataBatch<M, V> {
         MutableAddMetadataBatch {
@@ -34,14 +36,16 @@ impl<M, V> MutableAddMetadataBatch<M, V>
 }
 
 impl<M, V> Batch for MutableAddMetadataBatch<M, V>
-    where M: Send + Sized,
-          V: Batch + BatchIterator + Act
+where
+    M: Send + Sized,
+    V: Batch + BatchIterator + Act,
 {
 }
 
 impl<M, V> BatchIterator for MutableAddMetadataBatch<M, V>
-    where M: Send + Sized,
-          V: Batch + BatchIterator + Act
+where
+    M: Send + Sized,
+    V: Batch + BatchIterator + Act,
 {
     type Header = V::Header;
     type Metadata = M;
@@ -53,15 +57,16 @@ impl<M, V> BatchIterator for MutableAddMetadataBatch<M, V>
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<V::Header, M>> {
-        self.parent
-            .next_payload(idx)
-            .map(|p| PacketDescriptor { packet: p.packet.reinterpret_metadata() })
+        self.parent.next_payload(idx).map(|p| {
+            PacketDescriptor { packet: p.packet.reinterpret_metadata() }
+        })
     }
 }
 
 impl<M, V> Act for MutableAddMetadataBatch<M, V>
-    where M: Send + Sized,
-          V: Batch + BatchIterator + Act
+where
+    M: Send + Sized,
+    V: Batch + BatchIterator + Act,
 {
     #[inline]
     fn act(&mut self) {

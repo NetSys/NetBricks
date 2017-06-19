@@ -16,7 +16,8 @@ pub trait Executable {
 }
 
 impl<F> Executable for F
-    where F: FnMut()
+where
+    F: FnMut(),
 {
     fn execute(&mut self) {
         (*self)()
@@ -28,5 +29,7 @@ impl<F> Executable for F
 }
 
 pub trait Scheduler {
-    fn add_task<T: Executable + 'static>(&mut self, task: T) -> Result<usize> where Self: Sized;
+    fn add_task<T: Executable + 'static>(&mut self, task: T) -> Result<usize>
+    where
+        Self: Sized;
 }

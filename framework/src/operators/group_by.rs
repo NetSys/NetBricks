@@ -13,8 +13,9 @@ use std::marker::PhantomData;
 pub type GroupFn<T, M> = Box<FnMut(&Packet<T, M>) -> usize + Send>;
 
 pub struct GroupBy<T, V>
-    where T: EndOffset + 'static,
-          V: Batch + BatchIterator<Header = T> + Act + 'static
+where
+    T: EndOffset + 'static,
+    V: Batch + BatchIterator<Header = T> + Act + 'static,
 {
     _phantom_v: PhantomData<V>,
     groups: usize,
@@ -24,8 +25,9 @@ pub struct GroupBy<T, V>
 }
 
 struct GroupByProducer<T, V>
-    where T: EndOffset + 'static,
-          V: Batch + BatchIterator<Header = T> + Act + 'static
+where
+    T: EndOffset + 'static,
+    V: Batch + BatchIterator<Header = T> + Act + 'static,
 {
     parent: V,
     producers: Vec<MpscProducer>,
@@ -33,8 +35,9 @@ struct GroupByProducer<T, V>
 }
 
 impl<T, V> Executable for GroupByProducer<T, V>
-    where T: EndOffset + 'static,
-          V: Batch + BatchIterator<Header = T> + Act + 'static
+where
+    T: EndOffset + 'static,
+    V: Batch + BatchIterator<Header = T> + Act + 'static,
 {
     #[inline]
     fn execute(&mut self) {
@@ -59,14 +62,16 @@ impl<T, V> Executable for GroupByProducer<T, V>
 
 #[cfg_attr(feature = "dev", allow(len_without_is_empty))]
 impl<T, V> GroupBy<T, V>
-    where T: EndOffset + 'static,
-          V: Batch + BatchIterator<Header = T> + Act + 'static
+where
+    T: EndOffset + 'static,
+    V: Batch + BatchIterator<Header = T> + Act + 'static,
 {
-    pub fn new<S: Scheduler + Sized>(parent: V,
-                                     groups: usize,
-                                     group_fn: GroupFn<T, V::Metadata>,
-                                     sched: &mut S)
-                                     -> GroupBy<T, V> {
+    pub fn new<S: Scheduler + Sized>(
+        parent: V,
+        groups: usize,
+        group_fn: GroupFn<T, V::Metadata>,
+        sched: &mut S,
+    ) -> GroupBy<T, V> {
         let mut producers = Vec::with_capacity(groups);
         let mut consumers = HashMap::with_capacity(groups);
         for i in 0..groups {
@@ -76,10 +81,10 @@ impl<T, V> GroupBy<T, V>
         }
         let task = sched
             .add_task(GroupByProducer {
-                          parent: parent,
-                          group_fn: group_fn,
-                          producers: producers,
-                      })
+                parent: parent,
+                group_fn: group_fn,
+                producers: producers,
+            })
             .unwrap();
         GroupBy {
             _phantom_v: PhantomData,

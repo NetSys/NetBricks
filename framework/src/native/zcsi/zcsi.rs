@@ -3,33 +3,31 @@ use headers::MacAddress;
 use std::os::raw::c_char;
 #[link(name = "zcsi")]
 extern "C" {
-    pub fn init_system_whitelisted(name: *const c_char,
-                                   nlen: i32,
-                                   core: i32,
-                                   whitelist: *mut *const c_char,
-                                   wlcount: i32,
-                                   pool_size: u32,
-                                   cache_size: u32,
-                                   slots: u16)
-                                   -> i32;
+    pub fn init_system_whitelisted(
+        name: *const c_char,
+        nlen: i32,
+        core: i32,
+        whitelist: *mut *const c_char,
+        wlcount: i32,
+        pool_size: u32,
+        cache_size: u32,
+        slots: u16,
+    ) -> i32;
     pub fn init_thread(tid: i32, core: i32) -> i32;
-    pub fn init_secondary(name: *const c_char,
-                          nlen: i32,
-                          core: i32,
-                          vdevs: *mut *const c_char,
-                          vdev_count: i32)
-                          -> i32;
-    pub fn init_pmd_port(port: i32,
-                         rxqs: i32,
-                         txqs: i32,
-                         rx_cores: *const i32,
-                         tx_cores: *const i32,
-                         nrxd: i32,
-                         ntxd: i32,
-                         loopback: i32,
-                         tso: i32,
-                         csumoffload: i32)
-                         -> i32;
+    pub fn init_secondary(name: *const c_char, nlen: i32, core: i32, vdevs: *mut *const c_char, vdev_count: i32)
+        -> i32;
+    pub fn init_pmd_port(
+        port: i32,
+        rxqs: i32,
+        txqs: i32,
+        rx_cores: *const i32,
+        tx_cores: *const i32,
+        nrxd: i32,
+        ntxd: i32,
+        loopback: i32,
+        tso: i32,
+        csumoffload: i32,
+    ) -> i32;
     pub fn free_pmd_port(port: i32) -> i32;
     pub fn recv_pkts(port: i32, qid: i32, pkts: *mut *mut MBuf, len: i32) -> i32;
     pub fn send_pkts(port: i32, qid: i32, pkts: *mut *mut MBuf, len: i32) -> i32;

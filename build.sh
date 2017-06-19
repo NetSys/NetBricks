@@ -27,11 +27,11 @@ fi
 
 CARGO_LOC=`which cargo || true`
 export CARGO=${CARGO_PATH-"${CARGO_LOC}"}
-if [ -z ${CARGO} ] || [ ! -e ${CARGO} ]; then
-    echo "Could not find a preinstalled Cargo in PATH. Set CARGO_PATH if necessary."
-    exit 1
-fi
-echo "Using Cargo from ${CARGO}"
+#if [ -z ${CARGO} ] || [ ! -e ${CARGO} ]; then
+    #echo "Could not find a preinstalled Cargo in PATH. Set CARGO_PATH if necessary."
+    #exit 1
+#fi
+#echo "Using Cargo from ${CARGO}"
 
 MUSL_DOWNLOAD_PATH="${DOWNLOAD_DIR}/musl.tar.gz"
 MUSL_RESULT="${EXT_BASE}/musl"
@@ -380,7 +380,7 @@ case $TASK in
         export PATH="${BIN_DIR}:${PATH}"
         export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
-            ${BASE_DIR}/target/release/$cmd "$@"
+            $executable "$@"
         ;;
     debug)
         shift
@@ -397,7 +397,7 @@ case $TASK in
         export PATH="${BIN_DIR}:${PATH}"
         export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
-            rust-gdb --args ${BASE_DIR}/target/release/$cmd "$@"
+            rust-gdb --args $executable "$@"
         ;;
     update_rust)
         _BUILD_UPDATE_=1

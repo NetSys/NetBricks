@@ -98,10 +98,10 @@ impl IPLookup {
     }
 }
 
-pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>, S: Scheduler + Sized>
-    (parent: T,
-     s: &mut S)
-     -> CompositionBatch {
+pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>, S: Scheduler + Sized>(
+    parent: T,
+    s: &mut S,
+) -> CompositionBatch {
     let mut lpm_table = IPLookup::new();
     lpm_table.insert_ipv4(&Ipv4Addr::new(188, 19, 50, 135), 32, 1);
     lpm_table.insert_ipv4(&Ipv4Addr::new(123, 19, 205, 58), 32, 1);
@@ -213,15 +213,18 @@ pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>, S:
         .parse::<MacHeader>()
         .transform(box |p| p.get_mut_header().swap_addresses())
         .parse::<IpHeader>()
-        .group_by(3,
-                  box move |pkt| {
-                          let hdr = pkt.get_header();
-                          lpm_table.lookup_entry(hdr.src()) as usize
-                      },
-                  s);
-    let pipeline = merge(vec![groups.get_group(0).unwrap(),
-                              groups.get_group(1).unwrap(),
-                              groups.get_group(2).unwrap()])
-            .compose();
+        .group_by(
+            3,
+            box move |pkt| {
+                let hdr = pkt.get_header();
+                lpm_table.lookup_entry(hdr.src()) as usize
+            },
+            s,
+        );
+    let pipeline = merge(vec![
+        groups.get_group(0).unwrap(),
+        groups.get_group(1).unwrap(),
+        groups.get_group(2).unwrap(),
+    ]).compose();
     pipeline
 }

@@ -13,25 +13,28 @@ type FnvHash = BuildHasherDefault<FnvHasher>;
 const BUFFER_SIZE: usize = 2048;
 const PRINT_SIZE: usize = 256;
 
-pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(parent: T,
-                                                                                     sched: &mut S)
-                                                                                     -> CompositionBatch {
+pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
+    parent: T,
+    sched: &mut S,
+) -> CompositionBatch {
     let mut cache = HashMap::<Flow, ReorderedBuffer, FnvHash>::with_hasher(Default::default());
     let mut read_buf: Vec<u8> = (0..PRINT_SIZE).map(|_| 0).collect();
     let mut groups = parent
         .parse::<MacHeader>()
         .transform(box move |p| { p.get_mut_header().swap_addresses(); })
         .parse::<IpHeader>()
-        .group_by(2,
-                  box move |p| if p.get_header().protocol() == 6 { 0 } else { 1 },
-                  sched);
+        .group_by(
+            2,
+            box move |p| if p.get_header().protocol() == 6 { 0 } else { 1 },
+            sched,
+        );
     let pipe = groups
         .get_group(0)
         .unwrap()
         .metadata(box move |p| {
-                          let flow = p.get_header().flow().unwrap();
-                          flow
-                      })
+            let flow = p.get_header().flow().unwrap();
+            flow
+        })
         .parse::<TcpHeader>()
         .transform(box move |p| {
             if !p.get_header().psh_flag() {

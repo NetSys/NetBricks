@@ -10,8 +10,9 @@ use interface::PacketTx;
 pub type FilterFn<T, M> = Box<FnMut(&Packet<T, M>) -> bool + Send>;
 
 pub struct FilterBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator<Header = T> + Act
+where
+    T: EndOffset,
+    V: Batch + BatchIterator<Header = T> + Act,
 {
     parent: V,
     filter: FilterFn<T, V::Metadata>,
@@ -20,8 +21,9 @@ pub struct FilterBatch<T, V>
 }
 
 impl<T, V> FilterBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator<Header = T> + Act
+where
+    T: EndOffset,
+    V: Batch + BatchIterator<Header = T> + Act,
 {
     #[inline]
     pub fn new(parent: V, filter: FilterFn<T, V::Metadata>) -> FilterBatch<T, V> {
@@ -38,8 +40,9 @@ impl<T, V> FilterBatch<T, V>
 batch_no_new!{FilterBatch}
 
 impl<T, V> Act for FilterBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator<Header = T> + Act
+where
+    T: EndOffset,
+    V: Batch + BatchIterator<Header = T> + Act,
 {
     #[inline]
     fn act(&mut self) {
@@ -49,15 +52,16 @@ impl<T, V> Act for FilterBatch<T, V>
         while let Some(ParsedDescriptor {
                            mut packet,
                            index: idx,
-                       }) = iter.next(&mut self.parent) {
+                       }) = iter.next(&mut self.parent)
+        {
             if !(self.filter)(&mut packet) {
                 self.remove.push(idx)
             }
         }
         if !self.remove.is_empty() {
-            self.parent
-                .drop_packets(&self.remove[..])
-                .expect("Filtering was performed incorrectly");
+            self.parent.drop_packets(&self.remove[..]).expect(
+                "Filtering was performed incorrectly",
+            );
         }
         self.remove.clear();
     }
@@ -99,8 +103,9 @@ impl<T, V> Act for FilterBatch<T, V>
 }
 
 impl<T, V> BatchIterator for FilterBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator<Header = T> + Act
+where
+    T: EndOffset,
+    V: Batch + BatchIterator<Header = T> + Act,
 {
     type Header = T;
     type Metadata = <V as BatchIterator>::Metadata;

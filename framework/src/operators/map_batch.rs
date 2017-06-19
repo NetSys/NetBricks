@@ -11,8 +11,9 @@ use std::marker::PhantomData;
 pub type MapFn<T, M> = Box<FnMut(&Packet<T, M>) + Send>;
 
 pub struct MapBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator<Header = T> + Act
+where
+    T: EndOffset,
+    V: Batch + BatchIterator<Header = T> + Act,
 {
     parent: V,
     transformer: MapFn<T, V::Metadata>,
@@ -21,8 +22,9 @@ pub struct MapBatch<T, V>
 }
 
 impl<T, V> MapBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator<Header = T> + Act
+where
+    T: EndOffset,
+    V: Batch + BatchIterator<Header = T> + Act,
 {
     pub fn new(parent: V, transformer: MapFn<T, V::Metadata>) -> MapBatch<T, V> {
         MapBatch {
@@ -35,14 +37,16 @@ impl<T, V> MapBatch<T, V>
 }
 
 impl<T, V> Batch for MapBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator<Header = T> + Act
+where
+    T: EndOffset,
+    V: Batch + BatchIterator<Header = T> + Act,
 {
 }
 
 impl<T, V> Act for MapBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator<Header = T> + Act
+where
+    T: EndOffset,
+    V: Batch + BatchIterator<Header = T> + Act,
 {
     #[inline]
     fn act(&mut self) {
@@ -96,8 +100,9 @@ impl<T, V> Act for MapBatch<T, V>
 }
 
 impl<T, V> BatchIterator for MapBatch<T, V>
-    where T: EndOffset,
-          V: Batch + BatchIterator<Header = T> + Act
+where
+    T: EndOffset,
+    V: Batch + BatchIterator<Header = T> + Act,
 {
     type Header = T;
     type Metadata = <V as BatchIterator>::Metadata;

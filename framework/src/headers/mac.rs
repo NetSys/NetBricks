@@ -13,14 +13,16 @@ pub struct MacAddress {
 
 impl fmt::Display for MacAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
-               "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-               self.addr[0],
-               self.addr[1],
-               self.addr[2],
-               self.addr[3],
-               self.addr[4],
-               self.addr[5])
+        write!(
+            f,
+            "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+            self.addr[0],
+            self.addr[1],
+            self.addr[2],
+            self.addr[3],
+            self.addr[4],
+            self.addr[5]
+        )
     }
 }
 
@@ -75,11 +77,13 @@ pub struct MacHeader {
 
 impl fmt::Display for MacHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
-               "{} > {} 0x{:04x}",
-               self.src,
-               self.dst,
-               u16::from_be(self.etype))
+        write!(
+            f,
+            "{} > {} 0x{:04x}",
+            self.src,
+            self.dst,
+            u16::from_be(self.etype)
+        )
     }
 }
 

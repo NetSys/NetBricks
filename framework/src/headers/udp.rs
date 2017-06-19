@@ -16,12 +16,14 @@ pub struct UdpHeader {
 
 impl fmt::Display for UdpHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,
-               "src_port: {} dst_port: {} len: {} checksum: {}",
-               self.src_port(),
-               self.dst_port(),
-               self.length(),
-               self.checksum())
+        write!(
+            f,
+            "src_port: {} dst_port: {} len: {} checksum: {}",
+            self.src_port(),
+            self.dst_port(),
+            self.length(),
+            self.checksum()
+        )
     }
 }
 

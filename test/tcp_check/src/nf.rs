@@ -20,16 +20,18 @@ pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Composition
             let flow = hdr.flow().unwrap();
             let payload = pkt.get_payload();
             println!("hdr {} ihl {} offset {}", hdr, hdr.ihl(), hdr.offset());
-            println!("payload: {:x} {:x} {:x} {:x}",
-                     payload[0],
-                     payload[1],
-                     payload[2],
-                     payload[3]);
+            println!(
+                "payload: {:x} {:x} {:x} {:x}",
+                payload[0],
+                payload[1],
+                payload[2],
+                payload[3]
+            );
             println!("Src {} dst {}", flow.src_port, flow.dst_port);
         })
         .parse::<UdpHeader>()
         .map(box |pkt| {
-                     println!("UDP header {}", pkt.get_header());
-                 })
+            println!("UDP header {}", pkt.get_header());
+        })
         .compose()
 }
