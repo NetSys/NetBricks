@@ -15,6 +15,10 @@ before_install:
     - ./build.sh deps
 services:
     - docker
+before_script:
+    - sudo sysctl -w vm.nr_hugepages=256
+    - sudo mkdir -p /mnt/huge
+    - sudo mount -t hugetlbfs nodev /mnt/huge
 script:
     - ./build.sh check_examples
     - ./build.sh fmt_travis 

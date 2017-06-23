@@ -1,0 +1,67 @@
+Starting scheduler on 1
+GET / HTTP/1.1
+Host: lemmykoopa.com
+User-Agent: curl/7.47.0
+Accept: */*
+
+
+HTTP/1.1 200 OK
+Date: Fri, 09 Jun 2017 16:40:07 GMT
+Content-Type: text/html
+Content-Length: 2719
+Connection: keep-alive
+Keep-Alive: timeout=30
+Server: Apache/2
+Last-Modified: Sat, 03 Jul 2010 20:22:32 GMT
+ETag: "a9f-48a8176991200"
+Cache-Control: max-age=3600
+Expires: Fri, 09 Jun 2017 17:39:34 GMT
+Accept-Ranges: bytes
+Age: 33
+
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Mozilla/4.5 [en] (WinNT; I) [Netscape]">
+   <title>Lemmy�s Land</title>
+</head>
+<body text="#FFFFFF" bgcolor="#000000" link="#3366FF" vlink="#000099" alink="#3366FF" </P>
+
+<center><embed SRC="snowboss.mid" AUTOSTART="TRUE" LOOP="TRUE" WIDTH="135"
+HEIGHT="35" <BR>
+<p><img SRC="welcome.jpg" NOSAVE height=235 width=360></center>
+
+<p><b><font face="Arial,Helvetica"><font color="#FFFFFF">Ha ha! I am Lemmy
+Koopa, and you have foolishly fallen right into my trap. But don't worry-
+there is nothing to fear in Lemmy's Land, unless the idea of 43 fun-filled
+sections fills you with terror. If you feel brave and want to have some
+fun, I dare you to click on me and advance into my trap. But if you feel
+the need to stick to some crazy schedule and don't want to have a good
+time, then run over to Mario and he will rescue you.</font></font></b>
+<center>
+<p><a href="lkmain.html"><img SRC="lemmy.jpg" ALT="Click on me to go into my Land! I dare ya!" NOSAVE BORDER=0 height=206 width=108></a>
+<p><a href="index-2.html"><img SRC="pianom.gif" ALT="Ha! Not even Mario can help you! There is no way out, so you may as well click on me." NOSAVE BORDER=0 height=139 width=124></a>
+<p><b><font face="Arial,Helvetica"><font color="#FFFFFF">Thank you for
+being the</font></font></b>
+<br><img SRC="nfcounter?id=23E3D1-0-77000&font=ma&num_digits=06" NOSAVE height=40 width=70>
+<br><b><font face="Arial,Helvetica"><font color="#FFFFFF">person to allow
+me to capture you. Enjoy!</font></font></b></center>
+<b><font face="Arial,Helvetica"><font color="#FFFFFF"></font></font></b>
+<p><b><font face="Arial"><font color="#FFFFFF">Disclaimer: "Super" Mario
+and all related characters are property of Nintendo and I didn't make them.
+Clawdia, Susan, Bagels, and Playful were introduced by me, other original
+characters are property of their respective authors. Most content on this
+site is the original work of creative fans and should not be taken as factual
+depictions of the official source material. All submissions have been accredited
+to their author(s); submissions without a credit belong to me. If you find
+something that has been stolen from another site, please
+<a href="mailto:lemmykoopa@lemmykoopa.com">Email
+me</a> so that I may remove it. Taking material from Lemmy's Land for anything
+other than personal use is prohibited except by permission of the author.
+Lemmy's Land is copyright unto to me, all rights and lefts are reserved.
+Straights are still available.</font></font></b>
+</body>
+</html>
+
+packet received for untracked flow did not have SYN flag, skipping.
