@@ -27,6 +27,9 @@ toml = "*"
 # Hack for SHM
 uuid= { version = "*", features=["v4"] }
 error-chain = "*"
+etcdv3-rs={ git="https://github.com/apanda/etcdv3-rs" }
+tokio-core=">=0.1.8"
+futures=">=0.1.14"
 
 [features]
 default = []
