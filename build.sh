@@ -415,12 +415,12 @@ case $TASK in
         REQUIRE_RUSTFMT=1
         deps
         pushd $BASE_DIR/framework
-        ${RUSTFMT} fmt || true
+        ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis || true
         popd
 
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
-            ${RUSTFMT} fmt || true
+            ${RUSTFMT} fmt -- --config-path ${BASE_DIR}/.travis || true
             popd
         done
         ;;
