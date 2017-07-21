@@ -3,12 +3,13 @@
 #![feature(log_syntax)]
 #![feature(box_syntax)]
 #![feature(specialization)]
-#![feature(associated_consts)]
 #![feature(slice_concat_ext)]
 #![feature(fnbox)]
 #![feature(alloc)]
 #![feature(heap_api)]
 #![feature(unique)]
+// Used for cache alignment.
+#![feature(allocator_api)]
 
 #![allow(unused_features)]
 #![feature(integer_atomics)]
