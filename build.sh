@@ -349,7 +349,7 @@ case $TASK in
              apanda/netbricks-build:latest /opt/netbricks/build.sh _build_container
         ;;
     update_container)
-        docker build -f ${BASE_DIR}/build-container/Dockerfile -t apanda/netbricks-build:latest \
+        docker build --no-cache -f ${BASE_DIR}/build-container/Dockerfile -t apanda/netbricks-build:latest \
             ${BASE_DIR}/build-container
         docker push apanda/netbricks-build:latest
         ;;
