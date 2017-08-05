@@ -43,7 +43,7 @@ impl<T: Sized> CacheAligned<T> {
         unsafe {
             let alloc = allocate_cache_line(size_of::<T>()) as *mut T;
             ptr::write(alloc, src);
-            CacheAligned { ptr: Unique::new(alloc) }
+            CacheAligned { ptr: Unique::new(alloc).unwrap() }
         }
     }
 }
@@ -56,7 +56,7 @@ where
         unsafe {
             let alloc = allocate_cache_line(size_of::<T>()) as *mut T;
             ptr::copy(self.ptr.as_ptr() as *const T, alloc, 1);
-            CacheAligned { ptr: Unique::new(alloc) }
+            CacheAligned { ptr: Unique::new(alloc).unwrap() }
         }
     }
 }
