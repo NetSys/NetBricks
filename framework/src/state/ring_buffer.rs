@@ -75,7 +75,7 @@ impl RingBuffer {
 
     /// Read data from offset of the buffer. Do not use if using `write_at_tail`/`read_from_head`
     #[inline]
-    pub fn read_from_offset(&mut self, offset: usize, mut data: &mut [u8]) -> usize {
+    pub fn read_from_offset(&mut self, offset: usize, data: &mut [u8]) -> usize {
         self.wrapped_read(offset, data)
     }
 
@@ -121,7 +121,7 @@ impl RingBuffer {
 
     /// Read from the buffer, incrementing the read head by `increment` bytes. Returns bytes read.
     #[inline]
-    pub fn read_from_head_with_increment(&mut self, mut data: &mut [u8], increment: usize) -> usize {
+    pub fn read_from_head_with_increment(&mut self, data: &mut [u8], increment: usize) -> usize {
         let offset = self.read_offset();
         let to_read = min(self.available(), data.len());
         self.head = self.head.wrapping_add(min(increment, to_read));
@@ -130,7 +130,7 @@ impl RingBuffer {
 
     /// Read from the buffer, incrementing the read head. Returns bytes read.
     #[inline]
-    pub fn read_from_head(&mut self, mut data: &mut [u8]) -> usize {
+    pub fn read_from_head(&mut self, data: &mut [u8]) -> usize {
         let len = data.len();
         self.read_from_head_with_increment(data, len)
     }

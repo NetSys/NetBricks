@@ -1,6 +1,7 @@
 #include <rte_config.h>
 #include <rte_eal.h>
 #include <rte_ethdev.h>
+#include <rte_pci.h>
 #include "mempool.h"
 
 #define HW_RXCSUM 0
@@ -120,7 +121,7 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[], 
     /* Need to accesss rte_eth_devices manually since DPDK currently
      * provides no other mechanism for checking whether something is
      * attached */
-    if (port >= RTE_MAX_ETHPORTS || !rte_eth_devices[port].attached) {
+    if (port >= RTE_MAX_ETHPORTS || rte_eth_devices[port].state != RTE_ETH_DEV_ATTACHED) {
         printf("Port not found %d\n", port);
         return -ENODEV;
     }
@@ -209,20 +210,16 @@ int find_port_with_pci_address(const char* pci) {
         return -1;
     }
 
-    for (int i = 0; i < RTE_MAX_ETHPORTS; i++) {
-        if (!rte_eth_devices[i].attached) {
-            continue;
-        }
+    int n_devices = rte_eth_dev_count();
+    for (int i = 0; i < n_devices; i++) {
+        struct rte_eth_dev_info dev_info;
+        rte_eth_dev_info_get(i, &dev_info);
 
-        if (!rte_eth_devices[i].pci_dev) {
-            continue;
+        if (dev_info.pci_dev) {
+            if (rte_eal_compare_pci_addr(&addr, &dev_info.pci_dev->addr)) {
+                return i;
+            }
         }
-
-        if (rte_eal_compare_pci_addr(&addr, &rte_eth_devices[i].pci_dev->addr)) {
-            continue;
-        }
-
-        return i;
     }
 
     /* If not found, maybe the device has not been attached yet */

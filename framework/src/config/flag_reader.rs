@@ -20,6 +20,7 @@ pub fn basic_opts() -> Options {
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
     opts.optopt("f", "configuration", "Configuration file", "path");
+    opts.optmulti("", "dpdk_args", "DPDK arguments", "DPDK arguments");
 
     opts
 }
@@ -33,6 +34,11 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
         process::exit(0)
     }
+
+    if matches.opt_present("dpdk_args") {
+        print!("dpdk_args: {}",  matches.opt_strs("dpdk_args").join(" "));
+        process::exit(0)
+    };
 
     let configuration = if matches.opt_present("f") {
         let config_file = matches.opt_str("f").unwrap();
