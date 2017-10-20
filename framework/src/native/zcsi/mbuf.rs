@@ -2,7 +2,6 @@
 pub struct MBuf {
     buf_addr: *mut u8,
     phys_addr: usize,
-    buf_len: u16,
     data_off: u16,
     refcnt: u16,
     nb_segs: u8,
@@ -13,14 +12,16 @@ pub struct MBuf {
     data_len: u16,
     vlan_tci: u16,
     hash: u64,
-    seqn: u32,
     vlan_tci_outer: u32,
+    buf_len: u16,
+    timestamp: u64,
     userdata: u64,
     pool: u64,
     next: *mut MBuf,
     tx_offload: u64,
     priv_size: u16,
     timesync: u16,
+    seqn: u32,
 }
 
 // FIXME: Remove this once we start using these functions correctly

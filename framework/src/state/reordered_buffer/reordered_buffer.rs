@@ -382,7 +382,7 @@ impl ReorderedBuffer {
 
     /// Read data from the buffer. The amount of data read is limited by the amount of in-order data available at the
     /// moment.
-    pub fn read_data(&mut self, mut data: &mut [u8]) -> usize {
+    pub fn read_data(&mut self, data: &mut [u8]) -> usize {
         match self.state {
             State::Connected => self.read_data_common(data),
             State::ConnectedOutOfOrder => {
@@ -531,7 +531,7 @@ impl ReorderedBuffer {
     }
 
     #[inline]
-    fn read_data_common(&mut self, mut data: &mut [u8]) -> usize {
+    fn read_data_common(&mut self, data: &mut [u8]) -> usize {
         let read = self.data.read_from_head(data);
         self.head_seq = self.head_seq.wrapping_add(read as u32);
         read

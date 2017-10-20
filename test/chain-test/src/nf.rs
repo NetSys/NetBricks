@@ -7,7 +7,7 @@ pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata
     parent
         .parse::<MacHeader>()
         .transform(box move |pkt| {
-            let mut hdr = pkt.get_mut_header();
+            let hdr = pkt.get_mut_header();
             hdr.swap_addresses();
         })
         .parse::<IpHeader>()
@@ -37,7 +37,7 @@ pub fn chain<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(
         chained
             .parse::<MacHeader>()
             .transform(box move |pkt| {
-                let mut hdr = pkt.get_mut_header();
+                let hdr = pkt.get_mut_header();
                 hdr.swap_addresses();
             })
             .compose()

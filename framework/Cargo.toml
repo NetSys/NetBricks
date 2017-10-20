@@ -1,6 +1,6 @@
 [package]
 name = "e2d2"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
 build = "build.rs"
 
@@ -37,3 +37,7 @@ performance = []
 dev = ["clippy"]
 packet_offset = []
 sctp = ["rust-sctp"]
+
+[build-dependencies]
+# Use Bindgen to generate DPDK structures.
+bindgen = ">=0.30.0"
