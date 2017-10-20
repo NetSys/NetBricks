@@ -71,7 +71,7 @@ impl fmt::Display for NetbricksConfiguration {
         for core in &self.cores {
             try!(write!(f, "\t{}\n", core))
         }
-        if let Some(ref arg) = self.dpdk_args {
+        if let Some(arg) = self.dpdk_args {
             write!(f, "DPDK Args: {}\n", arg)?
         };
         write!(f, "")
