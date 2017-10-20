@@ -29,6 +29,7 @@ fn parse_ld_archive(ar: &Path) -> Vec<String> {
     }
 }
 
+
 #[allow(dead_code)]
 fn write_external_link(libs: &Vec<String>) {
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -40,6 +41,7 @@ fn write_external_link(libs: &Vec<String>) {
         f.write_all(&overall.into_bytes()).unwrap();
     }
 }
+
 
 /// Cargo runs main in this file to get some additional settings (e.g., LD_LIBRARY_PATH). It reads the printed output
 /// looking for certain variables, see [here](http://doc.crates.io/build-script.html) for documentation.
@@ -86,7 +88,7 @@ fn main() {
         .expect("Unable to generate DPDK bindings");
     let out_dir = env::var("OUT_DIR").unwrap();
     let dpdk_bindings = Path::new(&out_dir).join("dpdk_bindings.rs");
-    bindings
-        .write_to_file(dpdk_bindings)
-        .expect("Could not write bindings");
+    bindings.write_to_file(dpdk_bindings).expect(
+        "Could not write bindings",
+    );
 }
