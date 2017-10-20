@@ -1,2 +1,2 @@
-pub mod libnuma;
-pub mod zcsi;
+pub(crate) mod libnuma;
+pub(crate) mod zcsi;

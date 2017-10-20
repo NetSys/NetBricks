@@ -1,5 +1,5 @@
 #[repr(C)]
-pub(crate) struct MBuf {
+pub struct MBuf {
     buf_addr: *mut u8,
     phys_addr: usize,
     data_off: u16,
@@ -12,7 +12,6 @@ pub(crate) struct MBuf {
     data_len: u16,
     vlan_tci: u16,
     hash: u64,
-    seqn: u32,
     vlan_tci_outer: u32,
     buf_len: u16,
     timestamp: u64,

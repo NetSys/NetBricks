@@ -9,7 +9,6 @@ use fnv::FnvHasher;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::hash::BuildHasherDefault;
-use std::str;
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
 const BUFFER_SIZE: usize = 2048;

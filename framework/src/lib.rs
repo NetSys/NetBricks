@@ -8,6 +8,7 @@
 #![feature(alloc)]
 #![feature(heap_api)]
 #![feature(unique)]
+#![feature(const_fn)]
 // Used for cache alignment.
 #![feature(allocator_api)]
 
@@ -47,6 +48,7 @@ extern crate error_chain;
 extern crate nix;
 #[allow(dead_code)]
 mod native;
+mod native_include;
 pub mod allocators;
 pub mod headers;
 pub mod scheduler;
