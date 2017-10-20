@@ -340,6 +340,7 @@ case $TASK in
         ;;
     _build_container)
         curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+        export DPDK_CONFIG_FILE="${EXT_BASE}/dpdk-confs/common_linuxapp-${DPDK_VER}.container"
         PATH="$HOME/.cargo/bin:$PATH" ${BASE_DIR}/build.sh build
         ;;
     build_container)
