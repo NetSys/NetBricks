@@ -9,7 +9,8 @@ RUN apt-get -yq update && apt-get -yq install build-essential \
 				python python3
 RUN apt-get -yq update && apt-get -yq install libssl-dev \
 					libgnutls30 libgnutls-openssl-dev \
-					libcurl4-gnutls-dev cmake bash libpcap-dev libnuma-dev
+					libcurl4-gnutls-dev cmake bash libpcap-dev libnuma-dev \
+					clang-5.0
 # Fix the date at which we take Rust
 RUN mkdir -p ~/.ssh && ssh-keyscan -t rsa github.com > ~/.ssh/known_hosts
 ENV RTE_SDK=/opt/netbricks/3rdparty/dpdk

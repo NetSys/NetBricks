@@ -26,6 +26,8 @@ pub struct NetbricksConfiguration {
     pub pool_size: u32,
     /// Size of the per-core mempool cache.
     pub cache_size: u32,
+    /// Custom DPDK arguments.
+    pub dpdk_args: Option<String>,
 }
 
 /// Create an empty `NetbricksConfiguration`, useful when initializing through arguments.
@@ -40,6 +42,7 @@ impl Default for NetbricksConfiguration {
             strict: false,
             secondary: false,
             ports: vec![],
+            dpdk_args: None,
         }
     }
 }
@@ -71,6 +74,9 @@ impl fmt::Display for NetbricksConfiguration {
         for core in &self.cores {
             try!(write!(f, "\t{}\n", core))
         }
+        if let Some(arg) = self.dpdk_args {
+            write!(f, "DPDK Args: {}\n", arg)?
+        };
         write!(f, "")
     }
 }
