@@ -296,6 +296,7 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
         pool_size: pool_size,
         cache_size: cache_size,
         ports: ports,
+        dpdk_args: None,
     })
 }
 
