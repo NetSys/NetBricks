@@ -396,7 +396,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     #[inline]
     pub fn parse_header<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2, M> {
         unsafe {
-            assert!{self.payload_size() >= T2::size()}
+            assert!{self.payload_size() > T2::size()}
             let hdr = self.payload() as *mut T2;
             let offset = self.offset() + self.payload_offset();
             create_packet(self.get_mbuf_ref(), hdr, offset)
@@ -406,7 +406,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     #[inline]
     pub fn parse_header_and_record<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2, M> {
         unsafe {
-            assert!{self.payload_size() >= T2::size()}
+            assert!{self.payload_size() > T2::size()}
             let hdr = self.payload() as *mut T2;
             let payload_offset = self.payload_offset();
             let offset = self.offset() + payload_offset;
