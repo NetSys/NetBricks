@@ -93,8 +93,8 @@ rust_static() {
 }
 
 rust () {
-    echo "Building rust"
     if [ ! -z ${RUST_STATIC} ]; then
+        echo "Building rust"
         rust_static
     fi
     if [ ! -d ${BIN_DIR} ]; then

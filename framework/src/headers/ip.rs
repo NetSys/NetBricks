@@ -8,8 +8,9 @@ use std::net::Ipv4Addr;
 use std::slice;
 use utils::Flow;
 
-/// IP header using SSE
-#[derive(Default)]
+/// IP header using SSE. We need copying since Debug needs to copy things out to ensure
+/// aligned accesses
+#[derive(Copy, Debug, Clone, Default)]
 #[repr(C, packed)]
 pub struct IpHeader {
     version_to_len: u32,

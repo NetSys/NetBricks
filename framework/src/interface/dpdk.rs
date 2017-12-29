@@ -1,28 +1,51 @@
 use super::METADATA_SLOTS;
-use config::{NetbricksConfiguration, DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE};
+use super::native_include as ldpdk;
+use config::{DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE, NetbricksConfiguration};
 use native::libnuma;
 use native::zcsi;
 use std::cell::Cell;
 use std::ffi::CString;
+use std::ptr;
+use std::iter;
 
 /// Initialize the system, whitelisting some set of NICs and allocating mempool of given size.
-fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_size: u32, cache_size: u32) {
+fn init_system_wl_with_mempool(name: &str, core: i32, devices: &[String], pool_size: u32, cache_size: u32) {
     let name_cstr = CString::new(name).unwrap();
-    let pci_cstr: Vec<_> = pci.iter().map(|p| CString::new(&p[..]).unwrap()).collect();
-    let mut whitelist: Vec<_> = pci_cstr.iter().map(|p| p.as_ptr()).collect();
+
+    //let pci_cstr: Vec<_> = pci.iter().map(|p| CString::new(&p[..]).unwrap()).collect();
+    //let mut whitelist: Vec<_> = pci_cstr.iter().map(|p| p.as_ptr()).collect();
+    let mut dpdk_args = vec![];
+    //let core_str = CString::new(format!("0x{:x}", 1u32 << core)).unwrap();
+    // FIXME: Maybe replace with placement syntax
+    // First we need to push in name.
     unsafe {
-        let ret = zcsi::init_system_whitelisted(
-            name_cstr.as_ptr(),
-            name.len() as i32,
-            core,
-            whitelist.as_mut_ptr(),
-            pci.len() as i32,
-            pool_size,
-            cache_size,
-            METADATA_SLOTS,
-        );
+        dpdk_args.push(name_cstr.into_raw());
+        dpdk_args.push(CString::new("--master-lcore").unwrap().into_raw());
+        // Using RTE_MAX_LCORE as core ID for master.
+        let master_lcore = ldpdk::RTE_MAX_LCORE - 1;
+        dpdk_args.push(CString::new(master_lcore.to_string()).unwrap().into_raw());
+        dpdk_args.push(CString::new(format!("{}@{}", master_lcore, core)).unwrap().into_raw());
+        dpdk_args.push(CString::new("--no-shconf").unwrap().into_raw());
+
+        // Fix this
+        let numa_nodes = 2;
+        let mem_vec : Vec<_> = iter::repeat(pool_size.to_string()).take(numa_nodes).collect();
+        let mem = mem_vec.join(",");
+        dpdk_args.push(CString::new("--socket-mem").unwrap().into_raw());
+        dpdk_args.push(CString::new(mem).unwrap().into_raw());
+        dpdk_args.push(CString::new("--huge-unlink").unwrap().into_raw());
+        // White list a fake card so everything is blacklisted by default.
+        dpdk_args.push(CString::new("-w").unwrap().into_raw());
+        dpdk_args.push(CString::new("99:99.0").unwrap().into_raw());
+        for dev in devices {
+            dpdk_args.push(CString::new("-w").unwrap().into_raw());
+            dpdk_args.push(CString::new(&dev[..]).unwrap().into_raw());
+        }
+        dpdk_args.push(ptr::null_mut());
+        let arg_len = dpdk_args.len() as i32;
+        let ret = ldpdk::rte_eal_init(arg_len, dpdk_args.as_mut_ptr());
         if ret != 0 {
-            panic!("Could not initialize the system errno {}", ret)
+            panic!("Could not initialize DPDK -- errno {}", -ret)
         }
     }
 }

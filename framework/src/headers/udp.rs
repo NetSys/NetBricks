@@ -4,7 +4,7 @@ use std::default::Default;
 use std::fmt;
 
 /// UDP header using SSE
-#[derive(Default)]
+#[derive(Debug, Copy, Clone, Default)]
 #[repr(C, packed)]
 pub struct UdpHeader {
     src_port: u16,

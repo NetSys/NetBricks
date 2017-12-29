@@ -3,7 +3,7 @@ use headers::IpHeader;
 use std::default::Default;
 use std::fmt;
 
-#[derive(Default)]
+#[derive(Debug, Copy, Clone, Default)]
 #[repr(C, packed)]
 pub struct TcpHeader {
     src_port: u16,
@@ -37,6 +37,7 @@ macro_rules! write_or_return {
     }
 }
 
+
 impl fmt::Display for TcpHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write_or_return!(
@@ -59,6 +60,7 @@ impl fmt::Display for TcpHeader {
             self.checksum(),
             self.urgent()
         )
+
     }
 }
 

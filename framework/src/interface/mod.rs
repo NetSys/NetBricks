@@ -5,6 +5,7 @@ mod port;
 mod packet;
 use common::*;
 use native::zcsi::MBuf;
+use super::native_include;
 
 /// Generic trait for objects that can receive packets.
 pub trait PacketRx: Send {

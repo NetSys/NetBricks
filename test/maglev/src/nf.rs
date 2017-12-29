@@ -12,7 +12,6 @@ type FnvHash = BuildHasherDefault<FnvHasher>;
 type XxHashFactory = BuildHasherDefault<XxHash>;
 
 struct Maglev {
-    // permutation: Box<Vec<Vec<usize>>>,
     lut: Box<Vec<usize>>,
     lut_size: usize,
 }
@@ -89,6 +88,7 @@ pub fn maglev<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
     let ct = backends.len();
     let lut = Maglev::new(backends, 65537);
     let mut cache = HashMap::<usize, usize, FnvHash>::with_hasher(Default::default());
+
     let mut groups = parent
         .parse::<MacHeader>()
         .transform(box move |pkt| {

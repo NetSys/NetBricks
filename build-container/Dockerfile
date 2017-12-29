@@ -14,5 +14,4 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
 ENV PATH /root/.cargo/bin:$PATH
 RUN rustup component add rustfmt-preview --toolchain=nightly
 RUN rustup update
-# RUN cargo install rustfmt-nightly || true
 CMD [/bin/bash]

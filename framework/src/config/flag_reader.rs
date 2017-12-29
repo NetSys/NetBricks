@@ -52,6 +52,15 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
         NetbricksConfiguration::new_with_name(&name[..])
     };
 
+    let configuration = if matches.opt_present("dpdk_args") {
+        NetbricksConfiguration {
+            dpdk_args: Some(matches.opt_strs("dpdk_args").join(" ")),
+            ..configuration
+        }
+    } else {
+        configuration
+    };
+
     let configuration = if matches.opt_present("m") {
         NetbricksConfiguration {
             primary_core: matches
