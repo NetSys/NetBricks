@@ -55,7 +55,9 @@ impl Default for PollScheduler {
 
 impl PollScheduler {
     pub fn new_poll_handle(&self) -> PollHandle {
-        PollHandle { epoll_fd: self.epoll_fd }
+        PollHandle {
+            epoll_fd: self.epoll_fd,
+        }
     }
 
     pub fn new() -> PollScheduler {

@@ -44,9 +44,8 @@ impl PacketBatch {
     #[inline]
     pub fn allocate_batch_with_size(&mut self, len: u16) -> Result<&mut Self> {
         let capacity = self.array.capacity() as i32;
-        self.alloc_packet_batch(len, capacity).and_then(
-            |_| Ok(self),
-        )
+        self.alloc_packet_batch(len, capacity)
+            .and_then(|_| Ok(self))
     }
 
     /// Allocate `cnt` mbufs. `len` sets the metadata field indicating how much of the mbuf should be considred when
@@ -147,7 +146,11 @@ impl PacketBatch {
                     let array_ptr = self.scratch.as_mut_ptr();
                     let ret = mbuf_free_bulk(array_ptr, (len as i32));
                     self.scratch.clear();
-                    if ret == 0 { Some(len) } else { None }
+                    if ret == 0 {
+                        Some(len)
+                    } else {
+                        None
+                    }
                 }
             }
         }
@@ -209,7 +212,11 @@ impl PacketBatch {
                 };
                 // If free fails, I am not sure we can do much to recover this batch.
                 self.array.set_len(0);
-                if ret == 0 { Ok(()) } else { Err(()) }
+                if ret == 0 {
+                    Ok(())
+                } else {
+                    Err(())
+                }
             }
         }
     }

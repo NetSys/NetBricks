@@ -19,7 +19,7 @@ impl<T> Drop for SharedMemory<T> {
         unsafe {
             let size = self.size;
             let _ret = munmap(self.mem as *mut c_void, size); // Unmap pages.
-            // Record munmap failure.
+                                                              // Record munmap failure.
             let shm_ret = shm_unlink(self.name.as_ptr());
             assert!(shm_ret == 0, "Could not unlink shared memory region");
         }

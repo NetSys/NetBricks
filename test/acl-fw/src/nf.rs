@@ -20,10 +20,10 @@ pub struct Acl {
 
 impl Acl {
     pub fn matches(&self, flow: &Flow, connections: &HashSet<Flow, FnvHash>) -> bool {
-        if (self.src_ip.is_none() || self.src_ip.unwrap().in_range(flow.src_ip)) &&
-            (self.dst_ip.is_none() || self.dst_ip.unwrap().in_range(flow.dst_ip)) &&
-            (self.src_port.is_none() || flow.src_port == self.src_port.unwrap()) &&
-            (self.dst_port.is_none() || flow.dst_port == self.dst_port.unwrap())
+        if (self.src_ip.is_none() || self.src_ip.unwrap().in_range(flow.src_ip))
+            && (self.dst_ip.is_none() || self.dst_ip.unwrap().in_range(flow.dst_ip))
+            && (self.src_port.is_none() || flow.src_port == self.src_port.unwrap())
+            && (self.dst_port.is_none() || flow.dst_port == self.dst_port.unwrap())
         {
             if let Some(established) = self.established {
                 let rev_flow = flow.reverse_flow();
@@ -41,7 +41,9 @@ pub fn acl_match<T: 'static + Batch<Header = NullHeader>>(parent: T, acls: Vec<A
     let mut flow_cache = HashSet::<Flow, FnvHash>::with_hasher(Default::default());
     parent
         .parse::<MacHeader>()
-        .transform(box move |p| { p.get_mut_header().swap_addresses(); })
+        .transform(box move |p| {
+            p.get_mut_header().swap_addresses();
+        })
         .parse::<IpHeader>()
         .filter(box move |p| {
             let flow = p.get_header().flow().unwrap();

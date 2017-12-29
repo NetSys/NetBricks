@@ -2,9 +2,9 @@
 #![feature(asm)]
 extern crate e2d2;
 extern crate fnv;
-extern crate time;
 extern crate getopts;
 extern crate rand;
+extern crate time;
 use self::nf::*;
 use e2d2::config::{basic_opts, read_matches};
 use e2d2::interface::*;
@@ -29,9 +29,7 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| {
-            delay(ReceiveBatch::new(port.clone()), delay_arg).send(port.clone())
-        })
+        .map(|port| delay(ReceiveBatch::new(port.clone()), delay_arg).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
@@ -59,9 +57,9 @@ fn main() {
     match initialize_system(&configuration) {
         Ok(mut context) => {
             context.start_schedulers();
-            context.add_pipeline_to_run(Arc::new(
-                move |p, s: &mut StandaloneScheduler| test(p, s, delay_arg),
-            ));
+            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| {
+                test(p, s, delay_arg)
+            }));
             context.execute();
 
             let mut pkts_so_far = (0, 0);

@@ -37,7 +37,6 @@ macro_rules! write_or_return {
     }
 }
 
-
 impl fmt::Display for TcpHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write_or_return!(
@@ -60,7 +59,6 @@ impl fmt::Display for TcpHeader {
             self.checksum(),
             self.urgent()
         )
-
     }
 }
 

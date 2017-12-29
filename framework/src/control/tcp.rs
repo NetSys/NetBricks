@@ -1,9 +1,8 @@
-use super::{Available, HUP, IOScheduler, PollHandle, PollScheduler, READ, Token, WRITE};
+use super::{Available, IOScheduler, PollHandle, PollScheduler, Token, HUP, READ, WRITE};
 use fnv::FnvHasher;
 /// TCP connection.
 use net2::TcpBuilder;
 use scheduler::Executable;
-
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 use std::marker::PhantomData;
@@ -104,10 +103,8 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
         } else {
             // FIXME: Report something.
         }
-        self.handle.schedule_read(
-            &self.listener,
-            self.listener_token,
-        );
+        self.handle
+            .schedule_read(&self.listener, self.listener_token);
     }
 
     fn handle_data(&mut self, token: Token, available: Available) {

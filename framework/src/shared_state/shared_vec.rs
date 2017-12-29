@@ -1,4 +1,4 @@
-use super::{SharedMemory, open_shared};
+use super::{open_shared, SharedMemory};
 use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};
 use std::ops::{Index, IndexMut, Range, RangeFrom, RangeTo};

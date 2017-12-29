@@ -90,7 +90,6 @@ impl Flow {
     }
 }
 
-
 /// Given the MAC payload, generate a flow hash. The flow hash generated depends on the IV, so different IVs will
 /// produce different results (in cases when implementing Cuckoo hashing, etc.).
 #[inline]

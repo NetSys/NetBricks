@@ -22,10 +22,7 @@ pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Composition
             println!("hdr {} ihl {} offset {}", hdr, hdr.ihl(), hdr.offset());
             println!(
                 "payload: {:x} {:x} {:x} {:x}",
-                payload[0],
-                payload[1],
-                payload[2],
-                payload[3]
+                payload[0], payload[1], payload[2], payload[3]
             );
             println!("Src {} dst {}", flow.src_port, flow.dst_port);
         })

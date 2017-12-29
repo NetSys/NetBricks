@@ -53,8 +53,8 @@ where
     type Header = T;
     type Metadata = V::Metadata;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T, V::Metadata>> {
-        self.parent.next_payload(idx).map(|p| {
-            PacketDescriptor { packet: p.packet.parse_header() }
+        self.parent.next_payload(idx).map(|p| PacketDescriptor {
+            packet: p.packet.parse_header(),
         })
     }
 

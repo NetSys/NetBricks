@@ -1,8 +1,8 @@
-use super::{Scheduler, Executable};
+use super::{Executable, Scheduler};
 use common::*;
 use std::default::Default;
 use std::sync::Arc;
-use std::sync::mpsc::{SyncSender, Receiver, sync_channel, RecvError};
+use std::sync::mpsc::{sync_channel, Receiver, RecvError, SyncSender};
 use std::thread;
 use utils;
 
@@ -114,8 +114,7 @@ impl StandaloneScheduler {
             } else {
                 self.sched_channel.recv()
             }
-        }
-        {
+        } {
             self.handle_request(cmd)
         }
         println!(

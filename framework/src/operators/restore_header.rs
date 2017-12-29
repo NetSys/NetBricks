@@ -60,8 +60,8 @@ where
     type Header = T;
     type Metadata = M;
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T, M>> {
-        self.parent.next_payload(idx).map(|p| {
-            PacketDescriptor { packet: p.packet.restore_saved_header().unwrap() }
+        self.parent.next_payload(idx).map(|p| PacketDescriptor {
+            packet: p.packet.restore_saved_header().unwrap(),
         })
     }
 

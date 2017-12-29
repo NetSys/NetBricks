@@ -1,10 +1,8 @@
 use fnv::FnvHasher;
-
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use std::hash::BuildHasherDefault;
 use std::ops::AddAssign;
-
 use utils::Flow;
 
 /// A generic store for associating some merge-able type with each flow. Note, the merge must be commutative, we do not

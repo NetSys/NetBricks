@@ -1,9 +1,9 @@
 #![feature(box_syntax)]
 extern crate e2d2;
 extern crate fnv;
-extern crate time;
 extern crate getopts;
 extern crate rand;
+extern crate time;
 use self::nf::*;
 use e2d2::config::*;
 use e2d2::interface::*;

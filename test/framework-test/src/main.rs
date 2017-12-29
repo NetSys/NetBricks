@@ -1,8 +1,8 @@
 #![feature(box_syntax)]
 extern crate e2d2;
-extern crate time;
 extern crate getopts;
 extern crate rand;
+extern crate time;
 use e2d2::allocators::*;
 use e2d2::common::*;
 use e2d2::headers::*;
@@ -92,19 +92,19 @@ fn main() {
     let cores: Vec<i32> = cores_str
         .iter()
         .map(|n: &String| {
-            n.parse().ok().expect(
-                &format!("Core cannot be parsed {}", n),
-            )
+            n.parse()
+                .ok()
+                .expect(&format!("Core cannot be parsed {}", n))
         })
         .collect();
-
 
     fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
         let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
         for (port, core) in ports.iter().zip(cores.iter()) {
-            cores_for_port.entry(port.clone()).or_insert(vec![]).push(
-                *core,
-            )
+            cores_for_port
+                .entry(port.clone())
+                .or_insert(vec![])
+                .push(*core)
         }
         cores_for_port
     }
@@ -126,13 +126,14 @@ fn main() {
     for port in &ports_to_activate {
         let cores = cores_for_port.get(*port).unwrap();
         let queues = cores.len() as i32;
-        let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
-            .expect("Could not initialize port");
+        let pmd_port =
+            PmdPort::new_with_queues(*port, queues, queues, cores, cores).expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
-            queues_by_core.entry(*core).or_insert(vec![]).push(
-                PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap(),
-            );
+            queues_by_core
+                .entry(*core)
+                .or_insert(vec![])
+                .push(PmdPort::new_queue_pair(&pmd_port, queue, queue).unwrap());
         }
         ports.push(pmd_port);
     }

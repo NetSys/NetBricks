@@ -45,7 +45,9 @@ impl Scheduler for EmbeddedScheduler {
 impl EmbeddedScheduler {
     /// Create a new Bess scheduler.
     pub fn new() -> EmbeddedScheduler {
-        EmbeddedScheduler { tasks: Vec::with_capacity(DEFAULT_TASKQ_SIZE) }
+        EmbeddedScheduler {
+            tasks: Vec::with_capacity(DEFAULT_TASKQ_SIZE),
+        }
     }
 
     /// Run specified task.

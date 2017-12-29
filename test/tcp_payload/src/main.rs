@@ -2,9 +2,9 @@
 #![feature(asm)]
 extern crate e2d2;
 extern crate fnv;
-extern crate time;
 extern crate getopts;
 extern crate rand;
+extern crate time;
 use self::nf::*;
 use e2d2::allocators::CacheAligned;
 use e2d2::config::*;
@@ -20,9 +20,7 @@ mod nf;
 fn test<S: Scheduler + Sized>(ports: Vec<CacheAligned<PortQueue>>, sched: &mut S) {
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| {
-            reconstruction(ReceiveBatch::new(port.clone()), sched).send(port.clone())
-        })
+        .map(|port| reconstruction(ReceiveBatch::new(port.clone()), sched).send(port.clone()))
         .collect();
     for pipeline in pipelines {
         sched.add_task(pipeline).unwrap();

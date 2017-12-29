@@ -1,8 +1,8 @@
 use super::PortStats;
-use super::super::{PacketTx, PacketRx};
+use super::super::{PacketRx, PacketTx};
 use allocators::*;
 use common::*;
-use config::{NUM_RXD, NUM_TXD, PortConfiguration};
+use config::{PortConfiguration, NUM_RXD, NUM_TXD};
 use headers::MacAddress;
 use native::zcsi::*;
 use regex::Regex;
@@ -191,7 +191,6 @@ impl PmdPort {
         tso: bool,
         csumoffload: bool,
     ) -> Result<Arc<PmdPort>> {
-
         let loopbackv = i32_from_bool(loopback);
         let tsov = i32_from_bool(tso);
         let csumoffloadv = i32_from_bool(csumoffload);
@@ -365,35 +364,31 @@ impl PmdPort {
         match parts[0] {
             "bess" => PmdPort::new_bess_port(parts[1], rx_cores[0]),
             "ovs" => PmdPort::new_ovs_port(parts[1], rx_cores[0]),
-            "dpdk" => {
-                PmdPort::new_dpdk_port(
-                    parts[1],
-                    rxqs,
-                    txqs,
-                    rx_cores,
-                    tx_cores,
-                    nrxd,
-                    ntxd,
-                    loopback,
-                    tso,
-                    csumoffload,
-                )
-            }
+            "dpdk" => PmdPort::new_dpdk_port(
+                parts[1],
+                rxqs,
+                txqs,
+                rx_cores,
+                tx_cores,
+                nrxd,
+                ntxd,
+                loopback,
+                tso,
+                csumoffload,
+            ),
             "null" => PmdPort::null_port(),
-            _ => {
-                PmdPort::new_dpdk_port(
-                    name,
-                    rxqs,
-                    txqs,
-                    rx_cores,
-                    tx_cores,
-                    nrxd,
-                    ntxd,
-                    loopback,
-                    tso,
-                    csumoffload,
-                )
-            }
+            _ => PmdPort::new_dpdk_port(
+                name,
+                rxqs,
+                txqs,
+                rx_cores,
+                tx_cores,
+                nrxd,
+                ntxd,
+                loopback,
+                tso,
+                csumoffload,
+            ),
         }
     }
 
@@ -422,7 +417,6 @@ impl PmdPort {
         let rx_vec = vec![rx_core];
         let tx_vec = vec![tx_core];
         PmdPort::new_with_queues(name, 1, 1, &rx_vec[..], &tx_vec[..])
-
     }
 
     pub fn new(name: &str, core: i32) -> Result<Arc<PmdPort>> {

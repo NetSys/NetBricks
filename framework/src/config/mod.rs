@@ -62,10 +62,7 @@ impl fmt::Display for NetbricksConfiguration {
         try!(write!(
             f,
             "Configuration: name: {} mempool size: {} core cache: {} primary core: {}\n Ports:\n",
-            self.name,
-            self.pool_size,
-            self.cache_size,
-            self.primary_core
+            self.name, self.pool_size, self.cache_size, self.primary_core
         ));
         for port in &self.ports {
             try!(write!(f, "\t{}\n", port))

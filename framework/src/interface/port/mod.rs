@@ -15,7 +15,9 @@ struct PortStats {
 
 impl PortStats {
     pub fn new() -> CacheAligned<PortStats> {
-        CacheAligned::allocate(PortStats { stats: AtomicUsize::new(0) })
+        CacheAligned::allocate(PortStats {
+            stats: AtomicUsize::new(0),
+        })
     }
 }
 

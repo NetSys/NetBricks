@@ -50,18 +50,18 @@ where
         // Filter during the act
         let iter = PayloadEnumerator::<T, V::Metadata>::new(&mut self.parent);
         while let Some(ParsedDescriptor {
-                           mut packet,
-                           index: idx,
-                       }) = iter.next(&mut self.parent)
+            mut packet,
+            index: idx,
+        }) = iter.next(&mut self.parent)
         {
             if !(self.filter)(&mut packet) {
                 self.remove.push(idx)
             }
         }
         if !self.remove.is_empty() {
-            self.parent.drop_packets(&self.remove[..]).expect(
-                "Filtering was performed incorrectly",
-            );
+            self.parent
+                .drop_packets(&self.remove[..])
+                .expect("Filtering was performed incorrectly");
         }
         self.remove.clear();
     }

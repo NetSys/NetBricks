@@ -1,4 +1,4 @@
-use alloc::heap::{Heap, Alloc, Layout};
+use alloc::heap::{Alloc, Heap, Layout};
 use std::fmt;
 use std::mem::size_of;
 use std::ops::{Deref, DerefMut};
@@ -43,7 +43,9 @@ impl<T: Sized> CacheAligned<T> {
         unsafe {
             let alloc = allocate_cache_line(size_of::<T>()) as *mut T;
             ptr::write(alloc, src);
-            CacheAligned { ptr: Unique::new(alloc).unwrap() }
+            CacheAligned {
+                ptr: Unique::new(alloc).unwrap(),
+            }
         }
     }
 }
@@ -56,7 +58,9 @@ where
         unsafe {
             let alloc = allocate_cache_line(size_of::<T>()) as *mut T;
             ptr::copy(self.ptr.as_ptr() as *const T, alloc, 1);
-            CacheAligned { ptr: Unique::new(alloc).unwrap() }
+            CacheAligned {
+                ptr: Unique::new(alloc).unwrap(),
+            }
         }
     }
 }

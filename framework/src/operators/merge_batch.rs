@@ -63,10 +63,9 @@ impl<T: Batch> Act for MergeBatch<T> {
 
     #[inline]
     fn capacity(&self) -> i32 {
-        self.parents.iter().fold(
-            0,
-            |acc, x| cmp::max(acc, x.capacity()),
-        )
+        self.parents
+            .iter()
+            .fold(0, |acc, x| cmp::max(acc, x.capacity()))
     }
 
     #[inline]

@@ -1,15 +1,13 @@
-use super::{Available, HUP, IOScheduler, PollHandle, PollScheduler, READ, Token, WRITE};
+use super::{Available, IOScheduler, PollHandle, PollScheduler, Token, HUP, READ, WRITE};
 use fnv::FnvHasher;
 use scheduler::Executable;
 /// SCTP Connections.
 use sctp::*;
-
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 use std::marker::PhantomData;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::os::unix::io::AsRawFd;
-
 
 pub trait SctpControlAgent {
     fn new(address: SocketAddr, stream: SctpStream, scheduler: IOScheduler) -> Self;
@@ -62,10 +60,8 @@ impl<T: SctpControlAgent> SctpControlServer<T> {
     }
 
     fn listen(&mut self) {
-        self.handle.schedule_read(
-            &self.listener,
-            self.listener_token,
-        );
+        self.handle
+            .schedule_read(&self.listener, self.listener_token);
     }
 
     pub fn schedule(&mut self) {

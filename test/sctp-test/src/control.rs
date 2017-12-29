@@ -42,8 +42,7 @@ impl SctpControlAgent for ControlListener {
                     false
                 }
             }
-        }
-        {}
+        } {}
         if schedule {
             self.scheduler.schedule_read();
         };

@@ -1,9 +1,9 @@
 #![feature(box_syntax)]
 extern crate e2d2;
 extern crate fnv;
-extern crate time;
 extern crate getopts;
 extern crate rand;
+extern crate time;
 use self::nf::*;
 use e2d2::config::{basic_opts, read_matches};
 use e2d2::interface::*;
@@ -28,17 +28,13 @@ where
     for port in &ports {
         println!(
             "Receiving port {} on chain len {} pos {}",
-            port,
-            chain_len,
-            chain_pos
+            port, chain_len, chain_pos
         );
     }
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| {
-            chain(ReceiveBatch::new(port.clone()), chain_len, chain_pos).send(port.clone())
-        })
+        .map(|port| chain(ReceiveBatch::new(port.clone()), chain_len, chain_pos).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {

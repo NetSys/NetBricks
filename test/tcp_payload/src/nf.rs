@@ -34,7 +34,9 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Si
 
     let mut groups = parent
         .parse::<MacHeader>()
-        .transform(box move |p| { p.get_mut_header().swap_addresses(); })
+        .transform(box move |p| {
+            p.get_mut_header().swap_addresses();
+        })
         .parse::<IpHeader>()
         .group_by(
             2,

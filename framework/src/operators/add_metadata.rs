@@ -57,8 +57,8 @@ where
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<V::Header, M>> {
-        self.parent.next_payload(idx).map(|p| {
-            PacketDescriptor { packet: p.packet.reinterpret_metadata() }
+        self.parent.next_payload(idx).map(|p| PacketDescriptor {
+            packet: p.packet.reinterpret_metadata(),
         })
     }
 }

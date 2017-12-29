@@ -36,12 +36,8 @@ impl Maglev {
         let xx_hasher: XxHashFactory = Default::default();
         backends
             .iter()
-            .map(|n| {
-                Maglev::offset_skip_for_name(n, &fnv_hasher, &xx_hasher, lsize)
-            })
-            .map(|(offset, skip)| {
-                (0..lsize).map(|j| (offset + j * skip) % lsize).collect()
-            })
+            .map(|n| Maglev::offset_skip_for_name(n, &fnv_hasher, &xx_hasher, lsize))
+            .map(|(offset, skip)| (0..lsize).map(|j| (offset + j * skip) % lsize).collect())
             .collect()
     }
 

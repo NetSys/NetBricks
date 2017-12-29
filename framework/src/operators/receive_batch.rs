@@ -27,7 +27,6 @@ impl<T: PacketRx> ReceiveBatch<T> {
             queue: queue,
             received: 0,
         }
-
     }
 }
 

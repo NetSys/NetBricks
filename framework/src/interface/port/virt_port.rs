@@ -1,5 +1,5 @@
 use super::PortStats;
-use super::super::{PacketTx, PacketRx};
+use super::super::{PacketRx, PacketTx};
 use allocators::*;
 use common::*;
 use native::zcsi::*;

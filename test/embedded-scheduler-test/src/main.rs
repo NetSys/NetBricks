@@ -2,8 +2,8 @@
 #![feature(asm)]
 extern crate e2d2;
 extern crate fnv;
-extern crate time;
 extern crate rand;
+extern crate time;
 use e2d2::scheduler::*;
 
 fn test_func(id: &str) {

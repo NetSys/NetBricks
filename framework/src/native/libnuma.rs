@@ -104,9 +104,8 @@ impl Eq for Bitmask {}
 impl Bitmask {
     pub unsafe fn allocate_node_mask() -> Bitmask {
         Bitmask {
-            bitmask: wrapped::numa_bitmask_clearall(wrapped::numa_bitmask_alloc(
-                numa_num_possible_nodes() as u32,
-            )),
+            bitmask: wrapped::numa_bitmask_clearall(wrapped::numa_bitmask_alloc(numa_num_possible_nodes()
+                as u32)),
         }
     }
 
@@ -133,19 +132,27 @@ impl Bitmask {
     }
 
     pub fn get_mems_allowed() -> Bitmask {
-        Bitmask { bitmask: unsafe { wrapped::numa_get_mems_allowed() } }
+        Bitmask {
+            bitmask: unsafe { wrapped::numa_get_mems_allowed() },
+        }
     }
 
     pub fn get_interleaved_mask() -> Bitmask {
-        Bitmask { bitmask: unsafe { wrapped::numa_get_interleave_mask() } }
+        Bitmask {
+            bitmask: unsafe { wrapped::numa_get_interleave_mask() },
+        }
     }
 
     pub fn get_membind() -> Bitmask {
-        Bitmask { bitmask: unsafe { wrapped::numa_get_membind() } }
+        Bitmask {
+            bitmask: unsafe { wrapped::numa_get_membind() },
+        }
     }
 
     pub fn get_run_node_mask() -> Bitmask {
-        Bitmask { bitmask: unsafe { wrapped::numa_get_run_node_mask() } }
+        Bitmask {
+            bitmask: unsafe { wrapped::numa_get_run_node_mask() },
+        }
     }
 
     /// Set bit in bitmask.

@@ -20,7 +20,9 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Si
     let mut read_buf: Vec<u8> = (0..PRINT_SIZE).map(|_| 0).collect();
     let mut groups = parent
         .parse::<MacHeader>()
-        .transform(box move |p| { p.get_mut_header().swap_addresses(); })
+        .transform(box move |p| {
+            p.get_mut_header().swap_addresses();
+        })
         .parse::<IpHeader>()
         .group_by(
             2,
@@ -69,30 +71,28 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Si
                             e.remove_entry();
                         }
                     }
-                    Entry::Vacant(e) => {
-                        match ReorderedBuffer::new(BUFFER_SIZE) {
-                            Ok(mut b) => {
-                                if !p.get_header().syn_flag() {}
-                                let result = b.seq(seq, p.get_payload());
-                                match result {
-                                    InsertionResult::Inserted { available, .. } => {
-                                        if available > PRINT_SIZE {
-                                            let mut read = 0;
-                                            while available - read > PRINT_SIZE {
-                                                let avail = b.read_data(&mut read_buf[..]);
-                                                read += avail;
-                                            }
+                    Entry::Vacant(e) => match ReorderedBuffer::new(BUFFER_SIZE) {
+                        Ok(mut b) => {
+                            if !p.get_header().syn_flag() {}
+                            let result = b.seq(seq, p.get_payload());
+                            match result {
+                                InsertionResult::Inserted { available, .. } => {
+                                    if available > PRINT_SIZE {
+                                        let mut read = 0;
+                                        while available - read > PRINT_SIZE {
+                                            let avail = b.read_data(&mut read_buf[..]);
+                                            read += avail;
                                         }
                                     }
-                                    InsertionResult::OutOfMemory { .. } => {
-                                        println!("Too big a packet?");
-                                    }
                                 }
-                                e.insert(b);
+                                InsertionResult::OutOfMemory { .. } => {
+                                    println!("Too big a packet?");
+                                }
                             }
-                            Err(_) => (),
+                            e.insert(b);
                         }
-                    }
+                        Err(_) => (),
+                    },
                 }
             }
         })
