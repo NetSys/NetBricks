@@ -110,7 +110,6 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader, EmptyMetadata>> 
     }
 }
 
-
 impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     // --------------------- Not using packet offsets ------------------------------------------------------
     #[inline]
@@ -124,7 +123,6 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     fn header_u8(&self) -> *mut u8 {
         self.header as *mut u8
     }
-
 
     #[inline]
     #[cfg(not(feature = "packet_offset"))]
@@ -144,7 +142,6 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     fn header_u8(&self) -> *mut u8 {
         MBuf::read_metadata_slot(self.mbuf, HEADER_SLOT) as *mut u8
     }
-
 
     #[inline]
     #[cfg(feature = "packet_offset")]
@@ -309,9 +306,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
             let size = header.offset();
             let added = (*self.mbuf).add_data_end(size);
 
-            let header = self.payload();
-
-            let hdr = header as *mut T2;
+            let hdr = header as *const T2;
             let offset = self.offset() + self.payload_offset();
             if added >= size {
                 let dst = if len != offset {
@@ -325,7 +320,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                     self.payload() as *mut T2
                 };
                 ptr::copy_nonoverlapping(hdr, dst, 1);
-                Some(create_packet(self.get_mbuf_ref(), hdr, offset))
+                Some(create_packet(self.get_mbuf_ref(), dst, offset))
             } else {
                 None
             }
@@ -396,7 +391,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     #[inline]
     pub fn parse_header<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2, M> {
         unsafe {
-            assert!{self.payload_size() >= T2::size()}
+            assert!{self.payload_size() > T2::size()}
             let hdr = self.payload() as *mut T2;
             let offset = self.offset() + self.payload_offset();
             create_packet(self.get_mbuf_ref(), hdr, offset)
@@ -406,7 +401,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     #[inline]
     pub fn parse_header_and_record<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2, M> {
         unsafe {
-            assert!{self.payload_size() >= T2::size()}
+            assert!{self.payload_size() > T2::size()}
             let hdr = self.payload() as *mut T2;
             let payload_offset = self.payload_offset();
             let offset = self.offset() + payload_offset;
@@ -450,7 +445,6 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     pub fn deparse_header_stack(mut self) -> Option<Packet<T::PreviousHeader, M>> {
         self.pop_offset().map(|offset| self.deparse_header(offset))
     }
-
 
     #[inline]
     pub fn reset(mut self) -> Packet<NullHeader, EmptyMetadata> {
