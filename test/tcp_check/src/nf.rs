@@ -24,7 +24,8 @@ pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Composition
                 "payload: {:x} {:x} {:x} {:x}",
                 payload[0], payload[1], payload[2], payload[3]
             );
-            println!("Src {} dst {}", flow.src_port, flow.dst_port);
+            let (src, dst) = (flow.src_port, flow.dst_port);
+            println!("Src {} dst {}", src, dst);
         })
         .parse::<UdpHeader>()
         .map(box |pkt| {

@@ -93,7 +93,7 @@ pub fn maglev<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
         .parse::<MacHeader>()
         .transform(box move |pkt| {
             assert!(pkt.refcnt() == 1);
-            let mut hdr = pkt.get_mut_header();
+            let hdr = pkt.get_mut_header();
             hdr.swap_addresses();
         })
         .group_by(

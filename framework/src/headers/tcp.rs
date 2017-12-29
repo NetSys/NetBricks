@@ -3,7 +3,7 @@ use headers::IpHeader;
 use std::default::Default;
 use std::fmt;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 #[repr(C, packed)]
 pub struct TcpHeader {
     src_port: u16,

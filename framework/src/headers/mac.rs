@@ -5,7 +5,7 @@ use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 #[repr(C, packed)]
 pub struct MacAddress {
     pub addr: [u8; 6],
@@ -66,7 +66,7 @@ impl Hash for MacAddress {
 }
 
 /// A packet's MAC header.
-#[derive(Debug, Default)]
+#[derive(Default)]
 #[repr(C, packed)]
 pub struct MacHeader {
     pub dst: MacAddress,
