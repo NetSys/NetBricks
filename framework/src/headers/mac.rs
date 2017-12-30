@@ -16,23 +16,22 @@ impl fmt::Display for MacAddress {
         write!(
             f,
             "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-            self.addr[0],
-            self.addr[1],
-            self.addr[2],
-            self.addr[3],
-            self.addr[4],
-            self.addr[5]
+            self.addr[0], self.addr[1], self.addr[2], self.addr[3], self.addr[4], self.addr[5]
         )
     }
 }
 
 impl MacAddress {
     pub fn new(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8) -> MacAddress {
-        MacAddress { addr: [a, b, c, d, e, f] }
+        MacAddress {
+            addr: [a, b, c, d, e, f],
+        }
     }
 
     pub fn new_from_slice(slice: &[u8]) -> MacAddress {
-        MacAddress { addr: [slice[0], slice[1], slice[2], slice[3], slice[4], slice[5]] }
+        MacAddress {
+            addr: [slice[0], slice[1], slice[2], slice[3], slice[4], slice[5]],
+        }
     }
 
     #[inline]

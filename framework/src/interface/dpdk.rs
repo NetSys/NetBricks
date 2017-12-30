@@ -1,12 +1,13 @@
 use super::METADATA_SLOTS;
 use super::native_include as ldpdk;
 use config::{NetbricksConfiguration, DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE};
+use libc;
 use native::libnuma;
-use native::zcsi;
 use std::cell::Cell;
 use std::cmp;
 use std::ffi::CString;
 use std::iter;
+use std::mem;
 use std::ptr;
 
 unsafe fn init_socket_mempool(
@@ -121,7 +122,17 @@ fn set_lcore_id(lcore: i32) {
 
 /// Affinitize a pthread to a core and assign a DPDK thread ID.
 pub fn init_thread(tid: i32, core: i32) {
-    unsafe { zcsi::init_thread(tid, core) };
+    //unsafe { zcsi::init_thread(tid, core) };
+    unsafe {
+        let mut cset: libc::cpu_set_t = mem::uninitialized();
+        libc::CPU_ZERO(&mut cset);
+        libc::CPU_SET(core as usize, &mut cset);
+        {
+            let mut cset_dpdk = mem::transmute(cset);
+            let cset = &mut cset_dpdk as *mut ldpdk::cpu_set_t;
+            ldpdk::rte_thread_set_affinity(cset);
+        }
+    }
     set_lcore_id(tid)
 }
 

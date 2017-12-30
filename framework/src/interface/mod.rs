@@ -3,9 +3,9 @@ pub use self::port::*;
 pub mod dpdk;
 mod port;
 mod packet;
+use super::native_include;
 use common::*;
 use native::zcsi::MBuf;
-use super::native_include;
 
 /// Generic trait for objects that can receive packets.
 pub trait PacketRx: Send {
