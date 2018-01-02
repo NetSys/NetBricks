@@ -7,7 +7,6 @@ use toml::{self, Value};
 /// Default configuration values
 pub const DEFAULT_POOL_SIZE: u32 = 2048 - 1;
 pub const DEFAULT_CACHE_SIZE: u32 = 32;
-pub const DEFAULT_SECONDARY: bool = false;
 pub const DEFAULT_PRIMARY_CORE: i32 = 0;
 pub const DEFAULT_NAME: &'static str = "zcsi";
 pub const NUM_RXD: i32 = 128;
@@ -182,17 +181,6 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
         }
     };
 
-    // Is process a secondary process
-    let secondary = match toml.get("secondary") {
-        Some(&Value::Boolean(secondary)) => secondary,
-        None => DEFAULT_SECONDARY,
-        _ => {
-            println!("Could not parse whether this is a secondary process");
-            return Err(ErrorKind::ConfigurationError(String::from("Could not parse secondary processor spec")).into());
-        }
-    };
-
-    // Secondary ports to instantiate.
     let cores = match toml.get("cores") {
         Some(&Value::Array(ref c)) => {
             let mut cores = Vec::with_capacity(c.len());
@@ -245,7 +233,6 @@ pub fn read_configuration_from_str(configuration: &str, filename: &str) -> Resul
         primary_core: master_lcore,
         cores: cores,
         strict: strict,
-        secondary: secondary,
         pool_size: pool_size,
         cache_size: cache_size,
         ports: ports,

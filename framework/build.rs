@@ -72,6 +72,7 @@ fn main() {
         "cargo:rustc-link-search=native={}",
         native_path.to_str().unwrap()
     );
+    println!("cargo:rustc-link-lib=numa");
 
     let out_dir = env::var("OUT_DIR").unwrap();
 

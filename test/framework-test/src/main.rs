@@ -66,7 +66,6 @@ fn main() {
     let program = args[0].clone();
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
-    opts.optflag("", "secondary", "run as a secondary process");
     opts.optopt("n", "name", "name to use for the current process", "name");
     opts.optmulti("p", "port", "Port to use", "[type:]id");
     opts.optmulti("c", "core", "Core to use", "core");
@@ -109,16 +108,9 @@ fn main() {
         cores_for_port
     }
 
-    let primary = !matches.opt_present("secondary");
-
     let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
 
-    if primary {
-        init_system_wl(&name, master_core, &[]);
-    } else {
-        init_system_secondary(&name, master_core);
-    }
-
+    init_system_wl(&name, master_core, &[]);
     let ports_to_activate: Vec<_> = cores_for_port.keys().collect();
 
     let mut queues_by_core = HashMap::<i32, Vec<_>>::with_capacity(cores.len());

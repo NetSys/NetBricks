@@ -9,8 +9,6 @@ mod flag_reader;
 pub struct NetbricksConfiguration {
     /// Name, this is passed on to DPDK. If you want to run multiple DPDK apps, this needs to be unique per application.
     pub name: String,
-    /// Should this process be run as a secondary process or a primary process?
-    pub secondary: bool,
     /// Where should the main thread (for the examples this just sits around and prints packet counts) be run.
     pub primary_core: i32,
     /// Cores that can be used by NetBricks. Note that currently we will add any cores specified in the ports
@@ -40,7 +38,6 @@ impl Default for NetbricksConfiguration {
             primary_core: 0,
             cores: Default::default(),
             strict: false,
-            secondary: false,
             ports: vec![],
             dpdk_args: None,
         }

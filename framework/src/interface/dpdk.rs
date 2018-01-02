@@ -27,6 +27,8 @@ unsafe fn init_socket_mempool(
     )
 }
 
+
+/// Call into libnuma to bind thread to NUMA node.
 unsafe fn bind_thread_to_numa_node(socket: u32) {
     let bitmask = libnuma::numa_bitmask_setbit(
         libnuma::numa_bitmask_clearall(libnuma::numa_bitmask_alloc(
@@ -43,8 +45,8 @@ fn init_system_wl_with_mempool(name: &str, core: i32, devices: &[String], pool_s
 
     let mut dpdk_args = vec![];
     // FIXME: Maybe replace with placement syntax
-    // First we need to push in name.
     unsafe {
+        // First we need to push in name.
         dpdk_args.push(name_cstr.into_raw());
         dpdk_args.push(CString::new("--master-lcore").unwrap().into_raw());
         // Using RTE_MAX_LCORE as core ID for master.
@@ -132,6 +134,8 @@ pub fn init_thread(tid: i32, core: i32) {
             let cset = &mut cset_dpdk as *mut ldpdk::cpu_set_t;
             ldpdk::rte_thread_set_affinity(cset);
         }
+        // FIXME: Need to set lcore_id for use by mempool caches, which are accessed by some PMD drivers..
+        //ldpdk::per_lcore__lcore_id = tid as u32;
     }
     set_lcore_id(tid)
 }

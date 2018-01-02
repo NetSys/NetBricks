@@ -11,8 +11,6 @@ use std::process;
 pub fn basic_opts() -> Options {
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
-    opts.optflag("", "secondary", "run as a secondary process");
-    opts.optflag("", "primary", "run as a primary process");
     opts.optopt("n", "name", "name to use for the current process", "name");
     opts.optmulti("p", "port", "Port to use", "[type:]id");
     opts.optmulti("c", "core", "Core to use", "core");
@@ -69,24 +67,6 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
                 .parse()
                 .expect("Could not parse master core"),
             strict: true,
-            ..configuration
-        }
-    } else {
-        configuration
-    };
-
-    let configuration = if matches.opt_present("secondary") {
-        NetbricksConfiguration {
-            secondary: true,
-            ..configuration
-        }
-    } else {
-        configuration
-    };
-
-    let configuration = if matches.opt_present("primary") {
-        NetbricksConfiguration {
-            secondary: false,
             ..configuration
         }
     } else {

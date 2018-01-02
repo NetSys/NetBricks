@@ -21,14 +21,14 @@ fn delay_loop(delay: u64) {
     }
 }
 
-pub fn delay<T: 'static + Batch<Header = NullHeader>>(parent: T,
-                                                      delay: u64)
-                                                      -> TransformBatch<MacHeader, ParsedBatch<MacHeader, T>> {
-    parent.parse::<MacHeader>()
-          .transform(box move |pkt| {
-              assert!(pkt.refcnt() == 1);
-              let hdr = pkt.get_mut_header();
-              hdr.swap_addresses();
-              delay_loop(delay);
-          })
+pub fn delay<T: 'static + Batch<Header = NullHeader>>(
+    parent: T,
+    delay: u64,
+) -> TransformBatch<MacHeader, ParsedBatch<MacHeader, T>> {
+    parent.parse::<MacHeader>().transform(box move |pkt| {
+        assert!(pkt.refcnt() == 1);
+        let hdr = pkt.get_mut_header();
+        hdr.swap_addresses();
+        delay_loop(delay);
+    })
 }

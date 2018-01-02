@@ -1,7 +1,7 @@
 use e2d2::control::tcp::*;
-use std::net::*;
-use std::io::Read;
 use nix::errno;
+use std::io::Read;
+use std::net::*;
 
 pub struct ControlListener {
     scheduler: TcpScheduler,
@@ -13,7 +13,12 @@ impl TcpControlAgent for ControlListener {
     fn new(address: SocketAddr, stream: TcpStream, scheduler: TcpScheduler) -> ControlListener {
         println!("New connection from {}", address);
         scheduler.schedule_read();
-        ControlListener { scheduler: scheduler, stream: stream, buffer: (0..14).map(|_| 0).collect(), read_till: 0 }
+        ControlListener {
+            scheduler: scheduler,
+            stream: stream,
+            buffer: (0..14).map(|_| 0).collect(),
+            read_till: 0,
+        }
     }
 
     fn handle_read_ready(&mut self) -> bool {
@@ -22,7 +27,7 @@ impl TcpControlAgent for ControlListener {
             let read_till = self.read_till;
             let r = self.stream.read(&mut self.buffer[read_till..]);
             match r {
-                Ok(r) => { 
+                Ok(r) => {
                     if r > 0 {
                         if read_till + r == 14 {
                             //println!("Complete message");
@@ -30,7 +35,7 @@ impl TcpControlAgent for ControlListener {
                         }
                     };
                     r > 0
-                },
+                }
                 Err(e) => {
                     if let Some(e) = e.raw_os_error() {
                         if errno::from_i32(e) != errno::Errno::EAGAIN {
@@ -42,20 +47,19 @@ impl TcpControlAgent for ControlListener {
                         schedule = false;
                     }
                     false
-                },
+                }
             }
-        } {
-        }
+        } {}
         if schedule {
             self.scheduler.schedule_read();
         };
         schedule
     }
-    
+
     fn handle_write_ready(&mut self) -> bool {
         panic!("No writes expected");
     }
-    
+
     fn handle_hup(&mut self) -> bool {
         println!("Hanging up");
         false
