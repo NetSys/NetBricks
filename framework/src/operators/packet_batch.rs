@@ -144,7 +144,7 @@ impl PacketBatch {
                     let len = self.scratch.len();
                     // No need to offset here since self.scratch is tight.
                     let array_ptr = self.scratch.as_mut_ptr();
-                    let ret = mbuf_free_bulk(array_ptr, (len as i32));
+                    let ret = mbuf_free_bulk(array_ptr, len as i32);
                     self.scratch.clear();
                     if ret == 0 {
                         Some(len)

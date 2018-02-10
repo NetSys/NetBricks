@@ -12,5 +12,5 @@ RUN apt-get -yq update && apt-get -yq install libssl-dev \
 RUN mkdir -p ~/.ssh && ssh-keyscan -t rsa github.com > ~/.ssh/known_hosts
 RUN curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
 ENV PATH /root/.cargo/bin:$PATH
-RUN cargo install rustfmt
+RUN cargo install rustfmt-nightly || true
 CMD [/bin/bash]

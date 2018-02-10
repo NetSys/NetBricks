@@ -185,7 +185,7 @@ impl IpHeader {
     pub fn fragment_offset(&self) -> u16 {
         let id_flag_fragment = self.id_to_foffset;
         let flag_fragment = (id_flag_fragment & 0xffff) as u16;
-        u16::from_be(((flag_fragment & !0xe) >> 3))
+        u16::from_be((flag_fragment & !0xe) >> 3)
     }
 
     #[inline]

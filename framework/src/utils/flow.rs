@@ -125,7 +125,7 @@ pub fn crc_hash<T: Sized>(to_hash: &T, iv: u32) -> u32 {
 
 fn flow_as_u8(flow: &Flow) -> &[u8] {
     let size = mem::size_of::<Flow>();
-    unsafe { slice::from_raw_parts(((flow as *const Flow) as *const u8), size) }
+    unsafe { slice::from_raw_parts((flow as *const Flow) as *const u8, size) }
 }
 
 #[inline]

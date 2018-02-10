@@ -9,6 +9,8 @@
 #![feature(heap_api)]
 #![feature(unique)]
 #![feature(const_fn)]
+// FIXME: Figure out if this is really the right thing here.
+#![feature(ptr_internals)]
 // Used for cache alignment.
 #![feature(allocator_api)]
 #![allow(unused_features)]

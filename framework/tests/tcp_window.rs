@@ -473,11 +473,9 @@ fn test_overlapping_write() {
     let read = r0.read_data(&mut read_buf[..]);
     let read_str = str::from_utf8(&read_buf[..read]).unwrap();
     assert_eq!(
-        read_str,
-        "hello world",
+        read_str, "hello world",
         "Read value {} expected {}",
-        read_str,
-        "hello world"
+        read_str, "hello world"
     );
 
     if let InsertionResult::Inserted { written, .. } = r0.add_data(base_seq, data0.as_bytes()) {
