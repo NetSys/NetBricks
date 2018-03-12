@@ -31,7 +31,7 @@ fn monitor<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(
             let hdr = pkt.get_mut_header();
             hdr.swap_addresses();
         })
-        .parse::<IpHeader>()
+        .parse::<Ipv4Header>()
         .transform(box move |pkt| {
             let hdr = pkt.get_mut_header();
             let ttl = hdr.ttl();

@@ -14,7 +14,7 @@ pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Composition
             }
             println!("");
         })
-        .parse::<IpHeader>()
+        .parse::<Ipv4Header>()
         .map(box |pkt| {
             let hdr = pkt.get_header();
             let flow = hdr.flow().unwrap();
@@ -27,7 +27,7 @@ pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Composition
             let (src, dst) = (flow.src_port, flow.dst_port);
             println!("Src {} dst {}", src, dst);
         })
-        .parse::<UdpHeader>()
+        .parse::<UdpHeader<Ipv4Header>>()
         .map(box |pkt| {
             println!("UDP header {}", pkt.get_header());
         })

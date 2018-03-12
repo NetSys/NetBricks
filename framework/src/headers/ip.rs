@@ -4,22 +4,41 @@ use headers::MacHeader;
 use std::convert::From;
 use std::default::Default;
 use std::fmt;
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 use std::slice;
 use utils::Flow;
+
+type Ipv4Address = u32;
+type Ipv6Address = u128;
 
 /// IP header using SSE
 #[derive(Default)]
 #[repr(C, packed)]
-pub struct IpHeader {
+pub struct Ipv4Header {
     version_to_len: u32,
     id_to_foffset: u32,
     ttl_to_csum: u32,
-    src_ip: u32,
-    dst_ip: u32,
+    src_ip: Ipv4Address,
+    dst_ip: Ipv4Address,
 }
 
-impl fmt::Display for IpHeader {
+#[derive(Default)]
+#[repr(C, packed)]
+pub struct Ipv6Header {
+    version_to_flow_label: u32,
+    payload_len: u16,
+    next_header: u8,
+    hop_limit: u8,
+    src_ip: Ipv6Address,
+    dst_ip: Ipv6Address,
+}
+
+pub trait IpHeader : EndOffset + Default {}
+
+impl IpHeader for Ipv4Header {}
+impl IpHeader for Ipv6Header {}
+
+impl fmt::Display for Ipv4Header {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let src = Ipv4Addr::from(self.src());
         let dst = Ipv4Addr::from(self.dst());
@@ -38,7 +57,26 @@ impl fmt::Display for IpHeader {
     }
 }
 
-impl EndOffset for IpHeader {
+impl fmt::Display for Ipv6Header {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let src = Ipv6Addr::from(self.src());
+        let dst = Ipv6Addr::from(self.dst());
+        write!(
+            f,
+            "{} > {} version: {} traffic_class: {} flow_label: {} len: {} next_header: {} hop_limit: {}",
+            src,
+            dst,
+            self.version(),
+            self.traffic_class(),
+            self.flow_label(),
+            self.payload_len(),
+            self.next_header(),
+            self.hop_limit()
+        )
+    }
+}
+
+impl EndOffset for Ipv4Header {
     type PreviousHeader = MacHeader;
     #[inline]
     fn offset(&self) -> usize {
@@ -62,11 +100,39 @@ impl EndOffset for IpHeader {
 
     #[inline]
     fn check_correct(&self, _prev: &MacHeader) -> bool {
+        // prev.etype() == 0x0800
         true
     }
 }
 
-impl IpHeader {
+impl EndOffset for Ipv6Header {
+    type PreviousHeader = MacHeader;
+
+    #[inline]
+    fn offset(&self) -> usize {
+        // IPv6 Header is always 40 bytes: (4 + 8 + 20 + 16 + 8 + 8 + 128 + 128) / 8 = 40
+        40
+    }
+
+    #[inline]
+    fn size() -> usize {
+        // Struct is always 40 bytes as well
+        40
+    }
+
+    #[inline]
+    fn payload_size(&self, _: usize) -> usize {
+        self.payload_len() as usize
+    }
+
+    #[inline]
+    fn check_correct(&self, _prev: &MacHeader) -> bool {
+        // prev.etype() == 0x86DD
+        true
+    }
+}
+
+impl Ipv4Header {
     #[inline]
     pub fn flow(&self) -> Option<Flow> {
         let protocol = self.protocol();
@@ -74,7 +140,7 @@ impl IpHeader {
         let dst_ip = self.dst();
         if (protocol == 6 || protocol == 17) && self.payload_size(0) >= 4 {
             unsafe {
-                let self_as_u8 = (self as *const IpHeader) as *const u8;
+                let self_as_u8 = (self as *const Ipv4Header) as *const u8;
                 let port_as_u8 = self_as_u8.offset(self.offset() as isize);
                 let port_slice = slice::from_raw_parts(port_as_u8, 4);
                 let dst_port = BigEndian::read_u16(&port_slice[..2]);
@@ -93,28 +159,28 @@ impl IpHeader {
     }
 
     #[inline]
-    pub fn new() -> IpHeader {
+    pub fn new() -> Ipv4Header {
         Default::default()
     }
 
     #[inline]
-    pub fn src(&self) -> u32 {
-        u32::from_be(self.src_ip)
+    pub fn src(&self) -> Ipv4Address {
+        Ipv4Address::from_be(self.src_ip)
     }
 
     #[inline]
-    pub fn set_src(&mut self, src: u32) {
-        self.src_ip = u32::to_be(src)
+    pub fn set_src(&mut self, src: Ipv4Address) {
+        self.src_ip = Ipv4Address::to_be(src)
     }
 
     #[inline]
-    pub fn dst(&self) -> u32 {
-        u32::from_be(self.dst_ip)
+    pub fn dst(&self) -> Ipv4Address {
+        Ipv4Address::from_be(self.dst_ip)
     }
 
     #[inline]
-    pub fn set_dst(&mut self, dst: u32) {
-        self.dst_ip = u32::to_be(dst);
+    pub fn set_dst(&mut self, dst: Ipv4Address) {
+        self.dst_ip = Ipv4Address::to_be(dst);
     }
 
     #[inline]
@@ -197,12 +263,17 @@ impl IpHeader {
 
     #[inline]
     pub fn version(&self) -> u8 {
-        ((self.version_to_len & 0xf0) as u8) >> 4
+        // ((self.version_to_len & 0xf0) as u8) >> 4
+        ((u32::from_be(self.version_to_len) & 0xf0000000) >> 28) as u8
     }
 
     #[inline]
     pub fn set_version(&mut self, version: u8) {
-        self.version_to_len = (self.version_to_len & !0xf0) | (((version & 0xf) as u32) << 4);
+        self.version_to_len = u32::to_be(
+            (((version as u32) << 28) & 0xf0000000)
+                | (u32::from_be(self.version_to_len) & !0xf0000000)
+        );
+
     }
 
     #[inline]
@@ -243,5 +314,165 @@ impl IpHeader {
     #[inline]
     pub fn set_length(&mut self, len: u16) {
         self.version_to_len = (self.version_to_len & !0xffff0000) | ((u16::to_be(len) as u32) << 16);
+    }
+}
+
+impl Ipv6Header {
+    #[inline]
+    pub fn new() -> Ipv6Header {
+        Default::default()
+    }
+
+    #[inline]
+    pub fn src(&self) -> Ipv6Address {
+        Ipv6Address::from_be(self.src_ip)
+    }
+
+    #[inline]
+    pub fn set_src(&mut self, src: Ipv6Address) {
+        self.src_ip = Ipv6Address::to_be(src)
+    }
+
+    #[inline]
+    pub fn dst(&self) -> Ipv6Address {
+        Ipv6Address::from_be(self.dst_ip)
+    }
+
+    #[inline]
+    pub fn set_dst(&mut self, dst: Ipv6Address) {
+        self.dst_ip = Ipv6Address::to_be(dst);
+    }
+
+    #[inline]
+    pub fn hlimit(&self) -> u8 {
+        self.hop_limit
+    }
+
+    #[inline]
+    pub fn set_hlimit(&mut self, hlimit: u8) {
+        self.hop_limit = hlimit;
+    }
+
+    #[inline]
+    pub fn version(&self) -> u8 {
+        ((u32::from_be(self.version_to_flow_label) & 0xf0000000) >> 28) as u8
+    }
+
+    #[inline]
+    pub fn set_version(&mut self, version: u8) {
+        self.version_to_flow_label = u32::to_be(
+            (((version as u32) << 28) & 0xf0000000)
+                | (u32::from_be(self.version_to_flow_label) & !0xf0000000)
+        );
+
+    }
+
+    #[inline]
+    pub fn traffic_class(&self) -> u8 {
+        ((u32::from_be(self.version_to_flow_label) >> 20) as u8)
+    }
+
+    #[inline]
+    pub fn set_traffic_class(&mut self, tclass: u8) {
+        self.version_to_flow_label = u32::to_be(
+            (u32::from_be(self.version_to_flow_label) & 0xf00fffff) |
+            ((tclass as u32) << 20))
+    }
+
+    #[inline]
+    pub fn flow_label(&self) -> u32 {
+        u32::from_be(self.version_to_flow_label) & 0x0fffff
+    }
+
+    #[inline]
+    pub fn set_flow_label(&mut self, flow_label: u32) {
+        assert!(flow_label <= 0x0fffff);
+        self.version_to_flow_label = u32::to_be(
+            (u32::from_be(self.version_to_flow_label) & 0xfff00000) |
+            (flow_label & 0x0fffff)
+        )
+    }
+
+    #[inline]
+    pub fn payload_len(&self) -> u16 {
+        u16::from_be(self.payload_len)
+    }
+
+    #[inline]
+    pub fn set_payload_len(&mut self, len: u16) {
+        self.payload_len = u16::to_be(len)
+    }
+
+    #[inline]
+    pub fn next_header(&self) -> u8 {
+        self.next_header
+    }
+
+    #[inline]
+    pub fn set_next_header(&mut self, hdr: u8) {
+        self.next_header = hdr
+    }
+
+    #[inline]
+    pub fn hop_limit(&self) -> u8 {
+        self.hop_limit
+    }
+
+    #[inline]
+    pub fn set_hop_limit(&mut self, limit: u8) {
+        self.hop_limit = limit
+    }
+
+}
+
+#[cfg(test)]
+mod ipv4 {
+    use super::*;
+    use std::net::Ipv4Addr;
+    use std::str::FromStr;
+
+    #[test]
+    fn packet() {
+        let mut ip = Ipv4Header::new();
+        ip.set_src(u32::from(Ipv4Addr::from_str("10.0.0.1").unwrap()));
+        ip.set_dst(u32::from(Ipv4Addr::from_str("10.0.0.5").unwrap()));
+        ip.set_ttl(128);
+        ip.set_version(4);
+        ip.set_ihl(5);
+        ip.set_length(20);
+
+        assert_eq!(ip.version(), 4);
+        assert_eq!(ip.length(), 20);
+    }
+}
+
+
+#[cfg(test)]
+mod ipv6 {
+    use super::*;
+    use std::net::Ipv6Addr;
+    use std::str::FromStr;
+
+    #[test]
+    fn packet() {
+        let mut ip = Ipv6Header::new();
+        let src = Ipv6Addr::from_str("2001:db8::1").unwrap();
+        let dst = Ipv6Addr::from_str("2001:db8::2").unwrap();
+        ip.set_src(u128::from(src));
+        ip.set_dst(u128::from(dst));
+        ip.set_version(6);
+        ip.set_traffic_class(17);
+        ip.set_flow_label(15000);
+        ip.set_payload_len(1000);
+        ip.set_next_header(17); // UDP
+        ip.set_hop_limit(2);
+
+        assert_eq!(ip.version(), 6);
+        assert_eq!(ip.traffic_class(), 17);
+        assert_eq!(ip.flow_label(), 15000);
+        assert_eq!(ip.payload_len(), 1000);
+        assert_eq!(ip.next_header(), 17);
+        assert_eq!(ip.hop_limit(), 2);
+        assert_eq!("2001:db8::1 > 2001:db8::2 version: 6 traffic_class: 17 flow_label: 15000 len: 1000 next_header: 17 hop_limit: 2", ip.to_string())
     }
 }
