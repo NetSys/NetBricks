@@ -8,7 +8,7 @@ use std::str::FromStr;
 
 pub struct PacketCreator {
     mac: MacHeader,
-    ip: IpHeader,
+    ip: Ipv4Header,
     producer: MpscProducer,
 }
 
@@ -22,7 +22,7 @@ impl PacketCreator {
             addr: [0x68, 0x05, 0xca, 0x00, 0x00, 0x01],
         };
         mac.set_etype(0x0800);
-        let mut ip = IpHeader::new();
+        let mut ip = Ipv4Header::new();
         ip.set_src(u32::from(Ipv4Addr::from_str("10.0.0.1").unwrap()));
         ip.set_dst(u32::from(Ipv4Addr::from_str("10.0.0.5").unwrap()));
         ip.set_ttl(128);
@@ -37,7 +37,7 @@ impl PacketCreator {
     }
 
     #[inline]
-    fn initialize_packet(&self, pkt: Packet<NullHeader, EmptyMetadata>) -> Packet<IpHeader, EmptyMetadata> {
+    fn initialize_packet(&self, pkt: Packet<NullHeader, EmptyMetadata>) -> Packet<Ipv4Header, EmptyMetadata> {
         pkt.push_header(&self.mac)
             .unwrap()
             .push_header(&self.ip)
@@ -45,7 +45,7 @@ impl PacketCreator {
     }
 
     #[inline]
-    pub fn create_packet(&self) -> Packet<IpHeader, EmptyMetadata> {
+    pub fn create_packet(&self) -> Packet<Ipv4Header, EmptyMetadata> {
         self.initialize_packet(new_packet().unwrap())
     }
 }

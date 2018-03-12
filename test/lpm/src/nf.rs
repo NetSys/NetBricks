@@ -212,7 +212,7 @@ pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>, S:
     let mut groups = parent
         .parse::<MacHeader>()
         .transform(box |p| p.get_mut_header().swap_addresses())
-        .parse::<IpHeader>()
+        .parse::<Ipv4Header>()
         .group_by(
             3,
             box move |pkt| {

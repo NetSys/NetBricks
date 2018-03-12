@@ -10,7 +10,7 @@ pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata
             let hdr = pkt.get_mut_header();
             hdr.swap_addresses();
         })
-        .parse::<IpHeader>()
+        .parse::<Ipv4Header>()
         .transform(box |pkt| {
             let h = pkt.get_mut_header();
             let ttl = h.ttl();

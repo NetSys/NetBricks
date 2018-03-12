@@ -37,7 +37,7 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Si
         .transform(box move |p| {
             p.get_mut_header().swap_addresses();
         })
-        .parse::<IpHeader>()
+        .parse::<Ipv4Header>()
         .group_by(
             2,
             box move |p| if p.get_header().protocol() == 6 { 0 } else { 1 },
@@ -50,7 +50,7 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Si
             let flow = p.get_header().flow().unwrap();
             flow
         })
-        .parse::<TcpHeader>()
+        .parse::<TcpHeader<Ipv4Header>>()
         .transform(box move |p| {
             let flow = p.read_metadata();
             let mut seq = p.get_header().seq_num();
