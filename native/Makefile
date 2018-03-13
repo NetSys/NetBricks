@@ -37,6 +37,13 @@ PROD_STATIC = libzcsi.a
 
 DEPS = .make.dep
 
+OSTYPE ?= $(shell uname)
+ifeq ($(OSTYPE),Darwin)
+	MAKEJOBS := $(shell sysctl -n hw.physicalcpu)
+else
+	MAKEJOBS := 1
+endif
+
 # if multiple targets are specified, do them one by one */
 ifneq ($(words $(MAKECMDGOALS)),1)
 
@@ -47,7 +54,7 @@ $(sort all $(MAKECMDGOALS)):
 else
 
 # parallel build by default
-CORES ?= $(shell nproc || echo 1)
+CORES ?= $(shell nproc || echo $(MAKEJOBS))
 MAKEFLAGS += -j $(CORES)
 INSTALL_PATH = $(abspath ../target/native)
 
@@ -63,7 +70,6 @@ install: $(DEPS) $(PROD) | $(INSTALL_PATH)
 $(INSTALL_PATH):
 	mkdir -p $(INSTALL_PATH)
 
-	
 $(DEPS): $(SRCS) $(HEADERS)
 	@echo $(RTE_SDK) $(DPDK_INC_DIR)
 	@$(CC) $(CFLAGS) -MM $(SRCS) | sed 's|\(.*\)\.o: \(.*\)\.c|\2.o: \2.c|' > $(DEPS);

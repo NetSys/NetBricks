@@ -18,12 +18,13 @@ DPDK_INCLUDE=$(ADAPTOR_DIR)/include
 DPDK_LIB=$(ADAPTOR_DIR)
 
 LDFLAGS += -L$(DPDK_LIB_DIR) -L$(DPDK_LIB) -Wl,-rpath=$(DPDK_LIB)\
-	   -Wl,-rpath=$(DPDK_LIB_DIR) 
+	   -Wl,-rpath=$(DPDK_LIB_DIR)
 LIBS += -lm -lpthread -ldl -lpcap -ldpdk -lzcsi
 
 
 # change fpic to fPIC if something fails
-CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=native -Wno-unused-function -Wno-unused-but-set-variable \
+CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=native \
+	 -Wno-unused-function -Wno-unused-but-set-variable \
 	 -I$(DPDK_INC_DIR) \
 	 -I$(DPDK_INCLUDE) \
 	 -D_GNU_SOURCE
@@ -35,6 +36,13 @@ PROD = test
 
 DEPS = .make.dep
 
+OSTYPE ?= $(shell uname)
+ifeq ($(OSTYPE),Darwin)
+	MAKEJOBS := $(shell sysctl -n hw.physicalcpu)
+else
+	MAKEJOBS := 1
+endif
+
 # if multiple targets are specified, do them one by one */
 ifneq ($(words $(MAKECMDGOALS)),1)
 
@@ -45,13 +53,13 @@ $(sort all $(MAKECMDGOALS)):
 else
 
 # parallel build by default
-CORES ?= $(shell nproc || echo 1)
+CORES ?= $(shell nproc || echo $(MAKEJOBS))
 MAKEFLAGS += -j $(CORES)
 
 .PHONY: all clean tags cscope
 
 all: $(DEPS) $(PROD)
-	
+
 $(DEPS): $(SRCS) $(HEADERS)
 	@$(CC) $(CFLAGS) -MM $(SRCS) | sed 's|\(.*\)\.o: \(.*\)\.c|\2.o: \2.c|' > $(DEPS);
 

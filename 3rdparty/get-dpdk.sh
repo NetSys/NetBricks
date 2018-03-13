@@ -36,5 +36,11 @@ export RTE_TARGET=x86_64-native-linuxapp-gcc
 FLAGS="-g3 -Wno-error=maybe-uninitialized -fPIC"
 make config -C "${DPDK_RESULT}" T=x86_64-native-linuxapp-gcc \
 	EXTRA_CFLAGS="$FLAGS"
-PROCS="$(nproc)"
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    PROCS=`sysctl -n hw.physicalcpu`
+else
+    PROCS=`nproc`
+fi
+
 make -j $PROCS -C "${DPDK_RESULT}" EXTRA_CFLAGS="$FLAGS"
