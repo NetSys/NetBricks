@@ -1,7 +1,7 @@
 FROM debian:testing
-MAINTAINER "Aurojit Panda <apanda@cs.berkeley.edu>"
-ARG dpdk_file="common_linuxapp-16.07.container"
-#COPY container/sources.list /etc/apt/sources.list
+LABEL maintainer="Aurojit Panda <apanda@cs.berkeley.edu>"
+LABEL maintainer="williamofockham <zeeshan.lakhani@gmail.com>"
+ARG dpdk_file="common_linuxapp-17.08.container"
 RUN apt-get -yq update && apt-get -yq install apt-utils
 RUN apt-get -yq update && apt-get -yq install build-essential \
 				vim-nox curl \

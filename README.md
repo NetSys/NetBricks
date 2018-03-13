@@ -70,7 +70,7 @@ Container Build
 You must have [Docker](https://www.docker.com/) installed. Once this is done, just run
 
 ```
-./build.sh build_container 
+./build.sh build_container
 ```
 
 This will build and copy the binaries over to the `target` subdirectory. As noted above, you can run it if you have a
