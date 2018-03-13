@@ -51,6 +51,12 @@ source ${BASE_DIR}/examples.sh
 REQUIRE_RUSTFMT=0
 export RUSTFLAGS="-C target-cpu=native"
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    proc=`sysctl -n hw.physicalcpu`
+else
+    proc=`nproc`
+fi
+
 rust_build_static() {
     if [ ! -d ${RUST_DOWNLOAD_PATH} ]; then
         git clone https://github.com/rust-lang/rust.git \
@@ -155,7 +161,7 @@ clean () {
         popd
     done
     make clean -C ${BASE_DIR}/native
-    rm -rf ${BASE_DIR}/target 
+    rm -rf ${BASE_DIR}/target
 }
 
 UNWIND_BUILD="${TOOLS_BASE}"/libunwind
@@ -191,7 +197,6 @@ clean_deps() {
 
 dpdk () {
     $BASE_DIR/3rdparty/get-dpdk.sh ${DOWNLOAD_DIR}
-    proc="$(nproc)"
 }
 
 musl () {
@@ -324,7 +329,7 @@ case $TASK in
     create_container)
         clean
         clean_deps
-        docker build -f container/Dockerfile -t netbricks:vswitch --build-arg dpdk_file="common_linuxapp-${DPDK_VER}.vswitch" ${BASE_DIR}
+        docker build -f container/Dockerfile -t netbricks:vswitch --build-arg dpdk_file="common_linuxapp-${DPDK_VER}.container" ${BASE_DIR}
         echo "Done building container as netbricks:vswitch"
         ;;
     ctr_dpdk)
@@ -346,8 +351,8 @@ case $TASK in
     build_container)
         docker pull apanda/netbricks-build:latest
         docker run -t -v /lib/modules:/lib/modules \
-            -v /usr/src:/usr/src -v ${BASE_DIR}:/opt/netbricks \
-             apanda/netbricks-build:latest /opt/netbricks/build.sh _build_container
+            -v ${BASE_DIR}:/opt/netbricks \
+            apanda/netbricks-build:latest /opt/netbricks/build.sh _build_container
         ;;
     update_container)
         docker build --no-cache -f ${BASE_DIR}/build-container/Dockerfile -t apanda/netbricks-build:latest \
@@ -363,7 +368,7 @@ case $TASK in
     test)
         pushd $BASE_DIR/framework
         export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}"
-        ${CARGO} test --release
+        RUST_BACKTRACE=1 ${CARGO} test --release
         popd
 
         for testname in tcp_payload macswap; do
