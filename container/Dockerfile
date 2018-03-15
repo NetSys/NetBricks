@@ -8,7 +8,7 @@ RUN apt-get -yq update && apt-get -yq install build-essential \
 				pciutils sudo git \
 				python python3
 RUN apt-get -yq update && apt-get -yq install libssl-dev \
-					libgnutls30 libgnutls-openssl-dev \
+					libgnutls30 libgnutls-openssl-dev libsctp-dev \
 					libcurl4-gnutls-dev cmake bash libpcap-dev libnuma-dev \
 					clang-5.0 libclang-dev
 # Fix the date at which we take Rust
