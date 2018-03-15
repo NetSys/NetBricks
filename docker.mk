@@ -27,7 +27,6 @@ build-fresh:
 	--build-arg dpdk_file="common_linuxapp-$(DPDK_VER).container" $(BASE_DIR)
 
 run:
-	@echo $(BASE_DIR)
 	@docker run --name $(CONTAINER) -it --rm --privileged --pid='host' \
 	$(MOUNTS) $(CONTAINER):$(TAG)
 
