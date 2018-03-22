@@ -1,17 +1,17 @@
 #![feature(box_syntax)]
-extern crate e2d2;
 extern crate getopts;
+extern crate netbricks;
 extern crate rand;
 extern crate time;
-use e2d2::allocators::*;
-use e2d2::common::*;
-use e2d2::headers::*;
-use e2d2::interface::*;
-use e2d2::interface::dpdk::*;
-use e2d2::operators::*;
-use e2d2::scheduler::Executable;
-use e2d2::state::*;
 use getopts::Options;
+use netbricks::allocators::*;
+use netbricks::common::*;
+use netbricks::headers::*;
+use netbricks::interface::dpdk::*;
+use netbricks::interface::*;
+use netbricks::operators::*;
+use netbricks::scheduler::Executable;
+use netbricks::state::*;
 use std::collections::HashMap;
 use std::env;
 use std::process;
@@ -126,8 +126,8 @@ fn main() {
     for port in &ports_to_activate {
         let cores = cores_for_port.get(*port).unwrap();
         let queues = cores.len() as i32;
-        let pmd_port =
-            PmdPort::new_with_queues(*port, queues, queues, cores, cores).expect("Could not initialize port");
+        let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
+            .expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
             queues_by_core

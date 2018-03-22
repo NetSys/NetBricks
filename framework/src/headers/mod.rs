@@ -3,11 +3,11 @@ pub use self::mac::*;
 pub use self::null_header::*;
 pub use self::tcp::*;
 pub use self::udp::*;
-mod mac;
 mod ip;
-mod udp;
-mod tcp;
+mod mac;
 mod null_header;
+mod tcp;
+mod udp;
 
 /// A trait implemented by all headers, used for reading them from a mbuf.
 pub trait EndOffset: Send {

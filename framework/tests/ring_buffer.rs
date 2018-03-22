@@ -1,5 +1,5 @@
-extern crate e2d2;
-use e2d2::state::*;
+extern crate netbricks;
+use netbricks::state::*;
 
 #[test]
 fn alloc_test() {

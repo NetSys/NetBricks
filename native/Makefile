@@ -1,12 +1,11 @@
 CC = gcc
 
-RTE_SDK = $(abspath ../3rdparty/dpdk/)
-#ifndef RTE_SDK
-#$(error RTE_SDK is undefined)
-#endif
+ifndef RTE_SDK
+	$(error RTE_SDK is undefined)
+endif
 
 ifndef RTE_TARGET
-	RTE_TARGET="build"
+	RTE_TARGET=build
 endif
 
 ifneq ($(wildcard $(RTE_SDK)/$(RTE_TARGET)*),)
@@ -37,11 +36,10 @@ PROD_STATIC = libzcsi.a
 
 DEPS = .make.dep
 
-OSTYPE ?= $(shell uname)
 ifeq ($(OSTYPE),Darwin)
 	MAKEJOBS := $(shell sysctl -n hw.physicalcpu)
 else
-	MAKEJOBS := 1
+	MAKEJOBS := $(shell nproc || echo 1)
 endif
 
 # if multiple targets are specified, do them one by one */

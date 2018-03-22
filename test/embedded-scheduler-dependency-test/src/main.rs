@@ -1,10 +1,10 @@
 #![feature(box_syntax)]
 #![feature(asm)]
-extern crate e2d2;
 extern crate fnv;
+extern crate netbricks;
 extern crate rand;
 extern crate time;
-use e2d2::scheduler::*;
+use netbricks::scheduler::*;
 
 pub struct DepTask {
     id: String,

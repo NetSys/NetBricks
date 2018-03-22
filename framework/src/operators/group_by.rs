@@ -99,7 +99,10 @@ where
         self.groups
     }
 
-    pub fn get_group(&mut self, group: usize) -> Option<RestoreHeader<T, V::Metadata, ReceiveBatch<MpscConsumer>>> {
+    pub fn get_group(
+        &mut self,
+        group: usize,
+    ) -> Option<RestoreHeader<T, V::Metadata, ReceiveBatch<MpscConsumer>>> {
         match self.consumers.remove(&group) {
             Some(mut p) => {
                 {

@@ -1,14 +1,14 @@
 #![feature(box_syntax)]
-extern crate e2d2;
 extern crate fnv;
 extern crate getopts;
+extern crate netbricks;
 extern crate rand;
 extern crate time;
 use self::nf::*;
-use e2d2::config::*;
-use e2d2::interface::*;
-use e2d2::operators::*;
-use e2d2::scheduler::*;
+use netbricks::config::*;
+use netbricks::interface::*;
+use netbricks::operators::*;
+use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
 use std::process;
@@ -56,9 +56,12 @@ fn main() {
             context.start_schedulers();
 
             if phy_ports {
-                context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s)));
+                context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| {
+                    test(p, s)
+                }));
             } else {
-                context.add_test_pipeline(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s)));
+                context
+                    .add_test_pipeline(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s)));
             }
             context.execute();
 

@@ -8,31 +8,55 @@ TAG ?= latest
 CONTAINER = netbricks
 PROJECT = williamofockham
 REGISTRY_IMG_NAME = netbricks
-LINUX_HEADERS = -v /lib/modules:/lib/modules
+LINUX_HEADERS = -v /lib/modules:/lib/modules -v /usr/src:/usr/src
 DPDK_VER = 17.08
 BASE_DIR ?= $(or $(shell pwd),~/occam/Netbricks)
-MOUNTS = $(LINUX_HEADERS) -v /dev/hugepages:/dev/hugepages \
-         -v $(BASE_DIR):/opt/$(CONTAINER)
+MAX_CORES ?= 1
 
-.PHONY: build build-fresh run run-reg tag push pull image image-fresh rmi rmi-registry
+# Our Vagrant setup places MoonGen's repo @ /MoonGen
+# This works off of being relative (../) to utils/Netbricks.
+MOONGEN_DIR ?= $(or $(basename $(dirname $(shell pwd)))/MoonGen,\
+~/williamofockham/MoonGen)
+
+FILES_TO_MOUNT := $(foreach f,$(filter-out build libmoon,\
+$(notdir $(wildcard $(MOONGEN_DIR)/*))), -v $(MOONGEN_DIR)/$(f):/opt/moongen/$(f))
+BASE_MOUNT := -v $(BASE_DIR):/opt/$(CONTAINER)
+
+MOUNTS = $(LINUX_HEADERS) \
+         -v /sys/bus/pci/drivers:/sys/bus/pci/drivers \
+         -v /sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages \
+         -v /sys/devices/system/node:/sys/devices/system/node \
+         -v /sbin/modinfo:/sbin/modinfo \
+         -v /bin/kmod:/bin/kmod \
+         -v /sbin/lsmod:/sbin/lsmod \
+         -v /mnt/huge:/mnt/huge \
+         -v /dev:/dev \
+         -v /var/run:/var/run
+
+ALL_MOUNTS = $(MOUNTS) $(BASE_MOUNT) $(FILES_TO_MOUNT)
+
+.PHONY: build build-fresh run run-tests run-reg tag push pull image image-fresh rmi rmi-registry
 
 build:
-	@./build.sh dist_clean
-	@docker build -f container/Dockerfile -t $(CONTAINER):$(TAG) \
-	--build-arg dpdk_file="common_linuxapp-$(DPDK_VER).container" $(BASE_DIR)
+	@docker build -t $(CONTAINER):$(TAG) $(BASE_DIR)
 
 build-fresh:
-	@./build.sh dist_clean
-	@docker build --no-cache -f container/Dockerfile -t $(CONTAINER):$(TAG) \
-	--build-arg dpdk_file="common_linuxapp-$(DPDK_VER).container" $(BASE_DIR)
+	@docker build --no-cache -t $(CONTAINER):$(TAG) $(BASE_DIR)
 
 run:
-	@docker run --name $(CONTAINER) -it --rm --privileged --pid='host' \
-	$(MOUNTS) $(CONTAINER):$(TAG)
+	@docker run --name $(CONTAINER) -it --rm --privileged \
+	--cpuset-cpus="0-${MAX_CORES}" --pid='host' --network='host' \
+	$(ALL_MOUNTS) $(CONTAINER):$(TAG)
 
 run-reg:
-	@docker run --name $(CONTAINER) -it --rm --privileged --pid='host' \
-	$(MOUNTS) $(PROJECT)/$(CONTAINER):$(TAG)
+	@docker run --name $(CONTAINER) -it --rm --privileged \
+	--cpuset-cpus="0-${MAX_CORES}" --pid='host' --network='host' \
+	$(ALL_MOUNTS) $(PROJECT)/$(CONTAINER):$(TAG)
+
+run-tests:
+	@docker run --name $(CONTAINER) -t --rm --privileged \
+	--cpuset-cpus="0-${MAX_CORES}" --pid='host' --network='host' \
+	$(MOUNTS) $(CONTAINER):$(TAG) /opt/$(CONTAINER)/build.sh test
 
 tag:
 	@docker tag $(CONTAINER) $(PROJECT)/$(CONTAINER):$(TAG)
@@ -52,3 +76,6 @@ rmi:
 
 rmi-registry:
 	@docker rmi $(PROJECT)/$(CONTAINER):$(TAG)
+
+vm:
+	@vagrant up

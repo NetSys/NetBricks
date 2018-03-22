@@ -94,8 +94,12 @@ impl PollScheduler {
             self.events -= 1;
             self.ready_tokens.pop()
         } else {
-            let dest =
-                unsafe { slice::from_raw_parts_mut(self.ready_tokens.as_mut_ptr(), self.ready_tokens.capacity()) };
+            let dest = unsafe {
+                slice::from_raw_parts_mut(
+                    self.ready_tokens.as_mut_ptr(),
+                    self.ready_tokens.capacity(),
+                )
+            };
             self.events = epoll_wait(self.epoll_fd, dest, 0).unwrap();
             unsafe { self.ready_tokens.set_len(self.events) };
             self.ready_tokens.pop()

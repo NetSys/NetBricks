@@ -1,4 +1,4 @@
-use e2d2::control::tcp::*;
+use netbricks::control::tcp::*;
 use std::net::*;
 use std::io::Read;
 use nix::errno;
@@ -22,7 +22,7 @@ impl TcpControlAgent for ControlListener {
             let read_till = self.read_till;
             let r = self.stream.read(&mut self.buffer[read_till..]);
             match r {
-                Ok(r) => { 
+                Ok(r) => {
                     if r > 0 {
                         if read_till + r == 14 {
                             //println!("Complete message");
@@ -51,11 +51,11 @@ impl TcpControlAgent for ControlListener {
         };
         schedule
     }
-    
+
     fn handle_write_ready(&mut self) -> bool {
         panic!("No writes expected");
     }
-    
+
     fn handle_hup(&mut self) -> bool {
         println!("Hanging up");
         false

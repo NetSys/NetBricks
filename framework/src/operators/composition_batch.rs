@@ -36,7 +36,10 @@ impl BatchIterator for CompositionBatch {
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
+    unsafe fn next_payload(
+        &mut self,
+        idx: usize,
+    ) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
         self.parent.next_payload(idx)
     }
 }

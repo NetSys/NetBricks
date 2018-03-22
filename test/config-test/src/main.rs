@@ -1,7 +1,7 @@
-extern crate e2d2;
 extern crate getopts;
-use e2d2::config::*;
+extern crate netbricks;
 use getopts::Options;
+use netbricks::config::*;
 use std::env;
 use std::process;
 fn main() {

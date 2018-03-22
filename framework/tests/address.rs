@@ -1,5 +1,5 @@
-extern crate e2d2;
-use e2d2::utils::*;
+extern crate netbricks;
+use netbricks::utils::*;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 

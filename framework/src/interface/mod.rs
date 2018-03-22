@@ -1,8 +1,8 @@
 pub use self::packet::*;
 pub use self::port::*;
 pub mod dpdk;
-mod port;
 mod packet;
+mod port;
 use common::*;
 use native::zcsi::MBuf;
 

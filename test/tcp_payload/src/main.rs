@@ -1,16 +1,16 @@
 #![feature(box_syntax)]
 #![feature(asm)]
-extern crate e2d2;
 extern crate fnv;
 extern crate getopts;
+extern crate netbricks;
 extern crate rand;
 extern crate time;
 use self::nf::*;
-use e2d2::allocators::CacheAligned;
-use e2d2::config::*;
-use e2d2::interface::*;
-use e2d2::operators::*;
-use e2d2::scheduler::*;
+use netbricks::allocators::CacheAligned;
+use netbricks::config::*;
+use netbricks::interface::*;
+use netbricks::operators::*;
+use netbricks::scheduler::*;
 use std::env;
 use std::sync::Arc;
 use std::thread::sleep;

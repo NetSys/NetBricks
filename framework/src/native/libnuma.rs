@@ -104,13 +104,17 @@ impl Eq for Bitmask {}
 impl Bitmask {
     pub unsafe fn allocate_node_mask() -> Bitmask {
         Bitmask {
-            bitmask: wrapped::numa_bitmask_clearall(wrapped::numa_bitmask_alloc(numa_num_possible_nodes() as u32)),
+            bitmask: wrapped::numa_bitmask_clearall(wrapped::numa_bitmask_alloc(
+                numa_num_possible_nodes() as u32,
+            )),
         }
     }
 
     pub unsafe fn allocate_cpu_mask() -> Bitmask {
         Bitmask {
-            bitmask: wrapped::numa_bitmask_clearall(wrapped::numa_bitmask_alloc(numa_num_possible_cpus() as u32)),
+            bitmask: wrapped::numa_bitmask_clearall(wrapped::numa_bitmask_alloc(
+                numa_num_possible_cpus() as u32,
+            )),
         }
     }
 

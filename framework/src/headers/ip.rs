@@ -33,7 +33,7 @@ pub struct Ipv6Header {
     dst_ip: Ipv6Address,
 }
 
-pub trait IpHeader : EndOffset + Default {}
+pub trait IpHeader: EndOffset + Default {}
 
 impl IpHeader for Ipv4Header {}
 impl IpHeader for Ipv6Header {}
@@ -244,7 +244,8 @@ impl Ipv4Header {
 
     #[inline]
     pub fn set_flags(&mut self, flags: u8) {
-        self.id_to_foffset = (self.id_to_foffset & !0x00e00000) | (((flags & 0x7) as u32) << (16 + 5));
+        self.id_to_foffset =
+            (self.id_to_foffset & !0x00e00000) | (((flags & 0x7) as u32) << (16 + 5));
     }
 
     #[inline]
@@ -271,9 +272,8 @@ impl Ipv4Header {
     pub fn set_version(&mut self, version: u8) {
         self.version_to_len = u32::to_be(
             (((version as u32) << 28) & 0xf0000000)
-                | (u32::from_be(self.version_to_len) & !0xf0000000)
+                | (u32::from_be(self.version_to_len) & !0xf0000000),
         );
-
     }
 
     #[inline]
@@ -313,7 +313,8 @@ impl Ipv4Header {
 
     #[inline]
     pub fn set_length(&mut self, len: u16) {
-        self.version_to_len = (self.version_to_len & !0xffff0000) | ((u16::to_be(len) as u32) << 16);
+        self.version_to_len =
+            (self.version_to_len & !0xffff0000) | ((u16::to_be(len) as u32) << 16);
     }
 }
 
@@ -362,9 +363,8 @@ impl Ipv6Header {
     pub fn set_version(&mut self, version: u8) {
         self.version_to_flow_label = u32::to_be(
             (((version as u32) << 28) & 0xf0000000)
-                | (u32::from_be(self.version_to_flow_label) & !0xf0000000)
+                | (u32::from_be(self.version_to_flow_label) & !0xf0000000),
         );
-
     }
 
     #[inline]
@@ -375,8 +375,8 @@ impl Ipv6Header {
     #[inline]
     pub fn set_traffic_class(&mut self, tclass: u8) {
         self.version_to_flow_label = u32::to_be(
-            (u32::from_be(self.version_to_flow_label) & 0xf00fffff) |
-            ((tclass as u32) << 20))
+            (u32::from_be(self.version_to_flow_label) & 0xf00fffff) | ((tclass as u32) << 20),
+        )
     }
 
     #[inline]
@@ -388,8 +388,7 @@ impl Ipv6Header {
     pub fn set_flow_label(&mut self, flow_label: u32) {
         assert!(flow_label <= 0x0fffff);
         self.version_to_flow_label = u32::to_be(
-            (u32::from_be(self.version_to_flow_label) & 0xfff00000) |
-            (flow_label & 0x0fffff)
+            (u32::from_be(self.version_to_flow_label) & 0xfff00000) | (flow_label & 0x0fffff),
         )
     }
 
@@ -422,7 +421,6 @@ impl Ipv6Header {
     pub fn set_hop_limit(&mut self, limit: u8) {
         self.hop_limit = limit
     }
-
 }
 
 #[cfg(test)]
@@ -445,7 +443,6 @@ mod ipv4 {
         assert_eq!(ip.length(), 20);
     }
 }
-
 
 #[cfg(test)]
 mod ipv6 {

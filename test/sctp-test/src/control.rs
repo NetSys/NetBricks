@@ -1,5 +1,5 @@
-use e2d2::control::IOScheduler;
-use e2d2::control::sctp::*;
+use netbricks::control::IOScheduler;
+use netbricks::control::sctp::*;
 use nix::errno;
 use sctp::*;
 use std::net::SocketAddr;

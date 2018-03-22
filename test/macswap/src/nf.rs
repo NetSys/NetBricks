@@ -1,5 +1,5 @@
-use e2d2::headers::*;
-use e2d2::operators::*;
+use netbricks::headers::*;
+use netbricks::operators::*;
 
 pub fn macswap<T: 'static + Batch<Header = NullHeader>>(
     parent: T,

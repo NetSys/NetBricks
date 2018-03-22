@@ -1,8 +1,8 @@
 use super::EndOffset;
 use headers::ip::IpHeader;
 use std::default::Default;
-use std::marker::PhantomData;
 use std::fmt;
+use std::marker::PhantomData;
 
 /// UDP header using SSE
 #[derive(Default)]
@@ -12,11 +12,12 @@ pub struct UdpHeader<T> {
     dst_port: u16,
     len: u16,
     csum: u16,
-    _parent: PhantomData<T>
+    _parent: PhantomData<T>,
 }
 
 impl<T> fmt::Display for UdpHeader<T>
-where T: IpHeader
+where
+    T: IpHeader,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -31,7 +32,8 @@ where T: IpHeader
 }
 
 impl<T> EndOffset for UdpHeader<T>
-where T: IpHeader
+where
+    T: IpHeader,
 {
     type PreviousHeader = T;
     #[inline]
@@ -56,11 +58,15 @@ where T: IpHeader
 }
 
 impl<T> UdpHeader<T>
-where T: IpHeader
+where
+    T: IpHeader,
 {
     #[inline]
     pub fn new() -> UdpHeader<T> {
-        UdpHeader { _parent: PhantomData, ..Default::default() }
+        UdpHeader {
+            _parent: PhantomData,
+            ..Default::default()
+        }
     }
 
     #[inline]

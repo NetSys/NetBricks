@@ -51,7 +51,10 @@ where
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, _: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
+    unsafe fn next_payload(
+        &mut self,
+        _: usize,
+    ) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
         panic!("Cannot iterate send batch")
     }
 }
