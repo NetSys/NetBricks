@@ -20,6 +20,7 @@ members=["framework",
         "test/acl-fw",
         "test/embedded-scheduler-test",
         "test/embedded-scheduler-dependency-test"]
+
 [profile.release]
 opt-level = 3
 lto = true

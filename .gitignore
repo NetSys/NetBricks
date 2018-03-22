@@ -32,3 +32,6 @@ target/
 
 # cscope
 cscope*
+
+# vagrant
+.vagrant

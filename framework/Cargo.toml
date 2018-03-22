@@ -1,7 +1,7 @@
 [package]
-name = "e2d2"
+name = "netbricks"
 version = "0.2.0"
-authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
+authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <williamofockham@gmail.com>"]
 build = "build.rs"
 
 [lib]
@@ -26,9 +26,7 @@ toml = "*"
 # Hack for SHM
 uuid= { version = "*", features=["v4"] }
 error-chain = "*"
-etcdv3-rs={ git="https://github.com/apanda/etcdv3-rs" }
 tokio-core=">=0.1.8"
-futures=">=0.1.14"
 
 [features]
 default = []
@@ -39,4 +37,4 @@ sctp = ["rust-sctp"]
 
 [build-dependencies]
 # Use Bindgen to generate DPDK structures.
-bindgen = ">=0.30.0"
+bindgen = "0.35.0"

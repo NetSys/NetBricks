@@ -145,8 +145,8 @@ impl SegmentList {
                 .wrapping_add(self.storage[idx as usize].length as u32);
             if end >= self.storage[next as usize].seq {
                 // We have at least some overlap, and should merge.
-                let merge_len =
-                    self.storage[next as usize].length as usize - (end - self.storage[next as usize].seq) as usize;
+                let merge_len = self.storage[next as usize].length as usize
+                    - (end - self.storage[next as usize].seq) as usize;
                 let new_len = merge_len as usize + self.storage[idx as usize].length as usize;
                 if new_len <= u16::MAX as usize {
                     self.storage[idx as usize].length = new_len as u16;
@@ -164,7 +164,8 @@ impl SegmentList {
                     // Remove from next.
                     self.storage[next as usize].length -= max_len;
                     // Update seq
-                    self.storage[next as usize].seq = self.storage[next as usize].seq.wrapping_add(max_len as u32);
+                    self.storage[next as usize].seq =
+                        self.storage[next as usize].seq.wrapping_add(max_len as u32);
                     // No more merges are possible so exit this loop.
                     break;
                 }
@@ -219,7 +220,8 @@ impl SegmentList {
                     // println!("Overlapping");
                     // Overlapping segment
                     let new_end = max(seg_end, end);
-                    self.storage[idx as usize].length = (new_end - self.storage[idx as usize].seq) as u16;
+                    self.storage[idx as usize].length =
+                        (new_end - self.storage[idx as usize].seq) as u16;
                     break;
                 } else {
                     idx = self.storage[idx as usize].next;

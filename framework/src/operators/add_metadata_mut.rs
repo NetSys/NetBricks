@@ -25,7 +25,10 @@ where
     M: Send + Sized,
     V: Batch + BatchIterator + Act,
 {
-    pub fn new(parent: V, generator: MutableMetadataFn<V::Header, V::Metadata, M>) -> MutableAddMetadataBatch<M, V> {
+    pub fn new(
+        parent: V,
+        generator: MutableMetadataFn<V::Header, V::Metadata, M>,
+    ) -> MutableAddMetadataBatch<M, V> {
         MutableAddMetadataBatch {
             parent: parent,
             generator: generator,

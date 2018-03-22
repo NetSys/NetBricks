@@ -79,7 +79,10 @@ impl StandaloneScheduler {
         StandaloneScheduler::new_with_channel_and_capacity(channel, DEFAULT_Q_SIZE)
     }
 
-    pub fn new_with_channel_and_capacity(channel: Receiver<SchedulerCommand>, capacity: usize) -> StandaloneScheduler {
+    pub fn new_with_channel_and_capacity(
+        channel: Receiver<SchedulerCommand>,
+        capacity: usize,
+    ) -> StandaloneScheduler {
         StandaloneScheduler {
             run_q: Vec::with_capacity(capacity),
             next_task: 0,

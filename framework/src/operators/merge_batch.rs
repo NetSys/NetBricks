@@ -33,7 +33,10 @@ impl<T: Batch> BatchIterator for MergeBatch<T> {
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T::Header, T::Metadata>> {
+    unsafe fn next_payload(
+        &mut self,
+        idx: usize,
+    ) -> Option<PacketDescriptor<T::Header, T::Metadata>> {
         self.parents[self.which].next_payload(idx)
     }
 }

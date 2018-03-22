@@ -9,7 +9,6 @@
 #![feature(heap_api)]
 #![feature(unique)]
 #![feature(const_fn)]
-#![feature(i128_type)]
 // FIXME: Figure out if this is really the right thing here.
 #![feature(ptr_internals)]
 // Used for cache alignment.
@@ -47,18 +46,18 @@ extern crate error_chain;
 
 #[cfg(unix)]
 extern crate nix;
+pub mod allocators;
+pub mod common;
+pub mod config;
+pub mod control;
+pub mod headers;
+pub mod interface;
 #[allow(dead_code)]
 mod native;
 mod native_include;
-pub mod allocators;
-pub mod headers;
-pub mod scheduler;
-pub mod utils;
-pub mod queues;
-pub mod state;
 pub mod operators;
-pub mod interface;
-pub mod common;
-pub mod control;
+pub mod queues;
+pub mod scheduler;
 pub mod shared_state;
-pub mod config;
+pub mod state;
+pub mod utils;

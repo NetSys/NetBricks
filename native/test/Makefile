@@ -1,7 +1,5 @@
 CC = gcc
 
-RTE_SDK = $(abspath ../../3rdparty/dpdk/)
-
 ifndef RTE_TARGET
 $(error RTE_TARGET is undefined)
 endif
@@ -27,7 +25,8 @@ CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=native \
 	 -Wno-unused-function -Wno-unused-but-set-variable \
 	 -I$(DPDK_INC_DIR) \
 	 -I$(DPDK_INCLUDE) \
-	 -D_GNU_SOURCE
+	 -D_GNU_SOURCE \
+     -fPIC
 
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
@@ -40,7 +39,7 @@ OSTYPE ?= $(shell uname)
 ifeq ($(OSTYPE),Darwin)
 	MAKEJOBS := $(shell sysctl -n hw.physicalcpu)
 else
-	MAKEJOBS := 1
+	MAKEJOBS := $(shell nproc || echo 1)
 endif
 
 # if multiple targets are specified, do them one by one */

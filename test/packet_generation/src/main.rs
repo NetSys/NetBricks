@@ -1,15 +1,15 @@
 #![feature(box_syntax)]
 #![feature(asm)]
-extern crate e2d2;
 extern crate fnv;
 extern crate getopts;
+extern crate netbricks;
 extern crate rand;
 extern crate time;
-use e2d2::config::{basic_opts, read_matches};
-use e2d2::interface::*;
-use e2d2::operators::*;
-use e2d2::queues::*;
-use e2d2::scheduler::*;
+use netbricks::config::{basic_opts, read_matches};
+use netbricks::interface::*;
+use netbricks::operators::*;
+use netbricks::queues::*;
+use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
 use std::process;

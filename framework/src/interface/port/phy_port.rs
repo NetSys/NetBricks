@@ -1,5 +1,5 @@
-use super::PortStats;
 use super::super::{PacketRx, PacketTx};
+use super::PortStats;
 use allocators::*;
 use common::*;
 use config::{PortConfiguration, NUM_RXD, NUM_TXD};
@@ -146,7 +146,11 @@ impl PmdPort {
         self.txqs
     }
 
-    pub fn new_queue_pair(port: &Arc<PmdPort>, rxq: i32, txq: i32) -> Result<CacheAligned<PortQueue>> {
+    pub fn new_queue_pair(
+        port: &Arc<PmdPort>,
+        rxq: i32,
+        txq: i32,
+    ) -> Result<CacheAligned<PortQueue>> {
         if rxq > port.rxqs || rxq < 0 {
             Err(ErrorKind::BadRxQueue(port.port, rxq).into())
         } else if txq > port.txqs || txq < 0 {
@@ -199,7 +203,8 @@ impl PmdPort {
         let actual_rxqs = min(max_rxqs, rxqs);
         let actual_txqs = min(max_txqs, txqs);
 
-        if ((actual_txqs as usize) <= tx_cores.len()) && ((actual_rxqs as usize) <= rx_cores.len()) {
+        if ((actual_txqs as usize) <= tx_cores.len()) && ((actual_rxqs as usize) <= rx_cores.len())
+        {
             let ret = unsafe {
                 init_pmd_port(
                     port,

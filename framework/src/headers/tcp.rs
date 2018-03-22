@@ -1,8 +1,8 @@
 use super::EndOffset;
 use headers::ip::IpHeader;
 use std::default::Default;
-use std::marker::PhantomData;
 use std::fmt;
+use std::marker::PhantomData;
 
 #[derive(Default)]
 #[repr(C, packed)]
@@ -16,7 +16,7 @@ pub struct TcpHeader<T> {
     window: u16,
     csum: u16,
     urgent: u16,
-    _parent: PhantomData<T>
+    _parent: PhantomData<T>,
 }
 
 const CWR: u8 = 0b1000_0000;
@@ -39,7 +39,10 @@ macro_rules! write_or_return {
     }
 }
 
-impl<T> fmt::Display for TcpHeader<T> where T: IpHeader {
+impl<T> fmt::Display for TcpHeader<T>
+where
+    T: IpHeader,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write_or_return!(
             f,
@@ -65,7 +68,8 @@ impl<T> fmt::Display for TcpHeader<T> where T: IpHeader {
 }
 
 impl<T> EndOffset for TcpHeader<T>
-where T: IpHeader
+where
+    T: IpHeader,
 {
     type PreviousHeader = T;
 
@@ -90,10 +94,16 @@ where T: IpHeader
     }
 }
 
-impl<T> TcpHeader<T> where T: IpHeader {
+impl<T> TcpHeader<T>
+where
+    T: IpHeader,
+{
     #[inline]
     pub fn new() -> TcpHeader<T> {
-        TcpHeader { _parent: PhantomData, ..Default::default() }
+        TcpHeader {
+            _parent: PhantomData,
+            ..Default::default()
+        }
     }
 
     #[inline]

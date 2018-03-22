@@ -1,27 +1,31 @@
 sudo: required
-language: rust
-rust:
-    - nightly
-dist: trusty
-matrix:
-    include:
-        - rust: nightly
-env:
-    - SYSTEM_CARGO=1
-before_install:
-    - sudo apt-get update -qq
-    - sudo apt-get install -qq apt-utils build-essential pciutils linux-headers-`uname -r` python python3  libssl-dev 
-    - sudo apt-get install -qq libgnutls28 libgnutls-dev libcurl4-gnutls-dev cmake bash libpcap-dev libnuma-dev
-    - ./build.sh deps
+
+branches:
+  only:
+    - master
+
+language: generic
+
 services:
-    - docker
+  - docker
+
 before_script:
-    - sudo sysctl -w vm.nr_hugepages=256
-    - sudo mkdir -p /mnt/huge
-    - sudo mount -t hugetlbfs nodev /mnt/huge
+  - sudo ./scripts/travis-setup.sh
+  - make -f docker.mk build-fresh
+
 script:
-    - ./build.sh check_examples
-    - ./build.sh fmt_travis 
-    - ./build.sh build_container 
-    - ./build.sh ctr_test
-install: true
+  - make -f docker.mk run-tests
+
+before_deploy:
+  - |
+    if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    fi
+
+deploy:
+  provider: script
+  script: |
+          if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+            make -f docker.mk tag
+            make -f docker.mk push
+          fi

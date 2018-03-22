@@ -1,5 +1,5 @@
-use e2d2::headers::*;
-use e2d2::operators::*;
+use netbricks::headers::*;
+use netbricks::operators::*;
 
 #[inline]
 fn lat() {

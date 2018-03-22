@@ -1,8 +1,8 @@
-use e2d2::common::*;
-use e2d2::headers::*;
-use e2d2::interface::*;
-use e2d2::queues::*;
-use e2d2::scheduler::*;
+use netbricks::common::*;
+use netbricks::headers::*;
+use netbricks::interface::*;
+use netbricks::queues::*;
+use netbricks::scheduler::*;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
@@ -37,7 +37,10 @@ impl PacketCreator {
     }
 
     #[inline]
-    fn initialize_packet(&self, pkt: Packet<NullHeader, EmptyMetadata>) -> Packet<Ipv4Header, EmptyMetadata> {
+    fn initialize_packet(
+        &self,
+        pkt: Packet<NullHeader, EmptyMetadata>,
+    ) -> Packet<Ipv4Header, EmptyMetadata> {
         pkt.push_header(&self.mac)
             .unwrap()
             .push_header(&self.ip)

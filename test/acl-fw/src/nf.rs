@@ -1,7 +1,7 @@
-use e2d2::headers::*;
-use e2d2::operators::*;
-use e2d2::utils::{Flow, Ipv4Prefix};
 use fnv::FnvHasher;
+use netbricks::headers::*;
+use netbricks::operators::*;
+use netbricks::utils::{Flow, Ipv4Prefix};
 use std::collections::HashSet;
 use std::hash::BuildHasherDefault;
 
@@ -37,7 +37,10 @@ impl Acl {
     }
 }
 
-pub fn acl_match<T: 'static + Batch<Header = NullHeader>>(parent: T, acls: Vec<Acl>) -> CompositionBatch {
+pub fn acl_match<T: 'static + Batch<Header = NullHeader>>(
+    parent: T,
+    acls: Vec<Acl>,
+) -> CompositionBatch {
     let mut flow_cache = HashSet::<Flow, FnvHash>::with_hasher(Default::default());
     parent
         .parse::<MacHeader>()

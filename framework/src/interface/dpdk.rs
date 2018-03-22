@@ -6,7 +6,13 @@ use std::cell::Cell;
 use std::ffi::CString;
 
 /// Initialize the system, whitelisting some set of NICs and allocating mempool of given size.
-fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_size: u32, cache_size: u32) {
+fn init_system_wl_with_mempool(
+    name: &str,
+    core: i32,
+    pci: &[String],
+    pool_size: u32,
+    cache_size: u32,
+) {
     let name_cstr = CString::new(name).unwrap();
     let pci_cstr: Vec<_> = pci.iter().map(|p| CString::new(&p[..]).unwrap()).collect();
     let mut whitelist: Vec<_> = pci_cstr.iter().map(|p| p.as_ptr()).collect();
