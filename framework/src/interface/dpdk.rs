@@ -2,6 +2,7 @@ use super::METADATA_SLOTS;
 use super::native_include as ldpdk;
 use config::{NetbricksConfiguration, DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE};
 use libc;
+use native::zcsi as lzcsi;
 use native::libnuma;
 use std::cell::Cell;
 use std::cmp;
@@ -59,7 +60,8 @@ fn init_system_wl_with_mempool(name: &str, core: i32, devices: &[String], pool_s
         );
         dpdk_args.push(CString::new("--no-shconf").unwrap().into_raw());
 
-        let numa_nodes = if libnuma::numa_available() == -1 {
+        let numa_available = libnuma::numa_available();
+        let numa_nodes = if numa_available == -1 {
             // FIXME: Warn.
             1
         } else {
@@ -87,8 +89,11 @@ fn init_system_wl_with_mempool(name: &str, core: i32, devices: &[String], pool_s
             panic!("Could not initialize DPDK -- errno {}", -ret)
         }
 
-        let socket = ldpdk::lcore_config[master_lcore as usize].socket_id;
-        bind_thread_to_numa_node(socket);
+        if numa_available {
+            let socket = ldpdk::lcore_config[master_lcore as usize].socket_id;
+            bind_thread_to_numa_node(socket);
+        }
+
         for sock in 0..numa_nodes {
             let _ = init_socket_mempool(sock as i32, pool_size, cache_size, METADATA_SLOTS as u16);
         }
@@ -134,8 +139,14 @@ pub fn init_thread(tid: i32, core: i32) {
             let cset = &mut cset_dpdk as *mut ldpdk::cpu_set_t;
             ldpdk::rte_thread_set_affinity(cset);
         }
-        // FIXME: Need to set lcore_id for use by mempool caches, which are accessed by some PMD drivers..
-        //ldpdk::per_lcore__lcore_id = tid as u32;
+        let numa_available = libnuma::numa_available();
+        let socket = ldpdk::lcore_config[core as usize].socket_id;
+        if numa_available != -1 { bind_thread_to_numa_node(socket) };
+        // FIXME: Need to set lcore_id for use by mempool caches, which are accessed by some PMD drivers
+        lzcsi::init_thread(tid, core);
+        if init_thread != 1 {
+            panic!("init_thread failed")
+        }
     }
     set_lcore_id(tid)
 }

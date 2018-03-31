@@ -200,19 +200,8 @@ RTE_DECLARE_PER_LCORE(unsigned, _socket_id);
  * etc.*/
 int init_thread(int tid, int core) {
     /* Among other things this affinitizes the thread */
-    rte_cpuset_t cpuset;
-    int socket_id   = rte_lcore_to_socket_id(core);
-    int numa_active = numa_available();
-    CPU_ZERO(&cpuset);
-    CPU_SET(core, &cpuset);
-    rte_thread_set_affinity(&cpuset);
-    if (numa_active != -1) {
-        bind_to_domain(socket_id);
-    }
-    init_mempool_core(core);
-
     /* Set thread ID correctly */
     RTE_PER_LCORE(_lcore_id)     = tid;
     RTE_PER_LCORE(_mempool_core) = core;
-    return numa_active == -1 ? numa_active : socket_id;
+    return 1;
 }
