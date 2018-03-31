@@ -1,28 +1,5 @@
-#[repr(C)]
-pub struct MBuf {
-    buf_addr: *mut u8,
-    phys_addr: usize,
-    data_off: u16,
-    refcnt: u16,
-    nb_segs: u8,
-    port: u8,
-    ol_flags: u64,
-    packet_type: u32,
-    pkt_len: u32,
-    data_len: u16,
-    vlan_tci: u16,
-    hash: u64,
-    vlan_tci_outer: u32,
-    buf_len: u16,
-    timestamp: u64,
-    userdata: u64,
-    pool: u64,
-    next: *mut MBuf,
-    tx_offload: u64,
-    priv_size: u16,
-    timesync: u16,
-    seqn: u32,
-}
+use super::super::super::native_include as ldpdk;
+pub type MBuf = ldpdk::rte_mbuf;
 
 // FIXME: Remove this once we start using these functions correctly
 #[allow(dead_code)]
@@ -56,7 +33,7 @@ impl MBuf {
     #[inline]
     pub fn data_address(&self, offset: usize) -> *mut u8 {
         unsafe {
-            self.buf_addr
+            (self.buf_addr as *mut u8)
                 .offset(self.data_off as isize + offset as isize)
         }
     }
@@ -142,11 +119,15 @@ impl MBuf {
 
     #[inline]
     pub fn refcnt(&self) -> u16 {
-        self.refcnt
+        unsafe {
+            self.__bindgen_anon_1.refcnt
+        }
     }
 
     #[inline]
     pub fn reference(&mut self) {
-        self.refcnt += 1;
+        unsafe {
+            self.__bindgen_anon_1.refcnt += 1;
+        }
     }
 }
