@@ -65,13 +65,9 @@ fn main() {
 
             let delay: u64 = delay_arg;
             if phy_ports {
-                context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| {
-                    test(p, s, delay)
-                }));
+                context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s, delay)));
             } else {
-                context.add_test_pipeline(Arc::new(move |p, s: &mut StandaloneScheduler| {
-                    test(p, s, delay)
-                }));
+                context.add_test_pipeline(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s, delay)));
             }
             context.execute();
 

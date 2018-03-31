@@ -63,9 +63,7 @@ fn main() {
             context.start_schedulers();
 
             let delay: u64 = delay_arg;
-            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| {
-                test(p, s, delay)
-            }));
+            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s, delay)));
             context.execute();
 
             let mut pkts_so_far = (0, 0);

@@ -60,10 +60,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
 
         let symmetric_queue = port_def.contains_key("cores");
         if symmetric_queue && (port_def.contains_key("rx_cores") || port_def.contains_key("tx_cores")) {
-            println!(
-                "cores specified along with rx_cores and/or tx_cores for port {}",
-                name
-            );
+            println!("cores specified along with rx_cores and/or tx_cores for port {}", name);
             return Err(ErrorKind::ConfigurationError(format!(
                 "cores specified along with rx_cores and/or tx_cores \
                  for port {}",

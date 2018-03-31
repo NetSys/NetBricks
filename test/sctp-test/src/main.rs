@@ -22,8 +22,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-mod nf;
 mod control;
+mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
@@ -66,9 +66,7 @@ fn main() {
     match initialize_system(&configuration) {
         Ok(mut context) => {
             context.start_schedulers();
-            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| {
-                test(p, s, delay_arg)
-            }));
+            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s, delay_arg)));
             context.execute();
 
             let mut pkts_so_far = (0, 0);

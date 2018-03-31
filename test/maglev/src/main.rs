@@ -29,13 +29,7 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| {
-            maglev(
-                ReceiveBatch::new(port.clone()),
-                sched,
-                &vec!["Larry", "Curly", "Moe"],
-            ).send(port.clone())
-        })
+        .map(|port| maglev(ReceiveBatch::new(port.clone()), sched, &vec!["Larry", "Curly", "Moe"]).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     sched.add_task(merge(pipelines)).unwrap();

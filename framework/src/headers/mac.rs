@@ -76,13 +76,7 @@ pub struct MacHeader {
 
 impl fmt::Display for MacHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{} > {} 0x{:04x}",
-            self.src,
-            self.dst,
-            u16::from_be(self.etype)
-        )
+        write!(f, "{} > {} 0x{:04x}", self.src, self.dst, u16::from_be(self.etype))
     }
 }
 

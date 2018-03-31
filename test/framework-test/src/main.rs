@@ -6,8 +6,8 @@ extern crate time;
 use e2d2::allocators::*;
 use e2d2::common::*;
 use e2d2::headers::*;
-use e2d2::interface::*;
 use e2d2::interface::dpdk::*;
+use e2d2::interface::*;
 use e2d2::operators::*;
 use e2d2::scheduler::Executable;
 use e2d2::state::*;
@@ -90,20 +90,13 @@ fn main() {
 
     let cores: Vec<i32> = cores_str
         .iter()
-        .map(|n: &String| {
-            n.parse()
-                .ok()
-                .expect(&format!("Core cannot be parsed {}", n))
-        })
+        .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
         .collect();
 
     fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
         let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
         for (port, core) in ports.iter().zip(cores.iter()) {
-            cores_for_port
-                .entry(port.clone())
-                .or_insert(vec![])
-                .push(*core)
+            cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
         }
         cores_for_port
     }

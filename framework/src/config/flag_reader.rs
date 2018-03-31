@@ -78,11 +78,7 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
 
         let mut cores: Vec<i32> = cores_str
             .iter()
-            .map(|n: &String| {
-                n.parse()
-                    .ok()
-                    .expect(&format!("Core cannot be parsed {}", n))
-            })
+            .map(|n: &String| n.parse().ok().expect(&format!("Core cannot be parsed {}", n)))
             .collect();
 
         let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
@@ -112,10 +108,7 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
 fn extract_cores_for_port(ports: &[String], cores: &[i32]) -> HashMap<String, Vec<i32>> {
     let mut cores_for_port = HashMap::<String, Vec<i32>>::new();
     for (port, core) in ports.iter().zip(cores.iter()) {
-        cores_for_port
-            .entry(port.clone())
-            .or_insert(vec![])
-            .push(*core)
+        cores_for_port.entry(port.clone()).or_insert(vec![]).push(*core)
     }
     cores_for_port
 }

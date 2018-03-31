@@ -57,9 +57,7 @@ fn main() {
     match initialize_system(&configuration) {
         Ok(mut context) => {
             context.start_schedulers();
-            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| {
-                test(p, s, delay_arg)
-            }));
+            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| test(p, s, delay_arg)));
             context.execute();
 
             let mut pkts_so_far = (0, 0);

@@ -3,19 +3,7 @@ use headers::MacAddress;
 use std::os::raw::c_char;
 #[link(name = "zcsi")]
 extern "C" {
-    pub fn init_system_whitelisted(
-        name: *const c_char,
-        nlen: i32,
-        core: i32,
-        whitelist: *mut *const c_char,
-        wlcount: i32,
-        pool_size: u32,
-        cache_size: u32,
-        slots: u16,
-    ) -> i32;
     pub fn init_thread(tid: i32, core: i32) -> i32;
-    pub fn init_secondary(name: *const c_char, nlen: i32, core: i32, vdevs: *mut *const c_char, vdev_count: i32)
-        -> i32;
     pub fn init_pmd_port(
         port: i32,
         rxqs: i32,

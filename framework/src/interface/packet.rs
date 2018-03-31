@@ -103,10 +103,7 @@ pub fn new_packet_array(count: usize) -> Vec<Packet<NullHeader, EmptyMetadata>> 
         if alloc_ret == 0 {
             array.set_len(count);
         }
-        array
-            .iter()
-            .map(|m| packet_from_mbuf_no_increment(*m, 0))
-            .collect()
+        array.iter().map(|m| packet_from_mbuf_no_increment(*m, 0)).collect()
     }
 }
 

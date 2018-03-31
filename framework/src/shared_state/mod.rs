@@ -30,20 +30,12 @@ unsafe fn open_shared<T>(name: &str, size: usize) -> SharedMemory<T> {
     // Make sure size is page aligned
     assert!(size & !PAGE_SIZE == 0);
     let name = CString::new(name).unwrap();
-    let mut fd = shm_open(
-        name.as_ptr(),
-        libc::O_CREAT | libc::O_EXCL | libc::O_RDWR,
-        0o700,
-    );
+    let mut fd = shm_open(name.as_ptr(), libc::O_CREAT | libc::O_EXCL | libc::O_RDWR, 0o700);
     if fd == -1 {
         if let Some(e) = Error::last_os_error().raw_os_error() {
             if e == libc::EEXIST {
                 shm_unlink(name.as_ptr());
-                fd = shm_open(
-                    name.as_ptr(),
-                    libc::O_CREAT | libc::O_EXCL | libc::O_RDWR,
-                    0o700,
-                );
+                fd = shm_open(name.as_ptr(), libc::O_CREAT | libc::O_EXCL | libc::O_RDWR, 0o700);
             }
         }
     };

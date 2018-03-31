@@ -29,13 +29,7 @@ where
 
     let mut pipelines: Vec<_> = ports
         .iter()
-        .map(|port| {
-            nat(
-                ReceiveBatch::new(port.clone()),
-                sched,
-                &Ipv4Addr::new(10, 0, 0, 1),
-            ).send(port.clone())
-        })
+        .map(|port| nat(ReceiveBatch::new(port.clone()), sched, &Ipv4Addr::new(10, 0, 0, 1)).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     if pipelines.len() > 1 {

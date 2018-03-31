@@ -32,10 +32,7 @@ impl MBuf {
 
     #[inline]
     pub fn data_address(&self, offset: usize) -> *mut u8 {
-        unsafe {
-            (self.buf_addr as *mut u8)
-                .offset(self.data_off as isize + offset as isize)
-        }
+        unsafe { (self.buf_addr as *mut u8).offset(self.data_off as isize + offset as isize) }
     }
 
     /// Returns the total allocated size of this mbuf segment.
@@ -119,9 +116,7 @@ impl MBuf {
 
     #[inline]
     pub fn refcnt(&self) -> u16 {
-        unsafe {
-            self.__bindgen_anon_1.refcnt
-        }
+        unsafe { self.__bindgen_anon_1.refcnt }
     }
 
     #[inline]

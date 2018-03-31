@@ -53,9 +53,7 @@ impl SegmentList {
     /// Create a segement list expecting that we will need no more than `length` segments.
     pub fn new(length: usize) -> SegmentList {
         SegmentList {
-            storage: (0..(length as isize))
-                .map(|i| Segment::new(i, 0, 0))
-                .collect(),
+            storage: (0..(length as isize)).map(|i| Segment::new(i, 0, 0)).collect(),
             available: (0..(length as isize)).collect(),
             head: -1,
             tail: -1,
@@ -463,9 +461,7 @@ impl ReorderedBuffer {
             self.tail_seq = self.tail_seq.wrapping_add(written as u32);
             {
                 // Insert into segment list.
-                let segment = self.segment_list
-                    .insert_segment(seq, written as u16)
-                    .unwrap();
+                let segment = self.segment_list.insert_segment(seq, written as u16).unwrap();
                 // Since we are writing to the beginning, this must always be the head.
                 assert!(self.segment_list.is_head(segment));
                 // Compute the end of the segment, this might in fact be larger than size

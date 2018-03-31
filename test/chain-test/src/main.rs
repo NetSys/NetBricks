@@ -26,10 +26,7 @@ where
 {
     println!("Receiving started");
     for port in &ports {
-        println!(
-            "Receiving port {} on chain len {} pos {}",
-            port, chain_len, chain_pos
-        );
+        println!("Receiving port {} on chain len {} pos {}", port, chain_len, chain_pos);
     }
 
     let pipelines: Vec<_> = ports
@@ -45,12 +42,7 @@ where
 fn main() {
     let mut opts = basic_opts();
     opts.optopt("l", "chain", "Chain length", "length");
-    opts.optopt(
-        "j",
-        "position",
-        "Chain position (when externally chained)",
-        "position",
-    );
+    opts.optopt("j", "position", "Chain position (when externally chained)", "position");
     let args: Vec<String> = env::args().collect();
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,

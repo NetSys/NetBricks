@@ -1,5 +1,5 @@
-use super::PortStats;
 use super::super::{PacketRx, PacketTx};
+use super::PortStats;
 use allocators::*;
 use common::*;
 use config::{PortConfiguration, NUM_RXD, NUM_TXD};

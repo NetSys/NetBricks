@@ -60,8 +60,7 @@ impl<T: SctpControlAgent> SctpControlServer<T> {
     }
 
     fn listen(&mut self) {
-        self.handle
-            .schedule_read(&self.listener, self.listener_token);
+        self.handle.schedule_read(&self.listener, self.listener_token);
     }
 
     pub fn schedule(&mut self) {

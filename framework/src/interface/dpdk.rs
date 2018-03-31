@@ -2,11 +2,12 @@ use super::METADATA_SLOTS;
 use super::native_include as ldpdk;
 use config::{NetbricksConfiguration, DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE};
 use libc;
-use native::zcsi as lzcsi;
 use native::libnuma;
+use native::zcsi as lzcsi;
 use std::cell::Cell;
 use std::cmp;
 use std::ffi::CString;
+use std::io::Error;
 use std::iter;
 use std::mem;
 use std::ptr;
@@ -28,13 +29,10 @@ unsafe fn init_socket_mempool(
     )
 }
 
-
 /// Call into libnuma to bind thread to NUMA node.
 unsafe fn bind_thread_to_numa_node(socket: u32) {
     let bitmask = libnuma::numa_bitmask_setbit(
-        libnuma::numa_bitmask_clearall(libnuma::numa_bitmask_alloc(
-            libnuma::numa_num_possible_nodes() as u32,
-        )),
+        libnuma::numa_bitmask_clearall(libnuma::numa_bitmask_alloc(libnuma::numa_num_possible_nodes() as u32)),
         socket,
     );
     libnuma::numa_bind(bitmask);
@@ -53,11 +51,8 @@ fn init_system_wl_with_mempool(name: &str, core: i32, devices: &[String], pool_s
         // Using RTE_MAX_LCORE as core ID for master.
         let master_lcore = ldpdk::RTE_MAX_LCORE - 1;
         dpdk_args.push(CString::new(master_lcore.to_string()).unwrap().into_raw());
-        dpdk_args.push(
-            CString::new(format!("{}@{}", master_lcore, core))
-                .unwrap()
-                .into_raw(),
-        );
+        dpdk_args.push(CString::new("--lcore").unwrap().into_raw());
+        dpdk_args.push(CString::new(format!("{}@{}", master_lcore, core)).unwrap().into_raw());
         dpdk_args.push(CString::new("--no-shconf").unwrap().into_raw());
 
         let numa_available = libnuma::numa_available();
@@ -68,9 +63,7 @@ fn init_system_wl_with_mempool(name: &str, core: i32, devices: &[String], pool_s
             // The cmp::max is to take care of any cases where libnuma is broken.
             cmp::max(1, libnuma::numa_num_configured_nodes())
         } as usize;
-        let mem_vec: Vec<_> = iter::repeat(pool_size.to_string())
-            .take(numa_nodes)
-            .collect();
+        let mem_vec: Vec<_> = iter::repeat(pool_size.to_string()).take(numa_nodes).collect();
         let mem = mem_vec.join(",");
         dpdk_args.push(CString::new("--socket-mem").unwrap().into_raw());
         dpdk_args.push(CString::new(mem).unwrap().into_raw());
@@ -82,14 +75,18 @@ fn init_system_wl_with_mempool(name: &str, core: i32, devices: &[String], pool_s
             dpdk_args.push(CString::new("-w").unwrap().into_raw());
             dpdk_args.push(CString::new(&dev[..]).unwrap().into_raw());
         }
-        dpdk_args.push(ptr::null_mut());
         let arg_len = dpdk_args.len() as i32;
+        println!("arg_len = {}", arg_len);
+        dpdk_args.push(ptr::null_mut());
         let ret = ldpdk::rte_eal_init(arg_len, dpdk_args.as_mut_ptr());
-        if ret != 0 {
-            panic!("Could not initialize DPDK -- errno {}", -ret)
+        if ret == -1 {
+            panic!(
+                "Could not initialize DPDK -- errno {:?}",
+                Error::from_raw_os_error(-ret)
+            )
         }
 
-        if numa_available {
+        if numa_available != -1 {
             let socket = ldpdk::lcore_config[master_lcore as usize].socket_id;
             bind_thread_to_numa_node(socket);
         }
@@ -141,10 +138,12 @@ pub fn init_thread(tid: i32, core: i32) {
         }
         let numa_available = libnuma::numa_available();
         let socket = ldpdk::lcore_config[core as usize].socket_id;
-        if numa_available != -1 { bind_thread_to_numa_node(socket) };
+        if numa_available != -1 {
+            bind_thread_to_numa_node(socket)
+        };
         // FIXME: Need to set lcore_id for use by mempool caches, which are accessed by some PMD drivers
-        lzcsi::init_thread(tid, core);
-        if init_thread != 1 {
+        let init_result = lzcsi::init_thread(tid, core);
+        if init_result != 1 {
             panic!("init_thread failed")
         }
     }

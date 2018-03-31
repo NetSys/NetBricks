@@ -49,11 +49,7 @@ where
         self.parent.act();
         // Filter during the act
         let iter = PayloadEnumerator::<T, V::Metadata>::new(&mut self.parent);
-        while let Some(ParsedDescriptor {
-            mut packet,
-            index: idx,
-        }) = iter.next(&mut self.parent)
-        {
+        while let Some(ParsedDescriptor { mut packet, index: idx }) = iter.next(&mut self.parent) {
             if !(self.filter)(&mut packet) {
                 self.remove.push(idx)
             }

@@ -1,7 +1,7 @@
 use allocators::CacheAligned;
 use config::NetbricksConfiguration;
-use interface::{PmdPort, PortQueue, VirtualPort, VirtualQueue};
 use interface::dpdk::{init_system, init_thread};
+use interface::{PmdPort, PortQueue, VirtualPort, VirtualQueue};
 use scheduler::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -80,9 +80,7 @@ impl NetBricksContext {
             };
             let boxed_run = run.clone();
             channel
-                .send(SchedulerCommand::Run(Arc::new(move |s| {
-                    boxed_run(ports.clone(), s)
-                })))
+                .send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(ports.clone(), s))))
                 .unwrap();
         }
     }
@@ -92,9 +90,7 @@ impl NetBricksContext {
         T: Fn(Vec<AlignedVirtualQueue>, &mut StandaloneScheduler) + Send + Sync + 'static,
     {
         for (core, channel) in &self.scheduler_channels {
-            let port = self.virtual_ports
-                .entry(*core)
-                .or_insert(VirtualPort::new(1).unwrap());
+            let port = self.virtual_ports.entry(*core).or_insert(VirtualPort::new(1).unwrap());
             let boxed_run = run.clone();
             let queue = port.new_virtual_queue(1).unwrap();
             channel
@@ -113,9 +109,7 @@ impl NetBricksContext {
         run: Arc<T>,
     ) -> Result<()> {
         if let Some(channel) = self.scheduler_channels.get(&core) {
-            let port = self.virtual_ports
-                .entry(core)
-                .or_insert(VirtualPort::new(1).unwrap());
+            let port = self.virtual_ports.entry(core).or_insert(VirtualPort::new(1).unwrap());
             let boxed_run = run.clone();
             let queue = port.new_virtual_queue(1).unwrap();
             channel
@@ -142,9 +136,7 @@ impl NetBricksContext {
             };
             let boxed_run = run.clone();
             channel
-                .send(SchedulerCommand::Run(Arc::new(move |s| {
-                    boxed_run(ports.clone(), s)
-                })))
+                .send(SchedulerCommand::Run(Arc::new(move |s| boxed_run(ports.clone(), s))))
                 .unwrap();
             Ok(())
         } else {
@@ -163,26 +155,16 @@ impl NetBricksContext {
     /// Pause all schedulers, the returned `BarrierHandle` can be used to resume.
     pub fn barrier(&mut self) -> BarrierHandle {
         // TODO: If this becomes a problem, move this to the struct itself; but make sure to fix `stop` appropriately.
-        let channels: Vec<_> = self.scheduler_handles
-            .iter()
-            .map(|_| sync_channel(0))
-            .collect();
+        let channels: Vec<_> = self.scheduler_handles.iter().map(|_| sync_channel(0)).collect();
         let receivers = channels.iter().map(|&(_, ref r)| r);
         let senders = channels.iter().map(|&(ref s, _)| s);
         for ((_, channel), sender) in self.scheduler_channels.iter().zip(senders) {
-            channel
-                .send(SchedulerCommand::Handshake(sender.clone()))
-                .unwrap();
+            channel.send(SchedulerCommand::Handshake(sender.clone())).unwrap();
         }
         for receiver in receivers {
             receiver.recv().unwrap();
         }
-        BarrierHandle::with_threads(
-            self.scheduler_handles
-                .values()
-                .map(|j| j.thread())
-                .collect(),
-        )
+        BarrierHandle::with_threads(self.scheduler_handles.values().map(|j| j.thread()).collect())
     }
 
     /// Stop all schedulers, safely shutting down the system.
@@ -257,10 +239,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
     }
     if configuration.strict {
         let other_cores: HashSet<_> = ctx.rx_queues.keys().cloned().collect();
-        let core_diff: Vec<_> = other_cores
-            .difference(&cores)
-            .map(|c| c.to_string())
-            .collect();
+        let core_diff: Vec<_> = other_cores.difference(&cores).map(|c| c.to_string()).collect();
         if !core_diff.is_empty() {
             let missing_str = core_diff.join(", ");
             return Err(ErrorKind::ConfigurationError(format!(

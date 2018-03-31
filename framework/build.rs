@@ -54,24 +54,14 @@ fn main() {
         .join("build");
 
     let dpdk_libs = dpdk_build.clone().join("lib");
-    let native_path = Path::new(&cargo_dir)
-        .parent()
-        .unwrap()
-        .join("target")
-        .join("native");
+    let native_path = Path::new(&cargo_dir).parent().unwrap().join("target").join("native");
     //println!("DPDK {:?}", dpdk_libs.to_str());
     // Use DPDK directory as -L
-    println!(
-        "cargo:rustc-link-search=native={}",
-        dpdk_libs.to_str().unwrap()
-    );
+    println!("cargo:rustc-link-search=native={}", dpdk_libs.to_str().unwrap());
     if dpdk_libs.join("libdpdk.so").exists() {
         println!("cargo:rustc-link-lib=dpdk");
     }
-    println!(
-        "cargo:rustc-link-search=native={}",
-        native_path.to_str().unwrap()
-    );
+    println!("cargo:rustc-link-search=native={}", native_path.to_str().unwrap());
     println!("cargo:rustc-link-lib=numa");
 
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -89,21 +79,14 @@ fn main() {
         .generate()
         .expect("Unable to generate DPDK bindings");
     let dpdk_bindings = Path::new(&out_dir).join("dpdk_bindings.rs");
-    bindings
-        .write_to_file(dpdk_bindings)
-        .expect("Could not write bindings");
+    bindings.write_to_file(dpdk_bindings).expect("Could not write bindings");
 
-    let numa_header_path = Path::new(&cargo_dir)
-        .join("src")
-        .join("native")
-        .join("numa.h");
+    let numa_header_path = Path::new(&cargo_dir).join("src").join("native").join("numa.h");
     let bindings = bindgen::Builder::default()
         .header(numa_header_path.to_str().unwrap())
         .rust_target(bindgen::RustTarget::Nightly)
         .generate()
         .expect("Unable to generate libnuma bindings");
     let numa_bindings = Path::new(&out_dir).join("numa.rs");
-    bindings
-        .write_to_file(numa_bindings)
-        .expect("Could not write bindings");
+    bindings.write_to_file(numa_bindings).expect("Could not write bindings");
 }

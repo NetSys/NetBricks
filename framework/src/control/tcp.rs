@@ -103,8 +103,7 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
         } else {
             // FIXME: Report something.
         }
-        self.handle
-            .schedule_read(&self.listener, self.listener_token);
+        self.handle.schedule_read(&self.listener, self.listener_token);
     }
 
     fn handle_data(&mut self, token: Token, available: Available) {

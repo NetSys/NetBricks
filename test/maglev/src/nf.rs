@@ -4,8 +4,8 @@ use e2d2::scheduler::*;
 use e2d2::utils::*;
 use fnv::FnvHasher;
 use std::collections::HashMap;
-use std::hash::{BuildHasher, Hash, Hasher};
 use std::hash::BuildHasherDefault;
+use std::hash::{BuildHasher, Hash, Hasher};
 use twox_hash::XxHash;
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
