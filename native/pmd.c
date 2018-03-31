@@ -31,7 +31,8 @@ static const struct rte_eth_conf default_eth_conf = {
     /* FIXME: Find supported RSS hashes from rte_eth_dev_get_info */
     .rx_adv_conf.rss_conf =
         {
-            .rss_hf = ETH_RSS_IP | ETH_RSS_UDP | ETH_RSS_TCP | ETH_RSS_SCTP, .rss_key = NULL,
+            .rss_hf  = ETH_RSS_IP | ETH_RSS_UDP | ETH_RSS_TCP | ETH_RSS_SCTP,
+            .rss_key = NULL,
         },
     /* No flow director */
     .fdir_conf =
@@ -134,8 +135,12 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[], 
     rte_eth_dev_info_get(port, &dev_info);
 
     eth_rxconf = dev_info.default_rxconf;
-    /* Drop packets when no descriptors are available */
-    eth_rxconf.rx_drop_en = 1;
+    if (strcmp(dev_info.driver_name, "rte_em_pmd") != 0) {
+        /* Drop packets when no descriptors are available
+         * Protected since this is not supported by EM driver
+         * and there is no convenient way to look this up in DPDK. */
+        eth_rxconf.rx_drop_en = 1;
+    }
 
     eth_txconf           = dev_info.default_txconf;
     tso                  = !(!tso);
