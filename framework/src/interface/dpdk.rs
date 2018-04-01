@@ -12,6 +12,16 @@ use std::iter;
 use std::mem;
 use std::ptr;
 
+pub struct DpdkContext {
+    mempools: Vec<*mut ldpdk::rte_mempool>,
+}
+
+impl DpdkContext {
+    pub fn get_mempool(&self, socket: usize) -> *mut ldpdk::rte_mempool {
+        self.mempools[socket].clone()
+    }
+}
+
 unsafe fn init_socket_mempool(
     socket: i32,
     pool_size: u32,
@@ -39,7 +49,13 @@ unsafe fn bind_thread_to_numa_node(socket: u32) {
 }
 
 /// Initialize the system, whitelisting some set of NICs and allocating mempool of given size.
-fn init_system_wl_with_mempool(name: &str, core: i32, devices: &[String], pool_size: u32, cache_size: u32) {
+fn init_system_wl_with_mempool(
+    name: &str,
+    core: i32,
+    devices: &[String],
+    pool_size: u32,
+    cache_size: u32,
+) -> DpdkContext {
     let name_cstr = CString::new(name).unwrap();
 
     let mut dpdk_args = vec![];
@@ -91,10 +107,13 @@ fn init_system_wl_with_mempool(name: &str, core: i32, devices: &[String], pool_s
             bind_thread_to_numa_node(socket);
         }
 
-        for sock in 0..numa_nodes {
-            let _ = init_socket_mempool(sock as i32, pool_size, cache_size, METADATA_SLOTS as u16);
-        }
+        let ret = DpdkContext {
+            mempools: (0..numa_nodes)
+                .map(|sock| init_socket_mempool(sock as i32, pool_size, cache_size, METADATA_SLOTS as u16))
+                .collect()
+        };
         set_lcore_id(master_lcore as i32);
+        ret
     }
 }
 
