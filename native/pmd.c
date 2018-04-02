@@ -135,7 +135,7 @@ int init_pmd_port(int port, int rxqs, int txqs, int rxq_core[], int txq_core[], 
     rte_eth_dev_info_get(port, &dev_info);
 
     eth_rxconf = dev_info.default_rxconf;
-    if (strcmp(dev_info.driver_name, "rte_em_pmd") != 0 || 
+    if (strcmp(dev_info.driver_name, "rte_em_pmd") != 0 &&
         strcmp(dev_info.driver_name, "net_e1000_em") != 0) {
         /* Drop packets when no descriptors are available
          * Protected since this is not supported by EM driver
