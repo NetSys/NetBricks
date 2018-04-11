@@ -17,15 +17,8 @@ script:
   - make -f docker.mk run-tests
 
 before_deploy:
-  - |
-    if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-    fi
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
 deploy:
   provider: script
-  script: |
-          if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-            make -f docker.mk tag
-            make -f docker.mk push
-          fi
+  script: make -f docker.mk tag && make -f docker.mk push

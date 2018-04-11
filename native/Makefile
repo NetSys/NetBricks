@@ -22,7 +22,7 @@ LIBS += -Wl,--whole-archive -ldpdk -Wl,--no-whole-archive -Wl,-rpath=$(DPDK_LIB_
 LIBS += -lm -lpthread -ldl -lpcap -lnuma
 
 # change fpic to fPIC if something fails
-CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=native \
+CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=nehalem \
 	 -Wno-unused-function -Wno-unused-but-set-variable \
 	 -I$(DPDK_INC_DIR) -Iinclude/\
 	 -D_GNU_SOURCE \
