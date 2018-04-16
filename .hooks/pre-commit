@@ -1,0 +1,25 @@
+#!/bin/bash
+
+cargo +nightly fmt -- --version &>/dev/null
+if [ $? != 0 ]; then
+	printf "[pre_commit] \033[0;31merror\033[0m: \"cargo +nightly fmt\" not available?\n"
+	exit 1
+fi
+
+result=0
+
+printf "[pre_commit] rustfmt \n"
+make fmt
+if [ $? != 0 ]; then
+	result=1
+fi
+
+
+if [ $result != 0 ]; then
+	printf "\033[0;31mfail\033[0m \n"
+	printf "[pre_commit] error(s) in formatting files: \n"
+else
+	printf "\033[0;32mok\033[0m \n"
+fi
+
+exit $result
