@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::collections::hash_map::Iter;
+use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 use std::ops::AddAssign;
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};

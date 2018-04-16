@@ -1,6 +1,6 @@
-use super::Batch;
 use super::act::Act;
 use super::iterator::{BatchIterator, PacketDescriptor};
+use super::Batch;
 use common::*;
 use headers::NullHeader;
 use interface::*;

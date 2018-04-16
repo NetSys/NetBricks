@@ -6,8 +6,8 @@ use netbricks::operators::*;
 use netbricks::scheduler::*;
 use netbricks::state::*;
 use netbricks::utils::Flow;
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
