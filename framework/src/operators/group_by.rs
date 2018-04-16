@@ -1,8 +1,8 @@
+use super::act::Act;
+use super::iterator::*;
 use super::Batch;
 use super::ReceiveBatch;
 use super::RestoreHeader;
-use super::act::Act;
-use super::iterator::*;
 use headers::EndOffset;
 use interface::Packet;
 use queues::*;

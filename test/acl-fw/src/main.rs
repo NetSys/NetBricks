@@ -29,16 +29,14 @@ fn test<S: Scheduler + Sized>(ports: Vec<CacheAligned<PortQueue>>, sched: &mut S
             port.txq()
         );
     }
-    let acls = vec![
-        Acl {
-            src_ip: Some(Ipv4Prefix::new(0, 0)),
-            dst_ip: None,
-            src_port: None,
-            dst_port: None,
-            established: None,
-            drop: false,
-        },
-    ];
+    let acls = vec![Acl {
+        src_ip: Some(Ipv4Prefix::new(0, 0)),
+        dst_ip: None,
+        src_port: None,
+        dst_port: None,
+        established: None,
+        drop: false,
+    }];
     let pipelines: Vec<_> = ports
         .iter()
         .map(|port| acl_match(ReceiveBatch::new(port.clone()), acls.clone()).send(port.clone()))

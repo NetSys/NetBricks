@@ -1,5 +1,5 @@
-use netbricks::control::IOScheduler;
 use netbricks::control::sctp::*;
+use netbricks::control::IOScheduler;
 use nix::errno;
 use sctp::*;
 use std::net::SocketAddr;
