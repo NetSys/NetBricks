@@ -1,7 +1,11 @@
 PORT ?= "0000:00:08.0"
 CORE ?= 1
+BASE_DIR = $(shell git rev-parse --show-toplevel)
 
-.PHONY: clean compile compile-all fmt lint release release-all run run-rel test
+.PHONY: clean compile compile-all fmt init lint release release-all run run-rel test
+
+init:
+	@mkdir -p $(BASE_DIR)/.git/hooks && ln -s -f $(BASE_DIR)/.hooks/pre-commit $(BASE_DIR)/.git/hooks/pre-commit
 
 compile:
 ifdef TEST
