@@ -55,7 +55,7 @@ run-reg:
 
 run-tests:
 	@docker run --name $(CONTAINER) -t --rm --privileged \
-	--cpuset-cpus="0-${MAX_CORES}" --pid='host' --network='host' \
+	--pid='host' --network='host' \
 	$(MOUNTS) $(CONTAINER):$(TAG) /opt/$(CONTAINER)/build.sh test
 
 tag:
