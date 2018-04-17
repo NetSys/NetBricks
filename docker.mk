@@ -11,7 +11,7 @@ REGISTRY_IMG_NAME = netbricks
 LINUX_HEADERS = -v /lib/modules:/lib/modules -v /usr/src:/usr/src
 DPDK_VER = 17.08
 BASE_DIR ?= $(or $(shell pwd),~/occam/Netbricks)
-MAX_CORES ?= 1
+MAX_CORES ?= 3
 
 # Our Vagrant setup places MoonGen's repo @ /MoonGen
 # This works off of being relative (../) to utils/Netbricks.
@@ -55,7 +55,7 @@ run-reg:
 
 run-tests:
 	@docker run --name $(CONTAINER) -t --rm --privileged \
-	--cpuset-cpus="0-${MAX_CORES}" --pid='host' --network='host' \
+	--pid='host' --network='host' \
 	$(MOUNTS) $(CONTAINER):$(TAG) /opt/$(CONTAINER)/build.sh test
 
 tag:
