@@ -17,6 +17,8 @@ pub fn basic_opts() -> Options {
     opts.optmulti("p", "port", "Port to use", "[type:]id");
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
+    opts.optopt("", "pool_size", "Mempool Size", "size");
+    opts.optopt("", "cache_size", "Mempool Cache Size", "size");
     opts.optopt("f", "configuration", "Configuration file", "path");
     opts.optmulti("", "dpdk_args", "DPDK arguments", "DPDK arguments");
 
@@ -78,6 +80,32 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
     let configuration = if matches.opt_present("primary") {
         NetbricksConfiguration {
             secondary: false,
+            ..configuration
+        }
+    } else {
+        configuration
+    };
+
+    let configuration = if matches.opt_present("pool_size") {
+        NetbricksConfiguration {
+            pool_size: matches
+                .opt_str("pool_size")
+                .unwrap()
+                .parse()
+                .expect("Could not parse mempool size"),
+            ..configuration
+        }
+    } else {
+        configuration
+    };
+
+    let configuration = if matches.opt_present("cache_size") {
+        NetbricksConfiguration {
+            cache_size: matches
+                .opt_str("cache_size")
+                .unwrap()
+                .parse()
+                .expect("Could not parse core cache size"),
             ..configuration
         }
     } else {
