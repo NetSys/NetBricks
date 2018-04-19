@@ -18,7 +18,7 @@ pub fn basic_opts() -> Options {
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
     opts.optopt("", "pool_size", "Mempool Size", "size");
-    opts.optopt("", "cache_size", "Mempool Cache Size", "size");
+    opts.optopt("", "cache_size", "Core Cache Size", "size");
     opts.optopt("f", "configuration", "Configuration file", "path");
     opts.optmulti("", "dpdk_args", "DPDK arguments", "DPDK arguments");
 

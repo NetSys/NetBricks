@@ -6,6 +6,7 @@ extern crate time;
 use getopts::Options;
 use netbricks::allocators::*;
 use netbricks::common::*;
+use netbricks::config::{DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE};
 use netbricks::headers::*;
 use netbricks::interface::dpdk::*;
 use netbricks::interface::*;
@@ -71,6 +72,9 @@ fn main() {
     opts.optmulti("p", "port", "Port to use", "[type:]id");
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
+    opts.optopt("", "pool_size", "Mempool Size", "size");
+    opts.optopt("", "cache_size", "Core Cache Size", "size");
+
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
@@ -113,8 +117,21 @@ fn main() {
 
     let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
 
+    let pool_size = matches
+        .opt_str("pool_size")
+        .unwrap_or_else(|| DEFAULT_POOL_SIZE.to_string())
+        .parse()
+        .expect("Could not parse mempool size");
+
+    let cache_size = matches
+        .opt_str("cache_size")
+        .unwrap_or_else(|| DEFAULT_CACHE_SIZE.to_string())
+        .parse()
+        .expect("Could not parse core cache size");
+
     if primary {
-        init_system_wl(&name, master_core, &[]);
+        init_system_wl_with_mempool(&name, master_core, &[], pool_size, cache_size);
+        set_numa_domain();
     } else {
         init_system_secondary(&name, master_core);
     }
