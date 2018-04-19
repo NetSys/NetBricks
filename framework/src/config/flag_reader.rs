@@ -35,6 +35,7 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
         process::exit(0)
     }
 
+    // TODO: Actually allow dpdk_args to pass-through and affect EAL
     if matches.opt_present("dpdk_args") {
         print!("dpdk_args: {}", matches.opt_strs("dpdk_args").join(" "));
         process::exit(0)

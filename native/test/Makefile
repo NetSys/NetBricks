@@ -1,5 +1,9 @@
 CC = gcc
 
+ifndef RTE_SDK
+	$(error RTE_SDK is undefined)
+endif
+
 ifndef RTE_TARGET
 $(error RTE_TARGET is undefined)
 endif
@@ -15,10 +19,9 @@ ADAPTOR_DIR=$(abspath ../)
 DPDK_INCLUDE=$(ADAPTOR_DIR)/include
 DPDK_LIB=$(ADAPTOR_DIR)
 
-LDFLAGS += -L$(DPDK_LIB_DIR) -L$(DPDK_LIB) -Wl,-rpath=$(DPDK_LIB)\
-	   -Wl,-rpath=$(DPDK_LIB_DIR)
+LDFLAGS += -L$(DPDK_LIB_DIR) -L$(DPDK_LIB)
+LIBS += -Wl,--whole-archive -ldpdk -Wl,--no-whole-archive -Wl,-rpath=$(DPDK_LIB_DIR)
 LIBS += -lm -lpthread -ldl -lpcap -ldpdk -lzcsi
-
 
 # change fpic to fPIC if something fails
 CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=nehalem \
@@ -63,8 +66,8 @@ $(DEPS): $(SRCS) $(HEADERS)
 	@$(CC) $(CFLAGS) -MM $(SRCS) | sed 's|\(.*\)\.o: \(.*\)\.c|\2.o: \2.c|' > $(DEPS);
 
 $(PROD): $(OBJS)
-	echo $(LDFLAGS)
-	$(CC) $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
+	@echo $(LDFLAGS)
+	$(CC) -shared $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
 
 -include $(DEPS)
 

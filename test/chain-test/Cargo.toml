@@ -1,5 +1,5 @@
 [package]
-name = "zcsi-chain"
+name = "chain-test"
 version = "0.1.0"
 authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
 

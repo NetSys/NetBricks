@@ -12,5 +12,5 @@ ENV DELAY_TEST_ROOT="/opt/netbricks/test/delay-test/target/release"
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 COPY . /opt/netbricks
 WORKDIR /opt/netbricks
-RUN git clean -dffx && make compile-all
+RUN git clean -dffx && make compile
 CMD /bin/bash

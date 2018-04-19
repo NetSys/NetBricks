@@ -1,5 +1,5 @@
 [package]
-name = "tcp_payload"
+name = "tcp-payload"
 version = "0.1.0"
 authors = ["Steven H. Wang <wang.steven.h@gmail.com>"]
 

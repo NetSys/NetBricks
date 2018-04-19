@@ -16,6 +16,7 @@ pub fn init_system_wl_with_mempool(
     let name_cstr = CString::new(name).unwrap();
     let pci_cstr: Vec<_> = pci.iter().map(|p| CString::new(&p[..]).unwrap()).collect();
     let mut whitelist: Vec<_> = pci_cstr.iter().map(|p| p.as_ptr()).collect();
+
     unsafe {
         let ret = zcsi::init_system_whitelisted(
             name_cstr.as_ptr(),
