@@ -4,6 +4,12 @@ set -e
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 BUILD_SCRIPT=$( basename "$0" )
 
+if [[ -z ${CARGO_INCREMENTAL} ]] || [[ $CARGO_INCREMENTAL = false ]] || [[ $CARGO_INCREMENTAL = 0 ]]; then
+    export CARGO_INCREMENTAL="CARGO_INCREMENTAL=0 "
+fi
+
+echo "Current Cargo Incremental Setting: ${CARGO_INCREMENTAL}"
+
 CARGO_LOC=`which cargo || true`
 export CARGO=${CARGO_PATH-"${CARGO_LOC}"}
 
@@ -173,10 +179,10 @@ case $TASK in
         RUST_BACKTRACE=1 ${CARGO} test
         popd
 
-        for testname in tcp_payload macswap; do
-          pushd $BASE_DIR/test/$testname
-          ./check.sh
-          popd
+        for testname in tcp-payload macswap; do
+            pushd $BASE_DIR/test/$testname
+            ./check.sh
+            popd
         done
         ;;
     run)

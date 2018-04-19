@@ -76,7 +76,7 @@ $(PROD_STATIC): $(OBJS)
 	ar rcs $(PROD_STATIC) $(OBJS)
 
 $(PROD): $(OBJS)
-	$(CC) -shared  $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
+	$(CC) -shared $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
 
 -include $(DEPS)
 

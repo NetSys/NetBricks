@@ -79,6 +79,7 @@ fn main() {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
     };
+
     if matches.opt_present("h") {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
         process::exit(0)
