@@ -6,10 +6,10 @@ use std::default::Default;
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::slice;
-use utils::Flow;
+use utils::{Flow, FlowV6};
 
-type Ipv4Address = u32;
-type Ipv6Address = u128;
+pub type Ipv4Address = u32;
+pub type Ipv6Address = u128;
 
 /// IP header using SSE
 #[derive(Default)]
@@ -78,6 +78,7 @@ impl fmt::Display for Ipv6Header {
 
 impl EndOffset for Ipv4Header {
     type PreviousHeader = MacHeader;
+
     #[inline]
     fn offset(&self) -> usize {
         if cfg!(feature = "performance") {
@@ -100,7 +101,6 @@ impl EndOffset for Ipv4Header {
 
     #[inline]
     fn check_correct(&self, _prev: &MacHeader) -> bool {
-        // prev.etype() == 0x0800
         true
     }
 }
@@ -127,7 +127,6 @@ impl EndOffset for Ipv6Header {
 
     #[inline]
     fn check_correct(&self, _prev: &MacHeader) -> bool {
-        // prev.etype() == 0x86DD
         true
     }
 }
@@ -319,6 +318,31 @@ impl Ipv4Header {
 }
 
 impl Ipv6Header {
+    #[inline]
+    pub fn flow(&self) -> Option<FlowV6> {
+        let next_hdr = self.next_header();
+        let src_ip = self.src();
+        let dst_ip = self.dst();
+        if (next_hdr == 6 || next_hdr == 17) && self.payload_size(0) >= 4 {
+            unsafe {
+                let self_as_u8 = (self as *const Ipv6Header) as *const u8;
+                let port_as_u8 = self_as_u8.offset(self.offset() as isize);
+                let port_slice = slice::from_raw_parts(port_as_u8, 4);
+                let dst_port = BigEndian::read_u16(&port_slice[..2]);
+                let src_port = BigEndian::read_u16(&port_slice[2..]);
+                Some(FlowV6 {
+                    src_ip: src_ip,
+                    dst_ip: dst_ip,
+                    src_port: src_port,
+                    dst_port: dst_port,
+                    proto: next_hdr,
+                })
+            }
+        } else {
+            None
+        }
+    }
+
     #[inline]
     pub fn new() -> Ipv6Header {
         Default::default()

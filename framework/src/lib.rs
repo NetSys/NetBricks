@@ -11,6 +11,8 @@
 #![feature(const_fn)]
 // FIXME: Figure out if this is really the right thing here.
 #![feature(ptr_internals)]
+//
+#![allow(safe_packed_borrows)]
 // Used for cache alignment.
 #![feature(allocator_api)]
 #![allow(unused_features)]
@@ -28,6 +30,11 @@ extern crate fnv;
 extern crate lazy_static;
 extern crate libc;
 extern crate net2;
+
+extern crate num;
+#[macro_use]
+extern crate num_derive;
+
 extern crate regex;
 #[cfg(feature = "sctp")]
 extern crate sctp;

@@ -11,6 +11,9 @@ init:
 compile:
 	@./build.sh build
 
+compile-nb:
+	@./build.sh build_fmwk
+
 compile-test:
 ifdef TEST
 	@./build.sh build_test $(TEST)
