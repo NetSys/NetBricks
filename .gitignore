@@ -39,3 +39,8 @@ cscope*
 
 # editor
 .vscode
+
+# intellij
+.idea
+*.iml
+
