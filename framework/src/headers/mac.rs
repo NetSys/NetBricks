@@ -1,9 +1,28 @@
 use super::EndOffset;
 use headers::NullHeader;
+use num::FromPrimitive;
 use std::default::Default;
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
+
+const IPV4_ETHER_TYPE: u16 = 0x0800;
+const IPV6_ETHER_TYPE: u16 = 0x86DD;
+const VLAN_TAG_FRAME: u16 = 0x8100;
+const VLAN_TAG_FRAME_DBL: u16 = 0x9100;
+
+const HDR_SIZE: usize = 14;
+const HDR_SIZE_802_1Q: usize = HDR_SIZE + 4;
+const HDR_SIZE_802_1AD: usize = HDR_SIZE_802_1Q + 4;
+
+#[derive(FromPrimitive)]
+#[repr(u16)]
+pub enum EtherType {
+    IPv4 = IPV4_ETHER_TYPE,
+    IPv6 = IPV6_ETHER_TYPE,
+    VlanTF = VLAN_TAG_FRAME,
+    VlanTFDbl = VLAN_TAG_FRAME_DBL,
+}
 
 #[derive(Default)]
 #[repr(C, packed)]
@@ -76,19 +95,9 @@ pub struct MacHeader {
 
 impl fmt::Display for MacHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{} > {} 0x{:04x}",
-            self.src,
-            self.dst,
-            u16::from_be(self.etype)
-        )
+        write!(f, "{} > {} 0x{:04x}", self.src, self.dst, self.etype)
     }
 }
-
-const HDR_SIZE: usize = 14;
-const HDR_SIZE_802_1Q: usize = HDR_SIZE + 4;
-const HDR_SIZE_802_1AD: usize = HDR_SIZE_802_1Q + 4;
 
 impl EndOffset for MacHeader {
     type PreviousHeader = NullHeader;
@@ -98,8 +107,8 @@ impl EndOffset for MacHeader {
             HDR_SIZE
         } else {
             match self.etype {
-                0x8100 => HDR_SIZE_802_1Q,
-                0x9100 => HDR_SIZE_802_1AD,
+                VLAN_TAG_FRAME => HDR_SIZE_802_1Q,
+                VLAN_TAG_FRAME_DBL => HDR_SIZE_802_1AD,
                 _ => HDR_SIZE,
             }
         }
@@ -127,13 +136,13 @@ impl MacHeader {
     }
 
     #[inline]
-    pub fn etype(&self) -> u16 {
-        u16::from_be(self.etype)
+    pub fn etype(&self) -> Option<EtherType> {
+        FromPrimitive::from_u16(u16::from_be(self.etype))
     }
 
     #[inline]
-    pub fn set_etype(&mut self, etype: u16) {
-        self.etype = u16::to_be(etype)
+    pub fn set_etype(&mut self, etype: EtherType) {
+        self.etype = u16::to_be(etype as u16)
     }
 
     #[inline]

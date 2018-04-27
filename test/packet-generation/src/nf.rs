@@ -21,7 +21,7 @@ impl PacketCreator {
         mac.src = MacAddress {
             addr: [0x68, 0x05, 0xca, 0x00, 0x00, 0x01],
         };
-        mac.set_etype(0x0800);
+        mac.set_etype(mac::EtherType::IPv4);
         let mut ip = Ipv4Header::new();
         ip.set_src(u32::from(Ipv4Addr::from_str("10.0.0.1").unwrap()));
         ip.set_dst(u32::from(Ipv4Addr::from_str("10.0.0.5").unwrap()));

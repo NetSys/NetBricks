@@ -36,3 +36,6 @@ cscope*
 
 # vagrant
 .vagrant
+
+# editor
+.vscode

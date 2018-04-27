@@ -8,7 +8,12 @@ if [[ -z ${CARGO_INCREMENTAL} ]] || [[ $CARGO_INCREMENTAL = false ]] || [[ $CARG
     export CARGO_INCREMENTAL="CARGO_INCREMENTAL=0 "
 fi
 
+if [[ -z ${RUST_BACKTRACE} ]] || [[ RUST_BACKTRACE = true ]] || [[ RUST_BACKTRACE = 1 ]]; then
+    export RUST_BACKTRACE="RUST_BACKTRACE=1 "
+fi
+
 echo "Current Cargo Incremental Setting: ${CARGO_INCREMENTAL}"
+echo "Current Rust Backtrace Setting: ${RUST_BACKTRACE}"
 
 CARGO_LOC=`which cargo || true`
 export CARGO=${CARGO_PATH-"${CARGO_LOC}"}
@@ -28,6 +33,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 else
     proc=`nproc`
 fi
+
+RUNNABLE_TESTS="tcp-payload macswap ipv4or6"
 
 toggle_symbols () {
     if [ ! -z ${NETBRICKS_SYMBOLS} ]; then
@@ -176,10 +183,10 @@ case $TASK in
     test)
         pushd $BASE_DIR/framework
         export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${LD_LIBRARY_PATH}"
-        RUST_BACKTRACE=1 ${CARGO} test
+        ${CARGO} test
         popd
 
-        for testname in tcp-payload macswap; do
+        for testname in $RUNNABLE_TESTS; do
             pushd $BASE_DIR/test/$testname
             ./check.sh
             popd

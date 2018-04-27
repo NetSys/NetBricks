@@ -5,6 +5,7 @@ export examples=(
         test/packet-test
         test/tcp-payload
         test/macswap
+        test/ipv4or6
         # test/delay-test
         # test/shutdown-test
         # test/chain-test
