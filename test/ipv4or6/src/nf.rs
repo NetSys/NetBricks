@@ -11,9 +11,9 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
             let flow = hdr.flow().unwrap();
             let payload = pkt.get_payload();
             println!(
-                "hdr {} next_header {} offset {}",
+                "hdr {} next_header {:?} offset {}",
                 hdr,
-                hdr.next_header(),
+                hdr.next_header().unwrap(),
                 hdr.offset()
             );
             println!(
@@ -69,14 +69,14 @@ pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
             println!("");
         })
         .filter(box |pkt| match pkt.get_header().etype() {
-            Some(mac::EtherType::IPv4) => true,
-            Some(mac::EtherType::IPv6) => true,
+            Some(EtherType::IPv4) => true,
+            Some(EtherType::IPv6) => true,
             _ => false,
         })
         .group_by(
             2,
             box |pkt| match pkt.get_header().etype().unwrap() {
-                mac::EtherType::IPv4 => 1,
+                EtherType::IPv4 => 1,
                 _ => 0,
             },
             sched,

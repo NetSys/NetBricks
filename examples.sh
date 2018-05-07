@@ -6,6 +6,7 @@ export examples=(
         test/tcp-payload
         test/macswap
         test/ipv4or6
+        test/srv6-compose
         # test/delay-test
         # test/shutdown-test
         # test/chain-test
