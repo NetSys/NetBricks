@@ -15,7 +15,7 @@ const HDR_SIZE: usize = 14;
 const HDR_SIZE_802_1Q: usize = HDR_SIZE + 4;
 const HDR_SIZE_802_1AD: usize = HDR_SIZE_802_1Q + 4;
 
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, Debug, PartialEq)]
 #[repr(u16)]
 pub enum EtherType {
     IPv4 = IPV4_ETHER_TYPE,
@@ -90,7 +90,7 @@ impl Hash for MacAddress {
 pub struct MacHeader {
     pub dst: MacAddress,
     pub src: MacAddress,
-    etype: u16,
+    pub etype: u16,
 }
 
 impl fmt::Display for MacHeader {

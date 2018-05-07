@@ -1,6 +1,6 @@
 use byteorder::{BigEndian, ByteOrder};
 use fnv::FnvHasher;
-use headers::ip::{Ipv4Address, Ipv6Address};
+use headers::ip::{Rawv4Address, Rawv6Address};
 use native::zcsi::*;
 use std::hash::Hasher;
 use std::mem;
@@ -11,8 +11,8 @@ use std::slice;
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 #[repr(C, packed)]
 pub struct Flow {
-    pub src_ip: Ipv4Address,
-    pub dst_ip: Ipv4Address,
+    pub src_ip: Rawv4Address,
+    pub dst_ip: Rawv4Address,
     pub src_port: u16,
     pub dst_port: u16,
     pub proto: u8,
@@ -21,8 +21,8 @@ pub struct Flow {
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 #[repr(C, packed)]
 pub struct FlowV6 {
-    pub src_ip: Ipv6Address,
-    pub dst_ip: Ipv6Address,
+    pub src_ip: Rawv6Address,
+    pub dst_ip: Rawv6Address,
     pub src_port: u16,
     pub dst_port: u16,
     pub proto: u8,

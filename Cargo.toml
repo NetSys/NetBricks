@@ -4,7 +4,8 @@ members=["framework",
         "test/packet-test",
         "test/macswap",
         "test/tcp-payload",
-        "test/ipv4or6"
+        "test/ipv4or6",
+        "test/srv6-compose"
         # "test/delay-test",
         # "test/shutdown-test",
         # "test/chain-test",
