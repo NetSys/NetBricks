@@ -12,6 +12,8 @@ LINUX_HEADERS = -v /lib/modules:/lib/modules -v /usr/src:/usr/src
 DPDK_VER = 17.08
 BASE_DIR ?= $(or $(shell pwd),~/occam/Netbricks)
 MAX_CORES ?= 3
+DPDK_DEVICES ?= 0000:00:08.0 0000:00:09.0
+USERTOOLS_DIR = /dpdk/usertools
 
 # Our Vagrant setup places MoonGen's repo @ /MoonGen
 # This works off of being relative (../) to utils/Netbricks.
@@ -35,7 +37,11 @@ MOUNTS = $(LINUX_HEADERS) \
 
 ALL_MOUNTS = $(MOUNTS) $(BASE_MOUNT) $(FILES_TO_MOUNT)
 
-.PHONY: build build-fresh run run-tests run-reg tag push pull image image-fresh rmi rmi-registry
+.PHONY: bind-dpdk-devices build build-fresh run run-tests run-reg tag push pull image image-fresh rmi rmi-registry
+
+bind-dpdk-devices:
+	@docker exec -it $(CONTAINER) sh -c \
+	"$(USERTOOLS_DIR)/dpdk-devbind.py --force -b uio_pci_generic $(DPDK_DEVICES)"
 
 build:
 	@docker build -t $(CONTAINER):$(TAG) $(BASE_DIR)
