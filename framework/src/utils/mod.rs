@@ -33,12 +33,20 @@ pub fn clear_bit(original: u8, pos: u8) -> u8 {
     original & !mask
 }
 
-// setsbit in a byte, pos is the zero-based position in the byte starting from the left
+// sets a bit in a byte, pos is the zero-based position in the byte starting from the left
 #[inline]
 pub fn set_bit(original: u8, pos: u8) -> u8 {
     let swap_pos = 7 - pos;
     let mask = 1 << swap_pos;
     original | mask
+}
+
+// gets a bit value as a bool in a byte, pos is the zero-based position in the byte starting from left
+#[inline]
+pub fn get_bit(original: u8, pos: u8) -> bool {
+    let swap_pos = 7 - pos;
+    let mask = 1 << swap_pos;
+    (original & mask) != 0
 }
 
 /// Flips a bit in a byte to on or off
@@ -65,9 +73,13 @@ fn flippin_bits() {
     // we will clear the 3rd bit (2nd position)
     let cleared: u8 = 0b01001000;
 
+    // lets turn off the bit, and check that it is cleared
     let mut result = flip_bit(original, 2, false);
     assert_eq!(result, cleared);
+    assert_eq!(get_bit(result, 2), false);
 
+    // turn the bit back on, make sure it is set
     result = flip_bit(result, 2, true);
     assert_eq!(result, original);
+    assert_eq!(get_bit(result, 2), true);
 }

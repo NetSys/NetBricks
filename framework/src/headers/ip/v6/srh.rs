@@ -5,6 +5,7 @@ use headers::EndOffset;
 use std::default::Default;
 use std::fmt;
 use std::slice;
+use utils::*;
 
 /* From the SRH Draft RFC
    https://tools.ietf.org/html/draft-ietf-6man-segment-routing-header-11#section-3
@@ -99,6 +100,12 @@ use std::slice;
 
    o  Type Length Value (TLV) are described in Section 3.1.
 */
+
+// Positions of the various flag bits in the flag byte
+const PROTECTED_FLAG_POS: u8 = 1;
+const OAM_FLAG_POS: u8 = 2;
+const ALERT_FLAG_POS: u8 = 3;
+const HMAC_FLAG_POS: u8 = 4;
 
 // SRv6 Segment IDs are an array of 128-bit values with a length defined at
 // runtime.
@@ -240,47 +247,41 @@ where
 
     /// P-flag: Protected flag.  Set when the packet has been rerouted
     /// through FRR mechanism by an SR endpoint node.
-    pub fn protected(&self) -> bool {
-        (self.flags & 0x40) > 0
-    }
+    pub fn protected(&self) -> bool { get_bit(self.flags, PROTECTED_FLAG_POS) }
 
     pub fn set_protected(&mut self, protected: bool) {
-        let bit: u8 = if protected { 0x40 } else { 0 };
-        self.flags = (self.flags & !0x40) | bit;
+        self.flags = flip_bit(self.flags, PROTECTED_FLAG_POS, protected);
     }
 
     /// O-flag: OAM flag. When set, it indicates that this packet is an
     /// operations and management (OAM) packet.
     pub fn oam(&self) -> bool {
-        (self.flags & 0x20) > 0
+        get_bit(self.flags, OAM_FLAG_POS)
     }
 
     pub fn set_oam(&mut self, oam: bool) {
-        let bit: u8 = if oam { 0x20 } else { 0 };
-        self.flags = (self.flags & !0x20) | bit;
+        self.flags = flip_bit(self.flags, OAM_FLAG_POS, oam);
     }
 
     /// A-flag: Alert flag. If present, it means important Type Length Value
     /// (TLV) objects are present.
     pub fn alert(&self) -> bool {
-        (self.flags & 0x10) > 0
+        get_bit(self.flags, ALERT_FLAG_POS)
     }
 
     pub fn set_alert(&mut self, alert: bool) {
-        let bit: u8 = if alert { 0x10 } else { 0 };
-        self.flags = (self.flags & !0x10) | bit;
+        self.flags = flip_bit(self.flags, ALERT_FLAG_POS, alert);
     }
 
     /// H-flag: HMAC flag. If set, the HMAC TLV is present and is encoded as the
     /// last TLV of the SRH. In other words, the last 36 octets of the SRH
     /// represent the HMAC information.
     pub fn hmac(&self) -> bool {
-        (self.flags & 0x08) > 0
+        get_bit(self.flags, HMAC_FLAG_POS)
     }
 
     pub fn set_hmac(&mut self, hmac: bool) {
-        let bit: u8 = if hmac { 0x08 } else { 0 };
-        self.flags = (self.flags & !0x08) | bit;
+        self.flags = flip_bit(self.flags, HMAC_FLAG_POS, hmac);
     }
 
     /// Tag: tag a packet as part of a class or group of packets, e.g., packets
