@@ -24,3 +24,50 @@ pub fn round_to_power_of_2(mut size: usize) -> usize {
     size = size.wrapping_add(1);
     size
 }
+
+// clears a bit in a byte, pos is the zero-based position in the byte starting from the left
+#[inline]
+pub fn clear_bit(original: u8, pos: u8) -> u8 {
+    let swap_pos = 7 - pos;
+    let mask = 1 << swap_pos;
+    original & !mask
+}
+
+// setsbit in a byte, pos is the zero-based position in the byte starting from the left
+#[inline]
+pub fn set_bit(original: u8, pos: u8) -> u8 {
+    let swap_pos = 7 - pos;
+    let mask = 1 << swap_pos;
+    original | mask
+}
+
+/// Flips a bit in a byte to on or off
+///
+/// # Arguments
+///
+/// * `original` - the byte to flip a bit on
+/// * `pos` - the zero-based position of the bit in the byte to flip
+/// * `on` - a boolean indicating whether the bit should be set (true) or cleared (false)
+#[inline]
+pub fn flip_bit(original: u8, pos: u8, on: bool) -> u8 {
+    if on {
+        set_bit(original, pos)
+    } else {
+        clear_bit(original, pos)
+    }
+}
+
+// test flipping a bit at a known position
+#[test]
+fn flippin_bits() {
+    let original: u8 = 0b01101000;
+
+    // we will clear the 3rd bit (2nd position)
+    let cleared: u8 = 0b01001000;
+
+    let mut result = flip_bit(original, 2, false);
+    assert_eq!(result, cleared);
+
+    result = flip_bit(result, 2, true);
+    assert_eq!(result, original);
+}
