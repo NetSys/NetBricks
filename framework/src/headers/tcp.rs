@@ -1,11 +1,12 @@
 use super::EndOffset;
-use headers::IpHeader;
+use headers::ip::IpHeader;
 use std::default::Default;
 use std::fmt;
+use std::marker::PhantomData;
 
 #[derive(Default)]
 #[repr(C, packed)]
-pub struct TcpHeader {
+pub struct TcpHeader<T> {
     src_port: u16,
     dst_port: u16,
     seq: u32,
@@ -15,6 +16,7 @@ pub struct TcpHeader {
     window: u16,
     csum: u16,
     urgent: u16,
+    _parent: PhantomData<T>,
 }
 
 const CWR: u8 = 0b1000_0000;
@@ -37,7 +39,10 @@ macro_rules! write_or_return {
     }
 }
 
-impl fmt::Display for TcpHeader {
+impl<T> fmt::Display for TcpHeader<T>
+where
+    T: IpHeader,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write_or_return!(
             f,
@@ -62,8 +67,11 @@ impl fmt::Display for TcpHeader {
     }
 }
 
-impl EndOffset for TcpHeader {
-    type PreviousHeader = IpHeader;
+impl<T> EndOffset for TcpHeader<T>
+where
+    T: IpHeader,
+{
+    type PreviousHeader = T;
 
     #[inline]
     fn offset(&self) -> usize {
@@ -81,15 +89,21 @@ impl EndOffset for TcpHeader {
     }
 
     #[inline]
-    fn check_correct(&self, _prev: &IpHeader) -> bool {
+    fn check_correct(&self, _prev: &T) -> bool {
         true
     }
 }
 
-impl TcpHeader {
+impl<T> TcpHeader<T>
+where
+    T: IpHeader,
+{
     #[inline]
-    pub fn new() -> TcpHeader {
-        Default::default()
+    pub fn new() -> TcpHeader<T> {
+        TcpHeader {
+            _parent: PhantomData,
+            ..Default::default()
+        }
     }
 
     #[inline]

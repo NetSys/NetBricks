@@ -46,12 +46,8 @@ fn write_external_link(libs: &Vec<String>) {
 fn main() {
     // Get the directory where we are building.
     let cargo_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let dpdk_build = Path::new(&cargo_dir)
-        .parent()
-        .unwrap()
-        .join("3rdparty")
-        .join("dpdk")
-        .join("build");
+    let dpdk_dir = env::var("RTE_SDK").unwrap();
+    let dpdk_build = Path::new(&dpdk_dir).join("build");
 
     let dpdk_libs = dpdk_build.clone().join("lib");
     let native_path = Path::new(&cargo_dir)

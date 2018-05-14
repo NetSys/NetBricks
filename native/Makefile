@@ -1,12 +1,11 @@
 CC = gcc
 
-RTE_SDK = $(abspath ../3rdparty/dpdk/)
-#ifndef RTE_SDK
-#$(error RTE_SDK is undefined)
-#endif
+ifndef RTE_SDK
+	$(error RTE_SDK is undefined)
+endif
 
 ifndef RTE_TARGET
-	RTE_TARGET="build"
+	RTE_TARGET=build
 endif
 
 ifneq ($(wildcard $(RTE_SDK)/$(RTE_TARGET)*),)
@@ -23,7 +22,7 @@ LIBS += -Wl,--whole-archive -ldpdk -Wl,--no-whole-archive -Wl,-rpath=$(DPDK_LIB_
 LIBS += -lm -lpthread -ldl -lpcap -lnuma
 
 # change fpic to fPIC if something fails
-CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=native \
+CFLAGS = -std=gnu99 -g3 -ggdb3 -O3 -Wall -Werror -m64 -march=nehalem \
 	 -Wno-unused-function -Wno-unused-but-set-variable \
 	 -I$(DPDK_INC_DIR) -Iinclude/\
 	 -D_GNU_SOURCE \
@@ -37,6 +36,12 @@ PROD_STATIC = libzcsi.a
 
 DEPS = .make.dep
 
+ifeq ($(OSTYPE),Darwin)
+	MAKEJOBS := $(shell sysctl -n hw.physicalcpu)
+else
+	MAKEJOBS := $(shell nproc || echo 1)
+endif
+
 # if multiple targets are specified, do them one by one */
 ifneq ($(words $(MAKECMDGOALS)),1)
 
@@ -47,7 +52,7 @@ $(sort all $(MAKECMDGOALS)):
 else
 
 # parallel build by default
-CORES ?= $(shell nproc || echo 1)
+CORES ?= $(shell nproc || echo $(MAKEJOBS))
 MAKEFLAGS += -j $(CORES)
 INSTALL_PATH = $(abspath ../target/native)
 
@@ -63,7 +68,6 @@ install: $(DEPS) $(PROD) | $(INSTALL_PATH)
 $(INSTALL_PATH):
 	mkdir -p $(INSTALL_PATH)
 
-	
 $(DEPS): $(SRCS) $(HEADERS)
 	@echo $(RTE_SDK) $(DPDK_INC_DIR)
 	@$(CC) $(CFLAGS) -MM $(SRCS) | sed 's|\(.*\)\.o: \(.*\)\.c|\2.o: \2.c|' > $(DEPS);
@@ -72,7 +76,7 @@ $(PROD_STATIC): $(OBJS)
 	ar rcs $(PROD_STATIC) $(OBJS)
 
 $(PROD): $(OBJS)
-	$(CC) -shared  $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
+	$(CC) -shared $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
 
 -include $(DEPS)
 

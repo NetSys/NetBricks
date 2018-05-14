@@ -1,6 +1,6 @@
-extern crate e2d2;
-use e2d2::state::*;
-use e2d2::utils::*;
+extern crate netbricks;
+use netbricks::state::*;
+use netbricks::utils::*;
 use std::str;
 use std::u32;
 
@@ -244,7 +244,9 @@ fn test_state_change() {
     let data2_seq = base_seq
         .wrapping_add(data0.len() as u32)
         .wrapping_add(data1.len() as u32);
-    if let InsertionResult::Inserted { written, available } = ro.add_data(data2_seq, data2.as_bytes()) {
+    if let InsertionResult::Inserted { written, available } =
+        ro.add_data(data2_seq, data2.as_bytes())
+    {
         assert_eq!(written, data2.len());
         assert_eq!(
             available,
@@ -333,7 +335,8 @@ fn test_oom() {
         }
     }
     seq = seq.wrapping_add(data0.len() as u32);
-    if let InsertionResult::OutOfMemory { written, available } = r0.add_data(seq, data0.as_bytes()) {
+    if let InsertionResult::OutOfMemory { written, available } = r0.add_data(seq, data0.as_bytes())
+    {
         assert_ne!(written, data0.len());
         assert_eq!(available, 4096 - 1);
     } else {
@@ -367,7 +370,8 @@ fn test_reset() {
     }
 
     seq = seq.wrapping_add(data0.len() as u32);
-    if let InsertionResult::OutOfMemory { written, available } = r0.add_data(seq, data0.as_bytes()) {
+    if let InsertionResult::OutOfMemory { written, available } = r0.add_data(seq, data0.as_bytes())
+    {
         assert_ne!(written, data0.len());
         assert_eq!(available, 4096 - 1);
     } else {
@@ -394,7 +398,8 @@ fn test_reset() {
     }
 
     seq = seq.wrapping_add(data0.len() as u32);
-    if let InsertionResult::OutOfMemory { written, available } = r0.add_data(seq, data0.as_bytes()) {
+    if let InsertionResult::OutOfMemory { written, available } = r0.add_data(seq, data0.as_bytes())
+    {
         assert_ne!(written, data0.len());
         assert_eq!(available, 4096 - 1);
     } else {
@@ -456,7 +461,8 @@ fn test_overlapping_write() {
         panic!("Could not write data");
     }
 
-    if let InsertionResult::Inserted { written, .. } = r0.add_data(base_seq + ("hello".len() as u32), data1.as_bytes())
+    if let InsertionResult::Inserted { written, .. } =
+        r0.add_data(base_seq + ("hello".len() as u32), data1.as_bytes())
     {
         assert_eq!(
             written,

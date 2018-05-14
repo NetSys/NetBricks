@@ -6,8 +6,8 @@ use operators::ReceiveBatch;
 use std::clone::Clone;
 use std::cmp::min;
 use std::default::Default;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
+use std::sync::Arc;
 use utils::{pause, round_to_power_of_2};
 
 #[derive(Default)]

@@ -1,25 +1,29 @@
 [workspace]
 members=["framework",
         "test/framework-test",
-        "test/delay-test",
+        "test/packet-test",
         "test/macswap",
-        "test/shutdown-test",
-        "test/chain-test",
-        "test/lpm",
-        "test/lpm-embedded",
-        "test/nat",
-        "test/maglev",
-        "test/packet_generation",
-        "test/packet_test",
-        "test/tcp_check",
-        "test/tcp_payload",
-        "test/sctp-test",
-        "test/config-test",
-        "test/reset-parse",
-        "test/tcp_reconstruction",
-        "test/acl-fw",
-        "test/embedded-scheduler-test",
-        "test/embedded-scheduler-dependency-test"]
+        "test/tcp-payload",
+        "test/ipv4or6",
+        "test/srv6-compose"
+        # "test/delay-test",
+        # "test/shutdown-test",
+        # "test/chain-test",
+        # "test/lpm",
+        # "test/lpm-embedded",
+        # "test/nat",
+        # "test/maglev",
+        # "test/packet-generation",
+        # "test/tcp-check",
+        # "test/sctp-test",
+        # "test/config-test",
+        # "test/reset-parse",
+        # "test/tcp-reconstruction",
+        # "test/acl-fw",
+        # "test/embedded-scheduler-test",
+        # "test/embedded-scheduler-dependency-test"
+    ]
+
 [profile.release]
 opt-level = 3
 lto = true

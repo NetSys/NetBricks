@@ -1,8 +1,8 @@
-use e2d2::headers::*;
-use e2d2::operators::*;
-use e2d2::scheduler::*;
-use e2d2::utils::*;
 use fnv::FnvHasher;
+use netbricks::headers::*;
+use netbricks::operators::*;
+use netbricks::scheduler::*;
+use netbricks::utils::*;
 use std::collections::HashMap;
 use std::convert::From;
 use std::hash::BuildHasherDefault;
@@ -24,7 +24,8 @@ pub fn nat<T: 'static + Batch<Header = NullHeader>>(
     nat_ip: &Ipv4Addr,
 ) -> CompositionBatch {
     let ip = u32::from(*nat_ip);
-    let mut port_hash = HashMap::<Flow, Flow, FnvHash>::with_capacity_and_hasher(65536, Default::default());
+    let mut port_hash =
+        HashMap::<Flow, Flow, FnvHash>::with_capacity_and_hasher(65536, Default::default());
     let mut flow_vec: Vec<FlowUsed> = (MIN_PORT..65535).map(|_| Default::default()).collect();
     let mut next_port = 1024;
     const MIN_PORT: u16 = 1024;

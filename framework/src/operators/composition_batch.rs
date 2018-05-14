@@ -1,7 +1,7 @@
-use super::Batch;
 use super::act::Act;
 use super::iterator::{BatchIterator, PacketDescriptor};
 use super::packet_batch::PacketBatch;
+use super::Batch;
 use common::*;
 use headers::EndOffset;
 use headers::NullHeader;
@@ -36,7 +36,10 @@ impl BatchIterator for CompositionBatch {
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
+    unsafe fn next_payload(
+        &mut self,
+        idx: usize,
+    ) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
         self.parent.next_payload(idx)
     }
 }

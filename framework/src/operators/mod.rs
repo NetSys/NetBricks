@@ -27,6 +27,8 @@ use scheduler::Scheduler;
 mod macros;
 
 mod act;
+mod add_metadata;
+mod add_metadata_mut;
 mod composition_batch;
 mod deparsed_batch;
 mod filter_batch;
@@ -38,11 +40,9 @@ mod packet_batch;
 mod parsed_batch;
 mod receive_batch;
 mod reset_parse;
+mod restore_header;
 mod send_batch;
 mod transform_batch;
-mod restore_header;
-mod add_metadata;
-mod add_metadata_mut;
 
 /// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
 /// the precise batch being processed will be determined by the scheduling policy used.
@@ -105,7 +105,10 @@ pub trait Batch: BatchIterator + Act + Send {
     }
 
     /// Transform a header field.
-    fn transform(self, transformer: TransformFn<Self::Header, Self::Metadata>) -> TransformBatch<Self::Header, Self>
+    fn transform(
+        self,
+        transformer: TransformFn<Self::Header, Self::Metadata>,
+    ) -> TransformBatch<Self::Header, Self>
     where
         Self: Sized,
     {
@@ -122,7 +125,10 @@ pub trait Batch: BatchIterator + Act + Send {
     }
 
     /// Filter out packets, any packets for which `filter_f` returns false are dropped from the batch.
-    fn filter(self, filter_f: FilterFn<Self::Header, Self::Metadata>) -> FilterBatch<Self::Header, Self>
+    fn filter(
+        self,
+        filter_f: FilterFn<Self::Header, Self::Metadata>,
+    ) -> FilterBatch<Self::Header, Self>
     where
         Self: Sized,
     {

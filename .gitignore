@@ -7,6 +7,7 @@
 *.sln.docstates
 
 # Build results
+build
 Cargo.lock
 /target/
 target/
@@ -32,3 +33,14 @@ target/
 
 # cscope
 cscope*
+
+# vagrant
+.vagrant
+
+# editor
+.vscode
+
+# intellij
+.idea
+*.iml
+

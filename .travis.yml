@@ -1,27 +1,29 @@
 sudo: required
-language: rust
-rust:
-    - nightly
-dist: trusty
-matrix:
-    include:
-        - rust: nightly
-env:
-    - SYSTEM_CARGO=1
-before_install:
-    - sudo apt-get update -qq
-    - sudo apt-get install -qq apt-utils build-essential pciutils linux-headers-`uname -r` python python3  libssl-dev 
-    - sudo apt-get install -qq libgnutls28 libgnutls-dev libcurl4-gnutls-dev cmake bash libpcap-dev libnuma-dev
-    - ./build.sh deps
+
+branches:
+  only:
+    - master
+
+language: generic
+
+notifications:
+  email: false
+  slack:
+    secure: L6KjcG0lpme5cZ3y0GDTB7zlWC8uvZlSbRkxv5gz+bnUopcJ/i3pyFVVdmu24lAHhxwZDrPtMoVlSVNLq/mK5Jybq/38bsO7qWkNuv9GbRokbkjU+FQ/JAvvImeuJzaL7Pjcg8bmjW1B/sKw3nFB8gmtHe4hHamu0M9TaSR2dgRU78MizQ4aAxYrpl53fusngy9qVZdQvY1LvEGXzlsP+RwQnkvmq92wXA8+sl1Nds3AgorrAkpiv7uAMjxmAo8ZcL/jMn3IBZ7IjgDBIttg1sRn327j4MxZQ1qq6D5fAnUUX4SgFoSxHWEJ42oFH/UDDBpPtTITdeSzUIfTMQY71pRHf37CeVLpjfQ2ud9kGT2mrvrYh8ayeQ54iTgLPzc3XEm28mvzkZX7upi1/It27MObmjVFsLyrh1/4EASsKowfZzNNnmX1KSU/96kbnSf5J8fHExiedBIPu2O8bGeTe7/dE9WLTfrm0IoSGfLdJQIz+pKgCLpwqe3OCX4Wl/pW7JXl3pnx3EV2YncatiarL1EkyJoN2EQR3Jo/ixEuA6I8/9ge9BdHM3sNXlyYNu2a3F7O/g8E51yif6FMRshws1HrOajFcXc6Pw7P0VTNr360koxA7DRDjoO8qLYFSJPjHpFRQvsxVFv8tzYts6NtDG0WWRSgJnkHcTpnbdqfrNQ=
+
 services:
-    - docker
+  - docker
+
 before_script:
-    - sudo sysctl -w vm.nr_hugepages=256
-    - sudo mkdir -p /mnt/huge
-    - sudo mount -t hugetlbfs nodev /mnt/huge
+  - sudo ./scripts/travis-setup.sh
+  - make -f docker.mk build-fresh
+
 script:
-    - ./build.sh check_examples
-    - ./build.sh fmt_travis 
-    - ./build.sh build_container 
-    - ./build.sh ctr_test
-install: true
+  - make -f docker.mk run-tests
+
+before_deploy:
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+deploy:
+  provider: script
+  script: make -f docker.mk tag && make -f docker.mk push

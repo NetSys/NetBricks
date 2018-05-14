@@ -1,7 +1,7 @@
-use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
+use super::Batch;
 use common::*;
 use interface::Packet;
 use interface::PacketTx;
@@ -25,7 +25,10 @@ where
     M: Send + Sized,
     V: Batch + BatchIterator + Act,
 {
-    pub fn new(parent: V, generator: MetadataFn<V::Header, V::Metadata, M>) -> AddMetadataBatch<M, V> {
+    pub fn new(
+        parent: V,
+        generator: MetadataFn<V::Header, V::Metadata, M>,
+    ) -> AddMetadataBatch<M, V> {
         AddMetadataBatch {
             parent: parent,
             generator: generator,

@@ -1,12 +1,12 @@
 use allocators::CacheAligned;
 use config::NetbricksConfiguration;
-use interface::{PmdPort, PortQueue, VirtualPort, VirtualQueue};
 use interface::dpdk::{init_system, init_thread};
+use interface::{PmdPort, PortQueue, VirtualPort, VirtualQueue};
 use scheduler::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::sync::Arc;
 use std::sync::mpsc::{sync_channel, SyncSender};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle, Thread};
 
 type AlignedPortQueue = CacheAligned<PortQueue>;
@@ -130,7 +130,9 @@ impl NetBricksContext {
     }
 
     /// Install a pipeline on a particular core.
-    pub fn add_pipeline_to_core<T: Fn(Vec<AlignedPortQueue>, &mut StandaloneScheduler) + Send + Sync + 'static>(
+    pub fn add_pipeline_to_core<
+        T: Fn(Vec<AlignedPortQueue>, &mut StandaloneScheduler) + Send + Sync + 'static,
+    >(
         &mut self,
         core: i32,
         run: Arc<T>,
@@ -220,9 +222,10 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
     for port in &configuration.ports {
         if ctx.ports.contains_key(&port.name) {
             println!("Port {} appears twice in specification", port.name);
-            return Err(
-                ErrorKind::ConfigurationError(format!("Port {} appears twice in specification", port.name)).into(),
-            );
+            return Err(ErrorKind::ConfigurationError(format!(
+                "Port {} appears twice in specification",
+                port.name
+            )).into());
         } else {
             match PmdPort::new_port_from_configuration(port) {
                 Ok(p) => {

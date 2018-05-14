@@ -1,7 +1,7 @@
-use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
+use super::Batch;
 use common::*;
 use headers::NullHeader;
 use interface::{PacketRx, PacketTx};
@@ -41,7 +41,10 @@ impl<T: PacketRx> BatchIterator for ReceiveBatch<T> {
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
+    unsafe fn next_payload(
+        &mut self,
+        idx: usize,
+    ) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
         self.parent.next_payload(idx)
     }
 }

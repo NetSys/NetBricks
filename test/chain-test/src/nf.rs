@@ -1,16 +1,18 @@
-use e2d2::common::EmptyMetadata;
-use e2d2::headers::*;
-use e2d2::operators::*;
+use netbricks::common::EmptyMetadata;
+use netbricks::headers::*;
+use netbricks::operators::*;
 
 #[inline]
-pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(parent: T) -> CompositionBatch {
+pub fn chain_nf<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(
+    parent: T,
+) -> CompositionBatch {
     parent
         .parse::<MacHeader>()
         .transform(box move |pkt| {
             let hdr = pkt.get_mut_header();
             hdr.swap_addresses();
         })
-        .parse::<IpHeader>()
+        .parse::<Ipv4Header>()
         .transform(box |pkt| {
             let h = pkt.get_mut_header();
             let ttl = h.ttl();

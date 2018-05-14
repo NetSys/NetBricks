@@ -1,0 +1,16 @@
+[package]
+name = "tcp-payload"
+version = "0.1.0"
+authors = ["Steven H. Wang <wang.steven.h@gmail.com>"]
+
+[dependencies]
+netbricks = { path = "../../framework", features = ["performance"] }
+time = ">=0.1.0"
+getopts = "*"
+rand = "0.3"
+fnv = "*"
+twox-hash = "*"
+
+[features]
+default = []
+print = []

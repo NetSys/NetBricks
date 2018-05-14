@@ -1,19 +1,24 @@
 use super::EndOffset;
-use headers::IpHeader;
+use headers::ip::IpHeader;
 use std::default::Default;
 use std::fmt;
+use std::marker::PhantomData;
 
 /// UDP header using SSE
 #[derive(Default)]
 #[repr(C, packed)]
-pub struct UdpHeader {
+pub struct UdpHeader<T> {
     src_port: u16,
     dst_port: u16,
     len: u16,
     csum: u16,
+    _parent: PhantomData<T>,
 }
 
-impl fmt::Display for UdpHeader {
+impl<T> fmt::Display for UdpHeader<T>
+where
+    T: IpHeader,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -26,8 +31,11 @@ impl fmt::Display for UdpHeader {
     }
 }
 
-impl EndOffset for UdpHeader {
-    type PreviousHeader = IpHeader;
+impl<T> EndOffset for UdpHeader<T>
+where
+    T: IpHeader,
+{
+    type PreviousHeader = T;
     #[inline]
     fn offset(&self) -> usize {
         8 // 8 bytes
@@ -44,15 +52,21 @@ impl EndOffset for UdpHeader {
     }
 
     #[inline]
-    fn check_correct(&self, _prev: &IpHeader) -> bool {
+    fn check_correct(&self, _prev: &T) -> bool {
         true
     }
 }
 
-impl UdpHeader {
+impl<T> UdpHeader<T>
+where
+    T: IpHeader,
+{
     #[inline]
-    pub fn new() -> UdpHeader {
-        Default::default()
+    pub fn new() -> UdpHeader<T> {
+        UdpHeader {
+            _parent: PhantomData,
+            ..Default::default()
+        }
     }
 
     #[inline]

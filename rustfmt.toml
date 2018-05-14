@@ -1,4 +1,0 @@
-max_width = 120
-reorder_imports = true
-write_mode="Overwrite"
-report_fixme="Always"

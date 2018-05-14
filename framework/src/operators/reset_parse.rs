@@ -1,7 +1,7 @@
-use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
+use super::Batch;
 use common::*;
 use headers::NullHeader;
 use interface::PacketTx;
@@ -34,7 +34,10 @@ where
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
+    unsafe fn next_payload(
+        &mut self,
+        idx: usize,
+    ) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
         match self.parent.next_payload(idx) {
             Some(PacketDescriptor { packet }) => Some(PacketDescriptor {
                 packet: packet.reset(),

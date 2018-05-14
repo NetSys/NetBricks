@@ -1,15 +1,15 @@
 #![feature(box_syntax)]
 #![feature(asm)]
-extern crate e2d2;
+extern crate netbricks;
 extern crate fnv;
 extern crate time;
 extern crate getopts;
 extern crate rand;
 extern crate nix;
-use e2d2::interface::*;
-use e2d2::interface::dpdk::*;
-use e2d2::operators::*;
-use e2d2::scheduler::*;
+use netbricks::interface::*;
+use netbricks::interface::dpdk::*;
+use netbricks::operators::*;
+use netbricks::scheduler::*;
 use getopts::Options;
 use std::collections::HashMap;
 use std::env;
@@ -18,7 +18,7 @@ use std::thread;
 use std::sync::Arc;
 use self::nf::*;
 use self::control::*;
-use e2d2::control::tcp::*;
+use netbricks::control::tcp::*;
 use std::net::*;
 use std::process;
 use std::str::{FromStr};

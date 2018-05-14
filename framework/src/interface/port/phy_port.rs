@@ -1,5 +1,5 @@
-use super::PortStats;
 use super::super::{PacketRx, PacketTx};
+use super::PortStats;
 use allocators::*;
 use common::*;
 use config::{PortConfiguration, NUM_RXD, NUM_TXD};
@@ -9,8 +9,8 @@ use regex::Regex;
 use std::cmp::min;
 use std::ffi::CString;
 use std::fmt;
-use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 /// A DPDK based PMD port. Send and receive should not be called directly on this structure but on the port queue
 /// structure instead.
@@ -146,7 +146,11 @@ impl PmdPort {
         self.txqs
     }
 
-    pub fn new_queue_pair(port: &Arc<PmdPort>, rxq: i32, txq: i32) -> Result<CacheAligned<PortQueue>> {
+    pub fn new_queue_pair(
+        port: &Arc<PmdPort>,
+        rxq: i32,
+        txq: i32,
+    ) -> Result<CacheAligned<PortQueue>> {
         if rxq > port.rxqs || rxq < 0 {
             Err(ErrorKind::BadRxQueue(port.port, rxq).into())
         } else if txq > port.txqs || txq < 0 {
@@ -199,7 +203,8 @@ impl PmdPort {
         let actual_rxqs = min(max_rxqs, rxqs);
         let actual_txqs = min(max_txqs, txqs);
 
-        if ((actual_txqs as usize) <= tx_cores.len()) && ((actual_rxqs as usize) <= rx_cores.len()) {
+        if ((actual_txqs as usize) <= tx_cores.len()) && ((actual_rxqs as usize) <= rx_cores.len())
+        {
             let ret = unsafe {
                 init_pmd_port(
                     port,
@@ -400,16 +405,7 @@ impl PmdPort {
         tx_cores: &[i32],
     ) -> Result<Arc<PmdPort>> {
         PmdPort::new_port_with_queues_descriptors_offloads(
-            name,
-            rxqs,
-            txqs,
-            rx_cores,
-            tx_cores,
-            NUM_RXD,
-            NUM_TXD,
-            false,
-            false,
-            false,
+            name, rxqs, txqs, rx_cores, tx_cores, NUM_RXD, NUM_TXD, false, false, false,
         )
     }
 
