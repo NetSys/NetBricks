@@ -34,7 +34,7 @@ else
     proc=`nproc`
 fi
 
-RUNNABLE_TESTS="tcp-payload macswap ipv4or6"
+RUNNABLE_TESTS="tcp-payload macswap ipv4or6 srv6-compose"
 
 toggle_symbols () {
     if [ ! -z ${NETBRICKS_SYMBOLS} ]; then
