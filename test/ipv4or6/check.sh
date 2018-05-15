@@ -15,6 +15,7 @@ TEST_IPv6=$?
 echo ----
 if [[ $TEST_IPv4 != 0 ]] | [[ $TEST_IPv6 != 0 ]]; then
     echo "FAIL: IPv4 Test - $TEST_IPv4 | IPv6 Test - $TEST_IPv6"
+    exit 1
 else
     echo "PASS"
 fi
