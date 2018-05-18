@@ -1,5 +1,6 @@
 #![feature(box_syntax)]
 #![feature(asm)]
+extern crate colored;
 extern crate netbricks;
 use self::nf::*;
 use netbricks::config::{basic_opts, read_matches};

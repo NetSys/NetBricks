@@ -60,6 +60,38 @@ fn reference_mbuf(mbuf: *mut MBuf) {
     unsafe { (*mbuf).reference() };
 }
 
+#[cfg(feature = "packet_offset")]
+impl<T, M> Clone for Packet<T, M>
+where
+    T: EndOffset,
+    M: Sized + Send,
+{
+    fn clone(&self) -> Self {
+        Packet {
+            mbuf: self.mbuf.clone(),
+            _phantom_t: PhantomData,
+            _phantom_m: PhantomData,
+        }
+    }
+}
+
+#[cfg(not(feature = "packet_offset"))]
+impl<T, M> Clone for Packet<T, M>
+where
+    T: EndOffset,
+    M: Sized + Send,
+{
+    fn clone(&self) -> Self {
+        Packet {
+            mbuf: self.mbuf.clone(),
+            _phantom_t: PhantomData,
+            _phantom_m: PhantomData,
+            offset: self.offset.clone(),
+            header: self.header.clone(),
+        }
+    }
+}
+
 pub const METADATA_SLOTS: u16 = 16;
 const HEADER_SLOT: usize = 0;
 const OFFSET_SLOT: usize = HEADER_SLOT + 1;
@@ -315,34 +347,72 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         unsafe { create_packet(self.get_mbuf_ref(), hdr, offset) }
     }
 
-    /// When constructing a packet, take a packet as input and add a header.
+    /* When constructing a packet, take a packet as input and add a header.
+       Look at *fn insert_header* for a longer explanation. Use *push_header*
+       to create a new packet with a sequence of headers upon first creation, as
+       it returns an Option around the newly created packet itself. */
     #[inline]
     pub fn push_header<T2: EndOffset<PreviousHeader = T>>(
         mut self,
         header: &T2,
     ) -> Option<Packet<T2, M>> {
         unsafe {
-            let len = self.data_len();
-            let size = header.offset();
-            let added = (*self.mbuf).add_data_end(size);
+            let packet_len = self.data_len();
+            let header_size = header.offset();
+            let added = (*self.mbuf).add_data_end(header_size);
 
             let hdr = header as *const T2;
             let offset = self.offset() + self.payload_offset();
-            if added >= size {
-                let dst = if len != offset {
+            if added >= header_size {
+                let fin_dst = self.payload();
+                if packet_len != offset {
                     // Need to move down the rest of the data down.
-                    let final_dst = self.payload();
-                    let move_loc = final_dst.offset(size as isize);
-                    let to_move = len - offset;
-                    ptr::copy_nonoverlapping(final_dst, move_loc, to_move);
-                    final_dst as *mut T2
-                } else {
-                    self.payload() as *mut T2
-                };
+                    let move_loc = fin_dst.offset(header_size as isize);
+                    let to_move = packet_len - offset;
+                    ptr::copy_nonoverlapping(fin_dst, move_loc, to_move);
+                }
+                let dst = fin_dst as *mut T2;
                 ptr::copy_nonoverlapping(hdr, dst, 1);
                 Some(create_packet(self.get_mbuf_ref(), dst, offset))
             } else {
                 None
+            }
+        }
+    }
+
+    /* By Dan Jin: The entire network packet is stored in a mbuf by DPDK. A
+       NetBricks packet is a wrapper with an offset that tells you where a
+       particular header starts in the mbuf.
+
+       If you have a Packet<TcpHeader>, then *self.offset() is where the first
+       byte of the tcp header is*. self.payload_offset() is actually just
+       header.size()---NAMES ARE HORRIBLE. In this example, self.offset() +
+       self.payload_offset() give you where the tcp payload would start.
+
+       Use *insert_header* on a mutable reference to insert a header into an
+       already existing packet, after another header's offset basically. It
+       returns a void Result type, i.e. Err or Ok upon inserting a header int*/
+    #[inline]
+    pub fn insert_header<T2: EndOffset<PreviousHeader = T>>(&mut self, header: &T2) -> Result<()> {
+        unsafe {
+            let packet_len = self.data_len();
+            let header_size = header.offset();
+            let added = (*self.mbuf).add_data_end(header_size);
+
+            let hdr = header as *const T2;
+            let offset = self.offset() + self.payload_offset();
+            if added >= header_size {
+                let fin_dst = self.payload();
+                if packet_len != offset {
+                    // Need to move down the rest of the data down.
+                    let move_loc = fin_dst.offset(header_size as isize);
+                    let to_move = packet_len - offset;
+                    ptr::copy_nonoverlapping(fin_dst, move_loc, to_move);
+                }
+                ptr::copy_nonoverlapping(hdr, fin_dst as *mut T2, 1);
+                Ok(())
+            } else {
+                Err(ErrorKind::FailedToInsertHeader.into())
             }
         }
     }

@@ -4,7 +4,6 @@ use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
 
-#[derive(Default)]
 #[repr(C, packed)]
 pub struct TcpHeader<T> {
     src_port: u16,
@@ -35,6 +34,26 @@ macro_rules! write_or_return {
             if result.is_err() {
                 return result;
             }
+        }
+    }
+}
+
+impl<T> Default for TcpHeader<T>
+where
+    T: IpHeader,
+{
+    fn default() -> TcpHeader<T> {
+        TcpHeader {
+            src_port: 0,
+            dst_port: 0,
+            seq: 0,
+            ack: 0,
+            offset_to_ns: 0,
+            flags: 0,
+            window: 0,
+            csum: 0,
+            urgent: 0,
+            _parent: PhantomData,
         }
     }
 }
@@ -100,10 +119,7 @@ where
 {
     #[inline]
     pub fn new() -> TcpHeader<T> {
-        TcpHeader {
-            _parent: PhantomData,
-            ..Default::default()
-        }
+        Default::default()
     }
 
     #[inline]

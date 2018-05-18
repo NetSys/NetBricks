@@ -1,21 +1,35 @@
 use headers::ip::v6::{Ipv6VarHeader, NextHeader};
 use headers::EndOffset;
 use num::FromPrimitive;
+use std::default::Default;
 use std::marker::PhantomData;
 
-#[derive(Default)]
-#[repr(C, packed)]
 // All extension headers share the first two bytes, which are the next_header
 // field and the header length. We can use this struct as the first section of a
 // more specific header, or as a way to skip extension headers in the processing
 // pipeline that we don't care about.
+#[derive(Debug)]
+#[repr(C, packed)]
 pub struct Ipv6ExtHeader<T>
 where
     T: Ipv6VarHeader,
 {
     pub next_header: u8,
     pub hdr_ext_len: u8,
-    _parent: PhantomData<T>,
+    pub _parent: PhantomData<T>,
+}
+
+impl<T> Default for Ipv6ExtHeader<T>
+where
+    T: Ipv6VarHeader,
+{
+    fn default() -> Ipv6ExtHeader<T> {
+        Ipv6ExtHeader {
+            next_header: NextHeader::NoNextHeader as u8,
+            hdr_ext_len: 0,
+            _parent: PhantomData,
+        }
+    }
 }
 
 // Generic extension headers have the next_header field.
@@ -58,5 +72,26 @@ where
     #[inline]
     fn check_correct(&self, _prev: &Self::PreviousHeader) -> bool {
         true
+    }
+}
+
+impl<T> Ipv6ExtHeader<T>
+where
+    T: Ipv6VarHeader,
+{
+    pub fn new() -> Ipv6ExtHeader<T> {
+        Default::default()
+    }
+
+    pub fn hdr_ext_len(&self) -> u8 {
+        self.hdr_ext_len
+    }
+
+    pub fn set_hdr_ext_len(&mut self, hdr_ext_len: u8) {
+        self.hdr_ext_len = hdr_ext_len;
+    }
+
+    pub fn set_next_header(&mut self, next_hdr: NextHeader) {
+        self.next_header = next_hdr as u8;
     }
 }

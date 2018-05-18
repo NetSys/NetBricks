@@ -70,6 +70,11 @@ error_chain! {
             description("No scheduler running on core")
             display("No scheduler running on core {}", core)
         }
+
+        FailedToInsertHeader {
+            description("Failed to insert header into packet")
+            display("Failed to insert header into packet")
+        }
     }
 
     foreign_links {

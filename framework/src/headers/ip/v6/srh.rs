@@ -1,9 +1,11 @@
 use super::ext::Ipv6ExtHeader;
 use super::IpHeader;
+use generic_array::typenum::*;
+use generic_array::{ArrayLength, GenericArray};
 use headers::ip::v6::{Ipv6VarHeader, NextHeader};
 use headers::EndOffset;
-use std::default::Default;
 use std::fmt;
+use std::net::Ipv6Addr;
 use std::slice;
 use utils::*;
 
@@ -99,7 +101,10 @@ use utils::*;
       path and so on.
 
    o  Type Length Value (TLV) are described in Section 3.1.
-*/
+ */
+
+// As per Spec: Routing Type: TBD, to be assigned by IANA (suggested value: 4).
+pub const ROUTING_TYPE: u8 = 4;
 
 // Positions of the various flag bits in the flag byte
 const PROTECTED_FLAG_POS: u8 = 1;
@@ -107,40 +112,47 @@ const OAM_FLAG_POS: u8 = 2;
 const ALERT_FLAG_POS: u8 = 3;
 const HMAC_FLAG_POS: u8 = 4;
 
-// SRv6 Segment IDs are an array of 128-bit values with a length defined at
-// runtime.
-pub type Segments = [u128];
+pub type Segment = Ipv6Addr;
+pub type Segments = [Segment];
+pub type SRH<T> = SegmentRoutingHeader<T, U_>;
+
+// Generic Type for parsing/reading possible variable length segment list.
+pub type U_ = U0;
 
 // The v6 Segment Routing Header is a specialization of the v6 Routing Header,
 // defined in
 // https://tools.ietf.org/html/draft-ietf-6man-segment-routing-header-11. Like
 // all extension headers, it shares the first two fields.
-#[derive(Default)]
+#[derive(Debug)]
 #[repr(C, packed)]
-pub struct SegmentRoutingHeader<T>
+pub struct SegmentRoutingHeader<T, S>
 where
     T: Ipv6VarHeader,
+    S: ArrayLength<Segment>,
 {
-    ext_header: Ipv6ExtHeader<T>,
+    pub ext_header: Ipv6ExtHeader<T>,
     routing_type: u8,
     segments_left: u8,
     last_entry: u8,
     flags: u8,
     tag: u16, // Segments and TLVs follow this, but must be accessed via raw pointers
+    segments: GenericArray<Segment, S>,
 }
 
 // SRv6 can encapsulate any L4 IP protocol.
-impl<T> IpHeader for SegmentRoutingHeader<T>
+impl<T, S> IpHeader for SegmentRoutingHeader<T, S>
 where
     T: Ipv6VarHeader,
+    S: ArrayLength<Segment>,
 {
 }
 
 // The SegmentRoutingHeader is an extension header, and so has a next header
 // field and can be the PreviousHeader for another header.
-impl<T> Ipv6VarHeader for SegmentRoutingHeader<T>
+impl<T, S> Ipv6VarHeader for SegmentRoutingHeader<T, S>
 where
     T: Ipv6VarHeader,
+    S: ArrayLength<Segment>,
 {
     fn next_header(&self) -> Option<NextHeader> {
         self.ext_header.next_header()
@@ -148,15 +160,24 @@ where
 }
 
 // Formats the header for printing
-impl<T> fmt::Display for SegmentRoutingHeader<T>
+impl<T, S> fmt::Display for SegmentRoutingHeader<T, S>
 where
     T: Ipv6VarHeader,
+    S: ArrayLength<Segment>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let segments = self.segments();
+        let num_segments = segments.len();
+        let segs = segments
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+
         write!(
             f,
-            "next_header: {:?} hdr_ext_len: {} routing_type: {} segments_left: {} last_entry: {} protected: {} oam: {} \
-            alert: {} hmac: {} tag: {} segments_length: {}",
+            "next_header: {:?}, hdr_ext_len: {}, routing_type: {}, segments_left: {}, last_entry: {}, protected: {}, \
+             oam: {}, alert: {},  hmac: {},  tag: {},  segments_length: {},  segments: [{}]",
             self.next_header().unwrap_or(NextHeader::NoNextHeader),
             self.hdr_ext_len(),
             self.routing_type(),
@@ -167,14 +188,16 @@ where
             self.alert(),
             self.hmac(),
             self.tag(),
-            self.segments().len()
+            num_segments,
+            segs
         )
     }
 }
 
-impl<T> EndOffset for SegmentRoutingHeader<T>
+impl<T, S> EndOffset for SegmentRoutingHeader<T, S>
 where
     T: Ipv6VarHeader,
+    S: ArrayLength<Segment>,
 {
     type PreviousHeader = T;
 
@@ -208,12 +231,26 @@ where
     }
 }
 
-impl<T> SegmentRoutingHeader<T>
+impl<T, S> SegmentRoutingHeader<T, S>
 where
     T: Ipv6VarHeader,
+    S: ArrayLength<Segment>,
 {
-    pub fn new() -> SegmentRoutingHeader<T> {
-        Default::default()
+    pub fn new(segments: GenericArray<Segment, S>) -> SegmentRoutingHeader<T, S> {
+        let num_segments = segments.len() as u8;
+
+        SegmentRoutingHeader {
+            ext_header: Ipv6ExtHeader {
+                hdr_ext_len: 2 * num_segments,
+                ..Default::default()
+            },
+            routing_type: ROUTING_TYPE,
+            segments_left: 0,
+            last_entry: num_segments - 1,
+            flags: 0,
+            tag: 0,
+            segments: segments,
+        }
     }
 
     pub fn hdr_ext_len(&self) -> u8 {
@@ -247,7 +284,9 @@ where
 
     /// P-flag: Protected flag.  Set when the packet has been rerouted
     /// through FRR mechanism by an SR endpoint node.
-    pub fn protected(&self) -> bool { get_bit(self.flags, PROTECTED_FLAG_POS) }
+    pub fn protected(&self) -> bool {
+        get_bit(self.flags, PROTECTED_FLAG_POS)
+    }
 
     pub fn set_protected(&mut self, protected: bool) {
         self.flags = flip_bit(self.flags, PROTECTED_FLAG_POS, protected);
@@ -294,189 +333,24 @@ where
         self.tag = u16::to_be(tag)
     }
 
-    pub fn segments(&self) -> &Segments {
-        // TODO: check that hdr_ext_len and last_entry agree on the number of
-        // segments
-        let num_segments = self.last_entry() as usize + 1;
-        let ptr = (self as *const Self) as *const u8;
-        unsafe { slice::from_raw_parts(ptr.offset(8) as *const u128, num_segments) }
-    }
-}
+    // TODO: Wrap this Option
+    // ZNOTE: Will take care of this in next PR
+    pub fn segments(&self) -> &Segments
+    where
+        S: ArrayLength<Segment>,
+    {
+        let last_entry = self.last_entry();
+        let hdr_ext_len = self.hdr_ext_len();
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use headers::tests::packet_from_bytes;
-    use headers::{EtherType, Ipv6Header, MacAddress, MacHeader};
-    use std::convert::From;
-    use std::net::Ipv6Addr;
-    use std::str::FromStr;
-
-    #[test]
-    fn srh_from_bytes() {
-        let packet_header = [
-            // --- Ethernet header ---
-            // Destination MAC
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x01,
-            // Source MAC
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x02,
-            // EtherType (IPv6)
-            0x86,
-            0xDD,
-            // --- IPv6 Header ---
-            // Version, Traffic Class, Flow Label
-            0x60,
-            0x00,
-            0x00,
-            0x00,
-            // Payload Length
-            0x00,
-            0x18,
-            // Next Header (Routing = 43)
-            0x2b,
-            // Hop Limit
-            0x02,
-            // Source Address
-            0x20,
-            0x01,
-            0x0d,
-            0xb8,
-            0x85,
-            0xa3,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x01,
-            // Dest Address
-            0x20,
-            0x01,
-            0x0d,
-            0xb8,
-            0x85,
-            0xa3,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x8a,
-            0x2e,
-            0x03,
-            0x70,
-            0x73,
-            0x34,
-            // --- SRv6 Header --
-            // Next Header (TCP)
-            0x11,
-            // Hdr Ext Len (just one segment, units of 8 octets or 64 bits)
-            0x04,
-            // Routing type (SRv6)
-            0x04,
-            // Segments left
-            0x00,
-            // Last entry
-            0x01,
-            // Flags
-            0x00,
-            // Tag
-            0x00,
-            0x00,
-            // Segments: [0] 2001:0db8:85a3:0000:0000:8a2e:0370:7334
-            0x20,
-            0x01,
-            0x0d,
-            0xb8,
-            0x85,
-            0xa3,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x8a,
-            0x2e,
-            0x03,
-            0x70,
-            0x73,
-            0x34,
-            // Segments: [1] 2001:0db8:85a3:0000:0000:8a2e:0370:7335
-            0x20,
-            0x01,
-            0x0d,
-            0xb8,
-            0x85,
-            0xa3,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x8a,
-            0x2e,
-            0x03,
-            0x70,
-            0x73,
-            0x35,
-        ];
-        let pkt = packet_from_bytes(&packet_header);
-
-        // Check Ethernet header
-        let epkt = pkt.parse_header::<MacHeader>();
-        {
-            let eth = epkt.get_header();
-            assert_eq!(eth.dst.addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
-            assert_eq!(eth.src.addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
-            assert_eq!(eth.etype(), Some(EtherType::IPv6));
-        }
-
-        // Check IPv6 header
-        let v6pkt = epkt.parse_header::<Ipv6Header>();
-        {
-            let v6 = v6pkt.get_header();
-            let src = Ipv6Addr::from_str("2001:db8:85a3::1").unwrap();
-            let dst = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:7334").unwrap();
-            assert_eq!(v6.version(), 6);
-            assert_eq!(v6.traffic_class(), 0);
-            assert_eq!(v6.flow_label(), 0);
-            assert_eq!(v6.payload_len(), 24);
-            assert_eq!(v6.next_header().unwrap(), NextHeader::Routing);
-            assert_eq!(v6.hop_limit(), 2);
-            assert_eq!(Ipv6Addr::from(v6.src()), src);
-            assert_eq!(Ipv6Addr::from(v6.dst()), dst);
-        }
-
-        // Check SRH
-        let srhpkt = v6pkt.parse_header::<SegmentRoutingHeader<Ipv6Header>>();
-        {
-            let srh = srhpkt.get_header();
-            let seg0 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:7334").unwrap();
-            let seg1 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:7335").unwrap();
-            assert_eq!(srh.next_header().unwrap(), NextHeader::Udp);
-            assert_eq!(srh.hdr_ext_len(), 4);
-            assert_eq!(srh.routing_type(), 4);
-            assert_eq!(srh.segments_left(), 0);
-            assert_eq!(srh.last_entry(), 1);
-            assert_eq!(srh.protected(), false);
-            assert_eq!(srh.oam(), false);
-            assert_eq!(srh.alert(), false);
-            assert_eq!(srh.hmac(), false);
-            assert_eq!(srh.tag(), 0);
-            assert_eq!(srh.segments().len(), 2);
-            assert_eq!(Ipv6Addr::from(u128::from_be(srh.segments()[0])), seg0);
-            assert_eq!(Ipv6Addr::from(u128::from_be(srh.segments()[1])), seg1);
+        // o (last_entry + 1) -> number of segments
+        // o hdr_ext_len is equal to 2 * number of segments
+        // o double check they are both not 0 ahead of time b/c defaults.
+        if hdr_ext_len != 0 && (2 * (last_entry + 1) == hdr_ext_len) {
+            let num_segments = last_entry as usize + 1;
+            let ptr = (self as *const Self) as *const u8;
+            unsafe { slice::from_raw_parts(ptr.offset(8) as *const Segment, num_segments) }
+        } else {
+            &[]
         }
     }
 }

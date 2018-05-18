@@ -1,0 +1,1 @@
+00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 156: fe80::9 > fe80::6: srcrt (len=8, type=4, segleft=1[|srcrt]

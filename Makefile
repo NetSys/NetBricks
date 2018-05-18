@@ -57,4 +57,5 @@ else
 endif
 
 test:
+	@./build.sh build
 	@./build.sh test

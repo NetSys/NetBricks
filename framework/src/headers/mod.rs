@@ -30,29 +30,3 @@ pub trait EndOffset: Send {
 
     fn check_correct(&self, prev: &Self::PreviousHeader) -> bool;
 }
-
-#[cfg(test)]
-// Common testing helpers for headers
-mod tests {
-    use common::EmptyMetadata;
-    use headers::null_header::NullHeader;
-    use interface::{dpdk, new_packet, Packet};
-    use std::sync::{Once, ONCE_INIT};
-
-    static EAL_INIT: Once = ONCE_INIT;
-
-    // Acquire a packet buffer for testing header extraction from raw bytes
-    pub fn packet_from_bytes(bytes: &[u8]) -> Packet<NullHeader, EmptyMetadata> {
-        EAL_INIT.call_once(|| {
-            dpdk::init_system_wl("packet_overlay_tests", 0, &[]);
-        });
-        let mut pkt = new_packet().expect("Could not allocate packet!");
-        pkt.increase_payload_size(bytes.len());
-        {
-            let payload = pkt.get_mut_payload();
-            unsafe { bytes.as_ptr().copy_to(payload.as_mut_ptr(), bytes.len()) }
-        }
-        pkt
-    }
-
-}

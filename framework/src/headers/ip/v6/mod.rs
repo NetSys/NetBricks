@@ -4,7 +4,6 @@ use super::IpHeader;
 use byteorder::{BigEndian, ByteOrder};
 use headers::{EndOffset, MacHeader, TCP_NXT_HDR, UDP_NXT_HDR};
 use num::FromPrimitive;
-use std::convert::From;
 use std::default::Default;
 use std::fmt;
 use std::net::Ipv6Addr;
@@ -74,7 +73,7 @@ const HIP_NXT_HDR: u8 = 139;
 const MOBILITY_NXT_HDR: u8 = 135;
 // TODO: ... more constants here
 
-#[derive(FromPrimitive, Debug, PartialEq)]
+#[derive(FromPrimitive, Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
 pub enum NextHeader {
     Routing = ROUTING_NXT_HDR,
@@ -85,18 +84,28 @@ pub enum NextHeader {
     NoNextHeader = 59,
 }
 
-// V6 addresses are 128 bits wide.
-pub type Rawv6Address = u128;
-
-#[derive(Default)]
+#[derive(Debug)]
 #[repr(C, packed)]
 pub struct Ipv6Header {
     version_to_flow_label: u32,
     payload_len: u16,
     next_header: u8,
     hop_limit: u8,
-    src_ip: Rawv6Address,
-    dst_ip: Rawv6Address,
+    src_ip: Ipv6Addr,
+    dst_ip: Ipv6Addr,
+}
+
+impl Default for Ipv6Header {
+    fn default() -> Ipv6Header {
+        Ipv6Header {
+            version_to_flow_label: u32::to_be(6 << 24),
+            payload_len: 0,
+            next_header: 0,
+            hop_limit: 0,
+            src_ip: Ipv6Addr::unspecified(),
+            dst_ip: Ipv6Addr::unspecified(),
+        }
+    }
 }
 
 // IPv6 can encapsulate any L4 IP protocol.
@@ -138,7 +147,7 @@ impl EndOffset for Ipv6Header {
 // Similarly to being generic over v4 and v6 headers as parents for TCP/UDP, we
 // make extension headers generic but specify that they need to expose an
 // accessor for the next header field.
-pub trait Ipv6VarHeader: EndOffset + Default {
+pub trait Ipv6VarHeader: EndOffset {
     fn next_header(&self) -> Option<NextHeader>;
 }
 
@@ -153,13 +162,11 @@ impl Ipv6VarHeader for Ipv6Header {
 // Formats the header for printing
 impl fmt::Display for Ipv6Header {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let src = Ipv6Addr::from(self.src());
-        let dst = Ipv6Addr::from(self.dst());
         write!(
             f,
             "{} > {} version: {} traffic_class: {} flow_label: {} len: {} next_header: {:?} hop_limit: {}",
-            src,
-            dst,
+            self.src(),
+            self.dst(),
             self.version(),
             self.traffic_class(),
             self.flow_label(),
@@ -208,24 +215,24 @@ impl Ipv6Header {
 
     // Source address (converted to host byte order)
     #[inline]
-    pub fn src(&self) -> Rawv6Address {
-        Rawv6Address::from_be(self.src_ip)
+    pub fn src(&self) -> Ipv6Addr {
+        self.src_ip
     }
 
     #[inline]
-    pub fn set_src(&mut self, src: Rawv6Address) {
-        self.src_ip = Rawv6Address::to_be(src)
+    pub fn set_src(&mut self, src: Ipv6Addr) {
+        self.src_ip = src
     }
 
     // Destination address (converted to host byte order)
     #[inline]
-    pub fn dst(&self) -> Rawv6Address {
-        Rawv6Address::from_be(self.dst_ip)
+    pub fn dst(&self) -> Ipv6Addr {
+        self.dst_ip
     }
 
     #[inline]
-    pub fn set_dst(&mut self, dst: Rawv6Address) {
-        self.dst_ip = Rawv6Address::to_be(dst);
+    pub fn set_dst(&mut self, dst: Ipv6Addr) {
+        self.dst_ip = dst
     }
 
     // Hop Limit (TTL)
@@ -315,8 +322,8 @@ mod tests {
         let mut ip = Ipv6Header::new();
         let src = Ipv6Addr::from_str("2001:db8::1").unwrap();
         let dst = Ipv6Addr::from_str("2001:db8::2").unwrap();
-        ip.set_src(u128::from(src));
-        ip.set_dst(u128::from(dst));
+        ip.set_src(src);
+        ip.set_dst(dst);
         ip.set_version(6);
         ip.set_traffic_class(17);
         ip.set_flow_label(15000);

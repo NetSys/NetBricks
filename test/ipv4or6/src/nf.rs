@@ -1,3 +1,4 @@
+use colored::*;
 use netbricks::headers::*;
 use netbricks::operators::*;
 use netbricks::scheduler::*;
@@ -10,22 +11,26 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
             let hdr = pkt.get_header();
             let flow = hdr.flow().unwrap();
             let payload = pkt.get_payload();
-            println!(
-                "hdr {} next_header {:?} offset {}",
+            let info_fmt = format!(
+                "\nhdr {} next_header {:?} offset {}",
                 hdr,
                 hdr.next_header().unwrap(),
                 hdr.offset()
-            );
-            println!(
+            ).cyan();
+            println!("{}", info_fmt);
+            let payload_fmt = format!(
                 "payload: {:x} {:x} {:x} {:x}",
                 payload[0], payload[1], payload[2], payload[3]
-            );
+            ).cyan();
+            println!("{}", payload_fmt);
             let (src, dst) = (flow.src_port, flow.dst_port);
-            println!("Src {} dst {}", src, dst);
+            let src_dst_fmt = format!("Src {} dst {}", src, dst).cyan();
+            println!("{}", src_dst_fmt);
         })
         .parse::<TcpHeader<Ipv6Header>>()
         .map(box |pkt| {
-            println!("TCP header {}", pkt.get_header());
+            let tcp_fmt = format!("TCP header {}", pkt.get_header()).cyan();
+            println!("{}", tcp_fmt);
         })
         .compose()
 }
@@ -38,17 +43,21 @@ fn tcp_ipv4_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
             let hdr = pkt.get_header();
             let flow = hdr.flow().unwrap();
             let payload = pkt.get_payload();
-            println!("hdr {} offset {}", hdr, hdr.offset());
-            println!(
+            let info_fmt = format!("\nhdr {} offset {}", hdr, hdr.offset()).yellow();
+            println!("{}", info_fmt);
+            let payload_fmt = format!(
                 "payload: {:x} {:x} {:x} {:x}",
                 payload[0], payload[1], payload[2], payload[3]
-            );
+            ).yellow();
+            println!("{}", payload_fmt);
             let (src, dst) = (flow.src_port, flow.dst_port);
-            println!("Src {} dst {}", src, dst);
+            let src_dst_fmt = format!("Src {} dst {}", src, dst).yellow();
+            println!("{}", src_dst_fmt);
         })
         .parse::<TcpHeader<Ipv4Header>>()
         .map(box |pkt| {
-            println!("TCP header {}", pkt.get_header());
+            let tcp_fmt = format!("TCP header {}", pkt.get_header()).yellow();
+            println!("{}", tcp_fmt);
         })
         .compose()
 }
@@ -60,13 +69,13 @@ pub fn tcp_nf<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
     let mut groups = parent
         .parse::<MacHeader>()
         .map(box |pkt| {
-            println!("hdr {}", pkt.get_header());
+            let info_fmt = format!("hdr {}", pkt.get_header()).magenta();
+            println!("{}", info_fmt);
             let payload = pkt.get_payload();
-            print!("Payload: ");
+            println!("{}", format!("Payload: ").magenta());
             for p in payload {
-                print!("{:x} ", p);
+                print!("{}", format!("{:x} ", p).magenta())
             }
-            println!("");
         })
         .filter(box |pkt| match pkt.get_header().etype() {
             Some(EtherType::IPv4) => true,

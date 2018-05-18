@@ -9,6 +9,7 @@
 #![feature(heap_api)]
 #![feature(unique)]
 #![feature(const_fn)]
+#![feature(ip_constructors)]
 // FIXME: Figure out if this is really the right thing here.
 #![feature(ptr_internals)]
 //
@@ -46,6 +47,8 @@ extern crate uuid;
 
 // For cache aware allocation
 extern crate alloc;
+
+extern crate generic_array;
 
 // Better error handling.
 #[macro_use]

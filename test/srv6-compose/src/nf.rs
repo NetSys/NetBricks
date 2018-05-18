@@ -1,3 +1,4 @@
+use colored::*;
 use netbricks::headers::*;
 use netbricks::operators::*;
 use netbricks::scheduler::Scheduler;
@@ -6,24 +7,28 @@ use netbricks::scheduler::Scheduler;
 fn tcp_ipv6_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionBatch {
     parent
         .map(box |pkt| {
-            println!("IPv6-normcore hdr {}", pkt.get_header());
+            println!(
+                "IPv6-normcore hdr {}",
+                format!("{}", pkt.get_header()).red()
+            );
         })
         .parse::<TcpHeader<Ipv6Header>>()
         .map(box |pkt| {
-            println!("TCP header {}", pkt.get_header());
+            println!("TCP header {}", format!("{}", pkt.get_header()).red());
         })
         .compose()
 }
 
+#[inline]
 fn tcp_sr_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionBatch {
     parent
-        .parse::<SegmentRoutingHeader<Ipv6Header>>()
+        .parse::<SRH<Ipv6Header>>()
         .map(box |pkt| {
-            println!("SR-hdr {}", pkt.get_header());
+            println!("SR-hdr {}", format!("{}", pkt.get_header()).green());
         })
-        .parse::<TcpHeader<SegmentRoutingHeader<Ipv6Header>>>()
+        .parse::<TcpHeader<SRH<Ipv6Header>>>()
         .map(box |pkt| {
-            println!("TCP header {}", pkt.get_header());
+            println!("TCP header {}", format!("{}", pkt.get_header()).green());
         })
         .compose()
 }

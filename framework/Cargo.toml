@@ -12,7 +12,7 @@ libc = ">= 0.2.4"
 time = ">=0.1.0"
 getopts = "*"
 byteorder = "*"
-clippy = { version = "*", optional = true }
+clippy = { version = ">=0.0.197", optional = true }
 fnv = "*"
 twox-hash = "*"
 regex = "*"
@@ -26,10 +26,11 @@ toml = "*"
 # Hack for SHM
 uuid = { version = "*", features=["v4"] }
 error-chain = "*"
-tokio-core=">=0.1.8"
+tokio-core =">=0.1.8"
 num = "0.1"
 num-derive="0.2"
 num-traits = "0.2"
+generic-array = ">= 0.11.0"
 
 [features]
 default = []

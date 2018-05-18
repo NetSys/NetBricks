@@ -5,7 +5,6 @@ use std::fmt;
 use std::marker::PhantomData;
 
 /// UDP header using SSE
-#[derive(Default)]
 #[repr(C, packed)]
 pub struct UdpHeader<T> {
     src_port: u16,
@@ -13,6 +12,21 @@ pub struct UdpHeader<T> {
     len: u16,
     csum: u16,
     _parent: PhantomData<T>,
+}
+
+impl<T> Default for UdpHeader<T>
+where
+    T: IpHeader,
+{
+    fn default() -> UdpHeader<T> {
+        UdpHeader {
+            src_port: 0,
+            dst_port: 0,
+            len: 0,
+            csum: 0,
+            _parent: PhantomData,
+        }
+    }
 }
 
 impl<T> fmt::Display for UdpHeader<T>
@@ -63,10 +77,7 @@ where
 {
     #[inline]
     pub fn new() -> UdpHeader<T> {
-        UdpHeader {
-            _parent: PhantomData,
-            ..Default::default()
-        }
+        Default::default()
     }
 
     #[inline]

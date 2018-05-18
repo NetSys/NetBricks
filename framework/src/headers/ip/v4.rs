@@ -1,32 +1,40 @@
 use super::IpHeader;
 use byteorder::{BigEndian, ByteOrder};
 use headers::{EndOffset, MacHeader, TCP_NXT_HDR, UDP_NXT_HDR};
-use std::convert::From;
 use std::default::Default;
 use std::fmt;
 use std::net::Ipv4Addr;
 use std::slice;
 use utils::Flow;
 
-pub type Rawv4Address = u32;
-
 /// IP header using SSE
-#[derive(Default)]
 #[repr(C, packed)]
 pub struct Ipv4Header {
     version_to_len: u32,
     id_to_foffset: u32,
     ttl_to_csum: u32,
-    src_ip: Rawv4Address,
-    dst_ip: Rawv4Address,
+    src_ip: Ipv4Addr,
+    dst_ip: Ipv4Addr,
 }
 
 impl IpHeader for Ipv4Header {}
 
+impl Default for Ipv4Header {
+    fn default() -> Ipv4Header {
+        Ipv4Header {
+            version_to_len: u32::to_be(4 << 28),
+            id_to_foffset: 0,
+            ttl_to_csum: 0,
+            src_ip: Ipv4Addr::unspecified(),
+            dst_ip: Ipv4Addr::unspecified(),
+        }
+    }
+}
+
 impl fmt::Display for Ipv4Header {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let src = Ipv4Addr::from(self.src());
-        let dst = Ipv4Addr::from(self.dst());
+        let src = self.src();
+        let dst = self.dst();
         write!(
             f,
             "{} > {} version: {} ihl: {} len: {} ttl: {} proto: {} csum: {}",
@@ -61,7 +69,7 @@ impl EndOffset for Ipv4Header {
     }
 
     #[inline]
-    fn payload_size(&self, _: usize) -> usize {
+    fn payload_size(&self, _hint: usize) -> usize {
         (self.length() as usize) - self.offset()
     }
 
@@ -103,23 +111,23 @@ impl Ipv4Header {
     }
 
     #[inline]
-    pub fn src(&self) -> Rawv4Address {
-        Rawv4Address::from_be(self.src_ip)
+    pub fn src(&self) -> Ipv4Addr {
+        self.src_ip
     }
 
     #[inline]
-    pub fn set_src(&mut self, src: Rawv4Address) {
-        self.src_ip = Rawv4Address::to_be(src)
+    pub fn set_src(&mut self, src: Ipv4Addr) {
+        self.src_ip = src;
     }
 
     #[inline]
-    pub fn dst(&self) -> Rawv4Address {
-        Rawv4Address::from_be(self.dst_ip)
+    pub fn dst(&self) -> Ipv4Addr {
+        self.dst_ip
     }
 
     #[inline]
-    pub fn set_dst(&mut self, dst: Rawv4Address) {
-        self.dst_ip = Rawv4Address::to_be(dst);
+    pub fn set_dst(&mut self, dst: Ipv4Addr) {
+        self.dst_ip = dst;
     }
 
     #[inline]
@@ -266,8 +274,8 @@ mod tests {
     #[test]
     fn packet() {
         let mut ip = Ipv4Header::new();
-        ip.set_src(u32::from(Ipv4Addr::from_str("10.0.0.1").unwrap()));
-        ip.set_dst(u32::from(Ipv4Addr::from_str("10.0.0.5").unwrap()));
+        ip.set_src(Ipv4Addr::from_str("10.0.0.1").unwrap());
+        ip.set_dst(Ipv4Addr::from_str("10.0.0.5").unwrap());
         ip.set_ttl(128);
         ip.set_version(4);
         ip.set_ihl(5);
