@@ -40,7 +40,7 @@ fn main() {
         "dur",
         "Test duration",
         "If this option is set to a nonzero value, then the \
-         test will exit after 5 seconds.",
+         test will just loop after 2 seconds",
     );
 
     let args: Vec<String> = env::args().collect();
@@ -67,7 +67,7 @@ fn main() {
                 thread::sleep(Duration::from_secs(test_duration));
             } else {
                 loop {
-                    thread::sleep(Duration::from_secs(5));
+                    thread::sleep(Duration::from_secs(2));
                 }
             }
         }

@@ -1,8 +1,34 @@
 pub use self::config_reader::*;
 pub use self::flag_reader::*;
+use crossbeam::sync::ArcCell;
 use std::fmt;
+use std::sync::Arc;
 mod config_reader;
 mod flag_reader;
+
+/// Wrapper for static settings/config around ArcCell
+pub struct Atom<T>
+where
+    T: 'static,
+{
+    data: ArcCell<T>,
+}
+
+impl<T> Atom<T> {
+    pub fn new(d: T) -> Atom<T> {
+        Atom {
+            data: ArcCell::new(Arc::new(d)),
+        }
+    }
+
+    pub fn get(&self) -> Arc<T> {
+        self.data.get()
+    }
+
+    pub fn set(&self, d: T) -> Arc<T> {
+        self.data.set(Arc::new(d))
+    }
+}
 
 /// `NetBricks` control configuration. In theory all applications create one of these, either through the use of
 /// `read_configuration` or manually using args.

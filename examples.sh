@@ -7,6 +7,7 @@ export examples=(
         test/macswap
         test/ipv4or6
         test/srv6-compose
+        test/srv6-sighup-flow
         test/srv6-inject
         # test/delay-test
         # test/shutdown-test

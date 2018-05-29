@@ -26,11 +26,11 @@ toml = "*"
 # Hack for SHM
 uuid = { version = "*", features=["v4"] }
 error-chain = "*"
-tokio-core =">=0.1.8"
 num = "0.1"
 num-derive="0.2"
 num-traits = "0.2"
-generic-array = ">= 0.11.0"
+generic-array = ">=0.11.0"
+crossbeam = ">=0.3.2"
 
 [features]
 default = []

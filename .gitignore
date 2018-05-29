@@ -46,3 +46,7 @@ cscope*
 
 # pcap
 out.pcap
+
+# logs
+*.log
+*.out

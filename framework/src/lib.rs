@@ -31,8 +31,8 @@ extern crate fnv;
 extern crate lazy_static;
 extern crate libc;
 extern crate net2;
-
 extern crate num;
+
 #[macro_use]
 extern crate num_derive;
 
@@ -48,11 +48,15 @@ extern crate uuid;
 // For cache aware allocation
 extern crate alloc;
 
+// Handle generic, compile-time arrays in structs
 extern crate generic_array;
 
 // Better error handling.
 #[macro_use]
 extern crate error_chain;
+
+// Bring in crossbeam synchronization primatives
+extern crate crossbeam;
 
 #[cfg(unix)]
 extern crate nix;
