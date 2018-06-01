@@ -17,6 +17,7 @@
 // Used for cache alignment.
 #![feature(allocator_api)]
 #![allow(unused_features)]
+#![allow(renamed_and_removed_lints)]
 #![feature(integer_atomics)]
 #![allow(unused_doc_comments)]
 #![cfg_attr(feature = "dev", allow(unstable_features))]
