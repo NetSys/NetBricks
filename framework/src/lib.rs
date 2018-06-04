@@ -43,6 +43,8 @@ extern crate sctp;
 extern crate twox_hash;
 // TOML for scheduling configuration
 extern crate toml;
+#[macro_use]
+extern crate serde_derive;
 // UUID for SHM naming
 extern crate uuid;
 

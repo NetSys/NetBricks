@@ -32,6 +32,7 @@ impl<T> Atom<T> {
 
 /// `NetBricks` control configuration. In theory all applications create one of these, either through the use of
 /// `read_configuration` or manually using args.
+#[derive(Debug, Deserialize)]
 pub struct NetbricksConfiguration {
     /// Name, this is passed on to DPDK. If you want to run multiple DPDK apps, this needs to be unique per application.
     pub name: String,
@@ -87,7 +88,7 @@ impl fmt::Display for NetbricksConfiguration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(
             f,
-            "Configuration: name: {} mempool size: {} core cache: {} primary core: {}\n Ports:\n",
+            "Configuration: name: {} mempool size: {} core cache: {} primary core: {}\nPorts:\n",
             self.name, self.pool_size, self.cache_size, self.primary_core
         ));
         for port in &self.ports {
@@ -105,6 +106,7 @@ impl fmt::Display for NetbricksConfiguration {
 }
 
 /// Configuration for each port (network device) in `NetBricks`.
+#[derive(Debug, Deserialize)]
 pub struct PortConfiguration {
     /// Name. The exact semantics vary by backend. For DPDK, we allow things of the form:
     ///    <PCI ID> : Hardware device with PCI ID
@@ -165,7 +167,7 @@ impl fmt::Display for PortConfiguration {
         let tx_queue_str = tx_queues_str_vec.join(" ");
         write!(
             f,
-            "Port {} RXQ_Count: {} RX_Queues: [ {} ] TXQ_Count: {} TX_Queues: {} RXD: {} TXD: {} Loopback {}",
+            "Port: {} RXQ_Count: {} RX_Queues: [ {} ] TXQ_Count: {} TX_Queues: [ {} ] RXD: {} TXD: {} Loopback: {}",
             self.name,
             self.rx_queues.len(),
             rx_queue_str,

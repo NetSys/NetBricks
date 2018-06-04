@@ -108,6 +108,9 @@ case $TASK in
     sctp)
         find_sctp
         ;;
+    build_native)
+        native
+        ;;
     build_test)
         shift
         if [ $# -lt 1 ]; then
@@ -299,6 +302,7 @@ case $TASK in
       Where command is one of
           sctp: Check if sctp library is present.
           build: Build the project (this includes framework and all tests).
+          build_native: Build the DPDK C API.
           build_rel: Build a release of the project (this includes framework and all tests).
           build_fmwk: Just build framework.
           build_test: Build a particular test.

@@ -23,6 +23,8 @@ nix = "*"
 # Figure out if we want this permanently or just for now.
 rust-sctp = { git="https://github.com/netsys/rust-sctp", optional = true}
 toml = "*"
+serde = "1.0"
+serde_derive = "1.0"
 # Hack for SHM
 uuid = { version = "*", features=["v4"] }
 error-chain = "*"
