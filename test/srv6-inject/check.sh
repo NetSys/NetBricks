@@ -12,9 +12,9 @@ echo -e "${C}RUNNING: $TEST_NAME${NC}"
 tcpdump -ter /tmp/out.pcap | tee /dev/tty | diff - data/expect_srv6.out
 TEST_SRv6=$?
 
-# ../../build.sh run $TEST_NAME -p $PORT_OPTIONS2 -c 1 --dur 1
-# tcpdump -ter /tmp/out.pcap | tee /dev/tty | diff - data/expect_ipv6.out
-TEST_IPv6toSRv6=0
+../../build.sh run $TEST_NAME -p $PORT_OPTIONS2 -c 1 --dur 1
+tcpdump -ter /tmp/out.pcap | tee /dev/tty | diff - data/expect_ipv6.out
+TEST_IPv6toSRv6=$?
 
 echo ----
 if [[ $TEST_SRv6 != 0 ]] || [[ $TEST_IPv6toSRv6 != 0 ]]; then
