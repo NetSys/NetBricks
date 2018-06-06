@@ -84,6 +84,12 @@ pub enum NextHeader {
     NoNextHeader = 59,
 }
 
+impl Default for NextHeader {
+    fn default() -> NextHeader {
+        NextHeader::NoNextHeader
+    }
+}
+
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct Ipv6Header {
@@ -183,9 +189,7 @@ impl Ipv6Header {
         if let Some(next_hdr) = self.next_header() {
             let src_ip = self.src();
             let dst_ip = self.dst();
-            if (next_hdr == NextHeader::Tcp || next_hdr == NextHeader::Udp)
-                && self.payload_size(0) >= 4
-            {
+            if self.payload_size(0) >= 4 {
                 unsafe {
                     let self_as_u8 = (self as *const Ipv6Header) as *const u8;
                     let port_as_u8 = self_as_u8.offset(self.offset() as isize);

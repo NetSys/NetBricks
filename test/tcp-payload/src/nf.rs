@@ -5,7 +5,7 @@ use netbricks::headers::*;
 use netbricks::operators::*;
 use netbricks::scheduler::*;
 use netbricks::state::*;
-use netbricks::utils::Flow;
+use netbricks::utils::FlowV4;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
@@ -17,8 +17,8 @@ const READ_SIZE: usize = 256;
 fn read_payload(
     rb: &mut ReorderedBuffer,
     to_read: usize,
-    flow: Flow,
-    payload_cache: &mut HashMap<Flow, Vec<u8>>,
+    flow: FlowV4,
+    payload_cache: &mut HashMap<FlowV4, Vec<u8>>,
 ) {
     let mut read_buf = [0; READ_SIZE];
     let mut so_far = 0;
@@ -34,8 +34,8 @@ pub fn reconstruction<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Si
     parent: T,
     sched: &mut S,
 ) -> CompositionBatch {
-    let mut rb_map = HashMap::<Flow, ReorderedBuffer, FnvHash>::with_hasher(Default::default());
-    let mut payload_cache = HashMap::<Flow, Vec<u8>>::with_hasher(Default::default());
+    let mut rb_map = HashMap::<FlowV4, ReorderedBuffer, FnvHash>::with_hasher(Default::default());
+    let mut payload_cache = HashMap::<FlowV4, Vec<u8>>::with_hasher(Default::default());
 
     let mut groups = parent
         .parse::<MacHeader>()

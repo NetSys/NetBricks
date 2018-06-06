@@ -13,6 +13,7 @@ use netbricks::interface::*;
 use netbricks::operators::*;
 use netbricks::scheduler::Executable;
 use netbricks::state::*;
+use netbricks::utils::*;
 use std::collections::HashMap;
 use std::env;
 use std::process;
@@ -37,7 +38,7 @@ fn monitor<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(
             let hdr = pkt.get_mut_header();
             let ttl = hdr.ttl();
             hdr.set_ttl(ttl + 1);
-            monitoring_cache.update(hdr.flow().unwrap(), 1);
+            monitoring_cache.update(Flows::V4(hdr.flow().unwrap()), 1);
         })
         .compose()
 }

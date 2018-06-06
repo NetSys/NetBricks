@@ -5,6 +5,7 @@ use generic_array::{ArrayLength, GenericArray};
 use headers::ip::v6::{Ipv6VarHeader, NextHeader};
 use headers::EndOffset;
 use std::fmt;
+use std::marker::PhantomData;
 use std::net::Ipv6Addr;
 use std::slice;
 use utils::*;
@@ -166,7 +167,7 @@ where
     S: ArrayLength<Segment>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let segments = self.segments();
+        let segments = self.segments().unwrap_or(&[]);
         let num_segments = segments.len();
         let segs = segments
             .iter()
@@ -253,6 +254,49 @@ where
         }
     }
 
+    pub fn new_from(
+        prev_srh: &SegmentRoutingHeader<T, S>,
+        segments: GenericArray<Segment, S>,
+    ) -> SegmentRoutingHeader<T, S> {
+        let num_segments = segments.len() as u8;
+
+        SegmentRoutingHeader {
+            ext_header: Ipv6ExtHeader {
+                hdr_ext_len: 2 * num_segments,
+                next_header: prev_srh.next_header().unwrap_or(NextHeader::NoNextHeader) as u8,
+                _parent: PhantomData,
+            },
+            routing_type: ROUTING_TYPE,
+            segments_left: prev_srh.segments_left(),
+            last_entry: num_segments - 1,
+            flags: prev_srh.flags(),
+            tag: prev_srh.tag(),
+            segments: segments,
+        }
+    }
+
+    pub fn new_from_tuple(
+        fields: (Option<NextHeader>, u8, u8, u16),
+        segments: GenericArray<Segment, S>,
+    ) -> SegmentRoutingHeader<T, S> {
+        let num_segments = segments.len() as u8;
+        let (next_header, segments_left, flags, tag) = fields;
+
+        SegmentRoutingHeader {
+            ext_header: Ipv6ExtHeader {
+                hdr_ext_len: 2 * num_segments,
+                next_header: next_header.unwrap_or(NextHeader::NoNextHeader) as u8,
+                _parent: PhantomData,
+            },
+            routing_type: ROUTING_TYPE,
+            segments_left: segments_left,
+            last_entry: num_segments - 1,
+            flags: flags,
+            tag: tag,
+            segments: segments,
+        }
+    }
+
     pub fn hdr_ext_len(&self) -> u8 {
         self.ext_header.hdr_ext_len
     }
@@ -323,6 +367,10 @@ where
         self.flags = flip_bit(self.flags, HMAC_FLAG_POS, hmac);
     }
 
+    pub fn flags(&self) -> u8 {
+        u8::from_be(self.flags)
+    }
+
     /// Tag: tag a packet as part of a class or group of packets, e.g., packets
     /// sharing the same set of properties.
     pub fn tag(&self) -> u16 {
@@ -333,9 +381,7 @@ where
         self.tag = u16::to_be(tag)
     }
 
-    // TODO: Wrap this Option
-    // ZNOTE: Will take care of this in next PR
-    pub fn segments(&self) -> &Segments
+    pub fn segments(&self) -> Option<&Segments>
     where
         S: ArrayLength<Segment>,
     {
@@ -348,9 +394,14 @@ where
         if hdr_ext_len != 0 && (2 * (last_entry + 1) == hdr_ext_len) {
             let num_segments = last_entry as usize + 1;
             let ptr = (self as *const Self) as *const u8;
-            unsafe { slice::from_raw_parts(ptr.offset(8) as *const Segment, num_segments) }
+            unsafe {
+                Some(slice::from_raw_parts(
+                    ptr.offset(8) as *const Segment,
+                    num_segments,
+                ))
+            }
         } else {
-            &[]
+            None
         }
     }
 }

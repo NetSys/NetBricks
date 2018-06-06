@@ -1,6 +1,8 @@
 use common::*;
 use headers::{EndOffset, NullHeader};
 use native::zcsi::*;
+use std::cmp::Ordering;
+use std::fmt::Display;
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::ptr;
@@ -347,6 +349,14 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         unsafe { create_packet(self.get_mbuf_ref(), hdr, offset) }
     }
 
+    #[inline]
+    pub fn emit_metadata<M2: Sized + Send>(&self) -> &M2 {
+        unsafe {
+            let ptr = MBuf::metadata_as::<M2>(self.mbuf, FREEFORM_METADATA_SLOT);
+            &(*(ptr))
+        }
+    }
+
     /* When constructing a packet, take a packet as input and add a header.
        Look at *fn insert_header* for a longer explanation. Use *push_header*
        to create a new packet with a sequence of headers upon first creation, as
@@ -391,7 +401,8 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
 
        Use *insert_header* on a mutable reference to insert a header into an
        already existing packet, after another header's offset basically. It
-       returns a void Result type, i.e. Err or Ok upon inserting a header int*/
+       returns a void Result type, i.e. Err or Ok upon inserting a header int
+     */
     #[inline]
     pub fn insert_header<T2: EndOffset<PreviousHeader = T>>(&mut self, header: &T2) -> Result<()> {
         unsafe {
@@ -414,6 +425,55 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
             } else {
                 Err(ErrorKind::FailedToInsertHeader.into())
             }
+        }
+    }
+
+    /* Swap out old header of one type with a new header of the same type.
+       Returns the diff in bytes as a signed integer for calculation needs, e.g.
+       payload length for a v6 header, etc...
+    */
+    #[inline]
+    pub fn swap_header<T2>(&mut self, new_header: &T2) -> Result<isize>
+    where
+        T2: EndOffset<PreviousHeader = T::PreviousHeader> + Display,
+    {
+        unsafe {
+            let packet_len = self.data_len();
+            let current_hdr = self.header();
+
+            let current_hdr_size = (*current_hdr).offset();
+            let new_hdr_size = new_header.offset();
+            let payload = self.payload();
+            let offset = self.offset();
+
+            let to_move = packet_len - offset - current_hdr_size;
+
+            match new_hdr_size.cmp(&current_hdr_size) {
+                Ordering::Less => {
+                    let diff: usize = current_hdr_size - new_hdr_size;
+                    let move_loc = payload.offset(diff as isize);
+                    ptr::copy(payload, move_loc, to_move);
+
+                    let removed = (*self.mbuf).remove_data_end(diff);
+                    if removed <= new_hdr_size && diff != removed {
+                        return Err(ErrorKind::FailedToSwapHeader(format!("{}", new_header)).into());
+                    }
+                }
+                Ordering::Greater => {
+                    let diff: usize = new_hdr_size - current_hdr_size;
+                    let move_loc = payload.offset(diff as isize);
+
+                    let added = (*self.mbuf).add_data_end(diff);
+                    if added >= new_hdr_size && diff != added {
+                        return Err(ErrorKind::FailedToSwapHeader(format!("{}", new_header)).into());
+                    }
+                    ptr::copy(payload, move_loc, to_move);
+                }
+                Ordering::Equal => (),
+            }
+
+            ptr::copy_nonoverlapping(new_header as *const T2, self.header_u8() as *mut T2, 1);
+            Ok(new_hdr_size as isize - current_hdr_size as isize)
         }
     }
 
@@ -492,6 +552,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         }
     }
 
+    // TODO: Fix This.
     #[inline]
     pub fn parse_header_and_record<T2: EndOffset<PreviousHeader = T>>(mut self) -> Packet<T2, M> {
         unsafe {

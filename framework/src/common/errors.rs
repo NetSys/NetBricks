@@ -75,6 +75,11 @@ error_chain! {
             description("Failed to insert header into packet")
             display("Failed to insert header into packet")
         }
+
+        FailedToSwapHeader(new_header: String) {
+            description("Failed to swap-in new header in packet")
+                display("Failed to swap-in new header - {} - in packet", new_header)
+        }
     }
 
     foreign_links {

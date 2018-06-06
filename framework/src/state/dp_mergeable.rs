@@ -3,7 +3,7 @@ use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 use std::ops::AddAssign;
-use utils::Flow;
+use utils::Flows;
 
 /// A generic store for associating some merge-able type with each flow. Note, the merge must be commutative, we do not
 /// guarantee ordering for things being merged. The merge function is implemented by implementing the
@@ -19,8 +19,8 @@ const VEC_SIZE: usize = 1 << 24;
 #[derive(Clone)]
 pub struct DpMergeableStore<T: AddAssign<T> + Default> {
     /// Contains the counts on the data path.
-    state: HashMap<Flow, T, FnvHash>,
-    cache: Vec<(Flow, T)>,
+    state: HashMap<Flows, T, FnvHash>,
+    cache: Vec<(Flows, T)>,
     cache_size: usize,
 }
 
@@ -44,7 +44,7 @@ impl<T: AddAssign<T> + Default> DpMergeableStore<T> {
 
     /// Change the value for the given `Flow`.
     #[inline]
-    pub fn update(&mut self, flow: Flow, inc: T) {
+    pub fn update(&mut self, flow: Flows, inc: T) {
         {
             self.cache.push((flow, inc));
         }
@@ -55,7 +55,7 @@ impl<T: AddAssign<T> + Default> DpMergeableStore<T> {
 
     /// Remove an entry from the table.
     #[inline]
-    pub fn remove(&mut self, flow: &Flow) -> T {
+    pub fn remove(&mut self, flow: &Flows) -> T {
         self.merge_cache();
         self.state.remove(flow).unwrap_or_else(Default::default)
     }
@@ -64,7 +64,7 @@ impl<T: AddAssign<T> + Default> DpMergeableStore<T> {
     ///
     /// #[Warning]
     /// This might have severe performance penalties.
-    pub fn iter(&mut self) -> Iter<Flow, T> {
+    pub fn iter(&mut self) -> Iter<Flows, T> {
         self.merge_cache();
         self.state.iter()
     }

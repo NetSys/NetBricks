@@ -1,8 +1,7 @@
-use netbricks::config::Atom;
 use netbricks::headers::*;
 use netbricks::operators::*;
 use netbricks::scheduler::*;
-use Bar;
+use ATOM_CONF;
 
 #[inline]
 fn tcp_ipv6_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionBatch {
@@ -23,7 +22,6 @@ fn tcp_sr_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionB
 pub fn nf<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
     parent: T,
     sched: &mut S,
-    configuration: &'static Atom<Bar>,
 ) -> CompositionBatch {
     let mut groups = parent
         .parse::<MacHeader>()
@@ -40,7 +38,7 @@ pub fn nf<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
         .map(box move |_pkt| {
             info!(
                 "Settings/Configuration Static State Val: {:?}",
-                configuration.get()
+                ATOM_CONF.get()
             );
         })
         .group_by(

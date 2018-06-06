@@ -1,20 +1,38 @@
 #![feature(box_syntax)]
 #![feature(asm)]
+#![feature(ip_constructors)]
 extern crate colored;
+extern crate fnv;
 extern crate generic_array;
 extern crate netbricks;
+#[macro_use]
+extern crate lazy_static;
 use self::nf::*;
+use fnv::FnvHasher;
 use netbricks::config::{basic_opts, read_matches};
+use netbricks::headers::*;
 use netbricks::interface::*;
 use netbricks::operators::*;
 use netbricks::scheduler::*;
+use std::collections::HashMap;
 use std::env;
 use std::fmt::Display;
+use std::hash::BuildHasherDefault;
 use std::process;
 use std::sync::Arc;
+use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
 mod nf;
+
+type FnvHash = BuildHasherDefault<FnvHasher>;
+
+lazy_static! {
+    static ref CACHE: RwLock<HashMap<usize, Vec<Segment>, FnvHash>> = {
+        let m = HashMap::with_hasher(Default::default());
+        RwLock::new(m)
+    };
+}
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
 where

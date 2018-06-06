@@ -1,6 +1,6 @@
 extern crate generic_array;
 extern crate netbricks;
-use generic_array::typenum::U2;
+use generic_array::typenum::*;
 use generic_array::GenericArray;
 use netbricks::common::EmptyMetadata;
 use netbricks::headers::*;
@@ -190,9 +190,9 @@ fn srh_from_bytes() {
         assert_eq!(srh.alert(), false);
         assert_eq!(srh.hmac(), false);
         assert_eq!(srh.tag(), 0);
-        assert_eq!(srh.segments().len(), 2);
-        assert_eq!(srh.segments()[0], seg0);
-        assert_eq!(srh.segments()[1], seg1);
+        assert_eq!(srh.segments().unwrap().len(), 2);
+        assert_eq!(srh.segments().unwrap()[0], seg0);
+        assert_eq!(srh.segments().unwrap()[1], seg1);
     }
 }
 
@@ -268,6 +268,7 @@ fn insert_static_srh_from_bytes() {
     let epkt = pkt.parse_header::<MacHeader>();
     let mut v6pkt = epkt.parse_header::<Ipv6Header>();
     let mut v6pkt2 = v6pkt.clone();
+    let mut v6pkt3 = v6pkt.clone();
     let v6h = v6pkt.get_mut_header();
     {
         assert_eq!(v6h.next_header().unwrap(), NextHeader::Udp);
@@ -284,23 +285,86 @@ fn insert_static_srh_from_bytes() {
         srh.set_segments_left(0);
         assert_eq!(srh.ext_header.hdr_ext_len(), 4);
         assert_eq!(srh.next_header().unwrap(), NextHeader::NoNextHeader);
-        assert_eq!(srh.segments().len(), 2);
+        assert_eq!(srh.segments().unwrap().len(), 2);
         assert_eq!(srh.tag(), 0);
         assert_eq!(srh.protected(), false);
-        assert_eq!(srh.segments()[0], seg0);
-        assert_eq!(srh.segments()[1], seg1);
+        assert_eq!(srh.segments().unwrap()[0], seg0);
+        assert_eq!(srh.segments().unwrap()[1], seg1);
 
         // Test we can use iter (32 elements MAX implemented)
-        let mut iter = srh.segments().iter();
+        let mut iter = srh.segments().unwrap().iter();
         assert_eq!(iter.next().unwrap(), &seg0);
         assert_eq!(iter.next().unwrap(), &seg1);
 
         // Insert header onto packet
         if let Ok(()) = v6pkt2.insert_header(&srh) {
             let srhpkt = v6pkt2.parse_header::<SRH<Ipv6Header>>();
-            assert_eq!(srhpkt.get_header().segments().len(), 2);
+            assert_eq!(srhpkt.get_header().segments().unwrap().len(), 2);
         } else {
             panic!("Error adding srh header onto v6 packet");
+        }
+    }
+
+    if let Ok(()) = v6pkt3.insert_header(&srh) {
+        println!("OK! Insert of SRH");
+    } else {
+        panic!("Error inserting test SRH");
+    }
+
+    {
+        let mut srhv6_1 = v6pkt3.clone().parse_header::<SRH<Ipv6Header>>();
+        let seg2 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:7337").unwrap();
+        let seg3 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:7338").unwrap();
+        let segs2 = vec![seg2, seg3];
+        let srh2 = <SegmentRoutingHeader<Ipv6Header, U2>>::new(*GenericArray::<_, U2>::from_slice(
+            &segs2[..],
+        ));
+        {
+            if let Ok(diff) = srhv6_1.swap_header::<SegmentRoutingHeader<Ipv6Header, U2>>(&srh2) {
+                assert_eq!(diff, 0);
+                let srh = srhv6_1.get_header();
+                assert_eq!(srh.segments().unwrap().len(), 2);
+                assert_eq!(srh.segments().unwrap()[0], seg2);
+                assert_eq!(srh.segments().unwrap()[1], seg3);
+            }
+        }
+    }
+
+    {
+        let mut srhv6_2 = v6pkt3.clone().parse_header::<SRH<Ipv6Header>>();
+        let seg4 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:1000").unwrap();
+        let segs3 = vec![seg4];
+        let srh3 = <SegmentRoutingHeader<Ipv6Header, U1>>::new(*GenericArray::<_, U1>::from_slice(
+            &segs3[..],
+        ));
+        {
+            if let Ok(diff) = srhv6_2.swap_header::<SegmentRoutingHeader<Ipv6Header, U1>>(&srh3) {
+                assert_eq!(diff, -16);
+                let srh = srhv6_2.get_header();
+                assert_eq!(srh.segments().unwrap().len(), 1);
+                assert_eq!(srh.segments().unwrap()[0], seg4);
+            }
+        }
+    }
+
+    {
+        let mut srhv6_3 = v6pkt3.clone().parse_header::<SRH<Ipv6Header>>();
+        let seg5 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:3000").unwrap();
+        let seg6 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:3001").unwrap();
+        let seg7 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:3002").unwrap();
+        let segs4 = vec![seg5, seg6, seg7];
+        let srh4 = <SegmentRoutingHeader<Ipv6Header, U3>>::new(*GenericArray::<_, U3>::from_slice(
+            &segs4[..],
+        ));
+        {
+            if let Ok(diff) = srhv6_3.swap_header::<SegmentRoutingHeader<Ipv6Header, U3>>(&srh4) {
+                assert_eq!(diff, 32);
+                let srh = srhv6_3.get_header();
+                assert_eq!(srh.segments().unwrap().len(), 3);
+                assert_eq!(srh.segments().unwrap()[0], seg5);
+                assert_eq!(srh.segments().unwrap()[1], seg6);
+                assert_eq!(srh.segments().unwrap()[2], seg7);
+            }
         }
     }
 }

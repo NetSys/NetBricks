@@ -6,11 +6,17 @@ use std::mem;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::slice;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
+pub enum Flows {
+    V4(FlowV4),
+    V6(FlowV6),
+}
+
 // FIXME: Currently just deriving Hash, but figure out if this is a performance problem. By default, Rust uses SipHash
 // which is supposed to have reasonable performance characteristics.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
 #[repr(C, packed)]
-pub struct Flow {
+pub struct FlowV4 {
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
     pub src_port: u16,
@@ -26,6 +32,30 @@ pub struct FlowV6 {
     pub src_port: u16,
     pub dst_port: u16,
     pub proto: u8,
+}
+
+impl Default for FlowV4 {
+    fn default() -> FlowV4 {
+        FlowV4 {
+            src_ip: Ipv4Addr::unspecified(),
+            dst_ip: Ipv4Addr::unspecified(),
+            src_port: 0,
+            dst_port: 0,
+            proto: 0,
+        }
+    }
+}
+
+impl Default for FlowV6 {
+    fn default() -> FlowV6 {
+        FlowV6 {
+            src_ip: Ipv6Addr::unspecified(),
+            dst_ip: Ipv6Addr::unspecified(),
+            src_port: 0,
+            dst_port: 0,
+            proto: 0,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
@@ -61,9 +91,9 @@ const IHL_TO_BYTE_FACTOR: usize = 4; // IHL is in terms of number of 32-bit word
 
 /// This assumes the function is given the Mac Payload
 #[inline]
-pub fn ipv4_extract_flow(bytes: &[u8]) -> Option<Flow> {
+pub fn ipv4_extract_flow(bytes: &[u8]) -> Option<FlowV4> {
     let port_start = (bytes[0] & 0xf) as usize * IHL_TO_BYTE_FACTOR;
-    Some(Flow {
+    Some(FlowV4 {
         proto: bytes[9],
         src_ip: Ipv4Addr::from(BigEndian::read_u32(&bytes[12..16])),
         dst_ip: Ipv4Addr::from(BigEndian::read_u32(&bytes[16..20])),
@@ -72,10 +102,10 @@ pub fn ipv4_extract_flow(bytes: &[u8]) -> Option<Flow> {
     })
 }
 
-impl Flow {
+impl FlowV4 {
     #[inline]
-    pub fn reverse_flow(&self) -> Flow {
-        Flow {
+    pub fn reverse_flow(&self) -> FlowV4 {
+        FlowV4 {
             src_ip: self.dst_ip,
             dst_ip: self.src_ip,
             src_port: self.dst_port,
@@ -106,14 +136,14 @@ impl Flow {
 #[inline]
 pub fn ipv4_flow_hash(bytes: &[u8], _iv: u32) -> usize {
     if let Some(flow) = ipv4_extract_flow(bytes) {
-        flow_hash(&flow)
+        flow_hash(&Flows::V4(flow))
     } else {
         0
     }
 }
 
 #[inline]
-pub fn flow_hash(flow: &Flow) -> usize {
+pub fn flow_hash(flow: &Flows) -> usize {
     let mut hasher = FnvHasher::default();
     hasher.write(flow_as_u8(flow));
     hasher.finish() as usize
@@ -134,9 +164,17 @@ pub fn crc_hash<T: Sized>(to_hash: &T, iv: u32) -> u32 {
     }
 }
 
-fn flow_as_u8(flow: &Flow) -> &[u8] {
-    let size = mem::size_of::<Flow>();
-    unsafe { slice::from_raw_parts((flow as *const Flow) as *const u8, size) }
+fn flow_as_u8(flow: &Flows) -> &[u8] {
+    match flow {
+        Flows::V4(f) => {
+            let size = mem::size_of::<FlowV4>();
+            unsafe { slice::from_raw_parts((f as *const FlowV4) as *const u8, size) }
+        }
+        Flows::V6(f) => {
+            let size = mem::size_of::<FlowV6>();
+            unsafe { slice::from_raw_parts((f as *const FlowV6) as *const u8, size) }
+        }
+    }
 }
 
 #[inline]

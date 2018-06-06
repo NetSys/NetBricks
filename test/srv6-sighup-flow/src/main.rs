@@ -113,7 +113,7 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| nf(ReceiveBatch::new(port.clone()), sched, &ATOM_CONF).send(port.clone()))
+        .map(|port| nf(ReceiveBatch::new(port.clone()), sched).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
