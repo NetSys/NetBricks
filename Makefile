@@ -3,7 +3,8 @@ CORE ?= 0
 BASE_DIR = $(shell git rev-parse --show-toplevel)
 POOL_SIZE ?= 512
 
-.PHONY: clean compile compile-test fmt init lint release release-all run run-rel test
+.PHONY: clean compile compile-nb compile-test fmt init lint native release \
+        run run-rel test
 
 init:
 	@mkdir -p $(BASE_DIR)/.git/hooks && ln -s -f $(BASE_DIR)/.hooks/pre-commit $(BASE_DIR)/.git/hooks/pre-commit
@@ -20,6 +21,9 @@ ifdef TEST
 else
 	@./build.sh build_test
 endif
+
+native:
+	@./build.sh build_native
 
 release:
 	@./build.sh build_rel
