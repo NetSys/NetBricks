@@ -274,7 +274,7 @@ case $TASK in
     lint)
         pushd $BASE_DIR/framework
         ${CARGO} clean
-        ${CARGO} update # Clippy breaks with new compilers
+        ${CARGO} update
         ${CARGO} build --features dev
         popd
         ;;

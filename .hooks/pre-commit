@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cargo +nightly fmt -- --version &>/dev/null
+cargo +nightly fmt --version &>/dev/null
 if [ $? != 0 ]; then
 	printf "[pre_commit] \033[0;31merror\033[0m: \"cargo +nightly fmt\" not available?\n"
 	exit 1
