@@ -1,6 +1,8 @@
 pub use self::asm::*;
+pub use self::atom::*;
 pub use self::flow::*;
 mod asm;
+mod atom;
 mod flow;
 
 pub const PAGE_SIZE: usize = 4096; // Page size in bytes, not using huge pages here.
