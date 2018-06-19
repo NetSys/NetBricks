@@ -11,6 +11,7 @@ use std::slice;
 use utils::FlowV6;
 
 mod ext;
+mod nf_macros;
 mod srh;
 
 /* (From RFC8200 https://tools.ietf.org/html/rfc8200#section-3)

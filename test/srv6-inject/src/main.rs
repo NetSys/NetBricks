@@ -4,6 +4,7 @@
 extern crate colored;
 extern crate fnv;
 extern crate generic_array;
+#[macro_use]
 extern crate netbricks;
 #[macro_use]
 extern crate lazy_static;
