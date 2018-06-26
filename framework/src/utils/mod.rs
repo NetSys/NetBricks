@@ -67,21 +67,26 @@ pub fn flip_bit(original: u8, pos: u8, on: bool) -> u8 {
     }
 }
 
-// test flipping a bit at a known position
-#[test]
-fn flippin_bits() {
-    let original: u8 = 0b01101000;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    // we will clear the 3rd bit (2nd position)
-    let cleared: u8 = 0b01001000;
+    // test flipping a bit at a known position
+    #[test]
+    fn flippin_bits() {
+        let original: u8 = 0b01101000;
 
-    // lets turn off the bit, and check that it is cleared
-    let mut result = flip_bit(original, 2, false);
-    assert_eq!(result, cleared);
-    assert_eq!(get_bit(result, 2), false);
+        // we will clear the 3rd bit (2nd position)
+        let cleared: u8 = 0b01001000;
 
-    // turn the bit back on, make sure it is set
-    result = flip_bit(result, 2, true);
-    assert_eq!(result, original);
-    assert_eq!(get_bit(result, 2), true);
+        // lets turn off the bit, and check that it is cleared
+        let mut result = flip_bit(original, 2, false);
+        assert_eq!(result, cleared);
+        assert_eq!(get_bit(result, 2), false);
+
+        // turn the bit back on, make sure it is set
+        result = flip_bit(result, 2, true);
+        assert_eq!(result, original);
+        assert_eq!(get_bit(result, 2), true);
+    }
 }
