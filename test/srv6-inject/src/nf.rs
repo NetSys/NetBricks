@@ -35,7 +35,7 @@ impl Default for MetaDataz {
     }
 }
 
-fn srh_into_packet(pkt: &mut Packet<Ipv6Header, MetaDataz>) -> Option<(isize, Ipv6Addr)> {
+fn srh_into_packet(pkt: &mut Packet<Ipv6Header, MetaDataz>) -> Option<isize> {
     let seg0 = Ipv6Addr::from_str("fe80::4").unwrap();
     let seg1 = Ipv6Addr::from_str("1ce:c01d:bee2:15:a5:900d:a5:11fe").unwrap();
     let segvec = vec![seg0, seg1];
@@ -54,7 +54,7 @@ fn srh_into_packet(pkt: &mut Packet<Ipv6Header, MetaDataz>) -> Option<(isize, Ip
 fn srh_change_packet(
     pkt: &mut Packet<SRH<Ipv6Header>, MetaDataz>,
     seg_action: NewSegmentsAction,
-) -> Option<(isize, Ipv6Addr)> {
+) -> Option<isize> {
     let seg1 = Ipv6Addr::from_str("fe80::a").unwrap();
     let mut segvec = vec![seg1];
 
@@ -103,14 +103,16 @@ fn tcp_sr_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionB
         })
         .parse::<SRH<Ipv6Header>>()
         .transform(box |pkt| {
-            if let Some((payload_diff, segment_dst)) = srh_change_packet(pkt, NewSegmentsAction::Prepend) {
+            if let Some(payload_diff) = srh_change_packet(pkt, NewSegmentsAction::Prepend) {
                 let flow  = pkt.read_metadata().flow;
+                let segments_left = pkt.get_header().segments_left();
+                let segments = pkt.get_header().segments().unwrap().to_vec();
 
                 pkt.write_metadata({
                     &MetaDataz {
                         flow: flow,
                         payload_diff: payload_diff as i8,
-                        segment_dst: segment_dst,
+                        segment_dst: segments[segments_left as usize],
                         ..Default::default()
                     }
                 }).unwrap();
@@ -178,11 +180,10 @@ fn tcp_sr_inject_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> Compo
             }
         })
         .transform(box |pkt| {
-            if let Some((payload_diff, segment_dst)) = srh_into_packet(pkt) {
+            if let Some(payload_diff) = srh_into_packet(pkt) {
                 let curr_payload_len = pkt.get_header().payload_len();
                 let mut v6h = pkt.get_mut_header();
                 v6h.set_next_header(NextHeader::Routing);
-                v6h.set_dst(segment_dst);
                 v6h.set_payload_len(curr_payload_len + payload_diff as u16);
             }
         })
@@ -191,12 +192,28 @@ fn tcp_sr_inject_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> Compo
             _ => false,
         })
         .parse::<SRH<Ipv6Header>>()
+        .metadata_mut(box |pkt| {
+            let segments_left = pkt.get_header().segments_left();
+
+            MetaDataz {
+                flow: pkt.emit_metadata::<MetaDataz>().flow,
+                segment_dst: pkt.get_header().segments().unwrap()[segments_left as usize],
+                ..Default::default()
+            }
+        })
         .map(box |pkt| {
             println!("SR-hdr {}", format!("{}", pkt.get_header()).green());
         })
         .parse::<TcpHeader<SRH<Ipv6Header>>>()
         .map(box |pkt| {
             println!("TCP header {}", format!("{}", pkt.get_header()).green());
+        })
+        .reset()
+        .parse::<MacHeader>()
+        .parse::<Ipv6Header>()
+        .transform(box |pkt| {
+            let new_destination = pkt.emit_metadata::<MetaDataz>().segment_dst;
+            pkt.get_mut_header().set_dst(new_destination)
         })
         .compose()
 }

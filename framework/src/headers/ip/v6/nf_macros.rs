@@ -31,10 +31,7 @@ macro_rules! srh_insert {
                     );
 
                     if let Ok(()) = $pkt.insert_header(&srh) {
-                        // TODO: Define a structure for SR-action necessary info
-                        let (_next_header, segments_left, _flags, _tags) = $sr_info;
-
-                        Some((srh.offset() as isize, Segment::from($segments[segments_left as usize])))
+                        Some(srh.offset() as isize)
                     } else {
                         None
                     }
@@ -80,10 +77,7 @@ macro_rules! srh_swap {
 
                     if let Ok(swap_diff) =
                         $pkt.swap_header::<SegmentRoutingHeader<$prev_hdr_type, $utype>>(&srh) {
-                            // TODO: Define a structure for SR-action necessary info
-                            let (_next_header, segments_left, _flags, _tags) = $sr_info;
-
-                            Some((swap_diff, Segment::from($segments[segments_left as usize])))
+                            Some(swap_diff)
                         } else {
                             None
                         }
