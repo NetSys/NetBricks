@@ -1,7 +1,7 @@
 use common::*;
 use headers::{EndOffset, NullHeader};
 use native::zcsi::*;
-use std::cmp::Ordering;
+use std::cmp::{self, Ordering};
 use std::fmt::Display;
 use std::marker::PhantomData;
 use std::mem::size_of;
@@ -608,6 +608,63 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         unsafe {
             let header = self.data_base() as *mut NullHeader;
             create_packet(self.get_mbuf_ref(), header, 0)
+        }
+    }
+
+    /// Calculate current header + data calculations like for tcp/udp
+    /// checksum.
+    #[inline]
+    pub fn segment_length(&self) -> u32 {
+        unsafe {
+            let current_hdr = self.header();
+            let current_hdr_size = (*current_hdr).offset();
+            let payload = self.payload_size();
+            current_hdr_size as u32 + payload as u32 + self.sum_be_words(8)
+        }
+    }
+
+    /// Sum all words (16 bit chunks) from a packet's data (). The word at word offset
+    /// `skipword` will be skipped. Each word is treated as big endian.
+    /// Taken from and inspired by:
+    /// https://github.com/libpnet/libpnet/commit/db6c2fc0c4c96ec6583b3652655f3648f4aa2dd0#diff-0e88f9c4bcda8daf66293db8e37dda32R145.
+    #[inline]
+    fn sum_be_words(&self, mut skipword: usize) -> u32 {
+        let data: &[u8] = self.get_data();
+        let len = data.len();
+
+        let wdata: &[u16] = unsafe { slice::from_raw_parts(data.as_ptr() as *const u16, len / 2) };
+        skipword = cmp::min(skipword, wdata.len());
+
+        let mut sum = 0u32;
+        let mut i = 0;
+
+        while i < skipword {
+            sum += u16::from_be(unsafe { *wdata.get_unchecked(i) }) as u32;
+            i += 1;
+        }
+
+        i += 1;
+        while i < wdata.len() {
+            sum += u16::from_be(unsafe { *wdata.get_unchecked(i) }) as u32;
+            i += 1;
+        }
+
+        // If the length is odd, make sure to checksum the final byte
+        if len & 1 != 0 {
+            sum += (unsafe { *data.get_unchecked(len - 1) } as u32) << 8;
+        }
+
+        sum
+    }
+
+    /// Calculate the data from the current header offset all the way to the
+    /// payload. Used for tcp/udp packets.
+    #[inline]
+    fn get_data(&self) -> &mut [u8] {
+        unsafe {
+            let current_hdr_size = (*self.header()).offset();
+            let ptr = self.header_u8();
+            slice::from_raw_parts_mut(ptr, current_hdr_size + self.payload_size())
         }
     }
 

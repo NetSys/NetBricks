@@ -10,6 +10,7 @@
 #![feature(unique)]
 #![feature(const_fn)]
 #![feature(ip_constructors)]
+#![feature(type_ascription)]
 // FIXME: Figure out if this is really the right thing here.
 #![feature(ptr_internals)]
 //

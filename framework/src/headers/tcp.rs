@@ -1,8 +1,9 @@
 use super::EndOffset;
-use headers::ip::IpHeader;
+use headers::*;
 use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
+use std::net::Ipv6Addr;
 
 #[repr(C, packed)]
 pub struct TcpHeader<T> {
@@ -382,10 +383,24 @@ where
         u16::from_be(self.csum)
     }
 
-    // FIXME: Validate checksum and update checksum
-
     pub fn set_checksum(&mut self, csum: u16) {
         self.csum = u16::to_be(csum)
+    }
+
+    /// Update Checksum w/ tcp_segment_length (from <Packet>) and src and dst on
+    /// header.
+    /// TODO: Validate Checksum?
+    pub fn update_checksum(&mut self, segment_length: u32, src: Ipv6Addr, dst: Ipv6Addr) {
+        let mut sum = segment_length
+            + src.segments().iter().map(|x| *x as u32).sum::<u32>()
+            + dst.segments().iter().map(|x| *x as u32).sum::<u32>()
+            + TCP_NXT_HDR as u32;
+
+        while sum >> 16 != 0 {
+            sum = (sum >> 16) + (sum & 0xFFFF);
+        }
+
+        self.set_checksum(!sum as u16)
     }
 
     /// Urgent pointer
