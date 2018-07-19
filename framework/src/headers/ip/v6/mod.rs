@@ -188,12 +188,23 @@ impl Ipv6Header {
     #[inline]
     pub fn flow(&self) -> Option<FlowV6> {
         if let Some(next_hdr) = self.next_header() {
-            let src_ip = self.src();
-            let dst_ip = self.dst();
-            if self.payload_size(0) >= 4 {
-                unsafe {
-                    let self_as_u8 = (self as *const Ipv6Header) as *const u8;
-                    let port_as_u8 = self_as_u8.offset(self.offset() as isize);
+            unsafe {
+                let self_as_u8 = (self as *const Ipv6Header) as *const u8;
+
+                let mut next_hdr = next_hdr as u8;
+                let mut payload_offset = 0; //track to make sure we don't go beyond v6 payload size
+
+                while next_hdr != TCP_NXT_HDR && next_hdr != UDP_NXT_HDR && self.payload_size(0) > payload_offset {
+                    let seek_to = self_as_u8.offset((self.offset() + payload_offset) as isize);
+                    next_hdr = seek_to.read();
+                    payload_offset += seek_to.offset(1).read() as usize * 8 + 8; //skips the current ext header
+                }
+
+                if self.payload_size(0) >= payload_offset + 4 {
+                    let src_ip = self.src();
+                    let dst_ip = self.dst();
+
+                    let port_as_u8 = self_as_u8.offset((self.offset() + payload_offset) as isize);
                     let port_slice = slice::from_raw_parts(port_as_u8, 4);
                     let dst_port = BigEndian::read_u16(&port_slice[..2]);
                     let src_port = BigEndian::read_u16(&port_slice[2..]);
@@ -202,11 +213,11 @@ impl Ipv6Header {
                         dst_ip: dst_ip,
                         src_port: src_port,
                         dst_port: dst_port,
-                        proto: next_hdr as u8,
+                        proto: next_hdr,
                     })
+                } else {
+                    None
                 }
-            } else {
-                None
             }
         } else {
             None
