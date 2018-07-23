@@ -16,8 +16,8 @@ pub const UDP_NXT_HDR: u8 = 17;
 #[derive(FromPrimitive, Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
 pub enum L4Protocol {
-    TCP = TCP_NXT_HDR,
-    UDP = UDP_NXT_HDR,
+    Tcp = TCP_NXT_HDR,
+    Udp = UDP_NXT_HDR,
 }
 
 /// A trait implemented by all headers, used for reading them from a mbuf.

@@ -12,6 +12,71 @@ use std::sync::{Once, ONCE_INIT};
 
 static EAL_INIT: Once = ONCE_INIT;
 
+static SRH_BYTES: [u8; 170] = [
+    // --- Ethernet header ---
+    // Destination MAC
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+    // Source MAC
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x02, // EtherType (IPv6)
+    0x86, 0xDD, // --- IPv6 Header ---
+    // Version, Traffic Class, Flow Label
+    0x60, 0x00, 0x00, 0x00, // Payload Length
+    0x00, 0x18, // Next Header (Routing = 43)
+    0x2b, // Hop Limit
+    0x02, // Source Address
+    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x01, // Dest Address
+    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
+    // --- SRv6 Header --
+    // Next Header (TCP)
+    0x06,
+    // Hdr Ext Len (two segments, units of 8 octets or 64 bits)
+    0x06,
+    // Routing type (SRv6)
+    0x04, // Segments left
+    0x00, // Last entry
+    0x02, // Flags
+    0x00, // Tag
+    0x00, 0x00, // Segments: [0] 2001:0db8:85a3:0000:0000:8a2e:0370:7334
+    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
+    // Segments: [1] 2001:0db8:85a3:0000:0000:8a2e:0370:7335
+    0x20, 0x01, 0x0d, 0xb8, 0x85,
+    0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x35,
+    // Segments: [2] 2001:0db8:85a3:0000:0000:8a2e:0370:7333
+    0x20, 0x01, 0x0d, 0xb8, 0x85,
+    0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x33,
+    // --- Tcp header ---
+    // Src Port
+    0x0d, 0x88, // Dst Port
+    0x04, 0x00, // Sequence number
+    0x00, 0x00, 0x00, 0x00, // Ack number
+    0x00, 0x00, 0x00, 0x00, // Flags
+    0x50, 0x02, // Window
+    0x00, 0x0a, // Checksum
+    0x00, 0x00, // Urgent pointer
+    0x00, 0x00, // Payload
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
+];
+
+static V6_BYTES: [u8; 54] = [
+    // --- Ethernet header ---
+    // Destination MAC
+    0x00, 0x00, 0x00, 0x00, 0x00,
+    0x01, // Source MAC
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x02, // EtherType (IPv6)
+    0x86, 0xDD, // --- IPv6 Header ---
+    // Version, Traffic Class, Flow Label
+    0x60, 0x00, 0x00, 0x00, // Payload Length
+    0x00, 0x18, // Next Header (UDP = 17)
+    0x11, // Hop Limit
+    0x02, // Source Address
+    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x01, // Dest Address
+    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
+];
+
 fn setup() {
     EAL_INIT.call_once(|| {
         dpdk::init_system_wl("packet_overlay_tests", 0, &[]);
@@ -30,124 +95,7 @@ fn packet_from_bytes(bytes: &[u8]) -> Packet<NullHeader, EmptyMetadata> {
 }
 
 fn srh_from_bytes() {
-    let packet_header = [
-        // --- Ethernet header ---
-        // Destination MAC
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x01,
-        // Source MAC
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x02,
-        // EtherType (IPv6)
-        0x86,
-        0xDD,
-        // --- IPv6 Header ---
-        // Version, Traffic Class, Flow Label
-        0x60,
-        0x00,
-        0x00,
-        0x00,
-        // Payload Length
-        0x00,
-        0x18,
-        // Next Header (Routing = 43)
-        0x2b,
-        // Hop Limit
-        0x02,
-        // Source Address
-        0x20,
-        0x01,
-        0x0d,
-        0xb8,
-        0x85,
-        0xa3,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x01,
-        // Dest Address
-        0x20,
-        0x01,
-        0x0d,
-        0xb8,
-        0x85,
-        0xa3,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x8a,
-        0x2e,
-        0x03,
-        0x70,
-        0x73,
-        0x34,
-        // --- SRv6 Header --
-        // Next Header (UDP)
-        0x11,
-        // Hdr Ext Len (two segments, units of 8 octets or 64 bits)
-        0x04,
-        // Routing type (SRv6)
-        0x04,
-        // Segments left
-        0x00,
-        // Last entry
-        0x01,
-        // Flags
-        0x00,
-        // Tag
-        0x00,
-        0x00,
-        // Segments: [0] 2001:0db8:85a3:0000:0000:8a2e:0370:7334
-        0x20,
-        0x01,
-        0x0d,
-        0xb8,
-        0x85,
-        0xa3,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x8a,
-        0x2e,
-        0x03,
-        0x70,
-        0x73,
-        0x34,
-        // Segments: [1] 2001:0db8:85a3:0000:0000:8a2e:0370:7335
-        0x20,
-        0x01,
-        0x0d,
-        0xb8,
-        0x85,
-        0xa3,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x8a,
-        0x2e,
-        0x03,
-        0x70,
-        0x73,
-        0x35,
-    ];
-    let pkt = packet_from_bytes(&packet_header);
+    let pkt = packet_from_bytes(&SRH_BYTES);
 
     // Check Ethernet header
     let epkt = pkt.parse_header::<MacHeader>();
@@ -180,91 +128,26 @@ fn srh_from_bytes() {
         let srh = srhpkt.get_header();
         let seg0 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:7334").unwrap();
         let seg1 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:7335").unwrap();
-        assert_eq!(srh.next_header().unwrap(), NextHeader::Udp);
-        assert_eq!(srh.hdr_ext_len(), 4);
+        let seg2 = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:7333").unwrap();
+        assert_eq!(srh.next_header().unwrap(), NextHeader::Tcp);
+        assert_eq!(srh.hdr_ext_len(), 6);
         assert_eq!(srh.routing_type(), 4);
         assert_eq!(srh.segments_left(), 0);
-        assert_eq!(srh.last_entry(), 1);
+        assert_eq!(srh.last_entry(), 2);
         assert_eq!(srh.protected(), false);
         assert_eq!(srh.oam(), false);
         assert_eq!(srh.alert(), false);
         assert_eq!(srh.hmac(), false);
         assert_eq!(srh.tag(), 0);
-        assert_eq!(srh.segments().unwrap().len(), 2);
+        assert_eq!(srh.segments().unwrap().len(), 3);
         assert_eq!(srh.segments().unwrap()[0], seg0);
         assert_eq!(srh.segments().unwrap()[1], seg1);
+        assert_eq!(srh.segments().unwrap()[2], seg2);
     }
 }
 
 fn insert_static_srh_from_bytes() {
-    let packet_header = [
-        // --- Ethernet header ---
-        // Destination MAC
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x01,
-        // Source MAC
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x02,
-        // EtherType (IPv6)
-        0x86,
-        0xDD,
-        // --- IPv6 Header ---
-        // Version, Traffic Class, Flow Label
-        0x60,
-        0x00,
-        0x00,
-        0x00,
-        // Payload Length
-        0x00,
-        0x18,
-        // Next Header (UDP = 17)
-        0x11,
-        // Hop Limit
-        0x02,
-        // Source Address
-        0x20,
-        0x01,
-        0x0d,
-        0xb8,
-        0x85,
-        0xa3,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x01,
-        // Dest Address
-        0x20,
-        0x01,
-        0x0d,
-        0xb8,
-        0x85,
-        0xa3,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x8a,
-        0x2e,
-        0x03,
-        0x70,
-        0x73,
-        0x34,
-    ];
-    let pkt = packet_from_bytes(&packet_header);
+    let pkt = packet_from_bytes(&V6_BYTES);
     let epkt = pkt.parse_header::<MacHeader>();
     let mut v6pkt = epkt.parse_header::<Ipv6Header>();
     let mut v6pkt2 = v6pkt.clone();
@@ -369,9 +252,33 @@ fn insert_static_srh_from_bytes() {
     }
 }
 
+fn remove_srh() {
+    let pkt = packet_from_bytes(&SRH_BYTES);
+
+    // Check Ethernet header
+    let epkt = pkt.parse_header::<MacHeader>();
+    let mut v6pkt = epkt.parse_header::<Ipv6Header>();
+
+    if let Ok(_diff) = v6pkt.remove_header::<SRH<Ipv6Header>>() {
+        let tcp_pkt = v6pkt.parse_header::<TcpHeader<Ipv6Header>>();
+        {
+            let payload = tcp_pkt.get_payload();
+            let tcp_hdr = tcp_pkt.get_header();
+            assert_eq!(tcp_hdr.src_port(), 3464);
+            assert_eq!(tcp_hdr.dst_port(), 1024);
+            assert_eq!(tcp_hdr.seq_num(), 0);
+            assert_eq!(tcp_hdr.ack_num(), 0);
+            assert_eq!(tcp_hdr.window_size(), 10);
+            assert_eq!(payload.len(), 40);
+            assert_eq!(payload[39], 7);
+        }
+    }
+}
+
 #[test]
 fn packet_tests() {
     setup();
     srh_from_bytes();
     insert_static_srh_from_bytes();
+    remove_srh();
 }

@@ -80,6 +80,11 @@ error_chain! {
             description("Failed to swap-in new header in packet")
                 display("Failed to swap-in new header - {} - in packet", new_header)
         }
+
+        FailedToRemoveHeader {
+            description("Failed to remove header from packet")
+                display("Failed to remove header from packet")
+        }
     }
 
     foreign_links {

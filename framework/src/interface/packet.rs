@@ -1,4 +1,5 @@
 use common::*;
+use headers::ip::v6::Ipv6VarHeader;
 use headers::{EndOffset, NullHeader};
 use native::zcsi::*;
 use std::cmp::{self, Ordering};
@@ -424,6 +425,39 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                 Ok(())
             } else {
                 Err(ErrorKind::FailedToInsertHeader.into())
+            }
+        }
+    }
+
+    /// Remove the next header from the currently parsed packet
+    #[inline]
+    pub fn remove_header<T2: EndOffset<PreviousHeader = T>>(&mut self) -> Result<isize>
+    where
+        T2: Ipv6VarHeader,
+    {
+        unsafe {
+            let packet_len = self.data_len(); // length of packet
+            let var_header = self.payload() as *mut T2; // next_var_type_hdr ptr
+            let var_header_size = (*var_header).offset(); // size of next_var_type_hdr
+
+            // current_hdr ends and next_var_type_hdr starts in bytes
+            let var_header_offset = self.offset() + self.payload_offset();
+
+            if packet_len >= var_header_offset {
+                // Need to move up the data up and then remove the ext/var header
+                let src_loc = self.payload().offset(var_header_size as isize);
+                let dst_loc = var_header;
+                let to_move = packet_len - (var_header_offset + var_header_size);
+                ptr::copy_nonoverlapping(src_loc as *const T2, dst_loc, to_move);
+                let removed = (*self.mbuf).remove_data_end(var_header_size);
+
+                if removed != var_header_size {
+                    Err(ErrorKind::FailedToRemoveHeader.into())
+                } else {
+                    Ok(-(var_header_size as isize))
+                }
+            } else {
+                Err(ErrorKind::FailedToRemoveHeader.into())
             }
         }
     }
