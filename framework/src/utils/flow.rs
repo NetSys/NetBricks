@@ -15,7 +15,6 @@ pub enum Flows {
 // FIXME: Currently just deriving Hash, but figure out if this is a performance problem. By default, Rust uses SipHash
 // which is supposed to have reasonable performance characteristics.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
-#[repr(C, packed)]
 pub struct FlowV4 {
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
@@ -25,7 +24,6 @@ pub struct FlowV4 {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
-#[repr(C, packed)]
 pub struct FlowV6 {
     pub src_ip: Ipv6Addr,
     pub dst_ip: Ipv6Addr,

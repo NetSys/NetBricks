@@ -195,6 +195,7 @@ impl Ipv6Header {
                 let mut payload_offset = 0; //track to make sure we don't go beyond v6 payload size
 
                 // seek ahead until we find either a tcp or udp header, or exhaust the payload
+                // TODO: should validate we are only skipping v6 extension headers
                 while next_hdr != TCP_NXT_HDR && next_hdr != UDP_NXT_HDR && self.payload_size(0) > payload_offset {
                     // start at beginning of the current ext header, the first byte is the next header,
                     // the second byte is the header length in 8-octet unit excluding the first 8 octets

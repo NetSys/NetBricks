@@ -36,7 +36,7 @@ static SRH_BYTES: [u8; 170] = [
     // --- SRv6 Header --
     // Next Header (TCP)
     0x06,
-    // Hdr Ext Len (two segments, units of 8 octets or 64 bits)
+    // Hdr Ext Len (3 segments, units of 8 octets or 64 bits)
     0x06,
     // Routing type (SRv6)
     0x04,
@@ -154,10 +154,10 @@ fn srh_from_bytes() {
         assert_eq!(Ipv6Addr::from(v6.dst()), dst);
 
         let flow = v6.flow().unwrap();
-        assert_eq!({flow.src_ip}, src);
-        assert_eq!({flow.dst_ip}, dst);
-        assert_eq!({flow.src_port}, 3464);
-        assert_eq!({flow.dst_port}, 1024);
+        assert_eq!(flow.src_ip, src);
+        assert_eq!(flow.dst_ip, dst);
+        assert_eq!(flow.src_port, 3464);
+        assert_eq!(flow.dst_port, 1024);
         assert_eq!(flow.proto, TCP_NXT_HDR);
     }
 
@@ -213,10 +213,10 @@ fn v6_from_bytes() {
         assert_eq!(Ipv6Addr::from(v6.dst()), dst);
 
         let flow = v6.flow().unwrap();
-        assert_eq!({flow.src_ip}, src);
-        assert_eq!({flow.dst_ip}, dst);
-        assert_eq!({flow.src_port}, 3464);
-        assert_eq!({flow.dst_port}, 1024);
+        assert_eq!(flow.src_ip, src);
+        assert_eq!(flow.dst_ip, dst);
+        assert_eq!(flow.src_port, 3464);
+        assert_eq!(flow.dst_port, 1024);
         assert_eq!(flow.proto, UDP_NXT_HDR);
     }
 }
