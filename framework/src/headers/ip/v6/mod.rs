@@ -194,10 +194,15 @@ impl Ipv6Header {
                 let mut next_hdr = next_hdr as u8;
                 let mut payload_offset = 0; //track to make sure we don't go beyond v6 payload size
 
+                // seek ahead until we find either a tcp or udp header, or exhaust the payload
                 while next_hdr != TCP_NXT_HDR && next_hdr != UDP_NXT_HDR && self.payload_size(0) > payload_offset {
+                    // start at beginning of the current ext header, the first byte is the next header,
+                    // the second byte is the header length in 8-octet unit excluding the first 8 octets
                     let seek_to = self_as_u8.offset((self.offset() + payload_offset) as isize);
                     next_hdr = seek_to.read();
-                    payload_offset += seek_to.offset(1).read() as usize * 8 + 8; //skips the current ext header
+                    // to seek past the current ext header, we advance the offset by its size
+                    // which is (hdr_ext_len * 8 + 8) in bytes
+                    payload_offset += seek_to.offset(1).read() as usize * 8 + 8;
                 }
 
                 if self.payload_size(0) >= payload_offset + 4 {
