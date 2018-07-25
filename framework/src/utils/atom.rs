@@ -1,4 +1,4 @@
-use crossbeam::sync::ArcCell;
+use crossbeam::atomic::ArcCell;
 use std::sync::Arc;
 
 /// Wrapper for static settings/config around ArcCell
