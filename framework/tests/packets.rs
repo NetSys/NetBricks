@@ -1,3 +1,4 @@
+#![feature(tool_attributes)]
 extern crate generic_array;
 extern crate netbricks;
 use generic_array::typenum::*;
@@ -12,6 +13,7 @@ use std::sync::{Once, ONCE_INIT};
 
 static EAL_INIT: Once = ONCE_INIT;
 
+#[rustfmt::skip]
 static SRH_BYTES: [u8; 170] = [
     // --- Ethernet header ---
     // Destination MAC
@@ -77,6 +79,7 @@ static SRH_BYTES: [u8; 170] = [
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
 ];
 
+#[rustfmt::skip]
 static V6_BYTES: [u8; 62] = [
     // --- Ethernet header ---
     // Destination MAC
@@ -255,7 +258,7 @@ fn insert_static_srh_from_bytes() {
         assert_eq!(iter.next().unwrap(), &seg1);
 
         // Insert header onto packet
-        if let Ok(()) = v6pkt2.insert_header(&srh) {
+        if let Ok(_diff) = v6pkt2.insert_header(&srh) {
             let srhpkt = v6pkt2.parse_header::<SRH<Ipv6Header>>();
             assert_eq!(srhpkt.get_header().segments().unwrap().len(), 2);
         } else {
@@ -263,10 +266,25 @@ fn insert_static_srh_from_bytes() {
         }
     }
 
-    if let Ok(()) = v6pkt3.insert_header(&srh) {
+    let old_payload_len = v6pkt3.get_header().payload_len();
+    if let Ok(_diff) = v6pkt3.insert_header_fn(&srh, &|hdr: &mut Ipv6Header, diff: isize| {
+        let payload_len = hdr.payload_len();
+        hdr.set_next_header(NextHeader::Routing);
+        hdr.set_payload_len((payload_len as isize + diff) as u16);
+    }) {
         println!("OK! Insert of SRH");
     } else {
         panic!("Error inserting test SRH");
+    }
+
+    {
+        assert_eq!(
+            v6pkt3.get_header().next_header().unwrap(),
+            NextHeader::Routing
+        );
+
+        // manually add calculated srh offset and increase
+        assert_eq!(v6pkt3.get_header().payload_len(), old_payload_len + 40);
     }
 
     {
@@ -278,10 +296,14 @@ fn insert_static_srh_from_bytes() {
             &segs2[..],
         ));
         {
-            if let Ok(diff) = srhv6_1.swap_header::<SegmentRoutingHeader<Ipv6Header, U2>>(&srh2) {
+            let check_fn = |hdr: &mut SRH<Ipv6Header>, _diff: isize| {
+                assert_eq!(hdr.segments().unwrap().len(), 2)
+            };
+            if let Ok(diff) =
+                srhv6_1.swap_header_fn::<SegmentRoutingHeader<Ipv6Header, U2>>(&srh2, &check_fn)
+            {
                 assert_eq!(diff, 0);
                 let srh = srhv6_1.get_header();
-                assert_eq!(srh.segments().unwrap().len(), 2);
                 assert_eq!(srh.segments().unwrap()[0], seg2);
                 assert_eq!(srh.segments().unwrap()[1], seg3);
             }
@@ -350,6 +372,53 @@ fn remove_srh() {
     }
 }
 
+fn remove_srh_with_fn() {
+    let pkt = packet_from_bytes(&SRH_BYTES);
+
+    // Check Ethernet header
+    let epkt = pkt.parse_header::<MacHeader>();
+    let mut v6pkt = epkt.parse_header::<Ipv6Header>();
+    let old_payload_len = v6pkt.get_header().payload_len();
+
+    let update_v6h = |hdr: &mut Ipv6Header, diff: isize| {
+        let payload_len = hdr.payload_len();
+        hdr.set_next_header(NextHeader::Tcp);
+        hdr.set_payload_len((payload_len as isize + diff) as u16);
+    };
+
+    if let Ok(diff) = v6pkt.remove_header_fn::<SRH<Ipv6Header>>(&update_v6h) {
+        assert_eq!(v6pkt.get_header().next_header().unwrap(), NextHeader::Tcp);
+        assert_eq!(
+            v6pkt.get_header().payload_len(),
+            (old_payload_len as isize + diff) as u16
+        );
+
+        {
+            let src = Ipv6Addr::from_str("2001:db8:85a3::1").unwrap();
+            let dst = Ipv6Addr::from_str("2001:db8:85a3::8a2e:0370:7334").unwrap();
+            let flow = v6pkt.get_header().flow().unwrap();
+            assert_eq!(flow.src_ip, src);
+            assert_eq!(flow.dst_ip, dst);
+            assert_eq!(flow.src_port, 3464);
+            assert_eq!(flow.dst_port, 1024);
+            assert_eq!(flow.proto, TCP_NXT_HDR);
+        }
+
+        {
+            let tcp_pkt = v6pkt.parse_header::<TcpHeader<Ipv6Header>>();
+            let payload = tcp_pkt.get_payload();
+            let tcp_hdr = tcp_pkt.get_header();
+            assert_eq!(tcp_hdr.src_port(), 3464);
+            assert_eq!(tcp_hdr.dst_port(), 1024);
+            assert_eq!(tcp_hdr.seq_num(), 0);
+            assert_eq!(tcp_hdr.ack_num(), 0);
+            assert_eq!(tcp_hdr.window_size(), 10);
+            assert_eq!(payload.len(), 40);
+            assert_eq!(payload[39], 7);
+        }
+    }
+}
+
 #[test]
 fn packet_tests() {
     setup();
@@ -357,4 +426,5 @@ fn packet_tests() {
     v6_from_bytes();
     insert_static_srh_from_bytes();
     remove_srh();
+    remove_srh_with_fn();
 }

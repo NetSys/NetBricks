@@ -405,7 +405,10 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
        returns a void Result type, i.e. Err or Ok upon inserting a header int
      */
     #[inline]
-    pub fn insert_header<T2: EndOffset<PreviousHeader = T>>(&mut self, header: &T2) -> Result<()> {
+    pub fn insert_header<T2: EndOffset<PreviousHeader = T>>(
+        &mut self,
+        header: &T2,
+    ) -> Result<isize> {
         unsafe {
             let packet_len = self.data_len();
             let header_size = header.offset();
@@ -422,7 +425,24 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                     ptr::copy_nonoverlapping(fin_dst, move_loc, to_move);
                 }
                 ptr::copy_nonoverlapping(hdr, fin_dst as *mut T2, 1);
-                Ok(())
+                Ok(header_size as isize)
+            } else {
+                Err(ErrorKind::FailedToInsertHeader.into())
+            }
+        }
+    }
+
+    #[inline]
+    pub fn insert_header_fn<T2: EndOffset<PreviousHeader = T>>(
+        &mut self,
+        header: &T2,
+        on_insert: &Fn(&mut T, isize),
+    ) -> Result<isize> {
+        unsafe {
+            if let Ok(diff) = self.insert_header(header) {
+                let current_header: &mut T = &mut *self.header();
+                on_insert(current_header, diff);
+                Ok(diff)
             } else {
                 Err(ErrorKind::FailedToInsertHeader.into())
             }
@@ -456,6 +476,25 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                 } else {
                     Ok(-(var_header_size as isize))
                 }
+            } else {
+                Err(ErrorKind::FailedToRemoveHeader.into())
+            }
+        }
+    }
+
+    #[inline]
+    pub fn remove_header_fn<T2: EndOffset<PreviousHeader = T>>(
+        &mut self,
+        on_remove: &Fn(&mut T, isize),
+    ) -> Result<isize>
+    where
+        T2: Ipv6VarHeader,
+    {
+        unsafe {
+            if let Ok(diff) = self.remove_header::<T2>() {
+                let current_header: &mut T = &mut *self.header();
+                on_remove(current_header, diff);
+                Ok(diff)
             } else {
                 Err(ErrorKind::FailedToRemoveHeader.into())
             }
@@ -508,6 +547,26 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
 
             ptr::copy_nonoverlapping(new_header as *const T2, self.header_u8() as *mut T2, 1);
             Ok(new_hdr_size as isize - current_hdr_size as isize)
+        }
+    }
+
+    #[inline]
+    pub fn swap_header_fn<T2>(
+        &mut self,
+        new_header: &T2,
+        on_swap: &Fn(&mut T, isize),
+    ) -> Result<isize>
+    where
+        T2: EndOffset<PreviousHeader = T::PreviousHeader> + Display,
+    {
+        unsafe {
+            if let Ok(diff) = self.swap_header::<T2>(new_header) {
+                let current_header: &mut T = &mut *self.header();
+                on_swap(current_header, diff);
+                Ok(diff)
+            } else {
+                Err(ErrorKind::FailedToSwapHeader(format!("{}", new_header)).into())
+            }
         }
     }
 
