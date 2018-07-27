@@ -13,7 +13,7 @@
 #![feature(type_ascription)]
 // FIXME: Figure out if this is really the right thing here.
 #![feature(ptr_internals)]
-//
+#![feature(iterator_step_by)]
 #![allow(safe_packed_borrows)]
 // Used for cache alignment.
 #![feature(allocator_api)]

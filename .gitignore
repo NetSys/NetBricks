@@ -50,3 +50,6 @@ out.pcap
 # logs
 *.log
 *.out
+
+# wireedit
+*.lnk

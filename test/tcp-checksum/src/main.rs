@@ -1,5 +1,6 @@
 #![feature(box_syntax)]
 #![feature(asm)]
+#![feature(ip_constructors)]
 extern crate colored;
 extern crate netbricks;
 use self::nf::*;
