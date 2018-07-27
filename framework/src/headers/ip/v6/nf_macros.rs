@@ -30,11 +30,7 @@ macro_rules! srh_insert {
                         *GenericArray::<_, $utype>::from_slice(&$segments[..]),
                     );
 
-                    if let Ok(insert_diff) = $pkt.insert_header(&srh) {
-                        Some(insert_diff as isize)
-                    } else {
-                        None
-                    }
+                    Some($pkt.insert_header(NextHeader::Routing, &srh))
                 }
             )*
                 _ => {

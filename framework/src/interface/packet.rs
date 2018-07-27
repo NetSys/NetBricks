@@ -1,6 +1,6 @@
 use common::*;
 use headers::ip::v6::Ipv6VarHeader;
-use headers::{EndOffset, NullHeader};
+use headers::{EndOffset, HeaderUpdates, NextHeader, NullHeader};
 use native::zcsi::*;
 use std::cmp::{self, Ordering};
 use std::fmt::Display;
@@ -358,10 +358,12 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         }
     }
 
-    /* When constructing a packet, take a packet as input and add a header.
-       Look at *fn insert_header* for a longer explanation. Use *push_header*
-       to create a new packet with a sequence of headers upon first creation, as
-       it returns an Option around the newly created packet itself. */
+    /*
+    When constructing a packet, take a packet as input and add a header.
+    Look at *fn insert_header* for a longer explanation. Use *push_header*
+    to create a new packet with a sequence of headers upon first creation, as
+    it returns an Option around the newly created packet itself.
+     */
     #[inline]
     pub fn push_header<T2: EndOffset<PreviousHeader = T>>(
         mut self,
@@ -391,24 +393,22 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         }
     }
 
-    /* By Dan Jin: The entire network packet is stored in a mbuf by DPDK. A
-       NetBricks packet is a wrapper with an offset that tells you where a
-       particular header starts in the mbuf.
+    /*
+    By Dan Jin: The entire network packet is stored in a mbuf by DPDK. A
+    NetBricks packet is a wrapper with an offset that tells you where a
+    particular header starts in the mbuf.
 
-       If you have a Packet<TcpHeader>, then *self.offset() is where the first
-       byte of the tcp header is*. self.payload_offset() is actually just
-       header.size()---NAMES ARE HORRIBLE. In this example, self.offset() +
-       self.payload_offset() give you where the tcp payload would start.
+    If you have a Packet<TcpHeader>, then *self.offset() is where the first
+    byte of the tcp header is*. self.payload_offset() is actually just
+    header.size()---NAMES ARE HORRIBLE. In this example, self.offset() +
+    self.payload_offset() give you where the tcp payload would start.
 
-       Use *insert_header* on a mutable reference to insert a header into an
-       already existing packet, after another header's offset basically. It
-       returns a void Result type, i.e. Err or Ok upon inserting a header int
+    Use *insert_a_header* on a mutable reference to insert a header into an
+    already existing packet, after another header's offset basically. It
+    returns an isize Result type, i.e. Err(e) or Ok(diff) upon inserting a header int
      */
     #[inline]
-    pub fn insert_header<T2: EndOffset<PreviousHeader = T>>(
-        &mut self,
-        header: &T2,
-    ) -> Result<isize> {
+    fn insert_a_header<T2: EndOffset<PreviousHeader = T>>(&mut self, header: &T2) -> Result<isize> {
         unsafe {
             let packet_len = self.data_len();
             let header_size = header.offset();
@@ -432,26 +432,56 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         }
     }
 
+    /*
+    Use *insert_header_fn* on a mutable reference to insert a header into an
+    already existing packet, after another header's offset basically. It
+    returns a Result type, i.e. Err(e) or Ok(()) upon inserting a header.
+
+    This variant allows for passing in a higher-order function to make
+    mutable updates to the *current* header after insertion.
+
+    Works on V6 and V6 Extension Headers only via trait bounds.
+    */
     #[inline]
     pub fn insert_header_fn<T2: EndOffset<PreviousHeader = T>>(
         &mut self,
+        header_type: NextHeader,
         header: &T2,
-        on_insert: &Fn(&mut T, isize),
-    ) -> Result<isize> {
+        on_insert: &Fn(&mut T),
+    ) -> Result<()>
+    where
+        T: HeaderUpdates,
+        T2: Ipv6VarHeader,
+    {
         unsafe {
-            if let Ok(diff) = self.insert_header(header) {
-                let current_header: &mut T = &mut *self.header();
-                on_insert(current_header, diff);
-                Ok(diff)
+            if let Ok(diff) = self.insert_a_header::<T2>(header) {
+                let mut current_header: &mut T = &mut *self.header();
+                current_header.update_payload_len(diff);
+                current_header.update_next_header(header_type);
+                on_insert(current_header);
+                Ok(())
             } else {
                 Err(ErrorKind::FailedToInsertHeader.into())
             }
         }
     }
 
+    /// @see insert_header_fn
+    pub fn insert_header<T2: EndOffset<PreviousHeader = T>>(
+        &mut self,
+        header_type: NextHeader,
+        header: &T2,
+    ) -> Result<()>
+    where
+        T: HeaderUpdates,
+        T2: Ipv6VarHeader,
+    {
+        self.insert_header_fn::<T2>(header_type, header, &|_| ())
+    }
+
     /// Remove the next header from the currently parsed packet
     #[inline]
-    pub fn remove_header<T2: EndOffset<PreviousHeader = T>>(&mut self) -> Result<isize>
+    fn remove_a_header<T2: EndOffset<PreviousHeader = T>>(&mut self) -> Result<isize>
     where
         T2: Ipv6VarHeader,
     {
@@ -482,28 +512,63 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         }
     }
 
+    /*
+    Use *remove_header_fn* on a mutable reference to remove a (following) header
+    from an already existing packet, after another header's offset basically. It
+    returns a Result type, i.e. Err(e) or Ok(()) upon removing a header.
+
+    This variant allows for passing in a higher-order function to make
+    mutable updates to the *current* header after removal.
+
+    Works on V6 and V6 Extension Headers only via trait bounds.
+     */
     #[inline]
     pub fn remove_header_fn<T2: EndOffset<PreviousHeader = T>>(
         &mut self,
-        on_remove: &Fn(&mut T, isize),
-    ) -> Result<isize>
+        on_remove: &Fn(&mut T),
+    ) -> Result<()>
     where
+        T: HeaderUpdates,
         T2: Ipv6VarHeader,
     {
         unsafe {
-            if let Ok(diff) = self.remove_header::<T2>() {
-                let current_header: &mut T = &mut *self.header();
-                on_remove(current_header, diff);
-                Ok(diff)
-            } else {
-                Err(ErrorKind::FailedToRemoveHeader.into())
+            let var_header: Option<&T2> = {
+                let payload = self.payload() as *mut T2;
+                if self.data_len() > (*payload).offset() {
+                    Some(&*payload)
+                } else {
+                    None
+                }
+            };
+
+            match var_header.and_then(|hdr| Some((hdr.next_header(), self.remove_a_header::<T2>())))
+            {
+                Some((Some(next_header), Ok(diff))) => {
+                    let mut current_header: &mut T = &mut *self.header();
+                    current_header.update_payload_len(diff);
+                    current_header.update_next_header(next_header);
+                    on_remove(current_header);
+                    Ok(())
+                }
+                _ => Err(ErrorKind::FailedToRemoveHeader.into()),
             }
         }
     }
 
-    /* Swap out old header of one type with a new header of the same type.
-       Returns the diff in bytes as a signed integer for calculation needs, e.g.
-       payload length for a v6 header, etc...
+    /// @see remove_header_fn
+    #[inline]
+    pub fn remove_header<T2: EndOffset<PreviousHeader = T>>(&mut self) -> Result<()>
+    where
+        T: HeaderUpdates,
+        T2: Ipv6VarHeader,
+    {
+        self.remove_header_fn::<T2>(&|_| ())
+    }
+
+    /*
+    Swap out old header of one type with a new header of the same type.
+    Returns the diff in bytes as a signed integer for calculation needs, e.g.
+    payload length for a v6 header, etc...
     */
     #[inline]
     pub fn swap_header<T2>(&mut self, new_header: &T2) -> Result<isize>
@@ -551,18 +616,14 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     }
 
     #[inline]
-    pub fn swap_header_fn<T2>(
-        &mut self,
-        new_header: &T2,
-        on_swap: &Fn(&mut T, isize),
-    ) -> Result<isize>
+    pub fn swap_header_fn<T2>(&mut self, new_header: &T2, on_swap: &Fn(&mut T)) -> Result<isize>
     where
         T2: EndOffset<PreviousHeader = T::PreviousHeader> + Display,
     {
         unsafe {
             if let Ok(diff) = self.swap_header::<T2>(new_header) {
                 let current_header: &mut T = &mut *self.header();
-                on_swap(current_header, diff);
+                on_swap(current_header);
                 Ok(diff)
             } else {
                 Err(ErrorKind::FailedToSwapHeader(format!("{}", new_header)).into())

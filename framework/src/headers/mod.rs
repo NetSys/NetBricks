@@ -37,3 +37,13 @@ pub trait EndOffset: Send {
 
     fn check_correct(&self, prev: &Self::PreviousHeader) -> bool;
 }
+
+/// A trait implemented on headers that provide updates on byte-changes to packets
+/// TODO: Eventually roll this and other setters into packet actions like remove,
+///       insert, swap, etc, as part of specific changes to certain *types* of
+///       headers in a packet.
+///       In ref. to https://github.comcast.com/occam/og/pull/103#discussion_r293652
+pub trait HeaderUpdates {
+    fn update_payload_len(&mut self, payload_diff: isize);
+    fn update_next_header(&mut self, hdr: NextHeader);
+}

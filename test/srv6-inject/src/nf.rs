@@ -1,6 +1,7 @@
 use colored::*;
 use generic_array::typenum::*;
 use generic_array::GenericArray;
+use netbricks::common::*;
 use netbricks::headers::*;
 use netbricks::interface::*;
 use netbricks::operators::*;
@@ -35,20 +36,28 @@ impl Default for MetaDataz {
     }
 }
 
-fn srh_into_packet(pkt: &mut Packet<Ipv6Header, MetaDataz>) -> Option<isize> {
+fn srh_into_packet(pkt: &mut Packet<Ipv6Header, MetaDataz>) -> Result<()> {
     let seg0 = Ipv6Addr::from_str("fe80::4").unwrap();
     let seg1 = Ipv6Addr::from_str("1ce:c01d:bee2:15:a5:900d:a5:11fe").unwrap();
     let segvec = vec![seg0, seg1];
-    srh_insert!(segvec,
-                pkt,
-                (
-                    pkt.get_header().next_header(),
-                    segvec.len() as u8 - 1,
-                    0,
-                    0
-                ),
-                Ipv6Header,
-                [1 => U1, 2=> U2, 3 => U3, 4 => U4, 5 => U5, 6 => U6, 7 => U7, 8 => U8, 9 => U9, 10 => U10, 11 => U11, 12 => U12])
+    let insert = srh_insert!(
+            segvec,
+            pkt,
+            (
+                pkt.get_header().next_header(),
+                segvec.len() as u8 - 1,
+                0,
+                0
+            ),
+            Ipv6Header,
+            [1 => U1, 2=> U2, 3 => U3, 4 => U4, 5 => U5, 6 => U6, 7 => U7,
+             8 => U8, 9 => U9, 10 => U10, 11 => U11, 12 => U12]);
+
+    if let Some(Ok(())) = insert {
+        Ok(())
+    } else {
+        Err(ErrorKind::FailedToInsertHeader.into())
+    }
 }
 
 fn srh_change_packet(
@@ -180,11 +189,8 @@ fn tcp_sr_inject_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> Compo
             }
         })
         .transform(box |pkt| {
-            if let Some(payload_diff) = srh_into_packet(pkt) {
-                let curr_payload_len = pkt.get_header().payload_len();
-                let mut v6h = pkt.get_mut_header();
-                v6h.set_next_header(NextHeader::Routing);
-                v6h.set_payload_len(curr_payload_len + payload_diff as u16);
+            if let Ok(()) = srh_into_packet(pkt) {
+                println!("SRH Inserted")
             }
         })
         .filter(box |pkt| match pkt.get_header().next_header() {

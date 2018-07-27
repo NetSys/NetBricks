@@ -258,7 +258,7 @@ fn insert_static_srh_from_bytes() {
         assert_eq!(iter.next().unwrap(), &seg1);
 
         // Insert header onto packet
-        if let Ok(_diff) = v6pkt2.insert_header(&srh) {
+        if let Ok(()) = v6pkt2.insert_header(NextHeader::Routing, &srh) {
             let srhpkt = v6pkt2.parse_header::<SRH<Ipv6Header>>();
             assert_eq!(srhpkt.get_header().segments().unwrap().len(), 2);
         } else {
@@ -267,11 +267,7 @@ fn insert_static_srh_from_bytes() {
     }
 
     let old_payload_len = v6pkt3.get_header().payload_len();
-    if let Ok(_diff) = v6pkt3.insert_header_fn(&srh, &|hdr: &mut Ipv6Header, diff: isize| {
-        let payload_len = hdr.payload_len();
-        hdr.set_next_header(NextHeader::Routing);
-        hdr.set_payload_len((payload_len as isize + diff) as u16);
-    }) {
+    if let Ok(()) = v6pkt3.insert_header(NextHeader::Routing, &srh) {
         println!("OK! Insert of SRH");
     } else {
         panic!("Error inserting test SRH");
@@ -296,9 +292,7 @@ fn insert_static_srh_from_bytes() {
             &segs2[..],
         ));
         {
-            let check_fn = |hdr: &mut SRH<Ipv6Header>, _diff: isize| {
-                assert_eq!(hdr.segments().unwrap().len(), 2)
-            };
+            let check_fn = |hdr: &mut SRH<Ipv6Header>| assert_eq!(hdr.segments().unwrap().len(), 2);
             if let Ok(diff) =
                 srhv6_1.swap_header_fn::<SegmentRoutingHeader<Ipv6Header, U2>>(&srh2, &check_fn)
             {
@@ -380,17 +374,12 @@ fn remove_srh_with_fn() {
     let mut v6pkt = epkt.parse_header::<Ipv6Header>();
     let old_payload_len = v6pkt.get_header().payload_len();
 
-    let update_v6h = |hdr: &mut Ipv6Header, diff: isize| {
-        let payload_len = hdr.payload_len();
-        hdr.set_next_header(NextHeader::Tcp);
-        hdr.set_payload_len((payload_len as isize + diff) as u16);
-    };
-
-    if let Ok(diff) = v6pkt.remove_header_fn::<SRH<Ipv6Header>>(&update_v6h) {
+    if let Ok(()) = v6pkt.remove_header::<SRH<Ipv6Header>>() {
         assert_eq!(v6pkt.get_header().next_header().unwrap(), NextHeader::Tcp);
         assert_eq!(
             v6pkt.get_header().payload_len(),
-            (old_payload_len as isize + diff) as u16
+            // calculate diff from setup SRH_BYTES
+            (old_payload_len as isize - (6 * 8 + 8)) as u16
         );
 
         {

@@ -2,7 +2,7 @@ pub use self::ext::*;
 pub use self::srh::*;
 use super::IpHeader;
 use byteorder::{BigEndian, ByteOrder};
-use headers::{EndOffset, MacHeader, TCP_NXT_HDR, UDP_NXT_HDR};
+use headers::{EndOffset, HeaderUpdates, MacHeader, TCP_NXT_HDR, UDP_NXT_HDR};
 use num::FromPrimitive;
 use std::default::Default;
 use std::fmt;
@@ -196,7 +196,10 @@ impl Ipv6Header {
 
                 // seek ahead until we find either a tcp or udp header, or exhaust the payload
                 // TODO: should validate we are only skipping v6 extension headers
-                while next_hdr != TCP_NXT_HDR && next_hdr != UDP_NXT_HDR && self.payload_size(0) > payload_offset {
+                while next_hdr != TCP_NXT_HDR
+                    && next_hdr != UDP_NXT_HDR
+                    && self.payload_size(0) > payload_offset
+                {
                     // start at beginning of the current ext header, the first byte is the next header,
                     // the second byte is the header length in 8-octet unit excluding the first 8 octets
                     let seek_to = self_as_u8.offset((self.offset() + payload_offset) as isize);
@@ -330,6 +333,19 @@ impl Ipv6Header {
     #[inline]
     pub fn set_next_header(&mut self, hdr: NextHeader) {
         self.next_header = hdr as u8
+    }
+}
+
+impl HeaderUpdates for Ipv6Header {
+    #[inline]
+    fn update_payload_len(&mut self, payload_diff: isize) {
+        let current_payload = self.payload_len();
+        self.set_payload_len((current_payload as isize + payload_diff) as u16);
+    }
+
+    #[inline]
+    fn update_next_header(&mut self, hdr: NextHeader) {
+        self.set_next_header(hdr)
     }
 }
 
