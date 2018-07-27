@@ -62,6 +62,9 @@ extern crate error_chain;
 // Bring in crossbeam synchronization primatives
 extern crate crossbeam;
 
+// Handle execution on other threads
+extern crate rayon;
+
 #[cfg(unix)]
 extern crate nix;
 pub mod allocators;
