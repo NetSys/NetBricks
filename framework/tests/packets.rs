@@ -7,10 +7,8 @@ use generic_array::GenericArray;
 use netbricks::common::EmptyMetadata;
 use netbricks::headers::*;
 use netbricks::interface::{new_packet, Packet};
-use netbricks::utils::test::{DPDK_THREAD};
 use std::convert::From;
 use std::net::Ipv6Addr;
-use std::panic;
 use std::str::FromStr;
 
 #[rustfmt::skip]
@@ -125,7 +123,7 @@ fn packet_from_bytes(bytes: &[u8]) -> Packet<NullHeader, EmptyMetadata> {
 
 #[test]
 fn srh_from_bytes() {
-    dpdk_test! {{
+    dpdk_test! {
         let pkt = packet_from_bytes(&SRH_BYTES);
 
         // Check Ethernet header
@@ -182,12 +180,12 @@ fn srh_from_bytes() {
             assert_eq!(srh.segments().unwrap()[1], seg1);
             assert_eq!(srh.segments().unwrap()[2], seg2);
         }
-    }}
+    }
 }
 
 #[test]
 fn v6_from_bytes() {
-    dpdk_test! {{
+    dpdk_test! {
         let pkt = packet_from_bytes(&V6_BYTES);
 
         // Check Ethernet header
@@ -221,12 +219,12 @@ fn v6_from_bytes() {
             assert_eq!(flow.dst_port, 1024);
             assert_eq!(flow.proto, UDP_NXT_HDR);
         }
-    }}
+    }
 }
 
 #[test]
 fn insert_static_srh_from_bytes() {
-    dpdk_test! {{
+    dpdk_test! {
         let pkt = packet_from_bytes(&V6_BYTES);
         let epkt = pkt.parse_header::<MacHeader>();
         let mut v6pkt = epkt.parse_header::<Ipv6Header>();
@@ -343,12 +341,12 @@ fn insert_static_srh_from_bytes() {
                 }
             }
         }
-    }}
+    }
 }
 
 #[test]
 fn remove_srh() {
-    dpdk_test! {{
+    dpdk_test! {
         let pkt = packet_from_bytes(&SRH_BYTES);
 
         // Check Ethernet header
@@ -369,12 +367,12 @@ fn remove_srh() {
                 assert_eq!(payload[39], 7);
             }
         }
-    }}
+    }
 }
 
 #[test]
 fn remove_srh_with_fn() {
-    dpdk_test! {{
+    dpdk_test! {
         let pkt = packet_from_bytes(&SRH_BYTES);
 
         // Check Ethernet header
@@ -414,5 +412,5 @@ fn remove_srh_with_fn() {
                 assert_eq!(payload[39], 7);
             }
         }
-    }}
+    }
 }

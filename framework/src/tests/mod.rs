@@ -1,3 +1,6 @@
+//#![cfg(test)]
+#![macro_use]
+
 use interface::{dpdk};
 use rayon::{ThreadPool, ThreadPoolBuilder};
 
@@ -15,17 +18,19 @@ lazy_static! {
 
 #[macro_export]
 macro_rules! dpdk_test {
-    ($test: block) => {
-        let result = DPDK_THREAD.install(
+    ($($arg:tt)*) => {
+        use ::std::panic::{catch_unwind, resume_unwind};
+
+        let result = $crate::tests::DPDK_THREAD.install(
             || {
-                panic::catch_unwind(|| {
-                    $test
+                catch_unwind(|| {
+                    $($arg)*
                 })
             }
         );
 
         if let Err(err) = result {
-            panic::resume_unwind(err);
+            resume_unwind(err);
         }
     }
 }
