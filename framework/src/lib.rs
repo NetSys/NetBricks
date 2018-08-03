@@ -62,8 +62,15 @@ extern crate error_chain;
 // Bring in crossbeam synchronization primatives
 extern crate crossbeam;
 
+// Handle execution on other threads
+extern crate rayon;
+
 #[cfg(unix)]
 extern crate nix;
+
+// need this first so other modules in netbricks can use the macros in tests
+pub mod tests;
+
 pub mod allocators;
 pub mod common;
 pub mod config;
