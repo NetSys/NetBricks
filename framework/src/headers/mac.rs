@@ -2,12 +2,12 @@ use super::EndOffset;
 use headers::NullHeader;
 use num::FromPrimitive;
 use std::default::Default;
+use std::error::Error;
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::str::FromStr;
-
-extern crate hex;
+use hex;
 
 const IPV4_ETHER_TYPE: u16 = 0x0800;
 const IPV6_ETHER_TYPE: u16 = 0x86DD;
@@ -62,12 +62,9 @@ impl MacAddress {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct MacParseError(());
-
 impl FromStr for MacAddress {
     type Err = MacParseError;
-    fn from_str(s: &str) -> Result<MacAddress, MacParseError> {
+    fn from_str(s: &str) -> Result<MacAddress, Self::Err> {
         match hex::decode(s.replace(":", "").replace("-", "")) {
             Ok(ref v) if v.len() == 6 => Ok(MacAddress::new_from_slice(v.as_slice())),
             _ => Err(MacParseError(())),
@@ -170,6 +167,21 @@ impl MacHeader {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct MacParseError(());
+
+impl fmt::Display for MacParseError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str(self.description())
+    }
+}
+
+impl Error for MacParseError {
+    fn description(&self) -> &str {
+        "invalid MAC address syntax"
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,8 +189,9 @@ mod tests {
     #[test]
     fn test_from_str() {
         let address = "ba:dc:af:eb:ee:f4";
+        let expected = address.to_string();
         let parsed = MacAddress::from_str(address).map(|a| a.to_string());
-        assert_eq!(parsed, Ok(address.to_string()));
+        assert_eq!(parsed, Ok(expected));
     }
 
     #[test]

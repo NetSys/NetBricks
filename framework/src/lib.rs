@@ -34,6 +34,7 @@ extern crate lazy_static;
 extern crate libc;
 extern crate net2;
 extern crate num;
+extern crate hex;
 
 #[macro_use]
 extern crate num_derive;
