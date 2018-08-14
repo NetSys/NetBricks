@@ -1,8 +1,8 @@
 use super::EndOffset;
+use common::*;
 use headers::NullHeader;
 use num::FromPrimitive;
 use std::default::Default;
-use std::error::Error;
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -63,11 +63,11 @@ impl MacAddress {
 }
 
 impl FromStr for MacAddress {
-    type Err = MacParseError;
-    fn from_str(s: &str) -> Result<MacAddress, Self::Err> {
+    type Err = Error;
+    fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
         match hex::decode(s.replace(":", "").replace("-", "")) {
             Ok(ref v) if v.len() == 6 => Ok(MacAddress::new_from_slice(v.as_slice())),
-            _ => Err(MacParseError(())),
+            _ => Err(Error::from_kind(ErrorKind::FailedToParseMacAddress(s.to_string()))),
         }
     }
 }
@@ -167,21 +167,6 @@ impl MacHeader {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct MacParseError(());
-
-impl fmt::Display for MacParseError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.write_str(self.description())
-    }
-}
-
-impl Error for MacParseError {
-    fn description(&self) -> &str {
-        "invalid MAC address syntax"
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -191,7 +176,7 @@ mod tests {
         let address = "ba:dc:af:eb:ee:f4";
         let expected = address.to_string();
         let parsed = MacAddress::from_str(address).map(|a| a.to_string());
-        assert_eq!(parsed, Ok(expected));
+        assert_eq!(parsed.ok(), Some(expected));
     }
 
     #[test]
@@ -199,7 +184,7 @@ mod tests {
         let address = "ba-dc-af-eb-ee-f2";
         let expected = "ba:dc:af:eb:ee:f2".to_string();
         let parsed = MacAddress::from_str(address).map(|a| a.to_string());
-        assert_eq!(parsed, Ok(expected));
+        assert_eq!(parsed.ok(), Some(expected));
     }
 
     #[test]
@@ -207,20 +192,32 @@ mod tests {
         let address = "badcafebeef3";
         let expected = "ba:dc:af:eb:ee:f3".to_string();
         let parsed = MacAddress::from_str(address).map(|a| a.to_string());
-        assert_eq!(parsed, Ok(expected));
+        assert_eq!(parsed.ok(), Some(expected));
     }
 
     #[test]
     fn test_unparseable_address() {
         let address = "go:od:ca:fe:be:ef";
         let parsed = MacAddress::from_str(address);
-        assert_eq!(parsed, Err(MacParseError(())));
+        assert!(parsed.is_err());
+        match parsed.err() {
+            Some(Error(ErrorKind::FailedToParseMacAddress(s), _)) => {
+                assert_eq!(address.to_string(), s);
+            },
+            _ => assert!(false),
+        }
     }
 
     #[test]
     fn test_unparseable_address2() {
         let address = "ab:ad:ad:d4";
         let parsed = MacAddress::from_str(address);
-        assert_eq!(parsed, Err(MacParseError(())));
+        assert!(parsed.is_err());
+        match parsed.err() {
+            Some(Error(ErrorKind::FailedToParseMacAddress(s), _)) => {
+                assert_eq!(address.to_string(), s);
+            },
+            _ => assert!(false),
+        }
     }
 }
