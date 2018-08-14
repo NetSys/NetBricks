@@ -85,6 +85,11 @@ error_chain! {
             description("Failed to remove header from packet")
                 display("Failed to remove header from packet")
         }
+
+        FailedToParseMacAddress(s: String) {
+            description("Failed to parse MAC address")
+                display("Failed to parse MAC address: '{}'", s)
+        }
     }
 
     foreign_links {
