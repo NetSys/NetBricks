@@ -1,0 +1,3 @@
+[INFO] Settings/Configuration Static State Val: Bar { baz: false }
+[INFO] SR-hdr next_header: Tcp, hdr_ext_len: 8, routing_type: 4, segments_left: 1, last_entry: 3, protected: false, oam: false, alert: false,  hmac: false,  tag: 0,  segments_length: 4,  segments: [fe80::3, fe80::6, fe80::9, fe80::c]
+[INFO] So long, and thanks for all the fish: Bar { baz: true }

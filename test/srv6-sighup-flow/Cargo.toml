@@ -1,0 +1,21 @@
+[package]
+name = "srv6-sighup-flow"
+version = "0.1.0"
+authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+
+[dependencies]
+netbricks = { path = "../../framework", features = ["performance"] }
+time = ">=0.1.0"
+tokio = ">=0.1"
+tokio-signal = ">=0.2"
+futures-preview = ">=0.2.2"
+config = ">=0.8"
+lazy_static = "*"
+serde = "1.0"
+serde_derive = "1.0"
+log = "*"
+simplelog = "*"
+
+[features]
+default = []
+print = []

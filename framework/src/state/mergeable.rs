@@ -1,11 +1,11 @@
 use fnv::FnvHasher;
 use std::cmp::max;
-use std::collections::HashMap;
 use std::collections::hash_map::Iter;
+use std::collections::HashMap;
 use std::hash::BuildHasherDefault;
 use std::ops::AddAssign;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
-use utils::Flow;
+use utils::Flows;
 
 /// A generic store for associating some merge-able type with each flow. Note, the merge must be commutative, we do not
 /// guarantee ordering for things being merged. The merge function is implemented by implementing the
@@ -25,8 +25,8 @@ const MAX_CACHE_SIZE: usize = 1 << 20;
 const CHAN_SIZE: usize = 128;
 
 pub struct MergeableStoreCP<T: AddAssign<T> + Default + Clone> {
-    flow_counters: HashMap<Flow, T, FnvHash>,
-    hashmaps: Vec<Arc<RwLock<HashMap<Flow, T, FnvHash>>>>,
+    flow_counters: HashMap<Flows, T, FnvHash>,
+    hashmaps: Vec<Arc<RwLock<HashMap<Flows, T, FnvHash>>>>,
 }
 
 impl<T: AddAssign<T> + Default + Clone> MergeableStoreCP<T> {
@@ -37,7 +37,11 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreCP<T> {
         }
     }
 
-    pub fn dp_store_with_cache_and_size(&mut self, cache: usize, size: usize) -> MergeableStoreDP<T> {
+    pub fn dp_store_with_cache_and_size(
+        &mut self,
+        cache: usize,
+        size: usize,
+    ) -> MergeableStoreDP<T> {
         let hmap = Arc::new(RwLock::new(HashMap::with_capacity_and_hasher(
             size,
             Default::default(),
@@ -56,7 +60,7 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreCP<T> {
         MergeableStoreCP::dp_store_with_cache_and_size(self, CACHE_SIZE, VEC_SIZE)
     }
 
-    fn hmap_to_vec(hash: &RwLockReadGuard<HashMap<Flow, T, FnvHash>>) -> Vec<(Flow, T)> {
+    fn hmap_to_vec(hash: &RwLockReadGuard<HashMap<Flows, T, FnvHash>>) -> Vec<(Flows, T)> {
         let mut t = Vec::with_capacity(hash.len());
         t.extend(hash.iter().map(|(f, v)| (*f, v.clone())));
         t
@@ -79,14 +83,14 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreCP<T> {
         }
     }
 
-    pub fn get(&self, flow: &Flow) -> T {
+    pub fn get(&self, flow: &Flows) -> T {
         match self.flow_counters.get(flow) {
             Some(i) => i.clone(),
             None => Default::default(),
         }
     }
 
-    pub fn iter(&self) -> Iter<Flow, T> {
+    pub fn iter(&self) -> Iter<Flows, T> {
         self.flow_counters.iter()
     }
 
@@ -102,8 +106,8 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreCP<T> {
 #[derive(Clone)]
 pub struct MergeableStoreDP<T: AddAssign<T> + Default + Clone> {
     /// Contains the counts on the data path.
-    flow_counters: Arc<RwLock<HashMap<Flow, T, FnvHash>>>,
-    cache: Vec<(Flow, T)>,
+    flow_counters: Arc<RwLock<HashMap<Flows, T, FnvHash>>>,
+    cache: Vec<(Flows, T)>,
     base_cache_size: usize,
     cache_size: usize,
     len: usize,
@@ -123,7 +127,7 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreDP<T> {
 
     /// Change the value for the given `Flow`.
     #[inline]
-    pub fn update(&mut self, flow: Flow, inc: T) {
+    pub fn update(&mut self, flow: Flows, inc: T) {
         {
             self.cache.push((flow, inc));
         }
@@ -134,7 +138,7 @@ impl<T: AddAssign<T> + Default + Clone> MergeableStoreDP<T> {
 
     /// Remove an entry from the table.
     #[inline]
-    pub fn remove(&mut self, flow: &Flow) -> T {
+    pub fn remove(&mut self, flow: &Flows) -> T {
         // self.merge_cache();
         match self.flow_counters.write() {
             Ok(mut g) => {

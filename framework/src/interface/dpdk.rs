@@ -6,10 +6,17 @@ use std::cell::Cell;
 use std::ffi::CString;
 
 /// Initialize the system, whitelisting some set of NICs and allocating mempool of given size.
-fn init_system_wl_with_mempool(name: &str, core: i32, pci: &[String], pool_size: u32, cache_size: u32) {
+pub fn init_system_wl_with_mempool(
+    name: &str,
+    core: i32,
+    pci: &[String],
+    pool_size: u32,
+    cache_size: u32,
+) {
     let name_cstr = CString::new(name).unwrap();
     let pci_cstr: Vec<_> = pci.iter().map(|p| CString::new(&p[..]).unwrap()).collect();
     let mut whitelist: Vec<_> = pci_cstr.iter().map(|p| p.as_ptr()).collect();
+
     unsafe {
         let ret = zcsi::init_system_whitelisted(
             name_cstr.as_ptr(),
@@ -75,7 +82,7 @@ pub fn init_system(config: &NetbricksConfiguration) {
 
 thread_local!(static NUMA_DOMAIN: Cell<i32> = Cell::new(-1));
 
-fn set_numa_domain() {
+pub fn set_numa_domain() {
     let domain = unsafe {
         if libnuma::numa_available() == -1 {
             println!("No NUMA information found, support disabled");

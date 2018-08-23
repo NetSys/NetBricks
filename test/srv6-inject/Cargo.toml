@@ -1,0 +1,16 @@
+[package]
+name = "srv6-inject"
+version = "0.1.0"
+authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+
+[dependencies]
+netbricks = { path = "../../framework", features = ["performance"] }
+time = ">=0.1.0"
+generic-array = ">= 0.11.0"
+colored = ">=1.6"
+lazy_static = "*"
+fnv = "*"
+
+[features]
+default = []
+print = []

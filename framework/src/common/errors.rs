@@ -70,6 +70,26 @@ error_chain! {
             description("No scheduler running on core")
             display("No scheduler running on core {}", core)
         }
+
+        FailedToInsertHeader {
+            description("Failed to insert header into packet")
+            display("Failed to insert header into packet")
+        }
+
+        FailedToSwapHeader(new_header: String) {
+            description("Failed to swap-in new header in packet")
+                display("Failed to swap-in new header - {} - in packet", new_header)
+        }
+
+        FailedToRemoveHeader {
+            description("Failed to remove header from packet")
+                display("Failed to remove header from packet")
+        }
+
+        FailedToParseMacAddress(s: String) {
+            description("Failed to parse MAC address")
+                display("Failed to parse MAC address: '{}'", s)
+        }
     }
 
     foreign_links {

@@ -1,3 +1,5 @@
+// TODO: Fix - segfaults due to include version expectation.
+
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
@@ -108,8 +110,8 @@ int main (int argc, char* argv[]) {
 		/*txq_cores[i] = i;*/
 	/*}*/
 	enumerate_pmd_ports();
-	ret = init_pmd_port(PORT_OUT, THREADS, THREADS, 
-			rxq_cores, txq_cores, 256, 256, 
+	ret = init_pmd_port(PORT_OUT, THREADS, THREADS,
+			rxq_cores, txq_cores, 256, 256,
 			PORT_OUT == PORT_IN, 0, 0);
 	assert(ret == 0);
 	if (PORT_IN != PORT_OUT) {

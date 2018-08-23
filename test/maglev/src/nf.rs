@@ -1,11 +1,11 @@
-use e2d2::headers::*;
-use e2d2::operators::*;
-use e2d2::scheduler::*;
-use e2d2::utils::*;
 use fnv::FnvHasher;
+use netbricks::headers::*;
+use netbricks::operators::*;
+use netbricks::scheduler::*;
+use netbricks::utils::*;
 use std::collections::HashMap;
-use std::hash::{BuildHasher, Hash, Hasher};
 use std::hash::BuildHasherDefault;
+use std::hash::{BuildHasher, Hash, Hasher};
 use twox_hash::XxHash;
 
 type FnvHash = BuildHasherDefault<FnvHasher>;
@@ -18,7 +18,12 @@ struct Maglev {
 }
 
 impl Maglev {
-    pub fn offset_skip_for_name(name: &str, h1: &FnvHash, h2: &XxHashFactory, lsize: usize) -> (usize, usize) {
+    pub fn offset_skip_for_name(
+        name: &str,
+        h1: &FnvHash,
+        h2: &XxHashFactory,
+        lsize: usize,
+    ) -> (usize, usize) {
         let mut fnv_state = h1.build_hasher();
         name.hash(&mut fnv_state);
         let hash1 = fnv_state.finish() as usize;

@@ -1,8 +1,8 @@
+use super::act::Act;
+use super::iterator::*;
 use super::Batch;
 use super::ReceiveBatch;
 use super::RestoreHeader;
-use super::act::Act;
-use super::iterator::*;
 use headers::EndOffset;
 use interface::Packet;
 use queues::*;
@@ -99,7 +99,10 @@ where
         self.groups
     }
 
-    pub fn get_group(&mut self, group: usize) -> Option<RestoreHeader<T, V::Metadata, ReceiveBatch<MpscConsumer>>> {
+    pub fn get_group(
+        &mut self,
+        group: usize,
+    ) -> Option<RestoreHeader<T, V::Metadata, ReceiveBatch<MpscConsumer>>> {
         match self.consumers.remove(&group) {
             Some(mut p) => {
                 {

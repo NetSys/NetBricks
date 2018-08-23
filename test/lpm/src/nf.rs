@@ -1,8 +1,8 @@
-use e2d2::common::EmptyMetadata;
-use e2d2::headers::*;
-use e2d2::operators::*;
-use e2d2::scheduler::*;
 use fnv::FnvHasher;
+use netbricks::common::EmptyMetadata;
+use netbricks::headers::*;
+use netbricks::operators::*;
+use netbricks::scheduler::*;
 use std::collections::HashMap;
 use std::convert::From;
 use std::hash::BuildHasherDefault;
@@ -98,7 +98,10 @@ impl IPLookup {
     }
 }
 
-pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>, S: Scheduler + Sized>(
+pub fn lpm<
+    T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>,
+    S: Scheduler + Sized,
+>(
     parent: T,
     s: &mut S,
 ) -> CompositionBatch {
@@ -212,7 +215,7 @@ pub fn lpm<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>, S:
     let mut groups = parent
         .parse::<MacHeader>()
         .transform(box |p| p.get_mut_header().swap_addresses())
-        .parse::<IpHeader>()
+        .parse::<Ipv4Header>()
         .group_by(
             3,
             box move |pkt| {

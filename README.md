@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/williamofockham/NetBricks.svg?branch=master)](https://travis-ci.org/williamofockham/NetBricks)
+
 [NetBricks](http://netbricks.io/) is a Rust based framework for NFV development. Please refer to the
 [paper](https://people.eecs.berkeley.edu/~apanda/assets/papers/osdi16.pdf) for information
 about the architecture and design. Currently NetBricks requires a relatively modern Linux version.
@@ -70,7 +72,7 @@ Container Build
 You must have [Docker](https://www.docker.com/) installed. Once this is done, just run
 
 ```
-./build.sh build_container 
+./build.sh build_container
 ```
 
 This will build and copy the binaries over to the `target` subdirectory. As noted above, you can run it if you have a

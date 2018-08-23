@@ -1,7 +1,7 @@
 [package]
-name = "e2d2"
+name = "netbricks"
 version = "0.2.0"
-authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
+authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <williamofockham@gmail.com>"]
 build = "build.rs"
 
 [lib]
@@ -12,7 +12,7 @@ libc = ">= 0.2.4"
 time = ">=0.1.0"
 getopts = "*"
 byteorder = "*"
-clippy = { version = "*", optional = true }
+clippy = { version = ">=0.0.197", optional = true }
 fnv = "*"
 twox-hash = "*"
 regex = "*"
@@ -23,11 +23,18 @@ nix = "*"
 # Figure out if we want this permanently or just for now.
 rust-sctp = { git="https://github.com/netsys/rust-sctp", optional = true}
 toml = "*"
+serde = "1.0"
+serde_derive = "1.0"
 # Hack for SHM
-uuid= { version = "*", features=["v4"] }
-error-chain = "*"
-tokio-core=">=0.1.8"
-futures=">=0.1.14"
+uuid = { version = "*", features=["v4"] }
+error-chain = "0.12.0"
+num = "0.1"
+num-derive="0.2"
+num-traits = "0.2"
+generic-array = ">=0.11.0"
+crossbeam = "=0.4"
+rayon = "1.0.2"
+hex = "0.3.2"
 
 [features]
 default = []
@@ -38,4 +45,4 @@ sctp = ["rust-sctp"]
 
 [build-dependencies]
 # Use Bindgen to generate DPDK structures.
-bindgen = ">=0.30.0"
+bindgen = "0.35.0"

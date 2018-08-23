@@ -1,10 +1,11 @@
 pub use self::packet::*;
 pub use self::port::*;
-pub mod dpdk;
-mod port;
-mod packet;
 use common::*;
 use native::zcsi::MBuf;
+
+pub mod dpdk;
+mod packet;
+mod port;
 
 /// Generic trait for objects that can receive packets.
 pub trait PacketRx: Send {

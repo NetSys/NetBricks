@@ -1,7 +1,7 @@
-use super::Batch;
 use super::act::Act;
 use super::iterator::*;
 use super::packet_batch::PacketBatch;
+use super::Batch;
 use common::*;
 use headers::NullHeader;
 use interface::PacketTx;
@@ -51,7 +51,10 @@ where
     }
 
     #[inline]
-    unsafe fn next_payload(&mut self, _: usize) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
+    unsafe fn next_payload(
+        &mut self,
+        _: usize,
+    ) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
         panic!("Cannot iterate send batch")
     }
 }

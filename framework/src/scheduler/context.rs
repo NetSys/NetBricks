@@ -1,12 +1,12 @@
 use allocators::CacheAligned;
 use config::NetbricksConfiguration;
-use interface::{PmdPort, PortQueue, VirtualPort, VirtualQueue};
 use interface::dpdk::{init_system, init_thread};
+use interface::{PmdPort, PortQueue, VirtualPort, VirtualQueue};
 use scheduler::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::sync::Arc;
 use std::sync::mpsc::{sync_channel, SyncSender};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle, Thread};
 
 type AlignedPortQueue = CacheAligned<PortQueue>;
@@ -105,36 +105,11 @@ impl NetBricksContext {
         }
     }
 
-    pub fn add_test_pipeline_to_core<
-        T: Fn(Vec<AlignedVirtualQueue>, &mut StandaloneScheduler) + Send + Sync + 'static,
-    >(
-        &mut self,
-        core: i32,
-        run: Arc<T>,
-    ) -> Result<()> {
-        if let Some(channel) = self.scheduler_channels.get(&core) {
-            let port = self.virtual_ports
-                .entry(core)
-                .or_insert(VirtualPort::new(1).unwrap());
-            let boxed_run = run.clone();
-            let queue = port.new_virtual_queue(1).unwrap();
-            channel
-                .send(SchedulerCommand::Run(Arc::new(move |s| {
-                    boxed_run(vec![queue.clone()], s)
-                })))
-                .unwrap();
-            Ok(())
-        } else {
-            Err(ErrorKind::NoRunningSchedulerOnCore(core).into())
-        }
-    }
-
     /// Install a pipeline on a particular core.
-    pub fn add_pipeline_to_core<T: Fn(Vec<AlignedPortQueue>, &mut StandaloneScheduler) + Send + Sync + 'static>(
-        &mut self,
-        core: i32,
-        run: Arc<T>,
-    ) -> Result<()> {
+    pub fn add_pipeline_to_core<T>(&mut self, core: i32, run: Arc<T>) -> Result<()>
+    where
+        T: Fn(Vec<AlignedPortQueue>, &mut StandaloneScheduler) + Send + Sync + 'static,
+    {
         if let Some(channel) = self.scheduler_channels.get(&core) {
             let ports = match self.rx_queues.get(&core) {
                 Some(v) => v.clone(),
@@ -144,6 +119,27 @@ impl NetBricksContext {
             channel
                 .send(SchedulerCommand::Run(Arc::new(move |s| {
                     boxed_run(ports.clone(), s)
+                })))
+                .unwrap();
+            Ok(())
+        } else {
+            Err(ErrorKind::NoRunningSchedulerOnCore(core).into())
+        }
+    }
+
+    pub fn add_test_pipeline_to_core<T>(&mut self, core: i32, run: Arc<T>) -> Result<()>
+    where
+        T: Fn(Vec<AlignedVirtualQueue>, &mut StandaloneScheduler) + Send + Sync + 'static,
+    {
+        if let Some(channel) = self.scheduler_channels.get(&core) {
+            let port = self.virtual_ports
+                .entry(core)
+                .or_insert(VirtualPort::new(1).unwrap());
+            let boxed_run = run.clone();
+            let queue = port.new_virtual_queue(1).unwrap();
+            channel
+                .send(SchedulerCommand::Run(Arc::new(move |s| {
+                    boxed_run(vec![queue.clone()], s)
                 })))
                 .unwrap();
             Ok(())
@@ -220,9 +216,10 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
     for port in &configuration.ports {
         if ctx.ports.contains_key(&port.name) {
             println!("Port {} appears twice in specification", port.name);
-            return Err(
-                ErrorKind::ConfigurationError(format!("Port {} appears twice in specification", port.name)).into(),
-            );
+            return Err(ErrorKind::ConfigurationError(format!(
+                "Port {} appears twice in specification",
+                port.name
+            )).into());
         } else {
             match PmdPort::new_port_from_configuration(port) {
                 Ok(p) => {

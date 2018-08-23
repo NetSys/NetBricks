@@ -25,7 +25,10 @@ pub trait BatchIterator {
     /// index 0.
     fn start(&mut self) -> usize;
 
-    unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<Self::Header, Self::Metadata>>;
+    unsafe fn next_payload(
+        &mut self,
+        idx: usize,
+    ) -> Option<PacketDescriptor<Self::Header, Self::Metadata>>;
 }
 
 /// A struct containing the parsed information returned by the `PayloadEnumerator`.
@@ -73,7 +76,10 @@ where
     /// Used for looping over packets. Note this iterator is not safe if packets are added or dropped during iteration,
     /// so you should not do that if possible.
     #[inline]
-    pub fn next(&self, batch: &mut BatchIterator<Header = T, Metadata = M>) -> Option<ParsedDescriptor<T, M>> {
+    pub fn next(
+        &self,
+        batch: &mut BatchIterator<Header = T, Metadata = M>,
+    ) -> Option<ParsedDescriptor<T, M>> {
         let original_idx = self.idx.get();
         let item = unsafe { batch.next_payload(original_idx) };
         match item {

@@ -1,19 +1,19 @@
 #![feature(box_syntax)]
 #![feature(asm)]
-extern crate e2d2;
 extern crate fnv;
 extern crate getopts;
+extern crate netbricks;
 extern crate nix;
 extern crate rand;
 extern crate sctp;
 extern crate time;
 use self::control::*;
 use self::nf::*;
-use e2d2::config::{basic_opts, read_matches};
-use e2d2::control::sctp::*;
-use e2d2::interface::*;
-use e2d2::operators::*;
-use e2d2::scheduler::*;
+use netbricks::config::{basic_opts, read_matches};
+use netbricks::control::sctp::*;
+use netbricks::interface::*;
+use netbricks::operators::*;
+use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
 use std::net::*;
@@ -22,8 +22,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-mod nf;
 mod control;
+mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 

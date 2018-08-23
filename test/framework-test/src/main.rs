@@ -1,17 +1,19 @@
 #![feature(box_syntax)]
-extern crate e2d2;
 extern crate getopts;
+extern crate netbricks;
 extern crate rand;
 extern crate time;
-use e2d2::allocators::*;
-use e2d2::common::*;
-use e2d2::headers::*;
-use e2d2::interface::*;
-use e2d2::interface::dpdk::*;
-use e2d2::operators::*;
-use e2d2::scheduler::Executable;
-use e2d2::state::*;
 use getopts::Options;
+use netbricks::allocators::*;
+use netbricks::common::*;
+use netbricks::config::{DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE};
+use netbricks::headers::*;
+use netbricks::interface::dpdk::*;
+use netbricks::interface::*;
+use netbricks::operators::*;
+use netbricks::scheduler::Executable;
+use netbricks::state::*;
+use netbricks::utils::*;
 use std::collections::HashMap;
 use std::env;
 use std::process;
@@ -31,12 +33,12 @@ fn monitor<T: 'static + Batch<Header = NullHeader, Metadata = EmptyMetadata>>(
             let hdr = pkt.get_mut_header();
             hdr.swap_addresses();
         })
-        .parse::<IpHeader>()
+        .parse::<Ipv4Header>()
         .transform(box move |pkt| {
             let hdr = pkt.get_mut_header();
             let ttl = hdr.ttl();
             hdr.set_ttl(ttl + 1);
-            monitoring_cache.update(hdr.flow().unwrap(), 1);
+            monitoring_cache.update(Flows::V4(hdr.flow().unwrap()), 1);
         })
         .compose()
 }
@@ -71,10 +73,14 @@ fn main() {
     opts.optmulti("p", "port", "Port to use", "[type:]id");
     opts.optmulti("c", "core", "Core to use", "core");
     opts.optopt("m", "master", "Master core", "master");
+    opts.optopt("", "pool_size", "Mempool Size", "size");
+    opts.optopt("", "cache_size", "Core Cache Size", "size");
+
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
     };
+
     if matches.opt_present("h") {
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
         process::exit(0)
@@ -113,8 +119,21 @@ fn main() {
 
     let cores_for_port = extract_cores_for_port(&matches.opt_strs("p"), &cores);
 
+    let pool_size = matches
+        .opt_str("pool_size")
+        .unwrap_or_else(|| DEFAULT_POOL_SIZE.to_string())
+        .parse()
+        .expect("Could not parse mempool size");
+
+    let cache_size = matches
+        .opt_str("cache_size")
+        .unwrap_or_else(|| DEFAULT_CACHE_SIZE.to_string())
+        .parse()
+        .expect("Could not parse core cache size");
+
     if primary {
-        init_system_wl(&name, master_core, &[]);
+        init_system_wl_with_mempool(&name, master_core, &[], pool_size, cache_size);
+        set_numa_domain();
     } else {
         init_system_secondary(&name, master_core);
     }
@@ -126,8 +145,8 @@ fn main() {
     for port in &ports_to_activate {
         let cores = cores_for_port.get(*port).unwrap();
         let queues = cores.len() as i32;
-        let pmd_port =
-            PmdPort::new_with_queues(*port, queues, queues, cores, cores).expect("Could not initialize port");
+        let pmd_port = PmdPort::new_with_queues(*port, queues, queues, cores, cores)
+            .expect("Could not initialize port");
         for (idx, core) in cores.iter().enumerate() {
             let queue = idx as i32;
             queues_by_core

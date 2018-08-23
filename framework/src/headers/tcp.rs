@@ -1,11 +1,12 @@
 use super::EndOffset;
-use headers::IpHeader;
+use headers::*;
 use std::default::Default;
 use std::fmt;
+use std::marker::PhantomData;
+use std::net::Ipv6Addr;
 
-#[derive(Default)]
 #[repr(C, packed)]
-pub struct TcpHeader {
+pub struct TcpHeader<T> {
     src_port: u16,
     dst_port: u16,
     seq: u32,
@@ -15,6 +16,7 @@ pub struct TcpHeader {
     window: u16,
     csum: u16,
     urgent: u16,
+    _parent: PhantomData<T>,
 }
 
 const CWR: u8 = 0b1000_0000;
@@ -37,7 +39,30 @@ macro_rules! write_or_return {
     }
 }
 
-impl fmt::Display for TcpHeader {
+impl<T> Default for TcpHeader<T>
+where
+    T: IpHeader,
+{
+    fn default() -> TcpHeader<T> {
+        TcpHeader {
+            src_port: 0,
+            dst_port: 0,
+            seq: 0,
+            ack: 0,
+            offset_to_ns: 0,
+            flags: 0,
+            window: 0,
+            csum: 0,
+            urgent: 0,
+            _parent: PhantomData,
+        }
+    }
+}
+
+impl<T> fmt::Display for TcpHeader<T>
+where
+    T: IpHeader,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write_or_return!(
             f,
@@ -62,8 +87,11 @@ impl fmt::Display for TcpHeader {
     }
 }
 
-impl EndOffset for TcpHeader {
-    type PreviousHeader = IpHeader;
+impl<T> EndOffset for TcpHeader<T>
+where
+    T: IpHeader,
+{
+    type PreviousHeader = T;
 
     #[inline]
     fn offset(&self) -> usize {
@@ -81,14 +109,17 @@ impl EndOffset for TcpHeader {
     }
 
     #[inline]
-    fn check_correct(&self, _prev: &IpHeader) -> bool {
+    fn check_correct(&self, _prev: &T) -> bool {
         true
     }
 }
 
-impl TcpHeader {
+impl<T> TcpHeader<T>
+where
+    T: IpHeader,
+{
     #[inline]
-    pub fn new() -> TcpHeader {
+    pub fn new() -> TcpHeader<T> {
         Default::default()
     }
 
@@ -352,10 +383,66 @@ impl TcpHeader {
         u16::from_be(self.csum)
     }
 
-    // FIXME: Validate checksum and update checksum
-
     pub fn set_checksum(&mut self, csum: u16) {
         self.csum = u16::to_be(csum)
+    }
+
+    /// Update Checksum w/ tcp_segment_length (from <Packet>) and src and dst on
+    /// header.
+    /// TODO: Validate Checksum?
+    pub fn update_checksum(&mut self, segment_length: u32, src: Ipv6Addr, dst: Ipv6Addr) {
+        let mut sum = segment_length
+            + src.segments().iter().map(|x| *x as u32).sum::<u32>()
+            + dst.segments().iter().map(|x| *x as u32).sum::<u32>()
+            + TCP_NXT_HDR as u32;
+
+        while sum >> 16 != 0 {
+            sum = (sum >> 16) + (sum & 0xFFFF);
+        }
+
+        self.set_checksum(!sum as u16)
+    }
+
+    /*
+    see https://tools.ietf.org/html/rfc1624
+    essentially, if HC is the original checksum, m is original 16 bit word
+    of the header, HC', the new header checksum, m' the new 16 bit word then
+    HC' = ~(~HC + ~m + m')
+    */
+    pub fn update_checksum_incremental(
+        &mut self,
+        old_field: Ipv6Addr,
+        updated_field: Ipv6Addr,
+    ) -> Option<u16> {
+        let mut old_checksum = self.checksum();
+        if old_checksum == 0 {
+            return None;
+        }
+
+        let old_segments = old_field.segments();
+        let updated_segments = updated_field.segments();
+        let mut sum = 0;
+
+        for i in 0..updated_segments.len() {
+            let old_frag = old_segments[i] & 0xFFFF;
+            let updated_frag = updated_segments[i] & 0xFFFF;
+
+            match ((!old_checksum & 0xFFFF) as u32)
+                .checked_add((!old_frag & 0xFFFF) as u32 + (updated_frag & 0xFFFF) as u32)
+            {
+                Some(added) => sum = added,
+                None => return None,
+            }
+
+            sum = (sum >> 16 & 0xFFFF) + (sum & 0xFFFF);
+            sum = !sum & 0xFFFF;
+            old_checksum = sum as u16
+        }
+
+        let fin_sum = sum as u16;
+
+        self.set_checksum(fin_sum);
+        Some(fin_sum)
     }
 
     /// Urgent pointer

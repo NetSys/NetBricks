@@ -1,0 +1,13 @@
+[package]
+name = "ipv4or6"
+version = "0.1.0"
+authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+
+[dependencies]
+netbricks = { path = "../../framework", features = ["performance"] }
+time = ">=0.1.0"
+colored = ">=1.6"
+
+[features]
+default = []
+print = []

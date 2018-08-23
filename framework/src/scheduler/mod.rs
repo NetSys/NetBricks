@@ -5,8 +5,8 @@ pub use self::context::*;
 pub use self::standalone_scheduler::*;
 use common::*;
 
-mod standalone_scheduler;
 pub mod embedded_scheduler;
+mod standalone_scheduler;
 
 mod context;
 
