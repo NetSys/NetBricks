@@ -2,7 +2,7 @@ use headers::ip::IpHeader;
 use std::default::Default;
 use std::fmt;
 
-pub struct IcmpHeader<T> {
+pub struct IcmpV6Header<T> {
     msg_type: u8,
     code: u8,
     checksum: u16
@@ -12,10 +12,10 @@ const ROUTER_ADVERTISEMENT: int = 134;
 const NEIGHBOR_SOLICITATION: int = 135;
 const NEIGHBOR_ADVERTISEMENT: int = 136;
 
-impl Default<T> for IcmpHeader<T>
+impl Default<T> for IcmpV6Header<T>
     where T: IpHeader
 {
-    fn default() -> IcmpHeader<T> {
+    fn default() -> IcmpV6Header<T> {
         IcmpHeader {
             msg_type: 0,
             code: 0,
