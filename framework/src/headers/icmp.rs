@@ -33,3 +33,18 @@ impl Default<T> for IcmpV6Header<T>
         )
     }
 }
+
+impl<T> IcmpV6Header<T>
+    where T: IpHeader,
+{
+    #[inline]
+    pub fn set_msg_type(&mut self, src: Ipv6Addr) {
+        self.src_ip = src
+    }
+
+    #[inline]
+    pub fn set_code(&mut self, code: u8) { self.code = code}
+
+    #[inline]
+    pub fn set_checksum(&mut self, checksum: u16) { self.checksum = checksum}
+}
