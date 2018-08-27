@@ -1,6 +1,6 @@
 use super::IpHeader;
 use byteorder::{BigEndian, ByteOrder};
-use headers::{EndOffset, MacHeader, TCP_NXT_HDR, UDP_NXT_HDR};
+use headers::{EndOffset, MacHeader, TCP_NXT_HDR, UDP_NXT_HDR, ICMP_NXT_HDR};
 use std::default::Default;
 use std::fmt;
 use std::net::Ipv4Addr;
@@ -85,7 +85,7 @@ impl Ipv4Header {
         let protocol = self.protocol();
         let src_ip = self.src();
         let dst_ip = self.dst();
-        if (protocol == TCP_NXT_HDR || protocol == UDP_NXT_HDR) && self.payload_size(0) >= 4 {
+        if (protocol == TCP_NXT_HDR || protocol == UDP_NXT_HDR || protocol == ICMP_NXT_HDR) && self.payload_size(0) >= 4 {
             unsafe {
                 let self_as_u8 = (self as *const Ipv4Header) as *const u8;
                 let port_as_u8 = self_as_u8.offset(self.offset() as isize);

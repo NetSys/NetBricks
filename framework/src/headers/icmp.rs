@@ -8,9 +8,9 @@ pub struct IcmpV6Header<T> {
     checksum: u16
 }
 
-const ROUTER_ADVERTISEMENT: int = 134;
-const NEIGHBOR_SOLICITATION: int = 135;
-const NEIGHBOR_ADVERTISEMENT: int = 136;
+pub const ROUTER_ADVERTISEMENT: int = 134;
+pub const NEIGHBOR_SOLICITATION: int = 135;
+pub const NEIGHBOR_ADVERTISEMENT: int = 136;
 
 impl Default<T> for IcmpV6Header<T>
     where T: IpHeader
