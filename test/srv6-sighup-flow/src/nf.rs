@@ -33,7 +33,6 @@ pub fn nf<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
         .filter(box |pkt| match pkt.get_header().next_header() {
             Some(NextHeader::Routing) => true,
             Some(NextHeader::Tcp) => true,
-            Some(NextHeader::Icmp) => true,
             _ => false,
         })
         .map(box move |_pkt| {
@@ -43,7 +42,7 @@ pub fn nf<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
             );
         })
         .group_by(
-            3,
+            2,
             box |pkt| match pkt.get_header().next_header().unwrap() {
                 NextHeader::Routing => 1,
                 _ => 0,

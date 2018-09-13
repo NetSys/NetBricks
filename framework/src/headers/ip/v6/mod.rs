@@ -70,9 +70,10 @@ mod srh;
 
 // L3 Extention Header Values
 const ROUTING_NXT_HDR: u8 = 43;
-const HIP_NXT_HDR: u8 = 139;
-const MOBILITY_NXT_HDR: u8 = 135;
 const ICMP_NXT_HDR: u8 = 58;
+const NO_NXT_HDR: u8 = 59;
+const MOBILITY_NXT_HDR: u8 = 135;
+const HIP_NXT_HDR: u8 = 139;
 // TODO: ... more constants here
 
 #[derive(FromPrimitive, Debug, PartialEq, Copy, Clone)]
@@ -83,7 +84,7 @@ pub enum NextHeader {
     Mobility = MOBILITY_NXT_HDR,
     Tcp = TCP_NXT_HDR,
     Udp = UDP_NXT_HDR,
-    NoNextHeader = 59,
+    NoNextHeader = NO_NXT_HDR,
     Icmp = ICMP_NXT_HDR
 }
 

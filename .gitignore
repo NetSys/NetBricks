@@ -53,3 +53,5 @@ out.pcap
 
 # wireedit
 *.lnk
+
+.DS_Store
