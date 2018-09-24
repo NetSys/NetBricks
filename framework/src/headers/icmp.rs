@@ -1,9 +1,9 @@
 use headers::ip::IpHeader;
 use std::default::Default;
+use super::EndOffset;
+use std::marker::PhantomData;
+use num::FromPrimitive;
 use std::fmt;
-#[macro_use]
-extern crate enum_primitive;
-use enum_primitive::FromPrimitive;
 
 /*
    ICMPv6 messages are contained in Ipv6 packets. The IPV6packet contains an IPv6 header followed by the
@@ -31,47 +31,63 @@ use enum_primitive::FromPrimitive;
    message and parts of the IPv6 header.
 */
 
-pub const ROUTER_ADVERTISEMENT: u8 = 134;
-pub const NEIGHBOR_SOLICITATION: u8 = 135;
-pub const NEIGHBOR_ADVERTISEMENT: u8 = 136;
-
-enum_from_primitive! {
-#[derive(Debug, PartialEq)]
+#[derive(FromPrimitive, Debug, PartialEq)]
+#[repr(u16)]
 pub enum IcmpMessageType {
-    RouterAdvertisement = ROUTER_ADVERTISEMENT,
-    NeighborSolicitation = NEIGHBOR_SOLICITATION,
-    NeighborAdvertisement = NEIGHBOR_ADVERTISEMENT,
-}
-}
-
-pub struct IcmpV6Header<T> {
-    msg_type: IcmpMessageType,
-    code: u8,
-    checksum: u16,
+    RouterAdvertisement = 134,
+    NeighborSolicitation = 135,
+    NeighborAdvertisement = 136,
 }
 
-impl Default<T> for IcmpV6Header<T>
-where
-    T: IpHeader,
-{
-    fn default() -> IcmpV6Header<T> {
-        IcmpV6Header {
-            msg_type: None,
-            code: 0,
-            checksum: 0,
+impl fmt::Display for IcmpMessageType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            IcmpMessageType::RouterAdvertisement => write!(f, "Router Advertisement"),
+            IcmpMessageType::NeighborSolicitation => write!(f, "Neighbor Solicitation"),
+            IcmpMessageType::NeighborAdvertisement => write!(f, "Neighbor Advertisement"),
         }
     }
 
+}
+
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct IcmpV6Header<T> {
+    code: u8,
+    msg_type: u8,
+    checksum: u16,
+    _parent: PhantomData<T>,
+}
+
+impl<T> Default for IcmpV6Header<T>
+    where
+        T: IpHeader,
+{
+    fn default() -> IcmpV6Header<T> {
+        IcmpV6Header {
+            msg_type: 0,
+            code: 0,
+            checksum: 0,
+            _parent: PhantomData
+        }
+    }
+}
+
+impl<T> fmt::Display for IcmpV6Header<T>
+    where
+        T: IpHeader,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "msg_type: {} code: {} checksum: {}",
-            self.msg_type(),
+            self.msg_type().unwrap(),
             self.code(),
             self.checksum()
         )
     }
 }
+
 
 impl<T> EndOffset for IcmpV6Header<T>
     where
@@ -91,7 +107,7 @@ impl<T> EndOffset for IcmpV6Header<T>
 
     #[inline]
     fn payload_size(&self, _: usize) -> usize {
-        self.length() as usize - self.offset()
+        32
     }
 
     #[inline]
@@ -101,44 +117,33 @@ impl<T> EndOffset for IcmpV6Header<T>
 }
 
 impl<T> IcmpV6Header<T>
-where
-    T: IpHeader,
+    where
+        T: IpHeader,
 {
+
     #[inline]
-    pub fn set_msg_type(&mut self, msg_type: IcmpMessageType) {
-        self.msg_type = msg_type
+    pub fn msg_type(&self) -> Option<IcmpMessageType> {
+        FromPrimitive::from_u8(u8::from_be(self.msg_type))
     }
 
     #[inline]
-    pub fn msg_type(&self) -> IcmpMessageType { self.msg_type }
+    pub fn set_msg_type(&mut self, msg_type: IcmpMessageType) {
+        self.msg_type = u8::to_be(msg_type as u8)
+    }
 
     #[inline]
-    pub fn set_code(&mut self, code: u16) { self.code = u8::to_be(code) }
+    pub fn set_code(&mut self, code: u8) { self.code = u8::to_be(code) }
 
     #[inline]
-    pub fn code(&self) { u8::from_be(self.code)}
+    pub fn code(&self) -> u8{ u8::from_be(self.code)}
 
     #[inline]
     pub fn checksum(&self) -> u16 {
-        u16::from_be(self.csum)
+        u16::from_be(self.checksum)
     }
 
     #[inline]
     pub fn set_checksum(&mut self, csum: u16) {
-        self.csum = u16::to_be(csum)
+        self.checksum = u16::to_be(csum)
     }
 }
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn test_icmp_message_types() {
-        assert_eq!(IcmpMessageType::from_u8(134), Some(IcmpMessageType::RouterAdvertisement));
-        assert_eq!(IcmpMessageType::from_u8(135), Some(IcmpMessageType::NeighborSolicitation));
-        assert_eq!(IcmpMessageType::from_u8(136), Some(IcmpMessageType::NeighborAdvertisement));
-        assert_eq!(IcmpMessageType::from_u8(4), None);
-    }
-}
-
-

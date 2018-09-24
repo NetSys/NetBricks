@@ -70,10 +70,9 @@ mod srh;
 
 // L3 Extention Header Values
 const ROUTING_NXT_HDR: u8 = 43;
-const ICMP_NXT_HDR: u8 = 58;
-const NO_NXT_HDR: u8 = 59;
-const MOBILITY_NXT_HDR: u8 = 135;
 const HIP_NXT_HDR: u8 = 139;
+const MOBILITY_NXT_HDR: u8 = 135;
+const ICMP_NXT_HDR: u8 = 58;
 // TODO: ... more constants here
 
 #[derive(FromPrimitive, Debug, PartialEq, Copy, Clone)]
@@ -81,11 +80,11 @@ const HIP_NXT_HDR: u8 = 139;
 pub enum NextHeader {
     Routing = ROUTING_NXT_HDR,
     HostIdentityProtocol = HIP_NXT_HDR,
+    Icmp = ICMP_NXT_HDR,
     Mobility = MOBILITY_NXT_HDR,
     Tcp = TCP_NXT_HDR,
     Udp = UDP_NXT_HDR,
-    NoNextHeader = NO_NXT_HDR,
-    Icmp = ICMP_NXT_HDR
+    NoNextHeader = 59,
 }
 
 impl Default for NextHeader {
@@ -201,7 +200,6 @@ impl Ipv6Header {
                 // TODO: should validate we are only skipping v6 extension headers
                 while next_hdr != TCP_NXT_HDR
                     && next_hdr != UDP_NXT_HDR
-                    && next_hdr != ICMP_NXT_HDR
                     && self.payload_size(0) > payload_offset
                 {
                     // start at beginning of the current ext header, the first byte is the next header,
@@ -381,30 +379,5 @@ mod tests {
         assert_eq!(ip.next_header, UDP_NXT_HDR);
         assert_eq!(ip.hop_limit(), 2);
         assert_eq!("2001:db8::1 > 2001:db8::2 version: 6 traffic_class: 17 flow_label: 15000 len: 1000 next_header: Udp hop_limit: 2", ip.to_string())
-    }
-
-
-    #[test]
-    fn icmp_packet() {
-        let mut ip = Ipv6Header::new();
-        let src = Ipv6Addr::from_str("2001:db8::1").unwrap();
-        let dst = Ipv6Addr::from_str("2001:db8::2").unwrap();
-        ip.set_src(src);
-        ip.set_dst(dst);
-        ip.set_version(6);
-        ip.set_traffic_class(17);
-        ip.set_flow_label(15000);
-        ip.set_payload_len(1000);
-        ip.set_next_header(NextHeader::Icmp);
-        ip.set_hop_limit(2);
-
-        assert_eq!(ip.version(), 6);
-        assert_eq!(ip.traffic_class(), 17);
-        assert_eq!(ip.flow_label(), 15000);
-        assert_eq!(ip.payload_len(), 1000);
-        assert_eq!(ip.next_header().unwrap(), NextHeader::Icmp);
-        assert_eq!(ip.next_header, ICMP_NXT_HDR);
-        assert_eq!(ip.hop_limit(), 2);
-        assert_eq!("2001:db8::1 > 2001:db8::2 version: 6 traffic_class: 17 flow_label: 15000 len: 1000 next_header: Icmp hop_limit: 2", ip.to_string())
     }
 }

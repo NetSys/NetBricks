@@ -3,16 +3,20 @@ pub use self::mac::*;
 pub use self::null_header::*;
 pub use self::tcp::*;
 pub use self::udp::*;
+pub use self::icmp::*;
 pub mod ip;
 pub mod mac;
+
 mod null_header;
 mod tcp;
 mod udp;
+mod icmp;
 
 // L4 Protocol Next Header Values
 pub const TCP_NXT_HDR: u8 = 6;
 pub const UDP_NXT_HDR: u8 = 17;
 pub const ICMP_NXT_HDR: u8 = 1;
+
 
 #[derive(FromPrimitive, Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
