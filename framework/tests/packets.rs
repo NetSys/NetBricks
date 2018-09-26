@@ -202,11 +202,13 @@ fn icmpv6_from_bytes() {
             assert_eq!(Ipv6Addr::from(v6.dst()), dst);
         }
 
+        //Check Icmp header
         let icmp_pkt = v6pkt.parse_header::<IcmpV6Header<Ipv6Header>>();
         {
             let icmpv6 = icmp_pkt.get_header();
-            assert_eq!(icmpv6.msg_type(), Some(IcmpMessageType::RouterAdvertisement));
-
+            assert_eq!(icmpv6.msg_type().unwrap(), IcmpMessageType::RouterAdvertisement);
+            assert_eq!(icmpv6.checksum(), 0xf50c);
+            assert_eq!(icmpv6.code(), 0);
         }
     }
 }

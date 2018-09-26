@@ -53,8 +53,8 @@ impl fmt::Display for IcmpMessageType {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct IcmpV6Header<T> {
-    code: u8,
     msg_type: u8,
+    code: u8,
     checksum: u16,
     _parent: PhantomData<T>,
 }

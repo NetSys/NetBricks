@@ -1,7 +1,6 @@
 use colored::*;
 use netbricks::headers::*;
 use netbricks::operators::*;
-use std::collections::HashMap;
 use std::default::Default;
 use std::net::Ipv6Addr;
 use std::str::FromStr;
@@ -17,7 +16,7 @@ struct Meta {
 impl Default for Meta {
     fn default() -> Meta {
         Meta {
-            msg_type: None,
+            msg_type: IcmpMessageType::NeighborAdvertisement,
             code: 0,
             checksum: 0,
             src: Ipv6Addr::unspecified(),
@@ -33,47 +32,47 @@ fn icmp_v6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> CompositionB
     parent
         .parse::<Ipv6Header>()
         .metadata(box |pkt| Meta {
+            src: Ipv6Addr::from_str("fe80::d4f0:45ff:fe0c:664b").unwrap(),
+            dst: Ipv6Addr::from_str("ff02::1").unwrap(),
             ..Default::default()
         })
         .parse::<IcmpV6Header<Ipv6Header>>()
-        .metadata_mut(box |pkt| Meta {
-            msg_type: IcmpMessageType.from_u8(134),
-            code: pkt.read_metadata().code,
-            checksum: pkt.read_metadata().checksum,
-            src: Ipv6Addr.from_str("fe80::d4f0:45ff:fe0c:664b").unwrap(),
-            dst: IpV6Addr.from_str("ff02::1").unwrap()
+        .metadata(box | pkt | Meta {
+            msg_type: pkt.get_header().msg_type().unwrap(),
+            code: pkt.get_header().code(),
+            checksum: pkt.get_header().checksum(),
+            src: Ipv6Addr::from_str("fe80::d4f0:45ff:fe0c:664b").unwrap(),
+            dst: Ipv6Addr::from_str("ff02::1").unwrap(),
+            ..Default::default()
+
         })
         .transform(box |pkt| {
-            let init_checksum = pkt.read_metadata().checksum;
+            let src = pkt.read_metadata().src;
+            let dst = pkt.read_metadata().dst;
+
+            let msg_type = &pkt.read_metadata().msg_type;
+            let code = pkt.read_metadata().code;
+            let checksum = pkt.read_metadata().checksum;
 
             println!(
                 "{}",
                 format!(
-                    "   Original CheckSum: {:X?} | Src: {} | Dst: {}",
-                    init_checksum, src, dst
+                    " Src Ip {:X?} |  Dst Ip {:X?} | Msg Type: {:X?} | Code: {:X?} | Checksum: {:X?}",
+                    src, dst, msg_type, code, checksum
                 ).purple()
             );
 
-            {
-                let segment_length = pkt.segment_length();
-                let tcph = pkt.get_mut_header();
-                tcph.set_checksum(0);
-            }
-
-            let computed_checksum = pkt.get_header().checksum();
-
-            println!(
-                "{}\n",
-                format!(
-                    "Re-Computed CheckSum: {:X?} | Src: {} | Dst: {}",
-                    computed_checksum, src, dst
-                ).purple()
-            );
-
-            // Assert that we arrived at the same checksum we removed
             assert_eq!(
-                format!("{:X?}", init_checksum),
-                format!("{:X?}", computed_checksum)
+                format!("{:X?}", msg_type),
+                format!("{:X?}", IcmpMessageType::NeighborAdvertisement)
+            );
+            assert_eq!(
+                format!("{:X?}", code),
+                format!("{:X?}", 0)
+            );
+            assert_eq!(
+                format!("{:X?}", checksum),
+                format!("{:X?}", 0xf50c)
             );
         })
         .compose()

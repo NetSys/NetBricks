@@ -44,8 +44,6 @@ dev = ["clippy"]
 packet_offset = []
 sctp = ["rust-sctp"]
 
-
 [build-dependencies]
 # Use Bindgen to generate DPDK structures.
 bindgen = "0.35.0"
-
