@@ -15,7 +15,7 @@ echo "Using configuration ${CONFIG_FILE}${CONFIG_PFX}"
 if [ "$MODE" = "download" ]; then
 	if [ ! -e "$DOWNLOAD_PATH" ]; then
 		echo Fetching "http://dpdk.org/browse/dpdk/snapshot/dpdk-${DPDK_VER}.tar.gz"
-		curl http://dpdk.org/browse/dpdk/snapshot/dpdk-${DPDK_VER}.tar.gz -o "${DOWNLOAD_PATH}"
+		curl http://git.dpdk.org/dpdk/snapshot/dpdk-${DPDK_VER}.tar.gz -o "${DOWNLOAD_PATH}"
 	fi
 	if [ ! -d "${DPDK_RESULT}" ]; then
 		mkdir -p ${DPDK_RESULT}
