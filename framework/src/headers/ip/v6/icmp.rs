@@ -6,7 +6,7 @@ use num::FromPrimitive;
 use std::fmt;
 
 /*
-   ICMPv6 messages are contained in Ipv6 packets. The IPV6packet contains an IPv6 header followed by the
+   ICMPv6 messages are contained in IPv6 packets. The IPv6 packet contains an IPv6 header followed by the
    payload which contains the ICMPv6 message.
 
    From (https://tools.ietf.org/html/rfc4443)
@@ -47,7 +47,6 @@ impl fmt::Display for IcmpMessageType {
             IcmpMessageType::NeighborAdvertisement => write!(f, "Neighbor Advertisement"),
         }
     }
-
 }
 
 #[derive(Debug)]
@@ -88,7 +87,6 @@ impl<T> fmt::Display for IcmpV6Header<T>
     }
 }
 
-
 impl<T> EndOffset for IcmpV6Header<T>
     where
         T: IpHeader,
@@ -97,17 +95,20 @@ impl<T> EndOffset for IcmpV6Header<T>
 
     #[inline]
     fn offset(&self) -> usize {
-        54
+        // ICMPv6 Header(Type + Code + Checksum) is always 4 bytes: (8 + 8 + 16) / 8 = 4
+        4
     }
 
     #[inline]
     fn size() -> usize {
-        32
+        // ICMPv6 Header is always 4 bytes so size = offset
+        4
     }
 
     #[inline]
-    fn payload_size(&self, _: usize) -> usize {
-        32
+    fn payload_size(&self, hint: usize) -> usize {
+        // There is no payload size in the ICMPv6 header
+        hint - self.offset()
     }
 
     #[inline]
