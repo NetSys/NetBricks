@@ -22,7 +22,7 @@ impl Default for Meta {
 #[inline]
 fn icmp_v6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> CompositionBatch {
     println!("{}",
-             format!("Tests Fully Computed Checksum vs Incrementally Computed Checksums and RoundTrip Checksums").white());
+             format!("Tests ICMPv6 messages for msg_type, code and checksum").white());
     parent
         .parse::<Ipv6Header>()
         .parse::<IcmpV6Header<Ipv6Header>>()
