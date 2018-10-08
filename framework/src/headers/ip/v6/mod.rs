@@ -1,4 +1,5 @@
 pub use self::ext::*;
+pub use self::icmp::*;
 pub use self::srh::*;
 use super::IpHeader;
 use byteorder::{BigEndian, ByteOrder};
@@ -9,12 +10,11 @@ use std::fmt;
 use std::net::Ipv6Addr;
 use std::slice;
 use utils::FlowV6;
-pub use self::icmp::*;
 
 mod ext;
+mod icmp;
 mod nf_macros;
 mod srh;
-mod icmp;
 
 /* (From RFC8200 https://tools.ietf.org/html/rfc8200#section-3)
    IPv6 Header Format

@@ -17,9 +17,9 @@ use std::time::Duration;
 mod nf;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
-    where
-        T: PacketRx + PacketTx + Display + Clone + 'static,
-        S: Scheduler + Sized,
+where
+    T: PacketRx + PacketTx + Display + Clone + 'static,
+    S: Scheduler + Sized,
 {
     println!("Receiving started");
 

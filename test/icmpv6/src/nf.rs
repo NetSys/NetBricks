@@ -21,12 +21,14 @@ impl Default for Meta {
 
 #[inline]
 fn icmp_v6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> CompositionBatch {
-    println!("{}",
-             format!("Tests ICMPv6 messages for msg_type, code and checksum").white());
+    println!(
+        "{}",
+        format!("Tests ICMPv6 messages for msg_type, code and checksum").white()
+    );
     parent
         .parse::<Ipv6Header>()
         .parse::<IcmpV6Header<Ipv6Header>>()
-        .metadata(box | pkt | Meta {
+        .metadata(box |pkt| Meta {
             msg_type: pkt.get_header().msg_type().unwrap(),
             code: pkt.get_header().code(),
             checksum: pkt.get_header().checksum(),
@@ -35,7 +37,7 @@ fn icmp_v6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> CompositionB
             let msg_type = &pkt.read_metadata().msg_type;
             let code = pkt.read_metadata().code;
             let checksum = pkt.read_metadata().checksum;
-            
+
             println!(
                 "{}",
                 format!(
@@ -48,14 +50,8 @@ fn icmp_v6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> CompositionB
                 format!("{:X?}", msg_type),
                 format!("{:X?}", IcmpMessageType::RouterAdvertisement)
             );
-            assert_eq!(
-                format!("{:X?}", code),
-                format!("{:X?}", 0)
-            );
-            assert_eq!(
-                format!("{:X?}", checksum),
-                format!("{:X?}", 0xf50c)
-            );
+            assert_eq!(format!("{:X?}", code), format!("{:X?}", 0));
+            assert_eq!(format!("{:X?}", checksum), format!("{:X?}", 0xf50c));
         })
         .compose()
 }

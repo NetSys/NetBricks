@@ -1,9 +1,9 @@
-use headers::ip::IpHeader;
-use std::default::Default;
 use super::EndOffset;
-use std::marker::PhantomData;
+use headers::ip::IpHeader;
 use num::FromPrimitive;
+use std::default::Default;
 use std::fmt;
+use std::marker::PhantomData;
 
 /*
    ICMPv6 messages are contained in IPv6 packets. The IPv6 packet contains an IPv6 header followed by the
@@ -59,22 +59,22 @@ pub struct IcmpV6Header<T> {
 }
 
 impl<T> Default for IcmpV6Header<T>
-    where
-        T: IpHeader,
+where
+    T: IpHeader,
 {
     fn default() -> IcmpV6Header<T> {
         IcmpV6Header {
             msg_type: 0,
             code: 0,
             checksum: 0,
-            _parent: PhantomData
+            _parent: PhantomData,
         }
     }
 }
 
 impl<T> fmt::Display for IcmpV6Header<T>
-    where
-        T: IpHeader,
+where
+    T: IpHeader,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -88,8 +88,8 @@ impl<T> fmt::Display for IcmpV6Header<T>
 }
 
 impl<T> EndOffset for IcmpV6Header<T>
-    where
-        T: IpHeader,
+where
+    T: IpHeader,
 {
     type PreviousHeader = T;
 
@@ -118,10 +118,9 @@ impl<T> EndOffset for IcmpV6Header<T>
 }
 
 impl<T> IcmpV6Header<T>
-    where
-        T: IpHeader,
+where
+    T: IpHeader,
 {
-
     #[inline]
     pub fn msg_type(&self) -> Option<IcmpMessageType> {
         FromPrimitive::from_u8(u8::from_be(self.msg_type))
@@ -133,10 +132,14 @@ impl<T> IcmpV6Header<T>
     }
 
     #[inline]
-    pub fn set_code(&mut self, code: u8) { self.code = u8::to_be(code) }
+    pub fn set_code(&mut self, code: u8) {
+        self.code = u8::to_be(code)
+    }
 
     #[inline]
-    pub fn code(&self) -> u8{ u8::from_be(self.code)}
+    pub fn code(&self) -> u8 {
+        u8::from_be(self.code)
+    }
 
     #[inline]
     pub fn checksum(&self) -> u16 {
