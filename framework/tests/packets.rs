@@ -110,6 +110,58 @@ static V6_BYTES: [u8; 62] = [
     0x00, 0x00
 ];
 
+#[rustfmt::skip]
+static ICMP_BYTES: [u8;136] = [
+    // --- Ethernet Header ---
+    // Destination MAC
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+    // Source MAC
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+    //EtherType(IPv6)
+    0x86, 0xDD,
+    // --- IPv6 Header ---
+    //Version, Traffic Class, Flow Label
+    0x60, 0x00, 0x00, 0x00,
+    //Payload Length
+    0x00, 0x58,
+    // Next Header(ICMPV6=58)
+    0x3a,
+    // Hop Limit,
+    0xff,
+    // Source Address
+    0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b,
+    // Destination Address
+    0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+    // --ICMPv6 Header--
+    // Type
+    0x86,
+    // Code
+    0x00,
+    // Checksum
+    0xf5, 0x0c,
+    // --ICMPv6 Payload--
+    // Curr hop limit
+    0x40,
+    // Flags
+    0x40,
+    // Router lifetime
+    0x0e, 0x10,
+    // Reachable time
+    0x00,
+    // Retrans timer
+    0x00,
+    // ICMPv6 Option(Prefix Information)
+    0x03, 0x04, 0x40, 0xc0, 0x00, 0x00, 0x09, 0x3e, 0x00, 0x00, 0x09, 0x3e, 0x00, 0x00, 0x00, 0x00,
+    0x26, 0x07, 0xfc, 0xc8, 0xf1, 0x42, 0xb0, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    // ICMPv6 Option(MTU)
+    0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0x05, 0xdc,
+    // ICMPv6 Option(Source link-layer address)
+    0x01, 0x01, 0x70, 0x3a, 0xcb, 0x1b, 0xf9, 0x7a,
+    // ICMPv6 Option(Recursive DNS Server)
+    0x19, 0x03, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x26, 0x07, 0xfc, 0xc8, 0xf1, 0x42, 0xb0, 0xf0,
+    0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b
+];
+
 // Acquire a packet buffer for testing header extraction from raw bytes
 fn packet_from_bytes(bytes: &[u8]) -> Packet<NullHeader, EmptyMetadata> {
     let mut pkt = new_packet().expect("Could not allocate packet!");
@@ -120,6 +172,47 @@ fn packet_from_bytes(bytes: &[u8]) -> Packet<NullHeader, EmptyMetadata> {
     }
     pkt
 }
+
+#[test]
+fn icmpv6_from_bytes() {
+    dpdk_test!{
+        let pkt = packet_from_bytes(&ICMP_BYTES);
+        // Check Ethernet header
+        let epkt = pkt.parse_header::<MacHeader>();
+        {
+            let eth = epkt.get_header();
+            assert_eq!(eth.dst.addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
+            assert_eq!(eth.src.addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
+            assert_eq!(eth.etype(), Some(EtherType::IPv6));
+        }
+
+         // Check IPv6 header
+        let v6pkt = epkt.parse_header::<Ipv6Header>();
+        {
+            let v6 = v6pkt.get_header();
+            let src = Ipv6Addr::from_str("fe80::d4f0:45ff:fe0c:664b").unwrap();
+            let dst = Ipv6Addr::from_str("ff02::1").unwrap();
+            assert_eq!(v6.version(), 6);
+            assert_eq!(v6.traffic_class(), 0);
+            assert_eq!(v6.flow_label(), 0);
+            assert_eq!(v6.payload_len(), 88);
+            assert_eq!(v6.next_header().unwrap(), NextHeader::Icmp);
+            assert_eq!(v6.hop_limit(), 255);
+            assert_eq!(Ipv6Addr::from(v6.src()), src);
+            assert_eq!(Ipv6Addr::from(v6.dst()), dst);
+        }
+
+        //Check Icmp header
+        let icmp_pkt = v6pkt.parse_header::<IcmpV6Header<Ipv6Header>>();
+        {
+            let icmpv6 = icmp_pkt.get_header();
+            assert_eq!(icmpv6.msg_type().unwrap(), IcmpMessageType::RouterAdvertisement);
+            assert_eq!(icmpv6.checksum(), 0xf50c);
+            assert_eq!(icmpv6.code(), 0);
+        }
+    }
+}
+
 
 #[test]
 fn srh_from_bytes() {

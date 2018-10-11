@@ -1,4 +1,5 @@
 pub use self::ext::*;
+pub use self::icmp::*;
 pub use self::srh::*;
 use super::IpHeader;
 use byteorder::{BigEndian, ByteOrder};
@@ -11,6 +12,7 @@ use std::slice;
 use utils::FlowV6;
 
 mod ext;
+mod icmp;
 mod nf_macros;
 mod srh;
 
@@ -72,6 +74,7 @@ mod srh;
 const ROUTING_NXT_HDR: u8 = 43;
 const HIP_NXT_HDR: u8 = 139;
 const MOBILITY_NXT_HDR: u8 = 135;
+const ICMP_NXT_HDR: u8 = 58;
 // TODO: ... more constants here
 
 #[derive(FromPrimitive, Debug, PartialEq, Copy, Clone)]
@@ -79,6 +82,7 @@ const MOBILITY_NXT_HDR: u8 = 135;
 pub enum NextHeader {
     Routing = ROUTING_NXT_HDR,
     HostIdentityProtocol = HIP_NXT_HDR,
+    Icmp = ICMP_NXT_HDR,
     Mobility = MOBILITY_NXT_HDR,
     Tcp = TCP_NXT_HDR,
     Udp = UDP_NXT_HDR,

@@ -10,6 +10,7 @@ export examples=(
         test/srv6-sighup-flow
         test/srv6-inject
         test/tcp-checksum/
+        test/icmpv6
         # test/delay-test
         # test/shutdown-test
         # test/chain-test
