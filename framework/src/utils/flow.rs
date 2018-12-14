@@ -35,8 +35,8 @@ pub struct FlowV6 {
 impl Default for FlowV4 {
     fn default() -> FlowV4 {
         FlowV4 {
-            src_ip: Ipv4Addr::unspecified(),
-            dst_ip: Ipv4Addr::unspecified(),
+            src_ip: Ipv4Addr::UNSPECIFIED,
+            dst_ip: Ipv4Addr::UNSPECIFIED,
             src_port: 0,
             dst_port: 0,
             proto: 0,
@@ -47,8 +47,8 @@ impl Default for FlowV4 {
 impl Default for FlowV6 {
     fn default() -> FlowV6 {
         FlowV6 {
-            src_ip: Ipv6Addr::unspecified(),
-            dst_ip: Ipv6Addr::unspecified(),
+            src_ip: Ipv6Addr::UNSPECIFIED,
+            dst_ip: Ipv6Addr::UNSPECIFIED,
             src_port: 0,
             dst_port: 0,
             proto: 0,

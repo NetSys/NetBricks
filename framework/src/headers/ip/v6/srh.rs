@@ -11,98 +11,98 @@ use std::slice;
 use utils::*;
 
 /* From the SRH Draft RFC
-   https://tools.ietf.org/html/draft-ietf-6man-segment-routing-header-11#section-3
+  https://tools.ietf.org/html/draft-ietf-6man-segment-routing-header-11#section-3
 
-   Segment Routing Extension Header (SRH)
+  Segment Routing Extension Header (SRH)
 
-   A new type of the Routing Header (originally defined in [RFC8200]) is
-   defined: the Segment Routing Header (SRH) which has a new Routing
-   Type, (suggested value 4) to be assigned by IANA.
+  A new type of the Routing Header (originally defined in [RFC8200]) is
+  defined: the Segment Routing Header (SRH) which has a new Routing
+  Type, (suggested value 4) to be assigned by IANA.
 
-   The Segment Routing Header (SRH) is defined as follows:
+  The Segment Routing Header (SRH) is defined as follows:
 
-     0                   1                   2                   3
-     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    | Next Header   |  Hdr Ext Len  | Routing Type  | Segments Left |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |  Last Entry   |     Flags     |              Tag              |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |                                                               |
-    |            Segment List[0] (128 bits IPv6 address)            |
-    |                                                               |
-    |                                                               |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |                                                               |
-    |                                                               |
-                                  ...
-    |                                                               |
-    |                                                               |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |                                                               |
-    |            Segment List[n] (128 bits IPv6 address)            |
-    |                                                               |
-    |                                                               |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    //                                                             //
-    //         Optional Type Length Value objects (variable)       //
-    //                                                             //
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Next Header   |  Hdr Ext Len  | Routing Type  | Segments Left |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  Last Entry   |     Flags     |              Tag              |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                                                               |
+   |            Segment List[0] (128 bits IPv6 address)            |
+   |                                                               |
+   |                                                               |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                                                               |
+   |                                                               |
+                                 ...
+   |                                                               |
+   |                                                               |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                                                               |
+   |            Segment List[n] (128 bits IPv6 address)            |
+   |                                                               |
+   |                                                               |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   //                                                             //
+   //         Optional Type Length Value objects (variable)       //
+   //                                                             //
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-   where:
+  where:
 
-   o  Next Header: 8-bit selector.  Identifies the type of header
-      immediately following the SRH.
+  o  Next Header: 8-bit selector.  Identifies the type of header
+     immediately following the SRH.
 
-   o  Hdr Ext Len: 8-bit unsigned integer, is the length of the SRH
-      header in 8-octet units, not including the first 8 octets.
+  o  Hdr Ext Len: 8-bit unsigned integer, is the length of the SRH
+     header in 8-octet units, not including the first 8 octets.
 
-   o  Routing Type: TBD, to be assigned by IANA (suggested value: 4).
+  o  Routing Type: TBD, to be assigned by IANA (suggested value: 4).
 
-   o  Segments Left.  Defined in [RFC8200], it contains the index, in
-      the Segment List, of the next segment to inspect.  Segments Left
-      is decremented at each segment.
+  o  Segments Left.  Defined in [RFC8200], it contains the index, in
+     the Segment List, of the next segment to inspect.  Segments Left
+     is decremented at each segment.
 
-   o  Last Entry: contains the index, in the Segment List, of the last
-      element of the Segment List.
+  o  Last Entry: contains the index, in the Segment List, of the last
+     element of the Segment List.
 
-   o  Flags: 8 bits of flags.  Following flags are defined:
+  o  Flags: 8 bits of flags.  Following flags are defined:
 
-          0 1 2 3 4 5 6 7
-         +-+-+-+-+-+-+-+-+
-         |U|P|O|A|H|  U  |
-         +-+-+-+-+-+-+-+-+
+         0 1 2 3 4 5 6 7
+        +-+-+-+-+-+-+-+-+
+        |U|P|O|A|H|  U  |
+        +-+-+-+-+-+-+-+-+
 
-         U: Unused and for future use.  SHOULD be unset on transmission
-         and MUST be ignored on receipt.
+        U: Unused and for future use.  SHOULD be unset on transmission
+        and MUST be ignored on receipt.
 
-         P-flag: Protected flag.  Set when the packet has been rerouted
-         through FRR mechanism by an SR endpoint node.
+        P-flag: Protected flag.  Set when the packet has been rerouted
+        through FRR mechanism by an SR endpoint node.
 
-         O-flag: OAM flag.  When set, it indicates that this packet is
-         an operations and management (OAM) packet.
+        O-flag: OAM flag.  When set, it indicates that this packet is
+        an operations and management (OAM) packet.
 
-         A-flag: Alert flag.  If present, it means important Type Length
-         Value (TLV) objects are present.  See Section 3.1 for details
-         on TLVs objects.
+        A-flag: Alert flag.  If present, it means important Type Length
+        Value (TLV) objects are present.  See Section 3.1 for details
+        on TLVs objects.
 
-         H-flag: HMAC flag.  If set, the HMAC TLV is present and is
-         encoded as the last TLV of the SRH.  In other words, the last
-         36 octets of the SRH represent the HMAC information.  See
-         Section 3.1.5 for details on the HMAC TLV.
+        H-flag: HMAC flag.  If set, the HMAC TLV is present and is
+        encoded as the last TLV of the SRH.  In other words, the last
+        36 octets of the SRH represent the HMAC information.  See
+        Section 3.1.5 for details on the HMAC TLV.
 
-   o  Tag: tag a packet as part of a class or group of packets, e.g.,
-      packets sharing the same set of properties.
+  o  Tag: tag a packet as part of a class or group of packets, e.g.,
+     packets sharing the same set of properties.
 
-   o  Segment List[n]: 128 bit IPv6 addresses representing the nth
-      segment in the Segment List.  The Segment List is encoded starting
-      from the last segment of the path.  I.e., the first element of the
-      segment list (Segment List [0]) contains the last segment of the
-      path, the second element contains the penultimate segment of the
-      path and so on.
+  o  Segment List[n]: 128 bit IPv6 addresses representing the nth
+     segment in the Segment List.  The Segment List is encoded starting
+     from the last segment of the path.  I.e., the first element of the
+     segment list (Segment List [0]) contains the last segment of the
+     path, the second element contains the penultimate segment of the
+     path and so on.
 
-   o  Type Length Value (TLV) are described in Section 3.1.
- */
+  o  Type Length Value (TLV) are described in Section 3.1.
+*/
 
 // As per Spec: Routing Type: TBD, to be assigned by IANA (suggested value: 4).
 pub const ROUTING_TYPE: u8 = 4;

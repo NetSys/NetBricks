@@ -16,12 +16,14 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
                 hdr,
                 hdr.next_header().unwrap(),
                 hdr.offset()
-            ).cyan();
+            )
+            .cyan();
             println!("{}", info_fmt);
             let payload_fmt = format!(
                 "payload: {:x} {:x} {:x} {:x}",
                 payload[0], payload[1], payload[2], payload[3]
-            ).cyan();
+            )
+            .cyan();
             println!("{}", payload_fmt);
             let (src, dst) = (flow.src_port, flow.dst_port);
             let src_dst_fmt = format!("Src {} dst {}", src, dst).cyan();
@@ -48,7 +50,8 @@ fn tcp_ipv4_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
             let payload_fmt = format!(
                 "payload: {:x} {:x} {:x} {:x}",
                 payload[0], payload[1], payload[2], payload[3]
-            ).yellow();
+            )
+            .yellow();
             println!("{}", payload_fmt);
             let (src, dst) = (flow.src_port, flow.dst_port);
             let src_dst_fmt = format!("Src {} dst {}", src, dst).yellow();

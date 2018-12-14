@@ -43,7 +43,8 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
         let socket = match address {
             SocketAddr::V4(_) => TcpBuilder::new_v4(),
             SocketAddr::V6(_) => TcpBuilder::new_v6(),
-        }.unwrap();
+        }
+        .unwrap();
         let _ = socket.reuse_address(true).unwrap();
         // FIXME: Change 1024 to a parameter
         let listener = socket.bind(address).unwrap().listen(1024).unwrap();

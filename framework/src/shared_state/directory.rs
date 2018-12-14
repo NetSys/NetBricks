@@ -9,7 +9,7 @@ const DIRECTORY_PAGES: usize = 2; // Dedicate 2 pages to the directory.
 const BYTE_SIZE: usize = DIRECTORY_PAGES * PAGE_SIZE;
 
 /// Directory header for shared data.
-#[repr(packed, C)]
+#[repr(C)]
 pub struct DirectoryHeader {
     entries: AtomicUsize,
     // Used to signal that snapshotting is in progress.

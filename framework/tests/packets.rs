@@ -175,7 +175,7 @@ fn packet_from_bytes(bytes: &[u8]) -> Packet<NullHeader, EmptyMetadata> {
 
 #[test]
 fn icmpv6_from_bytes() {
-    dpdk_test!{
+    dpdk_test! {
         let pkt = packet_from_bytes(&ICMP_BYTES);
         // Check Ethernet header
         let epkt = pkt.parse_header::<MacHeader>();
@@ -212,7 +212,6 @@ fn icmpv6_from_bytes() {
         }
     }
 }
-
 
 #[test]
 fn srh_from_bytes() {

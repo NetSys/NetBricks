@@ -96,7 +96,7 @@ impl Default for NextHeader {
 }
 
 #[derive(Debug)]
-#[repr(C, packed)]
+#[repr(C)]
 pub struct Ipv6Header {
     version_to_flow_label: u32,
     payload_len: u16,
@@ -113,8 +113,8 @@ impl Default for Ipv6Header {
             payload_len: 0,
             next_header: 0,
             hop_limit: 0,
-            src_ip: Ipv6Addr::unspecified(),
-            dst_ip: Ipv6Addr::unspecified(),
+            src_ip: Ipv6Addr::UNSPECIFIED,
+            dst_ip: Ipv6Addr::UNSPECIFIED,
         }
     }
 }

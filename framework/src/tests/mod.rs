@@ -1,7 +1,7 @@
 //#![cfg(test)]
 #![macro_use]
 
-use interface::{dpdk};
+use interface::dpdk;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 
 lazy_static! {

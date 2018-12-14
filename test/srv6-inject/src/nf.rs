@@ -31,7 +31,7 @@ impl Default for MetaDataz {
         MetaDataz {
             flow: FlowV6::default(),
             payload_diff: 0,
-            segment_dst: Ipv6Addr::unspecified(),
+            segment_dst: Ipv6Addr::UNSPECIFIED,
         }
     }
 }
@@ -113,7 +113,7 @@ fn tcp_sr_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionB
         .parse::<SRH<Ipv6Header>>()
         .transform(box |pkt| {
             if let Some(payload_diff) = srh_change_packet(pkt, NewSegmentsAction::Prepend) {
-                let flow  = pkt.read_metadata().flow;
+                let flow = pkt.read_metadata().flow;
                 let segments_left = pkt.get_header().segments_left();
                 let segments = pkt.get_header().segments().unwrap().to_vec();
 
@@ -124,7 +124,8 @@ fn tcp_sr_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionB
                         segment_dst: segments[segments_left as usize],
                         ..Default::default()
                     }
-                }).unwrap();
+                })
+                .unwrap();
             }
         })
         .parse::<TcpHeader<SRH<Ipv6Header>>>()
@@ -154,21 +155,32 @@ fn tcp_sr_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionB
             v6h.set_payload_len((curr_payload_len as i8 + payload_diff) as u16);
         })
         .map(box |pkt| {
-            println!("V6-updated-hdr {}", format!("{}", pkt.get_header()).yellow());
+            println!(
+                "V6-updated-hdr {}",
+                format!("{}", pkt.get_header()).yellow()
+            );
         })
         .parse::<SRH<Ipv6Header>>()
         .map(box |pkt| {
             let cache = &mut *CACHE.write().unwrap();
-            cache.entry(flow_hash(&Flows::V6(pkt.read_metadata().flow))).or_insert(
-                pkt.get_header().segments().unwrap().to_vec()
-            );
+            cache
+                .entry(flow_hash(&Flows::V6(pkt.read_metadata().flow)))
+                .or_insert(pkt.get_header().segments().unwrap().to_vec());
             println!("SR-hdr {}", format!("{}", pkt.get_header()).yellow());
         })
         .map(box |pkt| {
             let cache = CACHE.read().unwrap();
-            println!("Cache Cache Flow Hash: {}",
-                     format!("{:?}", *cache.get(&flow_hash(&Flows::V6(pkt.read_metadata().flow)))
-                             .unwrap()).cyan().underline());
+            println!(
+                "Cache Cache Flow Hash: {}",
+                format!(
+                    "{:?}",
+                    *cache
+                        .get(&flow_hash(&Flows::V6(pkt.read_metadata().flow)))
+                        .unwrap()
+                )
+                .cyan()
+                .underline()
+            );
         })
         .parse::<TcpHeader<SRH<Ipv6Header>>>()
         .map(box |pkt| {

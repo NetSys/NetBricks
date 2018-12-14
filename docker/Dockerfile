@@ -6,6 +6,7 @@ RUN apt-get update && \
     apt-get -y --no-install-recommends install \
     libsctp-dev
 
+ENV RUSTC_WRAPPER=sccache
 ENV NETBRICKS_ROOT=/opt/netbricks
 ENV LD_LIBRARY_PATH="/opt/netbricks/native:/opt/netbricks/3rdparty/dpdk/build/lib"
 ENV DELAY_TEST_ROOT="/opt/netbricks/test/delay-test/target/release"

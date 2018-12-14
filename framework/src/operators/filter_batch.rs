@@ -37,7 +37,7 @@ where
     }
 }
 
-batch_no_new!{FilterBatch}
+batch_no_new! {FilterBatch}
 
 impl<T, V> Act for FilterBatch<T, V>
 where

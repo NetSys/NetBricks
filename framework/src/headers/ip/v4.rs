@@ -25,8 +25,8 @@ impl Default for Ipv4Header {
             version_to_len: u32::to_be(4 << 28),
             id_to_foffset: 0,
             ttl_to_csum: 0,
-            src_ip: Ipv4Addr::unspecified(),
-            dst_ip: Ipv4Addr::unspecified(),
+            src_ip: Ipv4Addr::UNSPECIFIED,
+            dst_ip: Ipv4Addr::UNSPECIFIED,
         }
     }
 }

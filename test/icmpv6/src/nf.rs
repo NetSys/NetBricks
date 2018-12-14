@@ -43,7 +43,8 @@ fn icmp_v6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> CompositionB
                 format!(
                     "   Msg Type: {:X?} | Code: {} | Checksum: {}",
                     msg_type, code, checksum
-                ).purple()
+                )
+                .purple()
             );
 
             assert_eq!(

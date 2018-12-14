@@ -18,7 +18,7 @@ impl Default for Meta {
         Meta {
             v6flow: FlowV6::default(),
             init_checksum: 0,
-            new_dst: Ipv6Addr::unspecified(),
+            new_dst: Ipv6Addr::UNSPECIFIED,
         }
     }
 }
@@ -36,9 +36,10 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
             Ipv6Addr::from_str("2001:558:feed:10:0:2::").unwrap(),
             "6A61",
         ),
-    ].iter()
-        .cloned()
-        .collect();
+    ]
+    .iter()
+    .cloned()
+    .collect();
     parent
         .parse::<Ipv6Header>()
         .metadata(box |pkt| Meta {
@@ -62,7 +63,8 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
                 format!(
                     "   Original CheckSum: {:X?} | Src: {} | Dst: {}",
                     init_checksum, src, dst
-                ).purple()
+                )
+                .purple()
             );
 
             {
@@ -79,7 +81,8 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
                 format!(
                     "Re-Computed CheckSum: {:X?} | Src: {} | Dst: {}",
                     computed_checksum, src, dst
-                ).purple()
+                )
+                .purple()
             );
 
             // Assert that we arrived at the same checksum we removed
@@ -108,7 +111,8 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
                 format!(
                     "      Previous CheckSum: {:X?} | Old Dst: {} | New Dst: {}",
                     current_checksum, old_dst, new_dst
-                ).purple()
+                )
+                .purple()
             );
 
             let segment_length = pkt.segment_length();
@@ -136,7 +140,8 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
                 format!(
                     "Newly Computed CheckSum: {:X?} | Old Dst: {} | New Dst: {}",
                     incremented_checksum, old_dst, new_dst
-                ).green()
+                )
+                .green()
             );
         })
         .reset()
@@ -160,16 +165,16 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
                 format!(
                     "          Previous CheckSum: {:X?} | Old Dst: {} | New Dst: {}",
                     current_checksum, old_dst, new_old_dst
-                ).green()
+                )
+                .green()
             );
 
             let segment_length = pkt.segment_length();
             let tcph = pkt.get_mut_header();
             // Check that we're returning an actual, overflow-checked new checksum
-            assert!(
-                tcph.update_checksum_incremental(old_dst, new_old_dst)
-                    .is_some()
-            );
+            assert!(tcph
+                .update_checksum_incremental(old_dst, new_old_dst)
+                .is_some());
             assert_eq!(
                 format!("{:X?}", tcph.checksum()),
                 format!("{:X?}", init_checksum)
@@ -192,7 +197,8 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
                 format!(
                     "Roundtrip Computed CheckSum: {:X?} | Old Dst: {} | New Dst: {}",
                     incremented_checksum, old_dst, new_old_dst
-                ).purple()
+                )
+                .purple()
             );
         })
         .compose()

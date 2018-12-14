@@ -42,7 +42,8 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreDataPath<T> {
         self.updates += 1;
         if self.updates >= self.delay {
             self.updates = 0;
-            if self.channel
+            if self
+                .channel
                 .try_send(self.cache.drain(0..).collect())
                 .is_ok()
             {
@@ -55,7 +56,8 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreDataPath<T> {
 impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreControlPlane<T> {
     fn update_internal(&mut self, v: Vec<(Flows, T)>) {
         for (flow, c) in v {
-            *(self.flow_counters
+            *(self
+                .flow_counters
                 .entry(flow)
                 .or_insert_with(Default::default)) += c;
         }

@@ -1,13 +1,13 @@
 use super::EndOffset;
 use common::*;
 use headers::NullHeader;
+use hex;
 use num::FromPrimitive;
 use std::default::Default;
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::str::FromStr;
-use hex;
 
 const IPV4_ETHER_TYPE: u16 = 0x0800;
 const IPV6_ETHER_TYPE: u16 = 0x86DD;
@@ -67,7 +67,9 @@ impl FromStr for MacAddress {
     fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
         match hex::decode(s.replace(":", "").replace("-", "")) {
             Ok(ref v) if v.len() == 6 => Ok(MacAddress::new_from_slice(v.as_slice())),
-            _ => Err(Error::from_kind(ErrorKind::FailedToParseMacAddress(s.to_string()))),
+            _ => Err(Error::from_kind(ErrorKind::FailedToParseMacAddress(
+                s.to_string(),
+            ))),
         }
     }
 }
@@ -203,7 +205,7 @@ mod tests {
         match parsed.err() {
             Some(Error(ErrorKind::FailedToParseMacAddress(s), _)) => {
                 assert_eq!(address.to_string(), s);
-            },
+            }
             _ => assert!(false),
         }
     }
@@ -216,7 +218,7 @@ mod tests {
         match parsed.err() {
             Some(Error(ErrorKind::FailedToParseMacAddress(s), _)) => {
                 assert_eq!(address.to_string(), s);
-            },
+            }
             _ => assert!(false),
         }
     }

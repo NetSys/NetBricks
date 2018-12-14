@@ -103,6 +103,7 @@ impl PollScheduler {
             self.events = epoll_wait(self.epoll_fd, dest, 0).unwrap();
             unsafe { self.ready_tokens.set_len(self.events) };
             self.ready_tokens.pop()
-        }.map(|t| (t.data(), self.epoll_kind_to_available(&t.events())))
+        }
+        .map(|t| (t.data(), self.epoll_kind_to_available(&t.events())))
     }
 }

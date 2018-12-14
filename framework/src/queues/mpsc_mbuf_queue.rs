@@ -94,7 +94,8 @@ impl MpscQueue {
         let producer_head = self.producer.head.load(Ordering::Acquire);
         let consumer_tail = self.consumer.tail.load(Ordering::Acquire);
 
-        let free = self.mask
+        let free = self
+            .mask
             .wrapping_add(consumer_tail)
             .wrapping_sub(producer_head);
         let insert = min(free, len);
@@ -124,7 +125,8 @@ impl MpscQueue {
         while {
             producer_head = self.producer.head.load(Ordering::Acquire);
             consumer_tail = self.consumer.tail.load(Ordering::Acquire);
-            let free = self.mask
+            let free = self
+                .mask
                 .wrapping_add(consumer_tail)
                 .wrapping_sub(producer_head);
             insert = min(free, len);

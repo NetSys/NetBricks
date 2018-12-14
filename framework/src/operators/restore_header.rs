@@ -24,7 +24,7 @@ where
     M: Sized + Send,
     V: Batch + BatchIterator + Act,
 {
-    act!{}
+    act! {}
 }
 
 impl<T, M, V> Batch for RestoreHeader<T, M, V>
