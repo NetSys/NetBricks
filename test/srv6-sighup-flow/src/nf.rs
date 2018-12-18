@@ -5,7 +5,7 @@ use ATOM_CONF;
 
 #[inline]
 fn tcp_ipv6_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionBatch {
-    parent.parse::<TcpHeader<Ipv6Header>>().compose()
+    parent.compose()
 }
 
 #[inline]
@@ -15,7 +15,6 @@ fn tcp_sr_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionB
         .map(box |pkt| {
             info!("SR-hdr {}", pkt.get_header());
         })
-        .parse::<TcpHeader<SRH<Ipv6Header>>>()
         .compose()
 }
 

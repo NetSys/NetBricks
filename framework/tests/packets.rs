@@ -1,4 +1,3 @@
-#![feature(tool_attributes)]
 extern crate generic_array;
 #[macro_use]
 extern crate netbricks;
@@ -7,160 +6,11 @@ use generic_array::GenericArray;
 use netbricks::common::EmptyMetadata;
 use netbricks::headers::*;
 use netbricks::interface::{new_packet, Packet};
+use netbricks::tests::*;
+use netbricks::utils::*;
 use std::convert::From;
 use std::net::Ipv6Addr;
 use std::str::FromStr;
-
-#[rustfmt::skip]
-static SRH_BYTES: [u8; 170] = [
-    // --- Ethernet header ---
-    // Destination MAC
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-    // Source MAC
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-    // EtherType (IPv6)
-    0x86, 0xDD,
-    // --- IPv6 Header ---
-    // Version, Traffic Class, Flow Label
-    0x60, 0x00, 0x00, 0x00,
-    // Payload Length
-    0x00, 0x74,
-    // Next Header (Routing = 43)
-    0x2b,
-    // Hop Limit
-    0x02,
-    // Source Address
-    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-    // Dest Address
-    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
-    // --- SRv6 Header --
-    // Next Header (TCP)
-    0x06,
-    // Hdr Ext Len (3 segments, units of 8 octets or 64 bits)
-    0x06,
-    // Routing type (SRv6)
-    0x04,
-    // Segments left
-    0x00,
-    // Last entry
-    0x02,
-    // Flags
-    0x00,
-    // Tag
-    0x00, 0x00,
-    // Segments: [0] 2001:0db8:85a3:0000:0000:8a2e:0370:7334
-    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
-    // Segments: [1] 2001:0db8:85a3:0000:0000:8a2e:0370:7335
-    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x35,
-    // Segments: [2] 2001:0db8:85a3:0000:0000:8a2e:0370:7333
-    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x33,
-    // --- Tcp header ---
-    // Src Port
-    0x0d, 0x88,
-    // Dst Port
-    0x04, 0x00,
-    // Sequence number
-    0x00, 0x00, 0x00, 0x00,
-    // Ack number
-    0x00, 0x00, 0x00, 0x00,
-    // Flags
-    0x50, 0x02,
-    // Window
-    0x00, 0x0a,
-    // Checksum
-    0x00, 0x00,
-    // Urgent pointer
-    0x00, 0x00,
-    // Payload
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
-];
-
-#[rustfmt::skip]
-static V6_BYTES: [u8; 62] = [
-    // --- Ethernet header ---
-    // Destination MAC
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-    // Source MAC
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-    // EtherType (IPv6)
-    0x86, 0xDD,
-    // --- IPv6 Header ---
-    // Version, Traffic Class, Flow Label
-    0x60, 0x00, 0x00, 0x00,
-    // Payload Length
-    0x00, 0x08,
-    // Next Header (UDP = 17)
-    0x11,
-    // Hop Limit
-    0x02,
-    // Source Address
-    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-    // Dest Address
-    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
-    // --- UDP Header ---
-    // Src Port
-    0x0d, 0x88,
-    // Dst Port
-    0x04, 0x00,
-    // Length
-    0x00, 0x08,
-    // Checksum
-    0x00, 0x00
-];
-
-#[rustfmt::skip]
-static ICMP_BYTES: [u8;136] = [
-    // --- Ethernet Header ---
-    // Destination MAC
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-    // Source MAC
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-    //EtherType(IPv6)
-    0x86, 0xDD,
-    // --- IPv6 Header ---
-    //Version, Traffic Class, Flow Label
-    0x60, 0x00, 0x00, 0x00,
-    //Payload Length
-    0x00, 0x58,
-    // Next Header(ICMPV6=58)
-    0x3a,
-    // Hop Limit,
-    0xff,
-    // Source Address
-    0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b,
-    // Destination Address
-    0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-    // --ICMPv6 Header--
-    // Type
-    0x86,
-    // Code
-    0x00,
-    // Checksum
-    0xf5, 0x0c,
-    // --ICMPv6 Payload--
-    // Curr hop limit
-    0x40,
-    // Flags
-    0x40,
-    // Router lifetime
-    0x0e, 0x10,
-    // Reachable time
-    0x00,
-    // Retrans timer
-    0x00,
-    // ICMPv6 Option(Prefix Information)
-    0x03, 0x04, 0x40, 0xc0, 0x00, 0x00, 0x09, 0x3e, 0x00, 0x00, 0x09, 0x3e, 0x00, 0x00, 0x00, 0x00,
-    0x26, 0x07, 0xfc, 0xc8, 0xf1, 0x42, 0xb0, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    // ICMPv6 Option(MTU)
-    0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0x05, 0xdc,
-    // ICMPv6 Option(Source link-layer address)
-    0x01, 0x01, 0x70, 0x3a, 0xcb, 0x1b, 0xf9, 0x7a,
-    // ICMPv6 Option(Recursive DNS Server)
-    0x19, 0x03, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x26, 0x07, 0xfc, 0xc8, 0xf1, 0x42, 0xb0, 0xf0,
-    0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b
-];
 
 // Acquire a packet buffer for testing header extraction from raw bytes
 fn packet_from_bytes(bytes: &[u8]) -> Packet<NullHeader, EmptyMetadata> {
@@ -176,7 +26,7 @@ fn packet_from_bytes(bytes: &[u8]) -> Packet<NullHeader, EmptyMetadata> {
 #[test]
 fn icmpv6_from_bytes() {
     dpdk_test! {
-        let pkt = packet_from_bytes(&ICMP_BYTES);
+        let pkt = packet_from_bytes(&ICMP_RTR_ADV_BYTES);
         // Check Ethernet header
         let epkt = pkt.parse_header::<MacHeader>();
         {
@@ -203,12 +53,55 @@ fn icmpv6_from_bytes() {
         }
 
         //Check Icmp header
-        let icmp_pkt = v6pkt.parse_header::<IcmpV6Header<Ipv6Header>>();
+        let icmp_pkt = v6pkt.parse_header::<Icmpv6Header<Ipv6Header>>();
         {
-            let icmpv6 = icmp_pkt.get_header();
-            assert_eq!(icmpv6.msg_type().unwrap(), IcmpMessageType::RouterAdvertisement);
-            assert_eq!(icmpv6.checksum(), 0xf50c);
-            assert_eq!(icmpv6.code(), 0);
+            let icmpv6h = icmp_pkt.get_header();
+            assert_eq!(icmpv6h.msg_type().unwrap(), IcmpMessageType::RouterAdvertisement);
+            assert_eq!(icmpv6h.checksum(), 0xf50c);
+            assert_eq!(icmpv6h.code(), 0);
+        }
+    }
+}
+
+#[test]
+fn icmpv6_too_big_from_bytes() {
+    dpdk_test! {
+        let pkt = packet_from_bytes(&ICMP_TOO_BIG_BYTES);
+        let epkt = pkt.parse_header::<MacHeader>();
+        {
+            let eth = epkt.get_header();
+            assert_eq!(eth.dst.addr, MacAddress::new(96, 3, 8, 162, 88, 156).addr);
+            assert_eq!(eth.src.addr, MacAddress::new(124, 154, 84, 106, 238, 254).addr);
+            assert_eq!(eth.etype(), Some(EtherType::IPv6));
+        }
+
+        let v6pkt = epkt.parse_header::<Ipv6Header>();
+        let icmpv6_pkt = v6pkt.parse_header::<Icmpv6PktTooBig<Ipv6Header>>();
+        let icmpv6h = icmpv6_pkt.get_header();
+        {
+            assert_eq!(icmpv6h.msg_type().unwrap(), IcmpMessageType::PacketTooBig);
+            assert_eq!(icmpv6h.checksum(), 0x5652);
+            assert_eq!(icmpv6h.code(), 0);
+            assert_eq!(icmpv6h.mtu(), 1280);
+            assert_eq!(icmpv6_pkt.get_payload().len(), icmpv6h.payload_size(0));
+        }
+
+
+        // See if inner-ipv6 hdr (offending header) is actually ipv6 hdr
+        {
+            let evilv6_payload = icmpv6_pkt.get_payload();
+            // Convert &[u8] (get_payload) into associated type
+            let evilv6h: Ipv6Header = cast_payload::<Ipv6Header>(evilv6_payload);
+            let src = Ipv6Addr::from_str("2601:449:4200:359a:bd78:6aaf:4f22:b652").unwrap();
+            let dst = Ipv6Addr::from_str("2001:470:1:18::1281").unwrap();
+            assert_eq!(evilv6h.version(), 6);
+            assert_eq!(evilv6h.traffic_class(), 0);
+            assert_eq!(evilv6h.flow_label(), 382544);
+            assert_eq!(evilv6h.payload_len(), 1408);
+            assert_eq!(evilv6h.next_header().unwrap(), NextHeader::Icmp);
+            assert_eq!(evilv6h.hop_limit(),55);
+            assert_eq!(Ipv6Addr::from(evilv6h.src()), src);
+            assert_eq!(Ipv6Addr::from(evilv6h.dst()), dst);
         }
     }
 }

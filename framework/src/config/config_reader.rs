@@ -22,7 +22,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                 return Err(ErrorKind::ConfigurationError(String::from(
                     "Could not parse name for port",
                 ))
-                .into())
+                .into());
             }
         };
 
@@ -34,7 +34,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                     "Could not parse number of rx descriptors {:?}",
                     v
                 ))
-                .into())
+                .into());
             }
         };
 
@@ -46,7 +46,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                     "Could not parse number of tx descriptors {:?}",
                     v
                 ))
-                .into())
+                .into());
             }
         };
 
@@ -58,7 +58,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                     "Could not parse loopback spec {:?}",
                     v
                 ))
-                .into())
+                .into());
             }
         };
 
@@ -70,7 +70,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                     "Could not parse tso spec {:?}",
                     v
                 ))
-                .into())
+                .into());
             }
         };
 
@@ -82,7 +82,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                     "Could not parse csum spec {:?}",
                     v
                 ))
-                .into())
+                .into());
             }
         };
 
@@ -197,7 +197,7 @@ pub fn read_configuration_from_str(
                     "Could not parse {} as core",
                     core
                 ))
-                .into())
+                .into());
             }
         },
         None => DEFAULT_PRIMARY_CORE,
@@ -278,7 +278,7 @@ pub fn read_configuration_from_str(
                 "Could not parse strict spec (should be boolean) {:?}",
                 v
             ))
-            .into())
+            .into());
         }
     };
 

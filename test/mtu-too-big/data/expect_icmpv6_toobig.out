@@ -1,0 +1,1 @@
+00:00:00:00:00:01 (oui Ethernet) > 00:00:00:00:00:00 (oui Ethernet), ethertype IPv6 (0x86dd), length 1294: fe80::3 > fe80::1: ICMP6, packet too big, mtu 1280, length 1240

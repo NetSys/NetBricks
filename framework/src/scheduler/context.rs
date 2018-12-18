@@ -234,7 +234,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
                         "Port {} could not be initialized {:?}",
                         port.name, e
                     ))
-                    .into())
+                    .into());
                 }
             }
 
@@ -252,7 +252,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
                              initialized {:?}",
                             rx_q, port.name, e
                         ))
-                        .into())
+                        .into());
                     }
                 }
             }

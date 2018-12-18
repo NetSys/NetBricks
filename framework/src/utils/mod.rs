@@ -1,11 +1,18 @@
 pub use self::asm::*;
 pub use self::atom::*;
 pub use self::flow::*;
+use headers::EndOffset;
+use std::ptr;
 mod asm;
 mod atom;
 mod flow;
 
 pub const PAGE_SIZE: usize = 4096; // Page size in bytes, not using huge pages here.
+
+/// cast rest of payload to a header or anything or implementing EndOffset
+pub fn cast_payload<T: EndOffset>(payload: &[u8]) -> T {
+    unsafe { ptr::read(payload.as_ptr() as *const T) }
+}
 
 /// Round a given buffer to page size units.
 #[inline]
@@ -27,7 +34,7 @@ pub fn round_to_power_of_2(mut size: usize) -> usize {
     size
 }
 
-// clears a bit in a byte, pos is the zero-based position in the byte starting from the left
+/// clears a bit in a byte, pos is the zero-based position in the byte starting from the left
 #[inline]
 pub fn clear_bit(original: u8, pos: u8) -> u8 {
     let swap_pos = 7 - pos;
@@ -35,7 +42,7 @@ pub fn clear_bit(original: u8, pos: u8) -> u8 {
     original & !mask
 }
 
-// sets a bit in a byte, pos is the zero-based position in the byte starting from the left
+/// sets a bit in a byte, pos is the zero-based position in the byte starting from the left
 #[inline]
 pub fn set_bit(original: u8, pos: u8) -> u8 {
     let swap_pos = 7 - pos;
@@ -43,7 +50,7 @@ pub fn set_bit(original: u8, pos: u8) -> u8 {
     original | mask
 }
 
-// gets a bit value as a bool in a byte, pos is the zero-based position in the byte starting from left
+/// gets a bit value as a bool in a byte, pos is the zero-based position in the byte starting from left
 #[inline]
 pub fn get_bit(original: u8, pos: u8) -> bool {
     let swap_pos = 7 - pos;

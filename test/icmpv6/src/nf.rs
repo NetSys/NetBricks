@@ -2,19 +2,18 @@ use colored::*;
 use netbricks::headers::*;
 use netbricks::operators::*;
 use std::default::Default;
+use std::net::Ipv6Addr;
 
 struct Meta {
-    msg_type: IcmpMessageType,
-    code: u8,
-    checksum: u16,
+    src_ip: Ipv6Addr,
+    dst_ip: Ipv6Addr,
 }
 
 impl Default for Meta {
     fn default() -> Meta {
         Meta {
-            msg_type: IcmpMessageType::NeighborAdvertisement,
-            code: 0,
-            checksum: 0,
+            src_ip: Ipv6Addr::UNSPECIFIED,
+            dst_ip: Ipv6Addr::UNSPECIFIED,
         }
     }
 }
@@ -27,32 +26,46 @@ fn icmp_v6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> CompositionB
     );
     parent
         .parse::<Ipv6Header>()
-        .parse::<IcmpV6Header<Ipv6Header>>()
         .metadata(box |pkt| Meta {
-            msg_type: pkt.get_header().msg_type().unwrap(),
-            code: pkt.get_header().code(),
-            checksum: pkt.get_header().checksum(),
+            src_ip: pkt.get_header().src(),
+            dst_ip: pkt.get_header().dst(),
         })
+        .parse::<Icmpv6Header<Ipv6Header>>()
         .transform(box |pkt| {
-            let msg_type = &pkt.read_metadata().msg_type;
-            let code = pkt.read_metadata().code;
-            let checksum = pkt.read_metadata().checksum;
+            let segment_length = pkt.segment_length(Protocol::Icmp);
+            let src = pkt.read_metadata().src_ip;
+            let dst = pkt.read_metadata().dst_ip;
 
+            let icmpv6 = pkt.get_mut_header();
             println!(
                 "{}",
                 format!(
-                    "   Msg Type: {:X?} | Code: {} | Checksum: {}",
-                    msg_type, code, checksum
+                    "   Msg Type: {:X?} | Code: {} | Checksum: {:X?}",
+                    icmpv6.msg_type().unwrap(),
+                    icmpv6.code(),
+                    icmpv6.checksum()
                 )
                 .purple()
             );
 
             assert_eq!(
-                format!("{:X?}", msg_type),
+                format!("{:X?}", icmpv6.msg_type().unwrap()),
                 format!("{:X?}", IcmpMessageType::RouterAdvertisement)
             );
-            assert_eq!(format!("{:X?}", code), format!("{:X?}", 0));
-            assert_eq!(format!("{:X?}", checksum), format!("{:X?}", 0xf50c));
+            assert_eq!(format!("{:X?}", icmpv6.code()), format!("{:X?}", 0));
+            assert_eq!(
+                format!("{:X?}", icmpv6.checksum()),
+                format!("{:X?}", 0xf50c)
+            );
+
+            let prev_checksum = icmpv6.checksum();
+            icmpv6.set_checksum(0);
+            icmpv6.update_v6_checksum(segment_length, src, dst, Protocol::Icmp);
+
+            assert_eq!(
+                format!("{:X?}", prev_checksum),
+                format!("{:X?}", icmpv6.checksum())
+            );
         })
         .compose()
 }

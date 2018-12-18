@@ -1,6 +1,6 @@
-use super::EndOffset;
+use super::{EndOffset, HeaderUpdates};
 use common::*;
-use headers::NullHeader;
+use headers::{NextHeader, NullHeader};
 use hex;
 use num::FromPrimitive;
 use std::default::Default;
@@ -167,6 +167,16 @@ impl MacHeader {
         self.src.copy_address(&self.dst);
         self.dst.copy_address(&src);
     }
+}
+
+impl HeaderUpdates for MacHeader {
+    type PreviousHeader = NullHeader;
+
+    #[inline]
+    fn update_payload_len(&mut self, _payload_diff: isize) {}
+
+    #[inline]
+    fn update_next_header(&mut self, _hdr: NextHeader) {}
 }
 
 #[cfg(test)]

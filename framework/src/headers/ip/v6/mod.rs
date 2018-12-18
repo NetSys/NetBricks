@@ -3,7 +3,7 @@ pub use self::icmp::*;
 pub use self::srh::*;
 use super::IpHeader;
 use byteorder::{BigEndian, ByteOrder};
-use headers::{EndOffset, HeaderUpdates, MacHeader, TCP_NXT_HDR, UDP_NXT_HDR};
+use headers::{EndOffset, HeaderUpdates, MacHeader, ICMP_NXT_HDR, TCP_NXT_HDR, UDP_NXT_HDR};
 use num::FromPrimitive;
 use std::default::Default;
 use std::fmt;
@@ -12,7 +12,7 @@ use std::slice;
 use utils::FlowV6;
 
 mod ext;
-mod icmp;
+pub mod icmp;
 mod nf_macros;
 mod srh;
 
@@ -74,8 +74,11 @@ mod srh;
 const ROUTING_NXT_HDR: u8 = 43;
 const HIP_NXT_HDR: u8 = 139;
 const MOBILITY_NXT_HDR: u8 = 135;
-const ICMP_NXT_HDR: u8 = 58;
 // TODO: ... more constants here
+
+// IPv6-specific MTU constants
+pub const IPV6_MIN_MTU: u32 = 1280;
+pub const IPV6_MIN_MTU_CHECK: u32 = IPV6_MIN_MTU + 14; // ipv6 min mtu (1280) + 14 ethernet hdr size;
 
 #[derive(FromPrimitive, Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
@@ -89,13 +92,25 @@ pub enum NextHeader {
     NoNextHeader = 59,
 }
 
+/// IPv6 Extension headers (and the first header) all have the "next header"
+/// field which specifies the contents of the following extension or protocol
+/// header. The value of this field is defined by IANA:
+/// https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
+///
+/// Similarly to being generic over v4 and v6 headers as parents for TCP/UDP, we
+/// make extension headers generic but specify that they need to expose an
+/// accessor for the next header field.
+pub trait Ipv6VarHeader: EndOffset {
+    fn next_header(&self) -> Option<NextHeader>;
+}
+
 impl Default for NextHeader {
     fn default() -> NextHeader {
         NextHeader::NoNextHeader
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Ipv6Header {
     version_to_flow_label: u32,
@@ -109,10 +124,10 @@ pub struct Ipv6Header {
 impl Default for Ipv6Header {
     fn default() -> Ipv6Header {
         Ipv6Header {
-            version_to_flow_label: u32::to_be(6 << 24),
+            version_to_flow_label: u32::to_be(6 << 28),
             payload_len: 0,
-            next_header: 0,
             hop_limit: 0,
+            next_header: NextHeader::default() as u8,
             src_ip: Ipv6Addr::UNSPECIFIED,
             dst_ip: Ipv6Addr::UNSPECIFIED,
         }
@@ -148,18 +163,6 @@ impl EndOffset for Ipv6Header {
         // prev.etype() == 0x86DD
         true
     }
-}
-
-// IPv6 Extension headers (and the first header) all have the "next header"
-// field which specifies the contents of the following extension or protocol
-// header. The value of this field is defined by IANA:
-// https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
-//
-// Similarly to being generic over v4 and v6 headers as parents for TCP/UDP, we
-// make extension headers generic but specify that they need to expose an
-// accessor for the next header field.
-pub trait Ipv6VarHeader: EndOffset {
-    fn next_header(&self) -> Option<NextHeader>;
 }
 
 // The IPv6 protocol header has a next header field and can be the
@@ -238,7 +241,7 @@ impl Ipv6Header {
     }
 
     #[inline]
-    pub fn new() -> Ipv6Header {
+    pub fn new() -> Self {
         Default::default()
     }
 
@@ -341,10 +344,17 @@ impl Ipv6Header {
 }
 
 impl HeaderUpdates for Ipv6Header {
+    type PreviousHeader = MacHeader;
+
     #[inline]
     fn update_payload_len(&mut self, payload_diff: isize) {
-        let current_payload = self.payload_len();
-        self.set_payload_len((current_payload as isize + payload_diff) as u16);
+        match self.next_header() {
+            None => (),
+            _ => {
+                let current_payload = self.payload_len();
+                self.set_payload_len((current_payload as isize + payload_diff) as u16);
+            }
+        }
     }
 
     #[inline]

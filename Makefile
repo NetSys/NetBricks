@@ -61,5 +61,10 @@ else
 endif
 
 test:
+ifdef TEST
+	@./build.sh build_test $(TEST)
+	@./build.sh test $(TEST)
+else
 	@./build.sh build
 	@./build.sh test
+endif

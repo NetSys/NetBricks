@@ -1,6 +1,5 @@
 use common::*;
-use headers::ip::v6::Ipv6VarHeader;
-use headers::{EndOffset, HeaderUpdates, NextHeader, NullHeader};
+use headers::{EndOffset, HeaderUpdates, Ipv6VarHeader, NextHeader, NullHeader, Protocol};
 use native::zcsi::*;
 use std::cmp::{self, Ordering};
 use std::fmt::Display;
@@ -302,7 +301,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     }
 
     #[inline]
-    fn data_len(&self) -> usize {
+    pub fn data_len(&self) -> usize {
         unsafe { (*self.mbuf).data_len() }
     }
 
@@ -384,9 +383,12 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                     let to_move = packet_len - offset;
                     ptr::copy_nonoverlapping(fin_dst, move_loc, to_move);
                 }
-                let dst = fin_dst as *mut T2;
-                ptr::copy_nonoverlapping(hdr, dst, 1);
-                Some(create_packet(self.get_mbuf_ref(), dst, offset))
+                ptr::copy_nonoverlapping(hdr, fin_dst as *mut T2, 1);
+                Some(create_packet(
+                    self.get_mbuf_ref(),
+                    fin_dst as *mut T2,
+                    offset,
+                ))
             } else {
                 None
             }
@@ -451,7 +453,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     ) -> Result<()>
     where
         T: HeaderUpdates,
-        T2: Ipv6VarHeader,
+        T2: EndOffset,
     {
         unsafe {
             if let Ok(diff) = self.insert_a_header::<T2>(header) {
@@ -474,17 +476,14 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     ) -> Result<()>
     where
         T: HeaderUpdates,
-        T2: Ipv6VarHeader,
+        T2: EndOffset,
     {
         self.insert_header_fn::<T2>(header_type, header, &|_| ())
     }
 
     /// Remove the next header from the currently parsed packet
     #[inline]
-    fn remove_a_header<T2: EndOffset<PreviousHeader = T>>(&mut self) -> Result<isize>
-    where
-        T2: Ipv6VarHeader,
-    {
+    fn remove_a_header<T2: EndOffset<PreviousHeader = T>>(&mut self) -> Result<isize> {
         unsafe {
             let packet_len = self.data_len(); // length of packet
             let var_header = self.payload() as *mut T2; // next_var_type_hdr ptr
@@ -765,15 +764,20 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         }
     }
 
-    /// Calculate current header + data calculations like for tcp/udp
+    /// Calculate current header + data calculations like for tcp/udp/icmp
     /// checksum.
     #[inline]
-    pub fn segment_length(&self) -> u32 {
+    pub fn segment_length(&self, proto: Protocol) -> u32 {
         unsafe {
             let current_hdr = self.header();
             let current_hdr_size = (*current_hdr).offset();
             let payload = self.payload_size();
-            current_hdr_size as u32 + payload as u32 + self.sum_be_words(8)
+            let skipword = match proto {
+                Protocol::Tcp => 8,
+                Protocol::Udp => 3,
+                _ => 1,
+            };
+            current_hdr_size as u32 + payload as u32 + self.sum_be_words(skipword)
         }
     }
 

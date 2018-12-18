@@ -68,10 +68,10 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
             );
 
             {
-                let segment_length = pkt.segment_length();
+                let segment_length = pkt.segment_length(Protocol::Tcp);
                 let tcph = pkt.get_mut_header();
                 tcph.set_checksum(0);
-                tcph.update_checksum(segment_length, src, dst);
+                tcph.update_v6_checksum(segment_length, src, dst, Protocol::Tcp);
             }
 
             let computed_checksum = pkt.get_header().checksum();
@@ -115,16 +115,18 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
                 .purple()
             );
 
-            let segment_length = pkt.segment_length();
+            let segment_length = pkt.segment_length(Protocol::Tcp);
             let tcph = pkt.get_mut_header();
 
             // Check that we're returning an actual, overflow-checked new checksum
-            assert!(tcph.update_checksum_incremental(old_dst, new_dst).is_some());
+            assert!(tcph
+                .update_v6_checksum_incremental(old_dst, new_dst)
+                .is_some());
             // Compare to WireShark Validation
             assert_eq!(format!("{:X?}", tcph.checksum()), *map.get(&src).unwrap());
 
             let incremented_checksum = tcph.checksum();
-            tcph.update_checksum(segment_length, src, new_dst);
+            tcph.update_v6_checksum(segment_length, src, new_dst, Protocol::Tcp);
 
             // Test Incremented vs Fully Computed Checksums
             assert_eq!(
@@ -169,11 +171,11 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
                 .green()
             );
 
-            let segment_length = pkt.segment_length();
+            let segment_length = pkt.segment_length(Protocol::Tcp);
             let tcph = pkt.get_mut_header();
             // Check that we're returning an actual, overflow-checked new checksum
             assert!(tcph
-                .update_checksum_incremental(old_dst, new_old_dst)
+                .update_v6_checksum_incremental(old_dst, new_old_dst)
                 .is_some());
             assert_eq!(
                 format!("{:X?}", tcph.checksum()),
@@ -181,7 +183,7 @@ fn tcp_ipv6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Composition
             );
 
             let incremented_checksum = tcph.checksum();
-            tcph.update_checksum(segment_length, src, new_old_dst);
+            tcph.update_v6_checksum(segment_length, src, new_old_dst, Protocol::Tcp);
 
             // Test Incremented vs Fully Computed Checksums
             assert_eq!(

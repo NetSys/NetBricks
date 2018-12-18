@@ -23,12 +23,13 @@ impl PacketCreator {
         };
         mac.set_etype(mac::EtherType::IPv4);
         let mut ip = Ipv4Header::new();
-        ip.set_src(u32::from(Ipv4Addr::from_str("10.0.0.1").unwrap()));
-        ip.set_dst(u32::from(Ipv4Addr::from_str("10.0.0.5").unwrap()));
+        ip.set_src(Ipv4Addr::from_str("10.0.0.1").unwrap());
+        ip.set_dst(Ipv4Addr::from_str("10.0.0.5").unwrap());
         ip.set_ttl(128);
         ip.set_version(4);
         ip.set_ihl(5);
         ip.set_length(20);
+
         PacketCreator {
             mac: mac,
             ip: ip,

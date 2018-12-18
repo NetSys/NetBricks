@@ -3,7 +3,6 @@ use headers::*;
 use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
-use std::net::Ipv6Addr;
 
 #[repr(C, packed)]
 pub struct TcpHeader<T> {
@@ -111,6 +110,21 @@ where
     #[inline]
     fn check_correct(&self, _prev: &T) -> bool {
         true
+    }
+}
+
+impl<T> CalcChecksums for TcpHeader<T>
+where
+    T: IpHeader,
+{
+    #[inline]
+    fn checksum(&self) -> u16 {
+        u16::from_be(self.csum)
+    }
+
+    #[inline]
+    fn set_checksum(&mut self, csum: u16) {
+        self.csum = u16::to_be(csum)
     }
 }
 
@@ -376,73 +390,6 @@ where
 
     pub fn set_window_size(&mut self, wnd: u16) {
         self.window = u16::to_be(wnd);
-    }
-
-    /// Checksum
-    pub fn checksum(&self) -> u16 {
-        u16::from_be(self.csum)
-    }
-
-    pub fn set_checksum(&mut self, csum: u16) {
-        self.csum = u16::to_be(csum)
-    }
-
-    /// Update Checksum w/ tcp_segment_length (from <Packet>) and src and dst on
-    /// header.
-    /// TODO: Validate Checksum?
-    pub fn update_checksum(&mut self, segment_length: u32, src: Ipv6Addr, dst: Ipv6Addr) {
-        let mut sum = segment_length
-            + src.segments().iter().map(|x| *x as u32).sum::<u32>()
-            + dst.segments().iter().map(|x| *x as u32).sum::<u32>()
-            + TCP_NXT_HDR as u32;
-
-        while sum >> 16 != 0 {
-            sum = (sum >> 16) + (sum & 0xFFFF);
-        }
-
-        self.set_checksum(!sum as u16)
-    }
-
-    /*
-    see https://tools.ietf.org/html/rfc1624
-    essentially, if HC is the original checksum, m is original 16 bit word
-    of the header, HC', the new header checksum, m' the new 16 bit word then
-    HC' = ~(~HC + ~m + m')
-    */
-    pub fn update_checksum_incremental(
-        &mut self,
-        old_field: Ipv6Addr,
-        updated_field: Ipv6Addr,
-    ) -> Option<u16> {
-        let mut old_checksum = self.checksum();
-        if old_checksum == 0 {
-            return None;
-        }
-
-        let old_segments = old_field.segments();
-        let updated_segments = updated_field.segments();
-        let mut sum = 0;
-
-        for i in 0..updated_segments.len() {
-            let old_frag = old_segments[i] & 0xFFFF;
-            let updated_frag = updated_segments[i] & 0xFFFF;
-
-            match ((!old_checksum & 0xFFFF) as u32)
-                .checked_add((!old_frag & 0xFFFF) as u32 + (updated_frag & 0xFFFF) as u32)
-            {
-                Some(added) => sum = added,
-                None => return None,
-            }
-
-            sum = (sum >> 16 & 0xFFFF) + (sum & 0xFFFF);
-            sum = !sum & 0xFFFF;
-            old_checksum = sum as u16
-        }
-
-        let fin_sum = sum as u16;
-
-        self.set_checksum(fin_sum);
-        Some(fin_sum)
     }
 
     /// Urgent pointer

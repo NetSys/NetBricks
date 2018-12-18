@@ -33,7 +33,7 @@ num-derive="0.2"
 num-traits = "0.2"
 generic-array = ">=0.11.0"
 crossbeam = "=0.4"
-rayon = "1.0.2"
+rayon = "1.0.3"
 hex = "0.3.2"
 enum_primitive = "0.1.1"
 
