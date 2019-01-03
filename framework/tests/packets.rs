@@ -243,7 +243,7 @@ fn insert_static_srh_from_bytes() {
             assert_eq!(iter.next().unwrap(), &seg1);
 
             // Insert header onto packet
-            if let Ok(()) = v6pkt2.insert_header(NextHeader::Routing, &srh) {
+            if let Ok(()) = v6pkt2.insert_v6_header(NextHeader::Routing, &srh) {
                 let srhpkt = v6pkt2.parse_header::<SRH<Ipv6Header>>();
                 assert_eq!(srhpkt.get_header().segments().unwrap().len(), 2);
             } else {
@@ -252,7 +252,7 @@ fn insert_static_srh_from_bytes() {
         }
 
         let old_payload_len = v6pkt3.get_header().payload_len();
-        if let Ok(()) = v6pkt3.insert_header(NextHeader::Routing, &srh) {
+        if let Ok(()) = v6pkt3.insert_v6_header(NextHeader::Routing, &srh) {
             println!("OK! Insert of SRH");
         } else {
             panic!("Error inserting test SRH");
