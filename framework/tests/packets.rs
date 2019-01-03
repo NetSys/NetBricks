@@ -31,8 +31,8 @@ fn icmpv6_from_bytes() {
         let epkt = pkt.parse_header::<MacHeader>();
         {
             let eth = epkt.get_header();
-            assert_eq!(eth.dst.addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
-            assert_eq!(eth.src.addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
+            assert_eq!(eth.dst().addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
+            assert_eq!(eth.src().addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
             assert_eq!(eth.etype(), Some(EtherType::IPv6));
         }
 
@@ -70,8 +70,8 @@ fn icmpv6_too_big_from_bytes() {
         let epkt = pkt.parse_header::<MacHeader>();
         {
             let eth = epkt.get_header();
-            assert_eq!(eth.dst.addr, MacAddress::new(96, 3, 8, 162, 88, 156).addr);
-            assert_eq!(eth.src.addr, MacAddress::new(124, 154, 84, 106, 238, 254).addr);
+            assert_eq!(eth.dst().addr, MacAddress::new(96, 3, 8, 162, 88, 156).addr);
+            assert_eq!(eth.src().addr, MacAddress::new(124, 154, 84, 106, 238, 254).addr);
             assert_eq!(eth.etype(), Some(EtherType::IPv6));
         }
 
@@ -115,8 +115,8 @@ fn srh_from_bytes() {
         let epkt = pkt.parse_header::<MacHeader>();
         {
             let eth = epkt.get_header();
-            assert_eq!(eth.dst.addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
-            assert_eq!(eth.src.addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
+            assert_eq!(eth.dst().addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
+            assert_eq!(eth.src().addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
             assert_eq!(eth.etype(), Some(EtherType::IPv6));
         }
 
@@ -177,8 +177,8 @@ fn v6_from_bytes() {
         let epkt = pkt.parse_header::<MacHeader>();
         {
             let eth = epkt.get_header();
-            assert_eq!(eth.dst.addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
-            assert_eq!(eth.src.addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
+            assert_eq!(eth.dst().addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
+            assert_eq!(eth.src().addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
             assert_eq!(eth.etype(), Some(EtherType::IPv6));
         }
 

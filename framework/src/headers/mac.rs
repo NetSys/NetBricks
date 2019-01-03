@@ -27,7 +27,7 @@ pub enum EtherType {
     VlanTFDbl = VLAN_TAG_FRAME_DBL,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Copy)]
 #[repr(C, packed)]
 pub struct MacAddress {
     pub addr: [u8; 6],
@@ -103,9 +103,9 @@ impl Hash for MacAddress {
 #[derive(Default)]
 #[repr(C, packed)]
 pub struct MacHeader {
-    pub dst: MacAddress,
-    pub src: MacAddress,
-    pub etype: u16,
+    dst: MacAddress,
+    src: MacAddress,
+    etype: u16,
 }
 
 impl fmt::Display for MacHeader {
@@ -146,8 +146,29 @@ impl EndOffset for MacHeader {
 }
 
 impl MacHeader {
+    #[inline]
     pub fn new() -> Self {
         Default::default()
+    }
+
+    #[inline]
+    pub fn src(&self) -> MacAddress {
+        self.src
+    }
+
+    #[inline]
+    pub fn set_src(&mut self, src: MacAddress) {
+        self.src = src
+    }
+
+    #[inline]
+    pub fn dst(&self) -> MacAddress {
+        self.dst
+    }
+
+    #[inline]
+    pub fn set_dst(&mut self, dst: MacAddress) {
+        self.dst = dst
     }
 
     #[inline]
