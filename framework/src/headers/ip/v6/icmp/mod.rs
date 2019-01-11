@@ -1,4 +1,5 @@
 pub use self::packet_too_big::*;
+pub use self::router_advertisement::*;
 use super::{EndOffset, Ipv6VarHeader};
 use headers::CalcChecksums;
 use num::FromPrimitive;
@@ -7,6 +8,7 @@ use std::fmt;
 use std::marker::PhantomData;
 
 mod packet_too_big;
+mod router_advertisement;
 
 /*
   ICMPv6 messages are contained in IPv6 packets. The IPv6 packet contains an IPv6 header followed by the
