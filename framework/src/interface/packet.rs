@@ -469,7 +469,16 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     }
 
     /// @see insert_header_fn
-    pub fn insert_header<T2: EndOffset<PreviousHeader = T>>(
+    pub fn insert_header<T2: EndOffset<PreviousHeader = T>>(&mut self, header: &T2) -> Result<()>
+    where
+        T: HeaderUpdates,
+        T2: EndOffset,
+    {
+        self.insert_header_fn::<T2>(NextHeader::NoNextHeader, header, &|_| ())
+    }
+
+    /// @see insert_header_fn
+    pub fn insert_v6_header<T2: EndOffset<PreviousHeader = T>>(
         &mut self,
         header_type: NextHeader,
         header: &T2,

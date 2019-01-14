@@ -37,14 +37,14 @@ fn send_too_big<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Compositio
             let mach = pkt.get_mut_header();
 
             // just for test purposes
-            let old_src = mach.src.clone();
-            let old_dst = mach.dst.clone();
+            let old_src = mach.src();
+            let old_dst = mach.dst();
 
             mach.swap_addresses();
 
             // Make sure we swap macs to send TOO BIG PACKET back to source
-            assert_eq!(mach.src, old_dst);
-            assert_eq!(mach.dst, old_src)
+            assert_eq!(mach.src(), old_dst);
+            assert_eq!(mach.dst(), old_src)
         })
         .parse::<Ipv6Header>()
         .transform(box |pkt| {
@@ -79,15 +79,14 @@ fn send_too_big<T: 'static + Batch<Header = MacHeader>>(parent: T) -> Compositio
         .parse::<MacHeader>()
         .transform(box |pkt| {
             let ipv6h_new = pkt.emit_metadata::<Meta>().newv6;
-            pkt.insert_header(NextHeader::NoNextHeader, &ipv6h_new)
-                .unwrap();
+            pkt.insert_header(&ipv6h_new).unwrap();
         })
         .parse::<Ipv6Header>()
         .transform(box |pkt| {
             // Write IcmpHeader
             let icmpv6 = <Icmpv6PktTooBig<Ipv6Header>>::new();
             // push icmpc6header
-            pkt.insert_header(NextHeader::Icmp, &icmpv6).unwrap();
+            pkt.insert_v6_header(NextHeader::Icmp, &icmpv6).unwrap();
 
             // Specify/set our v6 payload length, as we trim in the next section.
             pkt.get_mut_header()

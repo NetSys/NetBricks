@@ -30,7 +30,7 @@ macro_rules! srh_insert {
                         *GenericArray::<_, $utype>::from_slice(&$segments[..]),
                     );
 
-                    Some($pkt.insert_header(NextHeader::Routing, &srh))
+                    Some($pkt.insert_v6_header(NextHeader::Routing, &srh))
                 }
             )*
                 _ => {
