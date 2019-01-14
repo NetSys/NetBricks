@@ -151,9 +151,9 @@ fn icmpv6_neighbor_advertisement_from_bytes() {
             assert_eq!(icmpv6h.code(), 0);
             assert_eq!(icmpv6h.reserved_flags(), 96);
             assert_eq!(icmpv6h.target_addr(),dst);
-            assert_eq!(icmpv6h.override_flag(), false);
+            assert_eq!(icmpv6h.override_flag(), true);
             assert_eq!(icmpv6h.router_flag(), false);
-            assert_eq!(icmpv6h.solicitated_flag(), false);
+            assert_eq!(icmpv6h.solicitated_flag(), true);
 
         }
     }
