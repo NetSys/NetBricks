@@ -1,4 +1,4 @@
-use super::{IcmpMessageType, Icmpv6Header};
+use super::{IcmpMessageType, Icmpv6Header, IcmpOptions};
 use headers::{CalcChecksums, EndOffset, Ipv6VarHeader};
 use std::default::Default;
 use std::fmt;
@@ -10,7 +10,7 @@ use utils::*;
   payload which contains the ICMPv6 message.
 
   From (https://tools.ietf.org/html/rfc4861)
-  The ICMPv6 messages have the following general format:
+  The ICMPv6 Router Advertisement Messages have the following general format:
 
       0                   1                   2                   3
       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -68,6 +68,57 @@ use utils::*;
                      Section 6 limit the lifetime to 9000 seconds.  A
                      Lifetime of 0 indicates that the router is not a
                      default router and SHOULD NOT appear on the default
+                     router list.  The Router Lifetime applies only to
+                     the router's usefulness as a default router; it
+                     does not apply to information contained in other
+                     message fields or options.  Options that need time
+                     limits for their information include their own
+                     lifetime fields.
+
+      Reachable Time 32-bit unsigned integer.  The time, in
+                     milliseconds, that a node assumes a neighbor is
+                     reachable after having received a reachability
+                     confirmation.  Used by the Neighbor Unreachability
+                     Detection algorithm (see Section 7.3).  A value of
+                     zero means unspecified (by this router).
+
+      Retrans Timer  32-bit unsigned integer.  The time, in
+                     milliseconds, between retransmitted Neighbor
+                     Solicitation messages.  Used by address resolution
+                     and the Neighbor Unreachability Detection algorithm
+                     (see Sections 7.2 and 7.3).  A value of zero means
+                     unspecified (by this router).
+
+   Possible options:
+
+      Source link-layer address
+                     The link-layer address of the interface from which
+                     the Router Advertisement is sent.  Only used on
+                     link layers that have addresses.  A router MAY omit
+                     this option in order to enable inbound load sharing
+                     across multiple link-layer addresses.
+
+      MTU            SHOULD be sent on links that have a variable MTU
+                     (as specified in the document that describes how to
+                     run IP over the particular link type).  MAY be sent
+                     on other links.
+
+      Prefix Information
+                     These options specify the prefixes that are on-link
+                     and/or are used for stateless address
+                     autoconfiguration.  A router SHOULD include all its
+                     on-link prefixes (except the link-local prefix) so
+                     that multihomed hosts have complete prefix
+                     information about on-link destinations for the
+                     links to which they attach.  If complete
+                     information is lacking, a host with multiple
+                     interfaces may not be able to choose the correct
+                     outgoing interface when sending traffic to its
+                     neighbors.
+      Future versions of this protocol may define new option types.
+      Receivers MUST silently ignore any options they do not recognize
+      and continue processing the message.
+
 */
 
 const MANAGED_CFG_ADDR_POS: u8 = 0;
@@ -75,29 +126,24 @@ const OTHER_CFG_POS: u8 = 1;
 
 #[derive(Debug)]
 #[repr(C, packed)]
-pub struct IcmpOptions {
-    options: u32,
-}
-
-#[derive(Debug)]
-#[repr(C, packed)]
 pub struct Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
+    where
+        T: Ipv6VarHeader,
 {
-    pub icmp: Icmpv6Header<T>,
+    icmp: Icmpv6Header<T>,
     current_hop_limit: u8,
     reserved_flags: u8,
     router_lifetime: u16,
     reachable_time: u32,
     retrans_timer: u32,
-    pub options: IcmpOptions,
+    options: IcmpOptions,
     _parent: PhantomData<T>,
+
 }
 
 impl<T> Default for Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
+    where
+        T: Ipv6VarHeader,
 {
     fn default() -> Icmpv6RouterAdvertisement<T> {
         Icmpv6RouterAdvertisement {
@@ -112,15 +158,17 @@ where
             router_lifetime: 0,
             reachable_time: 0,
             retrans_timer: 0,
-            options: IcmpOptions { options: 0 },
+            options: IcmpOptions {
+                options: 0,
+            },
             _parent: PhantomData,
         }
     }
 }
 
 impl<T> fmt::Display for Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
+    where
+        T: Ipv6VarHeader,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -140,8 +188,8 @@ where
 }
 
 impl<T> EndOffset for Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
+    where
+        T: Ipv6VarHeader,
 {
     type PreviousHeader = T;
 
@@ -171,8 +219,8 @@ where
 }
 
 impl<T> Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
+    where
+        T: Ipv6VarHeader,
 {
     #[inline]
     pub fn new() -> Self {
