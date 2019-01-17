@@ -14,6 +14,9 @@ export examples=(
         test/tcp-checksum
         test/icmpv6
         test/mtu-too-big
+        test/icmpv6-router-advertisement
+        test/icmpv6-neighbor-solicitation
+        test/icmpv6-neighbor-advertisement
         # test/delay-test
         # test/chain-test
         # test/shutdown-test

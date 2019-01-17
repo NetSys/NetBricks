@@ -1,4 +1,4 @@
-use super::{IcmpMessageType, IcmpOptions, Icmpv6Header};
+use super::{IcmpMessageType, Icmpv6Header, IcmpOptions};
 use headers::{CalcChecksums, EndOffset, Ipv6VarHeader};
 use std::default::Default;
 use std::fmt;
@@ -127,8 +127,8 @@ const OTHER_CFG_POS: u8 = 1;
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
+    where
+        T: Ipv6VarHeader,
 {
     icmp: Icmpv6Header<T>,
     current_hop_limit: u8,
@@ -138,11 +138,12 @@ where
     retrans_timer: u32,
     options: IcmpOptions,
     _parent: PhantomData<T>,
+
 }
 
 impl<T> Default for Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
+    where
+        T: Ipv6VarHeader,
 {
     fn default() -> Icmpv6RouterAdvertisement<T> {
         Icmpv6RouterAdvertisement {
@@ -157,15 +158,17 @@ where
             router_lifetime: 0,
             reachable_time: 0,
             retrans_timer: 0,
-            options: IcmpOptions { options: 0 },
+            options: IcmpOptions {
+                options: 0,
+            },
             _parent: PhantomData,
         }
     }
 }
 
 impl<T> fmt::Display for Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
+    where
+        T: Ipv6VarHeader,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -185,8 +188,8 @@ where
 }
 
 impl<T> EndOffset for Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
+    where
+        T: Ipv6VarHeader,
 {
     type PreviousHeader = T;
 
@@ -216,8 +219,8 @@ where
 }
 
 impl<T> Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
+    where
+        T: Ipv6VarHeader,
 {
     #[inline]
     pub fn new() -> Self {

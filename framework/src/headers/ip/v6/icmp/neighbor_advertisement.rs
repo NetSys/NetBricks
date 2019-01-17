@@ -245,17 +245,17 @@ impl<T> Icmpv6NeighborAdvertisement<T>
 
     #[inline]
     pub fn router_flag(&self) -> bool {
-        get_bit(self.reserved_flags().to_be_bytes()[0], ROUTER_FLAG_POS)
+        get_bit(self.reserved_flags().to_be_bytes()[3], ROUTER_FLAG_POS)
     }
 
     #[inline]
     pub fn solicitated_flag(&self) -> bool {
-        get_bit(self.reserved_flags().to_be_bytes()[0], SOLICITED_FLAG_POS)
+        get_bit(self.reserved_flags().to_be_bytes()[3], SOLICITED_FLAG_POS)
     }
 
     #[inline]
     pub fn override_flag(&self) -> bool {
-       get_bit(self.reserved_flags().to_be_bytes()[0], OVERRIDE_FLAG_POS)
+       get_bit(self.reserved_flags().to_be_bytes()[3], OVERRIDE_FLAG_POS)
     }
 
     #[inline]

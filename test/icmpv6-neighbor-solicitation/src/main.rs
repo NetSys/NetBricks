@@ -13,7 +13,6 @@ use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-
 mod nf;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
