@@ -1,8 +1,8 @@
+pub use self::neighbor::*;
+pub use self::neighbor_advertisement::*;
+pub use self::neighbor_solicitation::*;
 pub use self::packet_too_big::*;
 pub use self::router_advertisement::*;
-pub use self::neighbor_solicitation::*;
-pub use self::neighbor_advertisement::*;
-pub use self::neighbor::*;
 use super::{EndOffset, Ipv6VarHeader};
 use headers::CalcChecksums;
 use num::FromPrimitive;
@@ -10,11 +10,11 @@ use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
 
+mod neighbor;
+mod neighbor_advertisement;
+mod neighbor_solicitation;
 mod packet_too_big;
 mod router_advertisement;
-mod neighbor_solicitation;
-mod neighbor_advertisement;
-mod neighbor;
 
 /*
   ICMPv6 messages are contained in IPv6 packets. The IPv6 packet contains an IPv6 header followed by the
@@ -64,8 +64,8 @@ impl fmt::Display for IcmpMessageType {
 
 #[derive(Debug)]
 #[repr(C, packed)]
-pub struct IcmpOptions  {
-    options: u32
+pub struct IcmpOptions {
+    options: u32,
 }
 
 #[derive(Debug)]

@@ -72,7 +72,7 @@ fn icmp_v6_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHead
             );
             assert_eq!(
                 format!("{:X?}", router_advertisement.retrans_timer()),
-                format!("{:X?}", 100)
+                format!("{:X?}", 500)
             );
         })
         .compose()

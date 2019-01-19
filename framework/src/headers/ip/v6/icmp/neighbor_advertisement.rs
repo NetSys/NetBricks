@@ -1,4 +1,4 @@
-use super::{Icmpv6Neighbor, Icmpv6Header, IcmpMessageType};
+use super::{IcmpMessageType, Icmpv6Header, Icmpv6Neighbor};
 use headers::{EndOffset, Ipv6VarHeader};
 use std::default::Default;
 use std::fmt;
@@ -129,8 +129,8 @@ const OVERRIDE_FLAG_POS: u8 = 2;
 #[derive(Debug)]
 #[repr(C)]
 pub struct Icmpv6NeighborAdvertisement<T>
-    where
-        T: Ipv6VarHeader,
+where
+    T: Ipv6VarHeader,
 {
     icmp_neighbor: Icmpv6Neighbor<T>,
     router_flag: bool,
@@ -140,8 +140,8 @@ pub struct Icmpv6NeighborAdvertisement<T>
 }
 
 impl<T> Default for Icmpv6NeighborAdvertisement<T>
-    where
-        T: Ipv6VarHeader,
+where
+    T: Ipv6VarHeader,
 {
     fn default() -> Icmpv6NeighborAdvertisement<T> {
         Icmpv6NeighborAdvertisement {
@@ -161,8 +161,8 @@ impl<T> Default for Icmpv6NeighborAdvertisement<T>
 }
 
 impl<T> fmt::Display for Icmpv6NeighborAdvertisement<T>
-    where
-        T: Ipv6VarHeader,
+where
+    T: Ipv6VarHeader,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -179,8 +179,8 @@ impl<T> fmt::Display for Icmpv6NeighborAdvertisement<T>
 }
 
 impl<T> EndOffset for Icmpv6NeighborAdvertisement<T>
-    where
-        T: Ipv6VarHeader,
+where
+    T: Ipv6VarHeader,
 {
     type PreviousHeader = T;
 
@@ -210,8 +210,8 @@ impl<T> EndOffset for Icmpv6NeighborAdvertisement<T>
 }
 
 impl<T> Icmpv6NeighborAdvertisement<T>
-    where
-        T: Ipv6VarHeader,
+where
+    T: Ipv6VarHeader,
 {
     #[inline]
     pub fn new() -> Self {
@@ -255,7 +255,7 @@ impl<T> Icmpv6NeighborAdvertisement<T>
 
     #[inline]
     pub fn override_flag(&self) -> bool {
-       get_bit(self.reserved_flags().to_be_bytes()[3], OVERRIDE_FLAG_POS)
+        get_bit(self.reserved_flags().to_be_bytes()[3], OVERRIDE_FLAG_POS)
     }
 
     #[inline]

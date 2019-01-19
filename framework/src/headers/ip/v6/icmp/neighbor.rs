@@ -1,29 +1,26 @@
-use super::{IcmpMessageType, Icmpv6Header, IcmpOptions};
+use super::{IcmpMessageType, IcmpOptions, Icmpv6Header};
 use headers::{CalcChecksums, EndOffset, Ipv6VarHeader};
 use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
 use std::net::Ipv6Addr;
 
-
-
 #[derive(Debug)]
 #[repr(C)]
 pub struct Icmpv6Neighbor<T>
-    where
-        T: Ipv6VarHeader,
+where
+    T: Ipv6VarHeader,
 {
-     pub icmp: Icmpv6Header<T>,
-     pub reserved_flags: u32,
-     pub target_addr: Ipv6Addr,
-     pub options: IcmpOptions,
-     pub _parent: PhantomData<T>,
-
+    pub icmp: Icmpv6Header<T>,
+    pub reserved_flags: u32,
+    pub target_addr: Ipv6Addr,
+    pub options: IcmpOptions,
+    pub _parent: PhantomData<T>,
 }
 
 impl<T> Default for Icmpv6Neighbor<T>
-    where
-        T: Ipv6VarHeader,
+where
+    T: Ipv6VarHeader,
 {
     fn default() -> Icmpv6Neighbor<T> {
         Icmpv6Neighbor {
@@ -34,9 +31,7 @@ impl<T> Default for Icmpv6Neighbor<T>
             reserved_flags: 0,
             target_addr: Ipv6Addr::UNSPECIFIED,
 
-            options: IcmpOptions {
-                options: 0,
-            },
+            options: IcmpOptions { options: 0 },
 
             _parent: PhantomData,
         }
@@ -44,8 +39,8 @@ impl<T> Default for Icmpv6Neighbor<T>
 }
 
 impl<T> fmt::Display for Icmpv6Neighbor<T>
-    where
-        T: Ipv6VarHeader,
+where
+    T: Ipv6VarHeader,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -62,8 +57,8 @@ impl<T> fmt::Display for Icmpv6Neighbor<T>
 }
 
 impl<T> EndOffset for Icmpv6Neighbor<T>
-    where
-        T: Ipv6VarHeader,
+where
+    T: Ipv6VarHeader,
 {
     type PreviousHeader = T;
 
@@ -93,8 +88,8 @@ impl<T> EndOffset for Icmpv6Neighbor<T>
 }
 
 impl<T> Icmpv6Neighbor<T>
-    where
-        T: Ipv6VarHeader,
+where
+    T: Ipv6VarHeader,
 {
     #[inline]
     pub fn new() -> Self {
@@ -130,5 +125,4 @@ impl<T> Icmpv6Neighbor<T>
     pub fn options(&self) -> u32 {
         u32::from_be(self.options.options)
     }
-
 }
