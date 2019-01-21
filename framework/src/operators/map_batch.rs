@@ -40,8 +40,7 @@ impl<T, V> Batch for MapBatch<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
-{
-}
+{}
 
 impl<T, V> Act for MapBatch<T, V>
 where

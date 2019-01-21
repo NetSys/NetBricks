@@ -40,8 +40,7 @@ impl<T, V> Batch for TransformBatch<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
-{
-}
+{}
 
 impl<T, V> BatchIterator for TransformBatch<T, V>
 where

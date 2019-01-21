@@ -42,8 +42,7 @@ impl<M, V> Batch for MutableAddMetadataBatch<M, V>
 where
     M: Send + Sized,
     V: Batch + BatchIterator + Act,
-{
-}
+{}
 
 impl<M, V> BatchIterator for MutableAddMetadataBatch<M, V>
 where

@@ -21,15 +21,14 @@ where
     T: EndOffset<PreviousHeader = V::Header>,
     V: Batch + BatchIterator + Act,
 {
-    act! {}
+    act!{}
 }
 
 impl<T, V> Batch for ParsedBatch<T, V>
 where
     V: Batch + BatchIterator + Act,
     T: EndOffset<PreviousHeader = V::Header>,
-{
-}
+{}
 
 impl<T, V> ParsedBatch<T, V>
 where

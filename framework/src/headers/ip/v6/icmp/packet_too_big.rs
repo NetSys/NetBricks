@@ -1,5 +1,5 @@
 use super::{IcmpMessageType, Icmpv6Header};
-use headers::{CalcChecksums, EndOffset, Ipv6VarHeader, IPV6_MIN_MTU};
+use headers::{CalcChecksums, EndOffset, IPV6_MIN_MTU, Ipv6VarHeader};
 use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;

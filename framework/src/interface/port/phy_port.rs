@@ -311,8 +311,7 @@ impl PmdPort {
                 loopback,
                 tso,
                 csumoffload,
-            )
-            .chain_err(|| ErrorKind::BadDev(String::from(spec)))
+            ).chain_err(|| ErrorKind::BadDev(String::from(spec)))
         } else {
             Err(ErrorKind::BadDev(String::from(spec)).into())
         }

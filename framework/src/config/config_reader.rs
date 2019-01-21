@@ -21,8 +21,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
             _ => {
                 return Err(ErrorKind::ConfigurationError(String::from(
                     "Could not parse name for port",
-                ))
-                .into());
+                )).into());
             }
         };
 
@@ -33,8 +32,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                 return Err(ErrorKind::ConfigurationError(format!(
                     "Could not parse number of rx descriptors {:?}",
                     v
-                ))
-                .into());
+                )).into());
             }
         };
 
@@ -45,8 +43,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                 return Err(ErrorKind::ConfigurationError(format!(
                     "Could not parse number of tx descriptors {:?}",
                     v
-                ))
-                .into());
+                )).into());
             }
         };
 
@@ -57,8 +54,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                 return Err(ErrorKind::ConfigurationError(format!(
                     "Could not parse loopback spec {:?}",
                     v
-                ))
-                .into());
+                )).into());
             }
         };
 
@@ -69,8 +65,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                 return Err(ErrorKind::ConfigurationError(format!(
                     "Could not parse tso spec {:?}",
                     v
-                ))
-                .into());
+                )).into());
             }
         };
 
@@ -81,8 +76,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                 return Err(ErrorKind::ConfigurationError(format!(
                     "Could not parse csum spec {:?}",
                     v
-                ))
-                .into());
+                )).into());
             }
         };
 
@@ -98,8 +92,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                 "cores specified along with rx_cores and/or tx_cores \
                  for port {}",
                 name
-            ))
-            .into());
+            )).into());
         }
 
         fn read_queue(queue: &Value) -> Result<Vec<i32>> {
@@ -113,8 +106,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                             return Err(ErrorKind::ConfigurationError(format!(
                                 "Could not parse queue spec {:?}",
                                 q
-                            ))
-                            .into());
+                            )).into());
                         };
                     }
                     Ok(qs)
@@ -172,8 +164,7 @@ pub fn read_configuration_from_str(
             return Err(ErrorKind::ConfigurationError(format!(
                 "Experienced {} parse errors in spec.",
                 error
-            ))
-            .into());
+            )).into());
         }
     };
 
@@ -196,8 +187,7 @@ pub fn read_configuration_from_str(
                 return Err(ErrorKind::ConfigurationError(format!(
                     "Could not parse {} as core",
                     core
-                ))
-                .into());
+                )).into());
             }
         },
         None => DEFAULT_PRIMARY_CORE,
@@ -241,8 +231,7 @@ pub fn read_configuration_from_str(
             println!("Could not parse whether this is a secondary process");
             return Err(ErrorKind::ConfigurationError(String::from(
                 "Could not parse secondary processor spec",
-            ))
-            .into());
+            )).into());
         }
     };
 
@@ -257,8 +246,7 @@ pub fn read_configuration_from_str(
                     return Err(ErrorKind::ConfigurationError(format!(
                         "Could not parse core spec {}",
                         core
-                    ))
-                    .into());
+                    )).into());
                 }
             }
             cores
@@ -277,8 +265,7 @@ pub fn read_configuration_from_str(
             return Err(ErrorKind::ConfigurationError(format!(
                 "Could not parse strict spec (should be boolean) {:?}",
                 v
-            ))
-            .into());
+            )).into());
         }
     };
 

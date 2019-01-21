@@ -145,8 +145,7 @@ impl<T, S> IpHeader for SegmentRoutingHeader<T, S>
 where
     T: Ipv6VarHeader,
     S: ArrayLength<Segment>,
-{
-}
+{}
 
 // The SegmentRoutingHeader is an extension header, and so has a next header
 // field and can be the PreviousHeader for another header.

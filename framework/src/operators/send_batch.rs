@@ -35,8 +35,7 @@ impl<Port, V> Batch for SendBatch<Port, V>
 where
     Port: PacketTx,
     V: Batch + BatchIterator + Act,
-{
-}
+{}
 
 impl<Port, V> BatchIterator for SendBatch<Port, V>
 where

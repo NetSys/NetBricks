@@ -46,7 +46,7 @@ impl BatchIterator for CompositionBatch {
 
 /// Internal interface for packets.
 impl Act for CompositionBatch {
-    act! {}
+    act!{}
 }
 
 impl Executable for CompositionBatch {

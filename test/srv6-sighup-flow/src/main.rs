@@ -29,7 +29,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use tokio::prelude::{Future, Stream};
-use tokio_signal::unix::{Signal, SIGHUP, SIGUSR1};
+use tokio_signal::unix::{SIGUSR1, Signal, SIGHUP};
 mod nf;
 
 #[derive(Debug, Deserialize)]
@@ -102,8 +102,7 @@ fn start_logger() {
             time_format: None,
         },
         StdFile::create("test.log").unwrap(),
-    )
-    .unwrap();
+    ).unwrap();
 }
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
