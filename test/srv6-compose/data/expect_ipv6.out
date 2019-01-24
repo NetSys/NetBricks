@@ -1,10 +1,10 @@
-00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
-00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
-00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
-00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
-00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
-00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
-00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
-00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
-00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
-00:00:00:00:00:00 (oui Ethernet) > 00:00:00:00:00:01 (oui Ethernet), ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
+00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
+00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
+00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
+00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
+00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
+00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
+00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
+00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
+00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0
+00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 74: fe80::1.1025 > fe80::2.1024: Flags [S], seq 1, win 10, length 0

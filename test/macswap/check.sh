@@ -8,7 +8,7 @@ NC='\033[0m'
 
 echo -e "${C}RUNNING: $TEST_NAME${NC}"
 
-tcpdump -ter /tmp/out.pcap | tee /dev/tty | diff - data/expect.out
+tcpdump -tner /tmp/out.pcap | tee /dev/tty | diff - data/expect.out
 
 result=$?
 echo ----

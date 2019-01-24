@@ -36,6 +36,7 @@ cscope*
 
 # vagrant
 .vagrant
+Vagrantfile
 
 # editor
 .vscode
@@ -55,3 +56,8 @@ out.pcap
 *.lnk
 
 .DS_Store
+
+# other
+moongen
+netbricks
+utils

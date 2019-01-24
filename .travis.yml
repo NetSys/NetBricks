@@ -1,10 +1,15 @@
 sudo: required
+dist: xenial
 
 branches:
   only:
     - master
 
 language: generic
+
+env:
+  global:
+    - SANDBOX=williamofockham/sandbox:nightly-2018-12-01
 
 notifications:
   email: false
@@ -16,14 +21,10 @@ services:
 
 before_script:
   - sudo ./scripts/travis-setup.sh
-  - make -f docker.mk build-fresh
+  - docker pull $SANDBOX
 
-script:
-  - make -f docker.mk run-tests
-
-before_deploy:
-  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-deploy:
-  provider: script
-  script: make -f docker.mk tag && make -f docker.mk push
+jobs:
+  include:
+    - stage: test
+      script:
+        - make -f docker.mk run-tests

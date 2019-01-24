@@ -282,7 +282,7 @@ case $TASK in
         done
         ;;
     check_examples)
-        python3 scripts/check-examples.py "${examples[@]}"
+        python scripts/check-examples.py "${examples[@]}"
         ;;
     doc)
         pushd $BASE_DIR/framework
