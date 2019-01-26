@@ -9,11 +9,11 @@ NC='\033[0m'
 echo -e "${C}RUNNING: $TEST_NAME${NC}"
 
 ../../build.sh run $TEST_NAME -p $PORT_OPTIONS1 -c 1 --dur 1
-tcpdump -ter /tmp/out.pcap | tee /dev/tty | diff - data/expect_srv6.out
+tcpdump -tner /tmp/out.pcap | tee /dev/tty | diff - data/expect_srv6.out
 TEST_SRv6=$?
 
 ../../build.sh run $TEST_NAME -p $PORT_OPTIONS2 -c 1 --dur 1
-tcpdump -ter /tmp/out.pcap | tee /dev/tty | diff - data/expect_ipv6.out
+tcpdump -tner /tmp/out.pcap | tee /dev/tty | diff - data/expect_ipv6.out
 TEST_IPv6toSRv6=$?
 
 echo ----

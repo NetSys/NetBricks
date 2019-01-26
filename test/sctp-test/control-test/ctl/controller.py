@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 import socket
 import sctp
 def test():
@@ -7,4 +7,3 @@ def test():
     tcp.sctp_send("Hello")
 if __name__ == "__main__":
     test()
-

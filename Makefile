@@ -2,12 +2,16 @@ PORT ?= "0000:00:09.0"
 CORE ?= 0
 BASE_DIR = $(shell git rev-parse --show-toplevel)
 POOL_SIZE ?= 512
+GH=git@github.com:williamofockham
 
 .PHONY: init compile compile-nb compile-test native build-rel build-rel-test \
         fmt clean lint run run-rel test
 
 init:
 	@mkdir -p $(BASE_DIR)/.git/hooks && ln -s -f $(BASE_DIR)/.hooks/pre-commit $(BASE_DIR)/.git/hooks/pre-commit
+	-git clone $(GH)/utils.git
+	-ln -s utils/Vagrantfile
+	-git clone --recurse-submodules $(GH)/moongen.git
 
 compile:
 	@./build.sh build
@@ -41,8 +45,6 @@ fmt:
 clean:
 	@./build.sh clean
 
-# Clippy has some issues current with Rust nightly. Will keep an eye on this
-# development.
 lint:
 	@./build.sh lint
 
