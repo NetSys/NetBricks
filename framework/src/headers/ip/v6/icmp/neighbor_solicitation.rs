@@ -127,7 +127,7 @@ where
 
     #[inline]
     fn offset(&self) -> usize {
-        // ICMPv6 Header for Packet Too Big Msg (Type + Code + Checksum + MTU)
+        // ICMPv6 Header for Neighbor Solicitation Msg (Type + Code + Checksum + Options)
         // is always 8 bytes: (8 + 8 + 16 + 32) / 8 = 8
         8
     }
