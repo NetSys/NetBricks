@@ -48,7 +48,7 @@ fn icmp_v6_neighbor_advertisement_nf<T: 'static + Batch<Header = MacHeader>>(
             );
             assert_eq!(
                 format!("{:X?}", neighbor_advertisement.checksum()),
-                format!("{:X?}", 0xf50c)
+                format!("{:X?}", 0x0d2b)
             );
             assert_eq!(
                 format!("{:X?}", neighbor_advertisement.reserved_flags()),

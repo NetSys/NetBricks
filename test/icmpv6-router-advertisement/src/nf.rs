@@ -1,8 +1,6 @@
 use colored::*;
 use netbricks::headers::*;
 use netbricks::operators::*;
-use netbricks::scheduler::*;
-use std::net::Ipv6Addr;
 
 pub fn icmp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
     let pipeline = parent
