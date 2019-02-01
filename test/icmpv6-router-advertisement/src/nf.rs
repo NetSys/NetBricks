@@ -46,7 +46,7 @@ fn icmp_v6_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHead
             );
             assert_eq!(
                 format!("{:X?}", router_advertisement.checksum()),
-                format!("{:X?}", 0xf50c)
+                format!("{:X?}", 0xbfbc)
             );
             assert_eq!(
                 format!("{:X?}", router_advertisement.current_hop_limit()),

@@ -48,7 +48,7 @@ fn icmp_v6_neighbor_solicitation_nf<T: 'static + Batch<Header = MacHeader>>(
             );
             assert_eq!(
                 format!("{:X?}", neighbor_solicitation.checksum()),
-                format!("{:X?}", 0xf50c)
+                format!("{:X?}", 0x70D0)
             );
             assert_eq!(
                 format!("{:X?}", neighbor_solicitation.reserved_flags()),

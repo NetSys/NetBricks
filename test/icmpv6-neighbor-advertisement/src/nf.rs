@@ -50,10 +50,6 @@ fn icmp_v6_neighbor_advertisement_nf<T: 'static + Batch<Header = MacHeader>>(
                 format!("{:X?}", neighbor_advertisement.checksum()),
                 format!("{:X?}", 0x0d2b)
             );
-            assert_eq!(
-                format!("{:X?}", neighbor_advertisement.reserved_flags()),
-                format!("{:X?}", 60)
-            );
 
             let expected_target_addr = Ipv6Addr::from_str("fe80::c002:3ff:fee4:0").unwrap();
 

@@ -194,7 +194,7 @@ where
     fn offset(&self) -> usize {
         // ICMPv6 Header for Router Advertisement (Type + Code + Checksum + Options)
         // is always 8 bytes: (8 + 8 + 16 + 32) / 8 = 8
-        8
+        16
     }
 
     #[inline]
