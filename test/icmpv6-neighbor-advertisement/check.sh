@@ -6,7 +6,7 @@ NC='\033[0m'
 
 echo -e "${C}RUNNING: $TEST_NAME${NC}"
 
-PORT_OPTIONS="dpdk:eth_pcap0,rx_pcap=data/icmpv6_neighbor_advertisement.pcap,tx_pcap=data/out.pcap"
+PORT_OPTIONS="dpdk:eth_pcap0,rx_pcap=data/icmpv6_neighbor_advertisement.pcap,tx_pcap=/tmp/out.pcap"
 
 ../../build.sh run $TEST_NAME -p $PORT_OPTIONS -c 1 --dur 1
 
