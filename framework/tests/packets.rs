@@ -65,9 +65,61 @@ fn icmpv6_router_advertisement_from_bytes() {
             assert_eq!(icmpv6h.router_lifetime(), 1800);
             assert_eq!(icmpv6h.reachable_time(), 2055);
             assert_eq!(icmpv6h.retrans_timer(), 1500);
+            let expected_source_link_layer_address = MacAddress::from_str("70:3a:cb:1b:f9:7a");
+            assert_eq!(icmpv6h.source_link_layer_address().unwrap(),expected_source_link_layer_address.unwrap());
         }
     }
 }
+
+
+
+#[test]
+fn icmpv6_router_advertisement_from_bytes_no_link_layer_address() {
+    dpdk_test! {
+        let pkt = packet_from_bytes(&ICMP_ROUTER_ADVERTISEMENT_BYTES_NO_LINK_LAYER_ADDRESS  );
+        // Check Ethernet header
+        let epkt = pkt.parse_header::<MacHeader>();
+        {
+            let eth = epkt.get_header();
+            assert_eq!(eth.dst().addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
+            assert_eq!(eth.src().addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
+            assert_eq!(eth.etype(), Some(EtherType::IPv6));
+        }
+
+         // Check IPv6 header
+        let v6pkt = epkt.parse_header::<Ipv6Header>();
+        {
+            let v6 = v6pkt.get_header();
+            let src = Ipv6Addr::from_str("fe80::d4f0:45ff:fe0c:664b").unwrap();
+            let dst = Ipv6Addr::from_str("ff02::1").unwrap();
+            assert_eq!(v6.version(), 6);
+            assert_eq!(v6.traffic_class(), 0);
+            assert_eq!(v6.flow_label(), 0);
+            assert_eq!(v6.payload_len(), 88);
+            assert_eq!(v6.next_header().unwrap(), NextHeader::Icmp);
+            assert_eq!(v6.hop_limit(), 255);
+            assert_eq!(Ipv6Addr::from(v6.src()), src);
+            assert_eq!(Ipv6Addr::from(v6.dst()), dst);
+        }
+
+        //Check Icmp header
+        let icmp_pkt = v6pkt.parse_header::<Icmpv6RouterAdvertisement<Ipv6Header>>();
+        {
+            let icmpv6h = icmp_pkt.get_header();
+            assert_eq!(icmpv6h.msg_type().unwrap(), IcmpMessageType::RouterAdvertisement);
+            assert_eq!(icmpv6h.checksum(), 0xf50c);
+            assert_eq!(icmpv6h.code(), 0);
+            assert_eq!(icmpv6h.current_hop_limit(), 64);
+            assert_eq!(icmpv6h.managed_addr_cfg(), false);
+            assert_eq!(icmpv6h.other_cfg(), true);
+            assert_eq!(icmpv6h.router_lifetime(), 1800);
+            assert_eq!(icmpv6h.reachable_time(), 2055);
+            assert_eq!(icmpv6h.retrans_timer(), 1500);
+            assert_eq!(icmpv6h.source_link_layer_address(), None);
+        }
+    }
+}
+
 
 #[test]
 fn icmpv6_neighbor_solicitation_from_bytes() {
