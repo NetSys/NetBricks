@@ -60,6 +60,5 @@ fn icmp_v6_neighbor_solicitation_nf<T: 'static + Batch<Header = MacHeader>>(
                 format!("{:X?}", neighbor_solicitation.target_addr()),
                 format!("{:X?}", expected_target_addr)
             );
-        })
-        .compose()
+        }).compose()
 }

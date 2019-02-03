@@ -1,4 +1,6 @@
-use super::{IcmpMessageType, IcmpOptions, Icmpv6Header};
+use super::{IcmpMessageType, Icmpv6Header};
+use headers::ip::v6::icmp::neighbor_options::Icmpv6RouterAdvertisementOption;
+use headers::mac::MacAddress;
 use headers::{CalcChecksums, EndOffset, Ipv6VarHeader};
 use std::default::Default;
 use std::fmt;
@@ -136,7 +138,7 @@ where
     router_lifetime: u16,
     reachable_time: u32,
     retrans_timer: u32,
-    options: IcmpOptions,
+    pub options: Icmpv6RouterAdvertisementOption<T>,
     _parent: PhantomData<T>,
 }
 
@@ -157,7 +159,9 @@ where
             router_lifetime: 0,
             reachable_time: 0,
             retrans_timer: 0,
-            options: IcmpOptions { options: 0 },
+            options: Icmpv6RouterAdvertisementOption {
+                ..Default::default()
+            },
             _parent: PhantomData,
         }
     }
@@ -170,7 +174,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "msg_type: {} code: {} checksum: {}, current_hop_limit {}, reserved_flags {}, router_lifetime {}, reachable_time {}, retrans_timers {}, options {}",
+            "msg_type: {} code: {} checksum: {}, current_hop_limit {}, reserved_flags {}, router_lifetime {}, reachable_time {}, retrans_timers {}",
             self.msg_type().unwrap(),
             self.code(),
             self.checksum(),
@@ -179,7 +183,6 @@ where
             self.router_lifetime(),
             self.reachable_time(),
             self.retrans_timer(),
-            self.options()
         )
     }
 }
@@ -275,7 +278,7 @@ where
     }
 
     #[inline]
-    pub fn options(&self) -> u32 {
-        u32::from_be(self.options.options)
+    pub fn source_link_layer_address(&self) -> MacAddress {
+        self.options.source_link_layer_address()
     }
 }

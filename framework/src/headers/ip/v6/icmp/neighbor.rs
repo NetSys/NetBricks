@@ -1,4 +1,4 @@
-use super::{IcmpMessageType, IcmpOptions, Icmpv6Header};
+use super::{IcmpMessageType, Icmpv6Header};
 use headers::{CalcChecksums, EndOffset, Ipv6VarHeader};
 use std::default::Default;
 use std::fmt;
@@ -14,7 +14,6 @@ where
     pub icmp: Icmpv6Header<T>,
     pub reserved_flags: u32,
     pub target_addr: Ipv6Addr,
-    pub options: IcmpOptions,
     pub _parent: PhantomData<T>,
 }
 
@@ -30,9 +29,6 @@ where
 
             reserved_flags: 0,
             target_addr: Ipv6Addr::UNSPECIFIED,
-
-            options: IcmpOptions { options: 0 },
-
             _parent: PhantomData,
         }
     }
@@ -45,13 +41,12 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "msg_type: {} code: {} checksum: {}, reserved_flags {}, target_addr {}, options {}",
+            "msg_type: {} code: {} checksum: {}, reserved_flags {}, target_addr {}",
             self.msg_type().unwrap(),
             self.code(),
             self.checksum(),
             self.reserved_flags(),
             self.target_addr(),
-            self.options()
         )
     }
 }
@@ -119,10 +114,5 @@ where
     #[inline]
     pub fn target_addr(&self) -> Ipv6Addr {
         self.target_addr
-    }
-
-    #[inline]
-    pub fn options(&self) -> u32 {
-        u32::from_be(self.options.options)
     }
 }

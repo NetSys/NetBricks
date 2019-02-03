@@ -1,6 +1,7 @@
 use colored::*;
 use netbricks::headers::*;
 use netbricks::operators::*;
+use std::str::FromStr;
 
 pub fn icmp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
     let pipeline = parent
@@ -46,7 +47,7 @@ fn icmp_v6_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHead
             );
             assert_eq!(
                 format!("{:X?}", router_advertisement.checksum()),
-                format!("{:X?}", 0xbfbc)
+                format!("{:X?}", 0xbff2)
             );
             assert_eq!(
                 format!("{:X?}", router_advertisement.current_hop_limit()),
@@ -54,7 +55,7 @@ fn icmp_v6_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHead
             );
             assert_eq!(
                 format!("{:X?}", router_advertisement.managed_addr_cfg()),
-                format!("{:X?}", false)
+                format!("{:X?}", true)
             );
             assert_eq!(
                 format!("{:X?}", router_advertisement.other_cfg()),
@@ -72,6 +73,11 @@ fn icmp_v6_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHead
                 format!("{:X?}", router_advertisement.retrans_timer()),
                 format!("{:X?}", 500)
             );
-        })
-        .compose()
+
+            let expected_mac_address = MacAddress::from_str("c2:00:54:f5:00:00");
+            assert_eq!(
+                format!("{:X?}", router_advertisement.source_link_layer_address()),
+                format!("{:X?}", expected_mac_address.unwrap())
+            );
+        }).compose()
 }

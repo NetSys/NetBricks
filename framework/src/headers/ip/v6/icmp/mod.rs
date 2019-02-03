@@ -1,5 +1,6 @@
 pub use self::neighbor::*;
 pub use self::neighbor_advertisement::*;
+pub use self::neighbor_options::*;
 pub use self::neighbor_solicitation::*;
 pub use self::packet_too_big::*;
 pub use self::router_advertisement::*;
@@ -12,6 +13,7 @@ use std::marker::PhantomData;
 
 mod neighbor;
 mod neighbor_advertisement;
+mod neighbor_options;
 mod neighbor_solicitation;
 mod packet_too_big;
 mod router_advertisement;
@@ -60,12 +62,6 @@ impl fmt::Display for IcmpMessageType {
             IcmpMessageType::NeighborAdvertisement => write!(f, "Neighbor Advertisement"),
         }
     }
-}
-
-#[derive(Debug)]
-#[repr(C, packed)]
-pub struct IcmpOptions {
-    options: u32,
 }
 
 #[derive(Debug)]

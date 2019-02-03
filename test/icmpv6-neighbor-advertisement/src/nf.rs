@@ -69,6 +69,5 @@ fn icmp_v6_neighbor_advertisement_nf<T: 'static + Batch<Header = MacHeader>>(
                 format!("{:X?}", neighbor_advertisement.override_flag()),
                 format!("{:X?}", true)
             );
-        })
-        .compose()
+        }).compose()
 }

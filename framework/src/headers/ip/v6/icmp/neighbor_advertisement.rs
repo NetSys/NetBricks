@@ -167,13 +167,12 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "msg_type: {} code: {} checksum: {}, reserved_flags {}, target_addr {}, options {}",
+            "msg_type: {} code: {} checksum: {}, reserved_flags {}, target_addr {}",
             self.icmp_neighbor.msg_type().unwrap(),
             self.icmp_neighbor.code(),
             self.icmp_neighbor.checksum(),
             self.icmp_neighbor.reserved_flags(),
             self.icmp_neighbor.target_addr(),
-            self.icmp_neighbor.options()
         )
     }
 }
@@ -236,11 +235,6 @@ where
     #[inline]
     pub fn reserved_flags(&self) -> u32 {
         self.icmp_neighbor.reserved_flags()
-    }
-
-    #[inline]
-    pub fn options(&self) -> u32 {
-        u32::from_be(self.icmp_neighbor.options.options)
     }
 
     #[inline]

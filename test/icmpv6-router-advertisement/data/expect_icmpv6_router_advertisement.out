@@ -1,1 +1,1 @@
-58:6d:8f:56:30:09 > 33:33:00:00:00:01, ethertype IPv6 (0x86dd), length 102: fe80::5a6d:8fff:fe56:3009 > ff02::1: ICMP6, router advertisement, length 48
+c2:00:54:f5:00:00 > 33:33:00:00:00:01, ethertype IPv6 (0x86dd), length 118: fe80::c000:54ff:fef5:0 > ff02::1: ICMP6, router advertisement, length 64
