@@ -76,7 +76,7 @@ fn icmp_v6_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHead
 
             let expected_mac_address = MacAddress::from_str("c2:00:54:f5:00:00");
             assert_eq!(
-                format!("{:X?}", router_advertisement.source_link_layer_address()),
+                format!("{:X?}", router_advertisement.source_link_layer_address().unwrap()),
                 format!("{:X?}", expected_mac_address.unwrap())
             );
         }).compose()

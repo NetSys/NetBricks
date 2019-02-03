@@ -278,7 +278,7 @@ where
     }
 
     #[inline]
-    pub fn source_link_layer_address(&self) -> MacAddress {
+    pub fn source_link_layer_address(&self) -> Option<MacAddress> {
         self.options.source_link_layer_address()
     }
 }

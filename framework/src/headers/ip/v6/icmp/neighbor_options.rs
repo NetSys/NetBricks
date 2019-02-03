@@ -196,7 +196,11 @@ where
     }
 
     #[inline]
-    pub fn source_link_layer_address(&self) -> MacAddress {
-        self.source_link_layer_address
+    pub fn source_link_layer_address(&self) -> Option<MacAddress> {
+        if self.icmp_option.option_type().unwrap() == Icmpv6OptionType::SourceLinkLayerAddress {
+            Some(self.source_link_layer_address) }
+        else {
+            None
+        }
     }
 }
