@@ -164,19 +164,19 @@ where
 
     #[inline]
     fn offset(&self) -> usize {
-        // ICMPv6 Neighbor Option(Source Link Layer Address) is always 1 byte: 8 / 8 = 1
+        // ICMPv6 Router Advertisement Option(Source Link Layer Address) is always 1 byte: 8 / 8 = 1
         1
     }
 
     #[inline]
     fn size() -> usize {
-        // ICMPv6 Neighbor Option(Source Link Layer Address) is always 1 byte so size = offset
+        // ICMPv6 Router Advertisement Option(Source Link Layer Address) is always 1 byte so size = offset
         1
     }
 
     #[inline]
     fn payload_size(&self, hint: usize) -> usize {
-        // There is no payload size in the Neighbor Option
+        // There is no payload size in the Router Advertisement Option
         hint - self.offset()
     }
 
