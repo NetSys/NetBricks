@@ -113,14 +113,14 @@ where
 
     #[inline]
     fn offset(&self) -> usize {
-        // ICMPv6 Header(Type + Code + Checksum) is always 4 bytes: (8 + 8 + 16) / 8 = 4
-        4
+        // ICMPv6 Header(Type + Code + Checksum + Curr Hop Limit + Flags) is always 6 bytes: (8 + 8 + 16 + 8 + 8) / 8 = 6
+        6
     }
 
     #[inline]
     fn size() -> usize {
         // ICMPv6 Header is always 4 bytes so size = offset
-        4
+        6
     }
 
     #[inline]

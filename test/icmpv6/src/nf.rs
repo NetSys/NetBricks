@@ -44,7 +44,8 @@ fn icmp_v6_nf<T: 'static + Batch<Header = MacHeader>>(parent: T) -> CompositionB
                     icmpv6.msg_type().unwrap(),
                     icmpv6.code(),
                     icmpv6.checksum()
-                ).purple()
+                )
+                .purple()
             );
 
             assert_eq!(

@@ -34,7 +34,8 @@ fn icmp_v6_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHead
                     router_advertisement.msg_type().unwrap(),
                     router_advertisement.code(),
                     router_advertisement.checksum()
-                ).purple()
+                )
+                .purple()
             );
 
             assert_eq!(
@@ -74,10 +75,11 @@ fn icmp_v6_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHead
                 format!("{:X?}", 500)
             );
 
-            let expected_mac_address = MacAddress::from_str("c2:00:54:f5:00:00");
-            assert_eq!(
-                format!("{:X?}", router_advertisement.source_link_layer_address().unwrap()),
-                format!("{:X?}", expected_mac_address.unwrap())
-            );
-        }).compose()
+            //        let expected_mac_address = MacAddress::from_str("c2:00:54:f5:00:00");
+            //      assert_eq!(
+            //        format!("{:X?}", router_advertisement.source_link_layer_address().unwrap()),
+            //      format!("{:X?}", expected_mac_address.unwrap())
+            //   );
+        })
+        .compose()
 }

@@ -35,7 +35,8 @@ fn icmp_v6_neighbor_solicitation_nf<T: 'static + Batch<Header = MacHeader>>(
                     neighbor_solicitation.msg_type().unwrap(),
                     neighbor_solicitation.code(),
                     neighbor_solicitation.checksum()
-                ).purple()
+                )
+                .purple()
             );
 
             assert_eq!(
@@ -60,5 +61,6 @@ fn icmp_v6_neighbor_solicitation_nf<T: 'static + Batch<Header = MacHeader>>(
                 format!("{:X?}", neighbor_solicitation.target_addr()),
                 format!("{:X?}", expected_target_addr)
             );
-        }).compose()
+        })
+        .compose()
 }

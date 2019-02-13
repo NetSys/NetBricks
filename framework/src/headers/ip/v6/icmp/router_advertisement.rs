@@ -1,12 +1,16 @@
 use super::{IcmpMessageType, Icmpv6Header};
-use headers::ip::v6::icmp::neighbor_options::Icmpv6RouterAdvertisementOption;
+use headers::ip::v6::icmp::neighbor_options::*;
 use headers::mac::MacAddress;
 use headers::{CalcChecksums, EndOffset, Ipv6VarHeader};
+use native::zcsi::*;
+use num::FromPrimitive;
 use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
+use std::ptr;
+use std::slice;
 use utils::*;
-
+use std::iter::Map;
 /*
   ICMPv6 messages are contained in IPv6 packets. The IPv6 packet contains an IPv6 header followed by the
   payload which contains the ICMPv6 message.
@@ -138,7 +142,6 @@ where
     router_lifetime: u16,
     reachable_time: u32,
     retrans_timer: u32,
-    pub options: Icmpv6RouterAdvertisementOption<T>,
     _parent: PhantomData<T>,
 }
 
@@ -159,9 +162,6 @@ where
             router_lifetime: 0,
             reachable_time: 0,
             retrans_timer: 0,
-            options: Icmpv6RouterAdvertisementOption {
-                ..Default::default()
-            },
             _parent: PhantomData,
         }
     }
@@ -175,6 +175,7 @@ where
         write!(
             f,
             "msg_type: {} code: {} checksum: {}, current_hop_limit {}, reserved_flags {}, router_lifetime {}, reachable_time {}, retrans_timers {}",
+        //options {}",
             self.msg_type().unwrap(),
             self.code(),
             self.checksum(),
@@ -197,19 +198,19 @@ where
     fn offset(&self) -> usize {
         // ICMPv6 Header for Router Advertisement (Type + Code + Checksum + Options)
         // is always 8 bytes: (8 + 8 + 16 + 32) / 8 = 8
-        16
+        6
     }
 
     #[inline]
     fn size() -> usize {
         // ICMPv6 Header is always 8 bytes so size = offset
-        8
+        6
     }
 
     #[inline]
-    fn payload_size(&self, hint: usize) -> usize {
+    fn payload_size(&self, _hint: usize) -> usize {
         // There is no payload size in the ICMPv6 header
-        hint - self.offset()
+        hint - usize
     }
 
     #[inline]
@@ -276,9 +277,13 @@ where
     pub fn retrans_timer(&self) -> u32 {
         u32::from_be(self.retrans_timer)
     }
+}
 
-    #[inline]
-    pub fn source_link_layer_address(&self) -> Option<MacAddress> {
-        self.options.source_link_layer_address()
+
+
+impl IPv6Optionable for Icmpv6RouterAdvertisement<T>
+{
+    fn parse(&self) -> Map<Icmpv6OptionType, &Icmpv6Option> {
+        unimplemented!()
     }
 }

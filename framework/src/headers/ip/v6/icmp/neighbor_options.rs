@@ -4,6 +4,8 @@ use num::FromPrimitive;
 use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
+use std::iter::Map;
+use headers::ip::v6::icmp::router_advertisement::Icmpv6RouterAdvertisement;
 
 #[derive(FromPrimitive, Debug, PartialEq)]
 #[repr(u8)]
@@ -27,180 +29,43 @@ impl fmt::Display for Icmpv6OptionType {
     }
 }
 
-#[derive(Debug, Clone)]
+trait Icmpv6Option {
+    fn option_type(&self) -> Icmpv6OptionType;
+    fn option_length(&self) -> u8;
+}
+
+#[derive(Default)]
 #[repr(C, packed)]
-pub struct Icmpv6Option<T>
-where
-    T: Ipv6VarHeader,
-{
-    option_type: u8,
-    option_length: u8,
-    _parent: PhantomData<T>,
+struct Icmpv6LinkLayerAddressOptionType {
+    source_link_layer_address: MacAddress
 }
 
-impl<T> Default for Icmpv6Option<T>
-where
-    T: Ipv6VarHeader,
-{
-    fn default() -> Icmpv6Option<T> {
-        Icmpv6Option {
-            option_type: 0,
-            option_length: 0,
-            _parent: PhantomData,
-        }
+impl Icmpv6LinkLayerAddressOption for Icmpv6LinkLayerAddressOptionType {
+    fn source_link_layer_address(&self) -> MacAddress {
+        self.source_link_layer_address
     }
 }
 
-impl<T> fmt::Display for Icmpv6Option<T>
-where
-    T: Ipv6VarHeader,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "option_type: {} option_length: {}",
-            self.option_type().unwrap(),
-            self.option_length()
-        )
+impl Icmpv6LinkLayerAddressOptionType {
+
+    #[inline]
+    fn set_source_link_layer_address(&mut self, mac_addr: MacAddress)  {
+        self.source_link_layer_address = mac_addr
     }
 }
 
-impl<T> EndOffset for Icmpv6Option<T>
-where
-    T: Ipv6VarHeader,
-{
-    type PreviousHeader = T;
-
-    #[inline]
-    fn offset(&self) -> usize {
-        // ICMPv6 Option(Type + Length) is always 2 bytes: (8 + 8) / 8 = 2
-        2
+trait Icmpv6LinkLayerAddressOption: Icmpv6Option {
+    fn option_type(&self) -> Icmpv6OptionType {
+        Icmpv6OptionType::SourceLinkLayerAddress
     }
 
-    #[inline]
-    fn size() -> usize {
-        // Icmpv6Option Header is always 4 bytes so size = offset
-        2
+    fn option_length(&self) -> u8 {
+        //length is always 8 bytes. we can move this to a map lookup if we need to
+        8
     }
-
-    #[inline]
-    fn payload_size(&self, hint: usize) -> usize {
-        // There is no payload size in the ICMPv6 header
-        hint - self.offset()
-    }
-
-    #[inline]
-    fn check_correct(&self, _prev: &T) -> bool {
-        true
-    }
+    fn source_link_layer_address(&self) -> MacAddress;
 }
 
-impl<T> Icmpv6Option<T>
-where
-    T: Ipv6VarHeader,
-{
-    #[inline]
-    pub fn new() -> Self {
-        Default::default()
-    }
-
-    #[inline]
-    pub fn option_type(&self) -> Option<Icmpv6OptionType> {
-        FromPrimitive::from_u8(self.option_type)
-    }
-
-    #[inline]
-    pub fn option_length(&self) -> u8 {
-        self.option_length
-    }
-}
-
-#[derive(Debug, Clone)]
-#[repr(C, packed)]
-pub struct Icmpv6RouterAdvertisementOption<T>
-where
-    T: Ipv6VarHeader,
-{
-    pub icmp_option: Icmpv6Option<T>,
-    pub source_link_layer_address: MacAddress,
-    pub _parent: PhantomData<T>,
-}
-
-impl<T> Default for Icmpv6RouterAdvertisementOption<T>
-where
-    T: Ipv6VarHeader,
-{
-    fn default() -> Icmpv6RouterAdvertisementOption<T> {
-        Icmpv6RouterAdvertisementOption {
-            icmp_option: Icmpv6Option {
-                ..Default::default()
-            },
-            source_link_layer_address: MacAddress {
-                addr: [0, 0, 0, 0, 0, 0],
-            },
-            _parent: PhantomData,
-        }
-    }
-}
-
-impl<T> fmt::Display for Icmpv6RouterAdvertisementOption<T>
-where
-    T: Ipv6VarHeader,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "icmp_option: {} source_link_layer_address: {}",
-            self.icmp_option, self.source_link_layer_address
-        )
-    }
-}
-
-impl<T> EndOffset for Icmpv6RouterAdvertisementOption<T>
-where
-    T: Ipv6VarHeader,
-{
-    type PreviousHeader = T;
-
-    #[inline]
-    fn offset(&self) -> usize {
-        // ICMPv6 Router Advertisement Option(Source Link Layer Address) is always 1 byte: 8 / 8 = 1
-        1
-    }
-
-    #[inline]
-    fn size() -> usize {
-        // ICMPv6 Router Advertisement Option(Source Link Layer Address) is always 1 byte so size = offset
-        1
-    }
-
-    #[inline]
-    fn payload_size(&self, hint: usize) -> usize {
-        // There is no payload size in the Router Advertisement Option
-        hint - self.offset()
-    }
-
-    #[inline]
-    fn check_correct(&self, _prev: &T) -> bool {
-        true
-    }
-}
-
-impl<T> Icmpv6RouterAdvertisementOption<T>
-where
-    T: Ipv6VarHeader,
-{
-    #[inline]
-    pub fn new() -> Self {
-        Default::default()
-    }
-
-    #[inline]
-    pub fn source_link_layer_address(&self) -> Option<MacAddress> {
-        if self.icmp_option.option_type().unwrap() == Icmpv6OptionType::SourceLinkLayerAddress {
-            Some(self.source_link_layer_address) }
-        else {
-            None
-        }
-    }
+pub trait IPv6Optionable {
+   // fn parse(&self) -> Map<Icmpv6OptionType, &Icmpv6Option>;
 }
