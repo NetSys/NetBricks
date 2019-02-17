@@ -65,13 +65,17 @@ fn icmpv6_router_advertisement_from_bytes() {
             assert_eq!(icmpv6h.router_lifetime(), 1800);
             assert_eq!(icmpv6h.reachable_time(), 2055);
             assert_eq!(icmpv6h.retrans_timer(), 1500);
-            let expected_source_link_layer_address = MacAddress::from_str("70:3a:cb:1b:f9:7a");
-            //assert_eq!(icmpv6h.source_link_layer_address().unwrap(),expected_source_link_layer_address.unwrap());
+            let options = icmpv6h.parse_options();
+            let source_link_layer = options.get(&Icmpv6OptionType::SourceLinkLayerAddress);
+            let expected_mac_address = MacAddress::from_str("c2:00:54:f5:00:00").unwrap();
+      //      match source_link_layer {
+        //        Icmpv6Option::SourceLinkLayerAddress(value) => println!("value: {}", value),
+          //      _ => println!("Something else"),
+           // }
+           // assert_eq!(source_link_layer.Link_layer_address, expected_mac_address);
         }
     }
 }
-
-
 
 #[test]
 fn icmpv6_router_advertisement_from_bytes_no_link_layer_address() {
@@ -119,7 +123,6 @@ fn icmpv6_router_advertisement_from_bytes_no_link_layer_address() {
         }
     }
 }
-
 
 #[test]
 fn icmpv6_neighbor_solicitation_from_bytes() {

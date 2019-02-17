@@ -1,13 +1,10 @@
-use super::{EndOffset, Ipv6VarHeader};
 use headers::mac::MacAddress;
 use num::FromPrimitive;
-use std::default::Default;
+use std::collections::HashMap;
 use std::fmt;
-use std::marker::PhantomData;
-use std::iter::Map;
-use headers::ip::v6::icmp::router_advertisement::Icmpv6RouterAdvertisement;
+use std::net::Ipv6Addr;
 
-#[derive(FromPrimitive, Debug, PartialEq)]
+#[derive(FromPrimitive, Debug, PartialEq, Hash, Eq, Clone, Copy)]
 #[repr(u8)]
 pub enum Icmpv6OptionType {
     SourceLinkLayerAddress = 1,
@@ -29,43 +26,28 @@ impl fmt::Display for Icmpv6OptionType {
     }
 }
 
-trait Icmpv6Option {
-    fn option_type(&self) -> Icmpv6OptionType;
-    fn option_length(&self) -> u8;
-}
-
-#[derive(Default)]
-#[repr(C, packed)]
-struct Icmpv6LinkLayerAddressOptionType {
-    source_link_layer_address: MacAddress
-}
-
-impl Icmpv6LinkLayerAddressOption for Icmpv6LinkLayerAddressOptionType {
-    fn source_link_layer_address(&self) -> MacAddress {
-        self.source_link_layer_address
-    }
-}
-
-impl Icmpv6LinkLayerAddressOptionType {
-
-    #[inline]
-    fn set_source_link_layer_address(&mut self, mac_addr: MacAddress)  {
-        self.source_link_layer_address = mac_addr
-    }
-}
-
-trait Icmpv6LinkLayerAddressOption: Icmpv6Option {
-    fn option_type(&self) -> Icmpv6OptionType {
-        Icmpv6OptionType::SourceLinkLayerAddress
-    }
-
-    fn option_length(&self) -> u8 {
-        //length is always 8 bytes. we can move this to a map lookup if we need to
-        8
-    }
-    fn source_link_layer_address(&self) -> MacAddress;
+pub enum Icmpv6Option {
+    SourceLinkLayerAddress {
+        link_layer_address: MacAddress,
+    },
+    TargetLinkLayerAddress {
+        link_layer_address: MacAddress,
+    },
+    Mtu {
+        prefix_length: u8,
+        reserved1: u8,
+        valid_lifetime: u32,
+        preferred_lifetime: u32,
+        reserved2: u32,
+        prefix_information: Ipv6Addr,
+    },
+    RedirectHeader {
+        reserved1: u16,
+        reserved2: u32,
+        ipheader_data: u32,
+    },
 }
 
 pub trait IPv6Optionable {
-   // fn parse(&self) -> Map<Icmpv6OptionType, &Icmpv6Option>;
+    fn parse_options(&self) -> HashMap<Icmpv6OptionType, Icmpv6Option>;
 }

@@ -2,15 +2,13 @@ use super::{IcmpMessageType, Icmpv6Header};
 use headers::ip::v6::icmp::neighbor_options::*;
 use headers::mac::MacAddress;
 use headers::{CalcChecksums, EndOffset, Ipv6VarHeader};
-use native::zcsi::*;
 use num::FromPrimitive;
+use std::collections::HashMap;
 use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
-use std::ptr;
 use std::slice;
 use utils::*;
-use std::iter::Map;
 /*
   ICMPv6 messages are contained in IPv6 packets. The IPv6 packet contains an IPv6 header followed by the
   payload which contains the ICMPv6 message.
@@ -175,7 +173,6 @@ where
         write!(
             f,
             "msg_type: {} code: {} checksum: {}, current_hop_limit {}, reserved_flags {}, router_lifetime {}, reachable_time {}, retrans_timers {}",
-        //options {}",
             self.msg_type().unwrap(),
             self.code(),
             self.checksum(),
@@ -196,21 +193,22 @@ where
 
     #[inline]
     fn offset(&self) -> usize {
-        // ICMPv6 Header for Router Advertisement (Type + Code + Checksum + Options)
-        // is always 8 bytes: (8 + 8 + 16 + 32) / 8 = 8
-        6
+        // ICMPv6 Header for Router Advertisement (Type + Code + Checksum)
+        // is always 8 bytes: (8 + 8 + 16) / 8 = 4
+        // Options are a variable length and will be manually parsed
+        16
     }
 
     #[inline]
     fn size() -> usize {
         // ICMPv6 Header is always 8 bytes so size = offset
-        6
+        16
     }
 
     #[inline]
-    fn payload_size(&self, _hint: usize) -> usize {
+    fn payload_size(&self, hint: usize) -> usize {
         // There is no payload size in the ICMPv6 header
-        hint - usize
+        hint - self.offset()
     }
 
     #[inline]
@@ -279,11 +277,62 @@ where
     }
 }
 
-
-
-impl IPv6Optionable for Icmpv6RouterAdvertisement<T>
+impl<T> IPv6Optionable for Icmpv6RouterAdvertisement<T>
+where
+    T: Ipv6VarHeader,
 {
-    fn parse(&self) -> Map<Icmpv6OptionType, &Icmpv6Option> {
-        unimplemented!()
+    fn parse_options(&self) -> HashMap<Icmpv6OptionType, Icmpv6Option> {
+        let mut options_map = HashMap::new();
+        unsafe {
+            let self_as_u8 = (self as *const Self) as *const u8;
+            let mut payload_offset = 0; //track to make sure we don't go beyond v6 payload size
+
+            let seek_to = self_as_u8.offset(self.offset() as isize);
+            // FIX ME THIS DOESNT WORK while !seek_to.is_null() {
+
+            // start at beginning of the options
+            // the second byte is the header length in 8-octet unit excluding the first 8 octets
+            let seek_to = self_as_u8.offset((self.offset() + payload_offset) as isize);
+
+            //lets get the first two indices which should be option_type and option_length fields
+            let option_meta = slice::from_raw_parts(seek_to, 2);
+
+            //Parse the option type field first then the option_length
+            let option_type: Option<Icmpv6OptionType> = FromPrimitive::from_u8(option_meta[0]);
+            let option_length = option_meta[1];
+
+            //Make sure the option is valid defined by the RFC. Note: a router can insert its own
+            //options defined outside of the spec.
+            if option_type.is_some() {
+                //option_length field = total length of 8 octets. we subtract two bytes because of
+                //option type and option length field
+                let option_value_length = (option_length * 8 - 2) as isize;
+
+                let value_seek_to =
+                    self_as_u8.offset((self.offset() + payload_offset + 2) as isize);
+                let option_value =
+                    slice::from_raw_parts(value_seek_to, option_value_length as usize);
+
+                match option_type.unwrap() {
+                    Icmpv6OptionType::SourceLinkLayerAddress => options_map.insert(
+                        option_type.unwrap(),
+                        Icmpv6Option::SourceLinkLayerAddress {
+                            link_layer_address: MacAddress::new(
+                                option_value[0],
+                                option_value[1],
+                                option_value[2],
+                                option_value[3],
+                                option_value[4],
+                                option_value[5],
+                            ),
+                        },
+                    ),
+                    _ => None,
+                };
+            }
+            payload_offset += seek_to.offset(option_length as isize).read() as usize;
+            //     }
+        }
+        options_map
     }
 }
