@@ -140,6 +140,7 @@ where
     router_lifetime: u16,
     reachable_time: u32,
     retrans_timer: u32,
+    options: HashMap<Icmpv6OptionType, Icmpv6Option>,
     _parent: PhantomData<T>,
 }
 
@@ -160,6 +161,7 @@ where
             router_lifetime: 0,
             reachable_time: 0,
             retrans_timer: 0,
+            options: HashMap::new(),
             _parent: PhantomData,
         }
     }
@@ -281,57 +283,53 @@ impl<T> IPv6Optionable for Icmpv6RouterAdvertisement<T>
 where
     T: Ipv6VarHeader,
 {
-    fn parse_options(&self) -> HashMap<Icmpv6OptionType, Icmpv6Option> {
+    fn parse_options(&self, payload_len: u16) -> HashMap<Icmpv6OptionType, Icmpv6Option> {
         let mut options_map = HashMap::new();
         unsafe {
             let self_as_u8 = (self as *const Self) as *const u8;
-            let mut payload_offset = 0; //track to make sure we don't go beyond v6 payload size
+            let mut payload_offset = self.offset(); //track to make sure we don't go beyond v6 payload size
 
-            let seek_to = self_as_u8.offset(self.offset() as isize);
-            // FIX ME THIS DOESNT WORK while !seek_to.is_null() {
+            while payload_offset < (payload_len as usize) {
+                // start at beginning of the options
+                // the second byte is the header length in 8-octet unit excluding the first 8 octets
+                let seek_to = self_as_u8.offset(payload_offset as isize);
 
-            // start at beginning of the options
-            // the second byte is the header length in 8-octet unit excluding the first 8 octets
-            let seek_to = self_as_u8.offset((self.offset() + payload_offset) as isize);
+                //lets get the first two indices which should be option_type and option_length fields
+                let option_meta = slice::from_raw_parts(seek_to, 2);
 
-            //lets get the first two indices which should be option_type and option_length fields
-            let option_meta = slice::from_raw_parts(seek_to, 2);
+                //Parse the option type field first then the option_length
+                let option_type: Option<Icmpv6OptionType> = FromPrimitive::from_u8(option_meta[0]);
+                let option_length = option_meta[1];
+                let option_length_octets = option_length * 8;
 
-            //Parse the option type field first then the option_length
-            let option_type: Option<Icmpv6OptionType> = FromPrimitive::from_u8(option_meta[0]);
-            let option_length = option_meta[1];
+                //Make sure the option is valid defined by the RFC. Note: a router can insert its own
+                //options defined outside of the spec.
+                if option_type.is_some() {
+                    //option_value_length is always total number of octets - 2(option type and length are always 2)
+                    let option_value_length = (option_length_octets - 2) as isize;
 
-            //Make sure the option is valid defined by the RFC. Note: a router can insert its own
-            //options defined outside of the spec.
-            if option_type.is_some() {
-                //option_length field = total length of 8 octets. we subtract two bytes because of
-                //option type and option length field
-                let option_value_length = (option_length * 8 - 2) as isize;
+                    let value_seek_to = self_as_u8.offset((payload_offset + 2) as isize);
+                    let option_value =
+                        slice::from_raw_parts(value_seek_to, option_value_length as usize);
 
-                let value_seek_to =
-                    self_as_u8.offset((self.offset() + payload_offset + 2) as isize);
-                let option_value =
-                    slice::from_raw_parts(value_seek_to, option_value_length as usize);
-
-                match option_type.unwrap() {
-                    Icmpv6OptionType::SourceLinkLayerAddress => options_map.insert(
-                        option_type.unwrap(),
-                        Icmpv6Option::SourceLinkLayerAddress {
-                            link_layer_address: MacAddress::new(
+                    match option_type.unwrap() {
+                        Icmpv6OptionType::SourceLinkLayerAddress => options_map.insert(
+                            option_type.unwrap(),
+                            Icmpv6Option::SourceLinkLayerAddress(MacAddress::new(
                                 option_value[0],
                                 option_value[1],
                                 option_value[2],
                                 option_value[3],
                                 option_value[4],
                                 option_value[5],
-                            ),
-                        },
-                    ),
-                    _ => None,
-                };
+                            )),
+                        ),
+                        _ => None,
+                    };
+                }
+
+                payload_offset += (option_length_octets) as usize;
             }
-            payload_offset += seek_to.offset(option_length as isize).read() as usize;
-            //     }
         }
         options_map
     }

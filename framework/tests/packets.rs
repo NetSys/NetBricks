@@ -38,6 +38,8 @@ fn icmpv6_router_advertisement_from_bytes() {
 
          // Check IPv6 header
         let v6pkt = epkt.parse_header::<Ipv6Header>();
+        let &v6 = v6pkt.get_header();
+        let payload_len = v6.payload_len();
         {
             let v6 = v6pkt.get_header();
             let src = Ipv6Addr::from_str("fe80::d4f0:45ff:fe0c:664b").unwrap();
@@ -45,7 +47,7 @@ fn icmpv6_router_advertisement_from_bytes() {
             assert_eq!(v6.version(), 6);
             assert_eq!(v6.traffic_class(), 0);
             assert_eq!(v6.flow_label(), 0);
-            assert_eq!(v6.payload_len(), 88);
+            assert_eq!(payload_len, 64);
             assert_eq!(v6.next_header().unwrap(), NextHeader::Icmp);
             assert_eq!(v6.hop_limit(), 255);
             assert_eq!(Ipv6Addr::from(v6.src()), src);
@@ -65,14 +67,14 @@ fn icmpv6_router_advertisement_from_bytes() {
             assert_eq!(icmpv6h.router_lifetime(), 1800);
             assert_eq!(icmpv6h.reachable_time(), 2055);
             assert_eq!(icmpv6h.retrans_timer(), 1500);
-            let options = icmpv6h.parse_options();
-            let source_link_layer = options.get(&Icmpv6OptionType::SourceLinkLayerAddress);
+            let options = icmpv6h.parse_options(payload_len);
+            let source_link_layer = options.get(&Icmpv6OptionType::SourceLinkLayerAddress).unwrap();
             let expected_mac_address = MacAddress::from_str("c2:00:54:f5:00:00").unwrap();
-      //      match source_link_layer {
-        //        Icmpv6Option::SourceLinkLayerAddress(value) => println!("value: {}", value),
-          //      _ => println!("Something else"),
-           // }
-           // assert_eq!(source_link_layer.Link_layer_address, expected_mac_address);
+            let source_link_layer_addr = match source_link_layer {
+                Icmpv6Option::SourceLinkLayerAddress(value) => Some(value),
+                _ => None,
+            };
+           assert_eq!(source_link_layer_addr.unwrap().clone(), expected_mac_address);
         }
     }
 }
@@ -92,6 +94,8 @@ fn icmpv6_router_advertisement_from_bytes_no_link_layer_address() {
 
          // Check IPv6 header
         let v6pkt = epkt.parse_header::<Ipv6Header>();
+        let &v6 = v6pkt.get_header();
+        let payload_len = v6.payload_len();
         {
             let v6 = v6pkt.get_header();
             let src = Ipv6Addr::from_str("fe80::d4f0:45ff:fe0c:664b").unwrap();
@@ -99,7 +103,7 @@ fn icmpv6_router_advertisement_from_bytes_no_link_layer_address() {
             assert_eq!(v6.version(), 6);
             assert_eq!(v6.traffic_class(), 0);
             assert_eq!(v6.flow_label(), 0);
-            assert_eq!(v6.payload_len(), 88);
+            assert_eq!(v6.payload_len(), 56);
             assert_eq!(v6.next_header().unwrap(), NextHeader::Icmp);
             assert_eq!(v6.hop_limit(), 255);
             assert_eq!(Ipv6Addr::from(v6.src()), src);
@@ -119,7 +123,9 @@ fn icmpv6_router_advertisement_from_bytes_no_link_layer_address() {
             assert_eq!(icmpv6h.router_lifetime(), 1800);
             assert_eq!(icmpv6h.reachable_time(), 2055);
             assert_eq!(icmpv6h.retrans_timer(), 1500);
-            //assert_eq!(icmpv6h.source_link_layer_address(), None);
+            let options = icmpv6h.parse_options(payload_len);
+            let source_link_layer = options.get(&Icmpv6OptionType::SourceLinkLayerAddress);
+            assert_eq!(source_link_layer.is_some(), false);
         }
     }
 }

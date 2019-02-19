@@ -1,5 +1,4 @@
 use headers::mac::MacAddress;
-use num::FromPrimitive;
 use std::collections::HashMap;
 use std::fmt;
 use std::net::Ipv6Addr;
@@ -25,29 +24,46 @@ impl fmt::Display for Icmpv6OptionType {
         }
     }
 }
+#[derive(Debug)]
+#[repr(C)]
+pub struct Icmpv6MtuOption {
+    prefix_length: u8,
+    reserved1: u8,
+    valid_lifetime: u32,
+    preferred_lifetime: u32,
+    reserved2: u32,
+    prefix_information: Ipv6Addr,
+}
 
+#[derive(Debug)]
+#[repr(C)]
+pub struct Icmpv6RedirectHeaderOption {
+    reserved1: u16,
+    reserved2: u32,
+    ipheader_data: u32,
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct Icmpv6PrefixInformationOption {
+    prefix_length: u8,
+    reserved1: u8,
+    valid_lifetime: u32,
+    preferred_lifetime: u32,
+    reserved2: u32,
+    prefix_information: Ipv6Addr,
+}
+
+#[derive(Debug)]
+#[repr(C)]
 pub enum Icmpv6Option {
-    SourceLinkLayerAddress {
-        link_layer_address: MacAddress,
-    },
-    TargetLinkLayerAddress {
-        link_layer_address: MacAddress,
-    },
-    Mtu {
-        prefix_length: u8,
-        reserved1: u8,
-        valid_lifetime: u32,
-        preferred_lifetime: u32,
-        reserved2: u32,
-        prefix_information: Ipv6Addr,
-    },
-    RedirectHeader {
-        reserved1: u16,
-        reserved2: u32,
-        ipheader_data: u32,
-    },
+    SourceLinkLayerAddress(MacAddress),
+    TargetLinkLayerAddress(MacAddress),
+    Mtu(Icmpv6MtuOption),
+    RedirectHeader(Icmpv6RedirectHeaderOption),
+    PrefixInformation(Icmpv6PrefixInformationOption),
 }
 
 pub trait IPv6Optionable {
-    fn parse_options(&self) -> HashMap<Icmpv6OptionType, Icmpv6Option>;
+    fn parse_options(&self, payload_len: u16) -> HashMap<Icmpv6OptionType, Icmpv6Option>;
 }
