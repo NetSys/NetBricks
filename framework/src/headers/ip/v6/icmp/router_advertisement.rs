@@ -311,10 +311,10 @@ where
                     let value_seek_to = self_as_u8.offset((payload_offset + 2) as isize);
                     let option_value =
                         slice::from_raw_parts(value_seek_to, option_value_length as usize);
-
-                    match option_type.unwrap() {
+                    let option_type_enum = option_type.unwrap();
+                    match option_type_enum() {
                         Icmpv6OptionType::SourceLinkLayerAddress => options_map.insert(
-                            option_type.unwrap(),
+                            option_type_enum,
                             Icmpv6Option::SourceLinkLayerAddress(MacAddress::new(
                                 option_value[0],
                                 option_value[1],
@@ -326,6 +326,9 @@ where
                         ),
                         _ => None,
                     };
+                }
+                else {
+                   //log loudly here that option type does not exist
                 }
 
                 payload_offset += (option_length_octets) as usize;
