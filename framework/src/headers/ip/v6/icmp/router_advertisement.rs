@@ -312,7 +312,7 @@ where
                     let option_value =
                         slice::from_raw_parts(value_seek_to, option_value_length as usize);
                     let option_type_enum = option_type.unwrap();
-                    match option_type_enum() {
+                    match option_type_enum {
                         Icmpv6OptionType::SourceLinkLayerAddress => options_map.insert(
                             option_type_enum,
                             Icmpv6Option::SourceLinkLayerAddress(MacAddress::new(
