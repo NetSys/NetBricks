@@ -1,1 +1,0 @@
-c2:02:03:e4:00:00 > c2:01:02:40:00:00, ethertype IPv6 (0x86dd), length 86: fe80::c002:3ff:fee4:0 > fe80::c001:2ff:fe40:0: ICMP6, neighbor advertisement, tgt is fe80::c002:3ff:fee4:0, length 32

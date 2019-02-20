@@ -24,7 +24,7 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| icmp_nf(ReceiveBatch::new(port.clone())).send(port.clone()))
+        .map(|port| ndp_nf(ReceiveBatch::new(port.clone())).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {

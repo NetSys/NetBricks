@@ -1,5 +1,5 @@
 [package]
-name = "icmpv6"
+name = "ndp-neighbor-solicitation"
 version = "0.1.0"
 authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
 

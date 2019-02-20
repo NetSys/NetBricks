@@ -1,4 +1,4 @@
-use super::{IcmpMessageType, Icmpv6Header, Icmpv6Neighbor};
+use super::{IcmpMessageType, Icmpv6Header, NDPNeighbor};
 use headers::{EndOffset, Ipv6VarHeader};
 use std::default::Default;
 use std::fmt;
@@ -75,21 +75,21 @@ use std::net::Ipv6Addr;
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct Icmpv6NeighborSolicitation<T>
+pub struct NDPNeighborSolicitation<T>
 where
     T: Ipv6VarHeader,
 {
-    icmp_neighbor: Icmpv6Neighbor<T>,
+    icmp_neighbor: NDPNeighbor<T>,
     _parent: PhantomData<T>,
 }
 
-impl<T> Default for Icmpv6NeighborSolicitation<T>
+impl<T> Default for NDPNeighborSolicitation<T>
 where
     T: Ipv6VarHeader,
 {
-    fn default() -> Icmpv6NeighborSolicitation<T> {
-        Icmpv6NeighborSolicitation {
-            icmp_neighbor: Icmpv6Neighbor {
+    fn default() -> NDPNeighborSolicitation<T> {
+        NDPNeighborSolicitation {
+            icmp_neighbor: NDPNeighbor {
                 icmp: Icmpv6Header {
                     msg_type: IcmpMessageType::NeighborSolicitation as u8,
                     ..Default::default()
@@ -101,7 +101,7 @@ where
     }
 }
 
-impl<T> fmt::Display for Icmpv6NeighborSolicitation<T>
+impl<T> fmt::Display for NDPNeighborSolicitation<T>
 where
     T: Ipv6VarHeader,
 {
@@ -118,7 +118,7 @@ where
     }
 }
 
-impl<T> EndOffset for Icmpv6NeighborSolicitation<T>
+impl<T> EndOffset for NDPNeighborSolicitation<T>
 where
     T: Ipv6VarHeader,
 {
@@ -149,7 +149,7 @@ where
     }
 }
 
-impl<T> Icmpv6NeighborSolicitation<T>
+impl<T> NDPNeighborSolicitation<T>
 where
     T: Ipv6VarHeader,
 {

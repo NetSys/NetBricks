@@ -24,7 +24,7 @@ fn packet_from_bytes(bytes: &[u8]) -> Packet<NullHeader, EmptyMetadata> {
 }
 
 #[test]
-fn icmpv6_router_advertisement_from_bytes() {
+fn ndp_router_advertisement_from_bytes() {
     dpdk_test! {
         let pkt = packet_from_bytes(&ICMP_ROUTER_ADVERTISEMENT_BYTES);
         // Check Ethernet header
@@ -67,20 +67,16 @@ fn icmpv6_router_advertisement_from_bytes() {
             assert_eq!(icmpv6h.router_lifetime(), 1800);
             assert_eq!(icmpv6h.reachable_time(), 2055);
             assert_eq!(icmpv6h.retrans_timer(), 1500);
-            let options = icmpv6h.parse_options(payload_len);
-            let source_link_layer = options.get(&Icmpv6OptionType::SourceLinkLayerAddress).unwrap();
             let expected_mac_address = MacAddress::from_str("c2:00:54:f5:00:00").unwrap();
-            let source_link_layer_addr = match source_link_layer {
-                Icmpv6Option::SourceLinkLayerAddress(value) => Some(value),
-                _ => None,
-            };
-           assert_eq!(source_link_layer_addr.unwrap().clone(), expected_mac_address);
+            let options = icmpv6h.parse_options(payload_len);
+            let source_link_layer_address = icmpv6h.source_link_layer_address(options);
+            assert_eq!(source_link_layer_address.unwrap(), expected_mac_address);
         }
     }
 }
 
 #[test]
-fn icmpv6_router_advertisement_from_bytes_no_link_layer_address() {
+fn ndp_router_advertisement_from_bytes_no_link_layer_address() {
     dpdk_test! {
         let pkt = packet_from_bytes(&ICMP_ROUTER_ADVERTISEMENT_BYTES_NO_LINK_LAYER_ADDRESS  );
         // Check Ethernet header
@@ -124,14 +120,14 @@ fn icmpv6_router_advertisement_from_bytes_no_link_layer_address() {
             assert_eq!(icmpv6h.reachable_time(), 2055);
             assert_eq!(icmpv6h.retrans_timer(), 1500);
             let options = icmpv6h.parse_options(payload_len);
-            let source_link_layer = options.get(&Icmpv6OptionType::SourceLinkLayerAddress);
+            let source_link_layer = options.get(&NDPOptionType::SourceLinkLayerAddress);
             assert_eq!(source_link_layer.is_some(), false);
         }
     }
 }
 
 #[test]
-fn icmpv6_neighbor_solicitation_from_bytes() {
+fn ndp_neighbor_solicitation_from_bytes() {
     dpdk_test! {
         let pkt = packet_from_bytes(&ICMP_NEIGHBOR_SOLICITATION_BYTES);
         // Check Ethernet header
@@ -160,7 +156,7 @@ fn icmpv6_neighbor_solicitation_from_bytes() {
         }
 
         //Check Icmp header
-        let icmp_pkt = v6pkt.parse_header::<Icmpv6NeighborSolicitation<Ipv6Header>>();
+        let icmp_pkt = v6pkt.parse_header::<NDPNeighborSolicitation<Ipv6Header>>();
         {
             let icmpv6h = icmp_pkt.get_header();
             let dst = Ipv6Addr::from_str("ff02::2").unwrap();
@@ -203,7 +199,7 @@ fn icmpv6_neighbor_advertisement_from_bytes() {
         }
 
         //Check Icmp header
-        let icmp_pkt = v6pkt.parse_header::<Icmpv6NeighborAdvertisement<Ipv6Header>>();
+        let icmp_pkt = v6pkt.parse_header::<NDPNeighborAdvertisement<Ipv6Header>>();
         {
             let icmpv6h = icmp_pkt.get_header();
             let dst = Ipv6Addr::from_str("ff02::2").unwrap();

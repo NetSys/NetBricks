@@ -1,4 +1,4 @@
-use super::{IcmpMessageType, Icmpv6Header, Icmpv6Neighbor};
+use super::{IcmpMessageType, Icmpv6Header, NDPNeighbor};
 use headers::{EndOffset, Ipv6VarHeader};
 use std::default::Default;
 use std::fmt;
@@ -128,24 +128,24 @@ const OVERRIDE_FLAG_POS: u8 = 2;
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct Icmpv6NeighborAdvertisement<T>
+pub struct NDPNeighborAdvertisement<T>
 where
     T: Ipv6VarHeader,
 {
-    icmp_neighbor: Icmpv6Neighbor<T>,
+    icmp_neighbor: NDPNeighbor<T>,
     router_flag: bool,
     solicitated_flag: bool,
     override_flag: bool,
     _parent: PhantomData<T>,
 }
 
-impl<T> Default for Icmpv6NeighborAdvertisement<T>
+impl<T> Default for NDPNeighborAdvertisement<T>
 where
     T: Ipv6VarHeader,
 {
-    fn default() -> Icmpv6NeighborAdvertisement<T> {
-        Icmpv6NeighborAdvertisement {
-            icmp_neighbor: Icmpv6Neighbor {
+    fn default() -> NDPNeighborAdvertisement<T> {
+        NDPNeighborAdvertisement {
+            icmp_neighbor: NDPNeighbor {
                 icmp: Icmpv6Header {
                     msg_type: IcmpMessageType::NeighborSolicitation as u8,
                     ..Default::default()
@@ -160,7 +160,7 @@ where
     }
 }
 
-impl<T> fmt::Display for Icmpv6NeighborAdvertisement<T>
+impl<T> fmt::Display for NDPNeighborAdvertisement<T>
 where
     T: Ipv6VarHeader,
 {
@@ -177,7 +177,7 @@ where
     }
 }
 
-impl<T> EndOffset for Icmpv6NeighborAdvertisement<T>
+impl<T> EndOffset for NDPNeighborAdvertisement<T>
 where
     T: Ipv6VarHeader,
 {
@@ -208,7 +208,7 @@ where
     }
 }
 
-impl<T> Icmpv6NeighborAdvertisement<T>
+impl<T> NDPNeighborAdvertisement<T>
 where
     T: Ipv6VarHeader,
 {

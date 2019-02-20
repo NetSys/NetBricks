@@ -12,11 +12,10 @@ export examples=(
         test/srv6-sighup-flow
         test/srv6-inject
         test/tcp-checksum
-        test/icmpv6
         test/mtu-too-big
-        test/icmpv6-router-advertisement
-        test/icmpv6-neighbor-solicitation
-        test/icmpv6-neighbor-advertisement
+        test/ndp-router-advertisement
+        test/ndp-neighbor-solicitation
+        test/ndp-neighbor-advertisement
         # test/delay-test
         # test/chain-test
         # test/shutdown-test

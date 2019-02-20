@@ -140,7 +140,7 @@ where
     router_lifetime: u16,
     reachable_time: u32,
     retrans_timer: u32,
-    options: HashMap<Icmpv6OptionType, Icmpv6Option>,
+    options: HashMap<NDPOptionType, NDPOption>,
     _parent: PhantomData<T>,
 }
 
@@ -277,13 +277,26 @@ where
     pub fn retrans_timer(&self) -> u32 {
         u32::from_be(self.retrans_timer)
     }
+
+    #[inline]
+    pub fn source_link_layer_address(
+        &self,
+        options: HashMap<NDPOptionType, NDPOption>,
+    ) -> Option<MacAddress> {
+        let source_link_layer = options.get(&NDPOptionType::SourceLinkLayerAddress).unwrap();
+        let source_link_option = match source_link_layer {
+            NDPOption::SourceLinkLayerAddress(value) => Some(*value),
+            _ => None,
+        };
+        source_link_option
+    }
 }
 
-impl<T> IPv6Optionable for Icmpv6RouterAdvertisement<T>
+impl<T> NDPOptionParser for Icmpv6RouterAdvertisement<T>
 where
     T: Ipv6VarHeader,
 {
-    fn parse_options(&self, payload_len: u16) -> HashMap<Icmpv6OptionType, Icmpv6Option> {
+    fn parse_options(&self, payload_len: u16) -> HashMap<NDPOptionType, NDPOption> {
         let mut options_map = HashMap::new();
         unsafe {
             let self_as_u8 = (self as *const Self) as *const u8;
@@ -294,28 +307,28 @@ where
                 // the second byte is the header length in 8-octet unit excluding the first 8 octets
                 let seek_to = self_as_u8.offset(payload_offset as isize);
 
-                //lets get the first two indices which should be option_type and option_length fields
+                // lets get the first two indices which should be option_type and option_length fields
                 let option_meta = slice::from_raw_parts(seek_to, 2);
 
-                //Parse the option type field first then the option_length
-                let option_type: Option<Icmpv6OptionType> = FromPrimitive::from_u8(option_meta[0]);
+                // Parse the option type field first then the option_length
+                let option_type: Option<NDPOptionType> = FromPrimitive::from_u8(option_meta[0]);
                 let option_length = option_meta[1];
                 let option_length_octets = option_length * 8;
 
-                //Make sure the option is valid defined by the RFC. Note: a router can insert its own
-                //options defined outside of the spec.
-                if option_type.is_some() {
-                    //option_value_length is always total number of octets - 2(option type and length are always 2)
-                    let option_value_length = (option_length_octets - 2) as isize;
+                // option_value_length is always total number of octets - 2(option type and length are always 2)
+                let option_value_length = (option_length_octets - 2) as isize;
+                let value_seek_to = self_as_u8.offset((payload_offset + 2) as isize);
+                let option_value =
+                    slice::from_raw_parts(value_seek_to, option_value_length as usize);
 
-                    let value_seek_to = self_as_u8.offset((payload_offset + 2) as isize);
-                    let option_value =
-                        slice::from_raw_parts(value_seek_to, option_value_length as usize);
-                    let option_type_enum = option_type.unwrap();
-                    match option_type_enum {
-                        Icmpv6OptionType::SourceLinkLayerAddress => options_map.insert(
-                            option_type_enum,
-                            Icmpv6Option::SourceLinkLayerAddress(MacAddress::new(
+                // Make sure the option is valid defined by the RFC. Note: a router can insert its own
+                // options defined outside of the spec.
+                match option_type {
+                    // we only care about matching on source link layer address
+                    Some(NDPOptionType::SourceLinkLayerAddress) => {
+                        options_map.insert(
+                            NDPOptionType::SourceLinkLayerAddress,
+                            NDPOption::SourceLinkLayerAddress(MacAddress::new(
                                 option_value[0],
                                 option_value[1],
                                 option_value[2],
@@ -323,12 +336,14 @@ where
                                 option_value[4],
                                 option_value[5],
                             )),
-                        ),
-                        _ => None,
-                    };
-                }
-                else {
-                   //log loudly here that option type does not exist
+                        );
+                    }
+                    Some(other) => {
+                        // log maybe?
+                    }
+                    None => {
+                        // log loudly as we cannot handle this option type
+                    }
                 }
 
                 payload_offset += (option_length_octets) as usize;

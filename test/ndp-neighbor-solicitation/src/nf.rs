@@ -4,7 +4,7 @@ use netbricks::operators::*;
 use std::net::Ipv6Addr;
 use std::str::FromStr;
 
-pub fn icmp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
+pub fn ndp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
     let pipeline = parent
         .parse::<MacHeader>()
         .filter(box |pkt| match pkt.get_header().etype() {
@@ -12,11 +12,11 @@ pub fn icmp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Compositio
             _ => false,
         });
 
-    icmp_v6_neighbor_solicitation_nf(pipeline)
+    ndp_neighbor_solicitation_nf(pipeline)
 }
 
 #[inline]
-fn icmp_v6_neighbor_solicitation_nf<T: 'static + Batch<Header = MacHeader>>(
+fn ndp_neighbor_solicitation_nf<T: 'static + Batch<Header = MacHeader>>(
     parent: T,
 ) -> CompositionBatch {
     println!(
@@ -25,7 +25,7 @@ fn icmp_v6_neighbor_solicitation_nf<T: 'static + Batch<Header = MacHeader>>(
     );
     parent
         .parse::<Ipv6Header>()
-        .parse::<Icmpv6NeighborSolicitation<Ipv6Header>>()
+        .parse::<NDPNeighborSolicitation<Ipv6Header>>()
         .transform(box |pkt| {
             let neighbor_solicitation = pkt.get_mut_header();
             println!(
@@ -35,8 +35,7 @@ fn icmp_v6_neighbor_solicitation_nf<T: 'static + Batch<Header = MacHeader>>(
                     neighbor_solicitation.msg_type().unwrap(),
                     neighbor_solicitation.code(),
                     neighbor_solicitation.checksum()
-                )
-                .purple()
+                ).purple()
             );
 
             assert_eq!(
@@ -61,6 +60,5 @@ fn icmp_v6_neighbor_solicitation_nf<T: 'static + Batch<Header = MacHeader>>(
                 format!("{:X?}", neighbor_solicitation.target_addr()),
                 format!("{:X?}", expected_target_addr)
             );
-        })
-        .compose()
+        }).compose()
 }

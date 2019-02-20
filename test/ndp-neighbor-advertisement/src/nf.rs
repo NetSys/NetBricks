@@ -4,7 +4,7 @@ use netbricks::operators::*;
 use std::net::Ipv6Addr;
 use std::str::FromStr;
 
-pub fn icmp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
+pub fn ndp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
     let pipeline = parent
         .parse::<MacHeader>()
         .filter(box |pkt| match pkt.get_header().etype() {
@@ -12,11 +12,11 @@ pub fn icmp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Compositio
             _ => false,
         });
 
-    icmp_v6_neighbor_advertisement_nf(pipeline)
+    ndp_neighbor_advertisement_nf(pipeline)
 }
 
 #[inline]
-fn icmp_v6_neighbor_advertisement_nf<T: 'static + Batch<Header = MacHeader>>(
+fn ndp_neighbor_advertisement_nf<T: 'static + Batch<Header = MacHeader>>(
     parent: T,
 ) -> CompositionBatch {
     println!(
@@ -25,7 +25,7 @@ fn icmp_v6_neighbor_advertisement_nf<T: 'static + Batch<Header = MacHeader>>(
     );
     parent
         .parse::<Ipv6Header>()
-        .parse::<Icmpv6NeighborAdvertisement<Ipv6Header>>()
+        .parse::<NDPNeighborAdvertisement<Ipv6Header>>()
         .transform(box |pkt| {
             let neighbor_advertisement = pkt.get_mut_header();
             println!(
@@ -35,8 +35,7 @@ fn icmp_v6_neighbor_advertisement_nf<T: 'static + Batch<Header = MacHeader>>(
                     neighbor_advertisement.msg_type().unwrap(),
                     neighbor_advertisement.code(),
                     neighbor_advertisement.checksum()
-                )
-                .purple()
+                ).purple()
             );
 
             assert_eq!(
@@ -70,6 +69,5 @@ fn icmp_v6_neighbor_advertisement_nf<T: 'static + Batch<Header = MacHeader>>(
                 format!("{:X?}", neighbor_advertisement.override_flag()),
                 format!("{:X?}", true)
             );
-        })
-        .compose()
+        }).compose()
 }

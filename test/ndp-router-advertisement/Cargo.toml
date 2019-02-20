@@ -1,5 +1,5 @@
 [package]
-name = "icmpv6-router-advertisement"
+name = "ndp-router-advertisement"
 version = "0.1.0"
 authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
 

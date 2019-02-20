@@ -1,9 +1,8 @@
 use colored::*;
 use netbricks::headers::*;
 use netbricks::operators::*;
-use std::str::FromStr;
 
-pub fn icmp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
+pub fn ndp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
     let pipeline = parent
         .parse::<MacHeader>()
         .filter(box |pkt| match pkt.get_header().etype() {
@@ -11,11 +10,11 @@ pub fn icmp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> Compositio
             _ => false,
         });
 
-    icmp_v6_router_advertisementertisement_nf(pipeline)
+    ndp_router_advertisementertisement_nf(pipeline)
 }
 
 #[inline]
-fn icmp_v6_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHeader>>(
+fn ndp_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHeader>>(
     parent: T,
 ) -> CompositionBatch {
     println!(
@@ -75,7 +74,7 @@ fn icmp_v6_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHead
                 format!("{:X?}", 500)
             );
 
-       /*     let options = router_advertisement.parse_options();
+            /*     let options = router_advertisement.parse_options();
             let source_link_layer = options.get(Icmpv6OptionType::SourceLinkLayerAddress);
             let expected_mac_address = MacAddress::from_str("c2:00:54:f5:00:00").unwrap();
             assert_eq!(
