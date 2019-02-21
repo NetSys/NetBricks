@@ -1,6 +1,12 @@
 use colored::*;
 use netbricks::headers::*;
 use netbricks::operators::*;
+use std::str::FromStr;
+
+struct Meta {
+    payload_len: u16
+}
+
 
 pub fn ndp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
     let pipeline = parent
@@ -23,9 +29,15 @@ fn ndp_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHeader>>
     );
     parent
         .parse::<Ipv6Header>()
+        .metadata(box |pkt| Meta {
+           payload_len: pkt.get_header().payload_len(),
+        })
         .parse::<Icmpv6RouterAdvertisement<Ipv6Header>>()
         .transform(box |pkt| {
+
+            let payload_len = pkt.read_metadata().payload_len;
             let router_advertisement = pkt.get_mut_header();
+
             println!(
                 "{}",
                 format!(
@@ -74,13 +86,18 @@ fn ndp_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHeader>>
                 format!("{:X?}", 500)
             );
 
-            /*     let options = router_advertisement.parse_options();
-            let source_link_layer = options.get(Icmpv6OptionType::SourceLinkLayerAddress);
+            assert_eq!(
+                format!("{:X?}", payload_len),
+                format!("{:X?}", 64)
+            );
+
+            let options = router_advertisement.parse_options(payload_len);
+            let source_link_layer = router_advertisement.source_link_layer_address(options);
             let expected_mac_address = MacAddress::from_str("c2:00:54:f5:00:00").unwrap();
             assert_eq!(
-                format!("{:X?}", source_link_layer.unwrap().link_layer_address),
+                format!("{:X?}", source_link_layer.unwrap()),
                 format!("{:X?}", expected_mac_address)
-            );*/
+            );
         })
         .compose()
 }
