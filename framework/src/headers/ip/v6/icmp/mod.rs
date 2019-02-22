@@ -1,4 +1,4 @@
-pub use self::neighbor::*;
+pub use self::ndp::*;
 pub use self::neighbor_advertisement::*;
 pub use self::neighbor_options::*;
 pub use self::neighbor_solicitation::*;
@@ -11,7 +11,7 @@ use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
 
-mod neighbor;
+mod ndp;
 mod neighbor_advertisement;
 mod neighbor_options;
 mod neighbor_solicitation;

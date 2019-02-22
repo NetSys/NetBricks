@@ -7,7 +7,7 @@ use std::net::Ipv6Addr;
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct NDPNeighbor<T>
+pub struct NDPMessage<T>
 where
     T: Ipv6VarHeader,
 {
@@ -17,12 +17,12 @@ where
     pub _parent: PhantomData<T>,
 }
 
-impl<T> Default for NDPNeighbor<T>
+impl<T> Default for NDPMessage<T>
 where
     T: Ipv6VarHeader,
 {
-    fn default() -> NDPNeighbor<T> {
-        NDPNeighbor {
+    fn default() -> NDPMessage<T> {
+        NDPMessage {
             icmp: Icmpv6Header {
                 ..Default::default()
             },
@@ -34,7 +34,7 @@ where
     }
 }
 
-impl<T> fmt::Display for NDPNeighbor<T>
+impl<T> fmt::Display for NDPMessage<T>
 where
     T: Ipv6VarHeader,
 {
@@ -51,7 +51,7 @@ where
     }
 }
 
-impl<T> EndOffset for NDPNeighbor<T>
+impl<T> EndOffset for NDPMessage<T>
 where
     T: Ipv6VarHeader,
 {
@@ -82,7 +82,7 @@ where
     }
 }
 
-impl<T> NDPNeighbor<T>
+impl<T> NDPMessage<T>
 where
     T: Ipv6VarHeader,
 {
