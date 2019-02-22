@@ -35,7 +35,8 @@ fn ndp_neighbor_advertisement_nf<T: 'static + Batch<Header = MacHeader>>(
                     neighbor_advertisement.msg_type().unwrap(),
                     neighbor_advertisement.code(),
                     neighbor_advertisement.checksum()
-                ).purple()
+                )
+                .purple()
             );
 
             assert_eq!(
@@ -69,5 +70,6 @@ fn ndp_neighbor_advertisement_nf<T: 'static + Batch<Header = MacHeader>>(
                 format!("{:X?}", neighbor_advertisement.override_flag()),
                 format!("{:X?}", true)
             );
-        }).compose()
+        })
+        .compose()
 }

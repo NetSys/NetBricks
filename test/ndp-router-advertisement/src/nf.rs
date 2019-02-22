@@ -4,9 +4,8 @@ use netbricks::operators::*;
 use std::str::FromStr;
 
 struct Meta {
-    payload_len: u16
+    payload_len: u16,
 }
-
 
 pub fn ndp_nf<T: 'static + Batch<Header = NullHeader>>(parent: T) -> CompositionBatch {
     let pipeline = parent
@@ -30,11 +29,10 @@ fn ndp_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHeader>>
     parent
         .parse::<Ipv6Header>()
         .metadata(box |pkt| Meta {
-           payload_len: pkt.get_header().payload_len(),
+            payload_len: pkt.get_header().payload_len(),
         })
         .parse::<Icmpv6RouterAdvertisement<Ipv6Header>>()
         .transform(box |pkt| {
-
             let payload_len = pkt.read_metadata().payload_len;
             let router_advertisement = pkt.get_mut_header();
 
@@ -86,10 +84,7 @@ fn ndp_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHeader>>
                 format!("{:X?}", 500)
             );
 
-            assert_eq!(
-                format!("{:X?}", payload_len),
-                format!("{:X?}", 64)
-            );
+            assert_eq!(format!("{:X?}", payload_len), format!("{:X?}", 64));
 
             let options = router_advertisement.parse_options(payload_len);
             let source_link_layer = router_advertisement.source_link_layer_address(options);
