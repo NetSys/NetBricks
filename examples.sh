@@ -14,8 +14,6 @@ export examples=(
         test/tcp-checksum
         test/mtu-too-big
         test/ndp-router-advertisement
-        test/ndp-neighbor-solicitation
-        test/ndp-neighbor-advertisement
         # test/delay-test
         # test/chain-test
         # test/shutdown-test

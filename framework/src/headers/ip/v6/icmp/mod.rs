@@ -1,7 +1,5 @@
 pub use self::ndp::*;
-pub use self::neighbor_advertisement::*;
 pub use self::neighbor_options::*;
-pub use self::neighbor_solicitation::*;
 pub use self::packet_too_big::*;
 pub use self::router_advertisement::*;
 use super::{EndOffset, Ipv6VarHeader};
@@ -12,9 +10,7 @@ use std::fmt;
 use std::marker::PhantomData;
 
 mod ndp;
-mod neighbor_advertisement;
 mod neighbor_options;
-mod neighbor_solicitation;
 mod packet_too_big;
 mod router_advertisement;
 

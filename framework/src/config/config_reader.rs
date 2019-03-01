@@ -266,7 +266,9 @@ pub fn read_configuration_from_str(
         None => Vec::with_capacity(0),
         _ => {
             println!("Cores is not an array");
-            return Err(ErrorKind::ConfigurationError(String::from("Cores is not an array")).into());
+            return Err(
+                ErrorKind::ConfigurationError(String::from("Cores is not an array")).into(),
+            );
         }
     };
 
@@ -295,7 +297,9 @@ pub fn read_configuration_from_str(
         None => Vec::with_capacity(0),
         _ => {
             println!("Ports is not an array");
-            return Err(ErrorKind::ConfigurationError(String::from("Ports is not an array")).into());
+            return Err(
+                ErrorKind::ConfigurationError(String::from("Ports is not an array")).into(),
+            );
         }
     };
 
