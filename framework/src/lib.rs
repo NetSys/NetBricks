@@ -84,6 +84,7 @@ pub mod interface;
 mod native;
 mod native_include;
 pub mod operators;
+pub mod packets;
 pub mod queues;
 pub mod scheduler;
 pub mod shared_state;
