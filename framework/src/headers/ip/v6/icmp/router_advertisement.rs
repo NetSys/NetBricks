@@ -1,6 +1,6 @@
 use super::{IcmpMessageType, Icmpv6Header};
 use headers::ip::v6::icmp::neighbor_options::*;
-use headers::mac::MacAddress;
+use headers::mac::*;
 use headers::{CalcChecksums, EndOffset, Ipv6VarHeader};
 use num::FromPrimitive;
 use std::collections::HashMap;
@@ -8,6 +8,7 @@ use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
 use std::slice;
+use std::net::Ipv6Addr;
 use utils::*;
 /*
   ICMPv6 messages are contained in IPv6 packets. The IPv6 packet contains an IPv6 header followed by the
@@ -130,6 +131,27 @@ const OTHER_CFG_POS: u8 = 1;
 
 #[derive(Debug)]
 #[repr(C, packed)]
+pub struct NDPOpt {
+    pub opt_type: u8,
+    pub opt_len: u8,
+    pub opt_data: u8
+}
+
+impl fmt::Display for NDPOpt
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "opt_type: {} opt_len: {} opt_data: {}",
+            self.opt_type,
+            self.opt_len,
+            self.opt_data,
+        )
+    }
+}
+
+#[derive(Debug)]
+#[repr(C, packed)]
 pub struct Icmpv6RouterAdvertisement<T>
 where
     T: Ipv6VarHeader,
@@ -140,7 +162,7 @@ where
     router_lifetime: u16,
     reachable_time: u32,
     retrans_timer: u32,
-    options: HashMap<NDPOptionType, NDPOption>,
+    options: u8,
     _parent: PhantomData<T>,
 }
 
@@ -161,7 +183,7 @@ where
             router_lifetime: 0,
             reachable_time: 0,
             retrans_timer: 0,
-            options: HashMap::new(),
+            options: 0,
             _parent: PhantomData,
         }
     }
@@ -219,10 +241,131 @@ where
     }
 }
 
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct SourceLinkLayerAddress {
+    pub addr: MacAddress,
+}
+
+impl fmt::Display for SourceLinkLayerAddress {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.addr
+        )
+    }
+}
+
+/**
+opt_start: a pointer to where the udp options begin
+payload_length: the overall length of the payload we cannot scan past
+*/
+pub fn scan_opt(opt_start: *const u8, offset: usize, payload_length: u16, opt_type: u8) -> Option<*const SourceLinkLayerAddress> {
+    unsafe {
+        // first thing is the option type
+        // second thing is the option length
+        let mut payload_offset = offset;
+        while (payload_offset as u16) < payload_length {
+            println!("scan_opt offset={}, length={}, opt_type={}", payload_offset, payload_length, opt_type);
+            let cur_type = *(opt_start.offset(payload_offset as isize));
+            let cur_size = *(opt_start.offset((payload_offset + 1) as isize));
+
+            println!("scan_opt cur_type={}, cur_size={}", cur_type, cur_size);
+
+            if cur_size == 0 {
+                println!("WHY IS cur_size 0!!!");
+                return None;
+            } else if cur_type != opt_type {
+                // the current type does not match the requested type, so skip to next
+                payload_offset = payload_offset + (cur_size as usize);
+                println!("Skipping to next offset {}", payload_offset);
+            } else {
+                // we have a winner!
+                println!("WE HAVE A WINNER!!!");
+                let cur_start = opt_start.offset((payload_offset + 2) as isize);
+                let found_opt = cur_start as *const SourceLinkLayerAddress;
+                return Some(found_opt);
+            }
+        }
+        None
+    }
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct MtuOption {
+    opt_type: u8,
+    opt_len: u8,
+    reserved: u16,
+    mtu: u32,
+}
+
+
+pub fn scan_opt2(opt_start: *const u8, offset: usize, payload_length: u16, opt_type: u8) -> Option<*const MtuOption> {
+    unsafe {
+        // first thing is the option type
+        // second thing is the option length
+        let mut payload_offset = offset;
+        while (payload_offset as u16) < payload_length {
+            println!("scan_opt offset={}, length={}, opt_type={}", payload_offset, payload_length, opt_type);
+            let seek_to = opt_start.offset(payload_offset as isize);
+            let option_meta = slice::from_raw_parts(seek_to, 2);
+            //let cur_type = *(opt_start.offset(payload_offset as isize));
+            let cur_type = option_meta[0];
+            //let cur_size = *(opt_start.offset((payload_offset + 1) as isize));
+            let cur_size = option_meta[1] * 8;
+
+            println!("scan_opt cur_type={}, cur_size={}", cur_type, cur_size);
+
+            if cur_size == 0 {
+                println!("WHY IS cur_size 0!!!");
+                return None;
+            } else if cur_type != opt_type {
+                // the current type does not match the requested type, so skip to next
+                payload_offset = payload_offset + (cur_size as usize);
+                println!("Skipping to next offset {}", payload_offset);
+            } else {
+                // we have a winner!
+                println!("WE HAVE A WINNER!!!");
+                let cur_start = opt_start.offset((payload_offset) as isize);
+                let found_opt = cur_start as *const MtuOption;
+                return Some(found_opt);
+            }
+        }
+        None
+    }
+}
+
 impl<T> Icmpv6RouterAdvertisement<T>
 where
     T: Ipv6VarHeader,
 {
+    pub fn opt(&self, opt_type: u8, payload_length: u16) -> Option<*const SourceLinkLayerAddress> {
+        unsafe {
+            //println!("SOURCE LINK LAYER {}", op);
+            let self_as_u8 = (self as *const Self) as *const u8;
+            let mut payload_offset = self.offset();
+            let opt_start = self_as_u8.offset(payload_offset as isize);
+
+            let ott = self_as_u8.offset(payload_offset as isize);
+            let ot = *ott;
+            println!("opt ot={}", ot);
+
+            let r = scan_opt2(self_as_u8, payload_offset, payload_length, 5);
+            match r {
+                Some(sll) => {
+                    let x = (*sll).mtu;
+                    println!("SOURCE PREFIX INFO {}", x);
+                },
+                None => {
+                    println!("NOT FOUND!!!!!");
+                }
+            }
+            return None;
+        }
+    }
+
     #[inline]
     pub fn new() -> Self {
         Default::default()
@@ -278,77 +421,77 @@ where
         u32::from_be(self.retrans_timer)
     }
 
-    #[inline]
-    pub fn source_link_layer_address(
-        &self,
-        options: HashMap<NDPOptionType, NDPOption>,
-    ) -> Option<MacAddress> {
-        let source_link_layer = options.get(&NDPOptionType::SourceLinkLayerAddress).unwrap();
-        let source_link_option = match source_link_layer {
-            NDPOption::SourceLinkLayerAddress(value) => Some(*value),
-            _ => None,
-        };
-        source_link_option
-    }
+//    #[inline]
+//    pub fn source_link_layer_address(
+//        &self,
+//        options: HashMap<NDPOptionType, NDPOption>,
+//    ) -> Option<MacAddress> {
+//        let source_link_layer = options.get(&NDPOptionType::SourceLinkLayerAddress).unwrap();
+//        let source_link_option = match source_link_layer {
+//            NDPOption::SourceLinkLayerAddress(value) => Some(*value),
+//            _ => None,
+//        };
+//        source_link_option
+//    }
 }
 
-impl<T> NDPOptionParser for Icmpv6RouterAdvertisement<T>
-where
-    T: Ipv6VarHeader,
-{
-    fn parse_options(&self, payload_len: u16) -> HashMap<NDPOptionType, NDPOption> {
-        let mut options_map = HashMap::new();
-        unsafe {
-            let self_as_u8 = (self as *const Self) as *const u8;
-            let mut payload_offset = self.offset(); //track to make sure we don't go beyond v6 payload size
-
-            while payload_offset < (payload_len as usize) {
-                // start at beginning of the options
-                // the second byte is the header length in 8-octet unit excluding the first 8 octets
-                let seek_to = self_as_u8.offset(payload_offset as isize);
-
-                // lets get the first two indices which should be option_type and option_length fields
-                let option_meta = slice::from_raw_parts(seek_to, 2);
-
-                // Parse the option type field first then the option_length
-                let option_type: Option<NDPOptionType> = FromPrimitive::from_u8(option_meta[0]);
-                let option_length = option_meta[1];
-                let option_length_octets = option_length * 8;
-
-                // option_value_length is always total number of octets - 2(option type and length are always 2)
-                let option_value_length = (option_length_octets - 2) as isize;
-                let value_seek_to = self_as_u8.offset((payload_offset + 2) as isize);
-                let option_value =
-                    slice::from_raw_parts(value_seek_to, option_value_length as usize);
-
-                // Make sure the option is valid defined by the RFC. Note: a router can insert its own
-                // options defined outside of the spec.
-                match option_type {
-                    // we only care about matching on source link layer address
-                    Some(NDPOptionType::SourceLinkLayerAddress) => {
-                        options_map.insert(
-                            NDPOptionType::SourceLinkLayerAddress,
-                            NDPOption::SourceLinkLayerAddress(MacAddress::new(
-                                option_value[0],
-                                option_value[1],
-                                option_value[2],
-                                option_value[3],
-                                option_value[4],
-                                option_value[5],
-                            )),
-                        );
-                    }
-                    Some(other) => {
-                        // log maybe?
-                    }
-                    None => {
-                        // log loudly as we cannot handle this option type
-                    }
-                }
-
-                payload_offset += (option_length_octets) as usize;
-            }
-        }
-        options_map
-    }
-}
+//impl<T> NDPOptionParser for Icmpv6RouterAdvertisement<T>
+//where
+//    T: Ipv6VarHeader,
+//{
+//    fn parse_options(&self, payload_len: u16) -> HashMap<NDPOptionType, NDPOption> {
+//        let mut options_map = HashMap::new();
+//        unsafe {
+//            let self_as_u8 = (self as *const Self) as *const u8;
+//            let mut payload_offset = self.offset(); //track to make sure we don't go beyond v6 payload size
+//
+//            while payload_offset < (payload_len as usize) {
+//                // start at beginning of the options
+//                // the second byte is the header length in 8-octet unit excluding the first 8 octets
+//                let seek_to = self_as_u8.offset(payload_offset as isize);
+//
+//                // lets get the first two indices which should be option_type and option_length fields
+//                let option_meta = slice::from_raw_parts(seek_to, 2);
+//
+//                // Parse the option type field first then the option_length
+//                let option_type: Option<NDPOptionType> = FromPrimitive::from_u8(option_meta[0]);
+//                let option_length = option_meta[1];
+//                let option_length_octets = option_length * 8;
+//
+//                // option_value_length is always total number of octets - 2(option type and length are always 2)
+//                let option_value_length = (option_length_octets - 2) as isize;
+//                let value_seek_to = self_as_u8.offset((payload_offset + 2) as isize);
+//                let option_value =
+//                    slice::from_raw_parts(value_seek_to, option_value_length as usize);
+//
+//                // Make sure the option is valid defined by the RFC. Note: a router can insert its own
+//                // options defined outside of the spec.
+//                match option_type {
+//                    // we only care about matching on source link layer address
+//                    Some(NDPOptionType::SourceLinkLayerAddress) => {
+//                        options_map.insert(
+//                            NDPOptionType::SourceLinkLayerAddress,
+//                            NDPOption::SourceLinkLayerAddress(MacAddress::new(
+//                                option_value[0],
+//                                option_value[1],
+//                                option_value[2],
+//                                option_value[3],
+//                                option_value[4],
+//                                option_value[5],
+//                            )),
+//                        );
+//                    }
+//                    Some(other) => {
+//                        // log maybe?
+//                    }
+//                    None => {
+//                        // log loudly as we cannot handle this option type
+//                    }
+//                }
+//
+//                payload_offset += (option_length_octets) as usize;
+//            }
+//        }
+//        options_map
+//    }
+//}
