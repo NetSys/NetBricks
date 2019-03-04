@@ -1,4 +1,5 @@
 use super::{IcmpMessageType, Icmpv6Header};
+use byteorder::*;
 use headers::ip::v6::icmp::neighbor_options::*;
 use headers::mac::*;
 use headers::{CalcChecksums, EndOffset, Ipv6VarHeader};
@@ -162,7 +163,7 @@ where
     router_lifetime: u16,
     reachable_time: u32,
     retrans_timer: u32,
-    options: u8,
+    pub options: NDPOpt,
     _parent: PhantomData<T>,
 }
 
@@ -183,7 +184,11 @@ where
             router_lifetime: 0,
             reachable_time: 0,
             retrans_timer: 0,
-            options: 0,
+            options: NDPOpt {
+                opt_type: 0,
+                opt_len: 0,
+                opt_data: 0
+            },
             _parent: PhantomData,
         }
     }
@@ -293,12 +298,65 @@ pub fn scan_opt(opt_start: *const u8, offset: usize, payload_length: u16, opt_ty
 }
 
 #[derive(Debug)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct MtuOption {
-    opt_type: u8,
-    opt_len: u8,
     reserved: u16,
-    mtu: u32,
+    mtu: [u8; 4],
+}
+
+impl MtuOption {
+    pub fn get_mtu(&self) -> u32 {
+        let x = &self.mtu;
+
+        let y: u32 = BigEndian::read_u32(x);
+
+        y
+    }
+}
+
+pub fn scan_ndp_opt(ndp_opt: &NDPOpt, payload_length: u16, opt_type: u8) -> Option<*const MtuOption> {
+    unsafe {
+        let mut cur_opt = Some(ndp_opt);
+        while cur_opt.is_some() {
+            println!("Running while loop...");
+            let cur = cur_opt.unwrap();
+
+            println!("Unwrapped option...");
+            let data_ptr = cur.opt_type as *const u8;
+            println!("Got data ptr...");
+
+            if cur.opt_len == 0 {
+                println!("OPT LEN IS 0, EXITING!!!");
+                return None
+            } else if cur.opt_type == opt_type {
+                println!("WINNER!!!");
+                let found = data_ptr as *const MtuOption;
+                return Some(found)
+            } else {
+                println!("SKIPPING {}!!!", cur.opt_type);
+
+                println!("Getting next opt start...");
+                // we have to skip forward to the next ndp option
+                // length field is in octets (groups of 8 bytes)
+                // that means that a length of 1 means 8 bytes
+                // length includes type and length, which are 1 byte each
+                // so a length of 1 means 8 bytes, 1 type 1 length 6 option data
+                let next_opt_start = data_ptr.offset((cur.opt_len * 8) as isize);
+                println!("GOT next opt start...");
+
+                println!("Attempting to cast to NDPOpt next option...");
+                // how do we know we are at the end?
+                let next_opt = next_opt_start as *const NDPOpt;
+
+                let nov = &(*next_opt);
+                println!("Next option type = {}; option length = {}", nov.opt_type, nov.opt_len);
+
+                println!("Got next opt!...");
+                cur_opt = Some(&(*next_opt));
+            }
+        }
+        None
+    }
 }
 
 
@@ -328,7 +386,7 @@ pub fn scan_opt2(opt_start: *const u8, offset: usize, payload_length: u16, opt_t
             } else {
                 // we have a winner!
                 println!("WE HAVE A WINNER!!!");
-                let cur_start = opt_start.offset((payload_offset) as isize);
+                let cur_start = opt_start.offset((payload_offset + 2) as isize);
                 let found_opt = cur_start as *const MtuOption;
                 return Some(found_opt);
             }
@@ -355,8 +413,9 @@ where
             let r = scan_opt2(self_as_u8, payload_offset, payload_length, 5);
             match r {
                 Some(sll) => {
-                    let x = (*sll).mtu;
-                    println!("SOURCE PREFIX INFO {}", x);
+                    let mtu = (*sll).get_mtu();
+                    let reserved = (*sll).reserved;
+                    println!("SOURCE MTU {}, RESERVED {}", mtu, reserved);
                 },
                 None => {
                     println!("NOT FOUND!!!!!");

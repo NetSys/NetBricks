@@ -88,6 +88,7 @@ fn ndp_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHeader>>
 
             println!("Hello I am writing code now dude!!!");
             router_advertisement.opt(1, payload_len);
+            //scan_ndp_opt(&router_advertisement.options, payload_len, 5);
 
 
       //      let options = router_advertisement.parse_options(payload_len);
