@@ -34,7 +34,10 @@ fn ndp_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHeader>>
         .parse::<Icmpv6RouterAdvertisement<Ipv6Header>>()
         .transform(box |pkt| {
             let payload_len = pkt.read_metadata().payload_len;
+            let dl = pkt.data_len();
             let router_advertisement = pkt.get_mut_header();
+
+            println!("payload_len {}; data_len {}", payload_len, dl);
 
             println!(
                 "{}",
@@ -86,18 +89,15 @@ fn ndp_router_advertisementertisement_nf<T: 'static + Batch<Header = MacHeader>>
 
             assert_eq!(format!("{:X?}", payload_len), format!("{:X?}", 64));
 
-            println!("Hello I am writing code now dude!!!");
-            router_advertisement.opt(1, payload_len);
-            //scan_ndp_opt(&router_advertisement.options, payload_len, 5);
+            assert_eq!(
+                format!("{:X?}", router_advertisement.get_source_link_layer_address_option(payload_len).unwrap()),
+                format!("{:X?}", MacAddress::from_str("c2:00:54:f5:00:00").unwrap())
+            );
 
-
-      //      let options = router_advertisement.parse_options(payload_len);
-       //     let source_link_layer = router_advertisement.source_link_layer_address(options);
-        //    let expected_mac_address = MacAddress::from_str("c2:00:54:f5:00:00").unwrap();
-         //   assert_eq!(
-          //      format!("{:X?}", source_link_layer.unwrap()),
-           //     format!("{:X?}", expected_mac_address)
-            //);
+            assert_eq!(
+                format!("{:X?}", router_advertisement.get_mtu_option(payload_len).unwrap()),
+                format!("{:X?}", 1500)
+            );
         })
         .compose()
 }
