@@ -152,9 +152,9 @@ impl PmdPort {
         txq: i32,
     ) -> Result<CacheAligned<PortQueue>> {
         if rxq > port.rxqs || rxq < 0 {
-            Err(ErrorKind::BadRxQueue(port.port, rxq).into())
+            Err(NetBricksError::BadRxQueue(port.port, rxq).into())
         } else if txq > port.txqs || txq < 0 {
-            Err(ErrorKind::BadTxQueue(port.port, txq).into())
+            Err(NetBricksError::BadTxQueue(port.port, txq).into())
         } else {
             Ok(CacheAligned::allocate(PortQueue {
                 port: port.clone(),
@@ -230,10 +230,10 @@ impl PmdPort {
                     stats_tx: (0..txqs).map(|_| Arc::new(PortStats::new())).collect(),
                 }))
             } else {
-                Err(ErrorKind::FailedToInitializePort(port).into())
+                Err(NetBricksError::FailedToInitializePort(port).into())
             }
         } else {
-            Err(ErrorKind::FailedToInitializePort(port).into())
+            Err(NetBricksError::FailedToInitializePort(port).into())
         }
     }
 
@@ -257,7 +257,7 @@ impl PmdPort {
                 stats_tx: vec![Arc::new(PortStats::new())],
             }))
         } else {
-            Err(ErrorKind::FailedToInitializePort(port).into())
+            Err(NetBricksError::FailedToInitializePort(port).into())
         }
     }
 
@@ -277,10 +277,10 @@ impl PmdPort {
                         stats_tx: vec![Arc::new(PortStats::new())],
                     }))
                 } else {
-                    Err(ErrorKind::FailedToInitializePort(port).into())
+                    Err(NetBricksError::FailedToInitializePort(port).into())
                 }
             }
-            _ => Err(ErrorKind::BadVdev(String::from(name)).into()),
+            _ => Err(NetBricksError::BadVdev(String::from(name)).into()),
         }
     }
 
@@ -299,7 +299,7 @@ impl PmdPort {
         let cannonical_spec = PmdPort::cannonicalize_pci(spec);
         let port = unsafe { attach_pmd_device((cannonical_spec[..]).as_ptr()) };
         if port >= 0 {
-            println!("Going to try and use port {}", port);
+            info!("Going to try and use port {}", port);
             PmdPort::init_dpdk_port(
                 port,
                 rxqs,
@@ -312,9 +312,9 @@ impl PmdPort {
                 tso,
                 csumoffload,
             )
-            .chain_err(|| ErrorKind::BadDev(String::from(spec)))
+            .map_err(|_| NetBricksError::BadDev(String::from(spec)).into())
         } else {
-            Err(ErrorKind::BadDev(String::from(spec)).into())
+            Err(NetBricksError::BadDev(String::from(spec)).into())
         }
     }
 

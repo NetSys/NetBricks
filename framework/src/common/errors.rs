@@ -1,98 +1,112 @@
-error_chain! {
-    errors {
-        FailedAllocation {
-            description("Failed to allocate memory")
-            display("Failed to allocate memory")
-        }
-        FailedDeallocation {
-            description("Failed to deallocate memory")
-            display("Failed to deallocate memory")
-        }
-        FailedToInitializePort(port: i32) {
-            description("Failed to initialize port")
-            display("Failed to initialize port: {}", port)
-        }
-        BadQueue {
-            description("Invalid queue request")
-            display("Invalid queue request")
-        }
-        CannotSend {
-            description("Cannot send data out port")
-            display("Cannot send data out port")
-        }
-        BadDev(dev: String) {
-            description("Cannot find device")
-            display("Cannot find device: {}", dev)
-        }
-        BadVdev(vdev: String) {
-            description("Bad vdev specification")
-            display("Bad vdev specification: {}", vdev)
-        }
-        BadTxQueue(port: i32, queue: i32) {
-            description("Bad TX queue")
-            display("Bad TX queue {} for port {}", queue, port)
-        }
-        BadRxQueue(port: i32, queue: i32) {
-            description("Bad RX queue")
-            display("Bad RX queue {} for port {}", queue, port)
-        }
-        BadOffset(offset: usize) {
-            description("Attempt to access bad packet offset")
-            display("Attempt to access bad packet offset {}", offset)
-        }
+use failure::{Error, Fail};
 
-        MetadataTooLarge {
-            description("Metadata is too large")
-            display("Metadata is too large")
-        }
+pub type Result<T> = ::std::result::Result<T, Error>;
 
-        RingAllocationFailure {
-            description("Could not allocate ring")
-            display("Could not allocate ring")
-        }
+#[derive(Debug, Fail)]
+pub enum NetBricksError {
+    #[fail(display = "Failed to allocate memory")]
+    FailedAllocation,
 
-        InvalidRingSize(size: usize) {
-            description("Bad ring size, must be power of 2")
-            display("Bad ring size {}, must be a power of 2", size)
-        }
+    #[fail(display = "Failed to free memory buffer (mbuf) {}", _0)]
+    FailedToFreeMBuf(i32),
 
-        RingDuplicationFailure {
-            description("Address of second copy of ring does not match expected address")
-            display("Address of second copy of ring does not match expected address")
-        }
+    #[fail(display = "Failed to remove/drop packets from buffer")]
+    FailedToDropPackets,
 
-        ConfigurationError(description: String) {
-            description("Configuration error")
-            display("Configuration error: {}", description)
-        }
+    #[fail(display = "Failed to deallocate memory")]
+    FailedDeallocation,
 
-        NoRunningSchedulerOnCore(core: i32) {
-            description("No scheduler running on core")
-            display("No scheduler running on core {}", core)
-        }
+    #[fail(display = "Failed to initialize port: {}", _0)]
+    FailedToInitializePort(i32),
 
-        FailedToInsertHeader {
-            description("Failed to insert header into packet")
-            display("Failed to insert header into packet")
-        }
+    #[fail(display = "Invalid queue request")]
+    BadQueue,
 
-        FailedToSwapHeader(new_header: String) {
-            description("Failed to swap-in new header in packet")
-                display("Failed to swap-in new header - {} - in packet", new_header)
-        }
+    #[fail(display = "Cannot send data out port")]
+    CannotSend,
 
-        FailedToRemoveHeader {
-            description("Failed to remove header from packet")
-                display("Failed to remove header from packet")
-        }
+    #[fail(display = "Cannot find device: {}", _0)]
+    BadDev(String),
 
-        FailedToParseMacAddress(s: String) {
-            description("Failed to parse MAC address")
-                display("Failed to parse MAC address: '{}'", s)
-        }
+    #[fail(display = "Bad vdev specification: {}", _0)]
+    BadVdev(String),
+
+    #[fail(display = "Bad TX queue {} for port {}", _0, _1)]
+    BadTxQueue(i32, i32),
+
+    #[fail(display = "Bad RX queue {} for port {}", _0, _1)]
+    BadRxQueue(i32, i32),
+
+    #[fail(display = "Attempt to access bad packet offset {}", _0)]
+    BadOffset(usize),
+
+    #[fail(display = "Metadata is too large")]
+    MetadataTooLarge,
+
+    #[fail(display = "Could not allocate ring")]
+    RingAllocationFailure,
+
+    #[fail(display = "Address of second copy of ring does not match expected address")]
+    RingDuplicationFailure,
+
+    #[fail(display = "Bad ring size {}, must be a power of 2", _0)]
+    InvalidRingSize(usize),
+
+    #[fail(display = "Configuration error: {}", _0)]
+    ConfigurationError(String),
+
+    #[fail(display = "No scheduler running on core {}", _0)]
+    NoRunningSchedulerOnCore(i32),
+
+    #[fail(display = "Failed to insert header into packet")]
+    FailedToInsertHeader,
+
+    #[fail(
+        display = "Failed to swap-in new header - {} - in packet, new_header",
+        _0
+    )]
+    FailedToSwapHeader(String),
+
+    #[fail(display = "Failed to remove header from packet")]
+    FailedToRemoveHeader,
+
+    #[fail(display = "Failed to parse MAC address: '{}'", _0)]
+    FailedToParseMacAddress(String),
+
+    #[fail(display = "_")]
+    #[doc(hidden)]
+    __Nonexhaustive,
+}
+
+#[macro_export]
+macro_rules! error_chain {
+    ($error:expr) => {
+        error!("{}", $crate::common::errors::string_chain($error))
+    };
+}
+
+#[macro_export]
+macro_rules! warn_chain {
+    ($error:expr) => {
+        warn!("{}", $crate::common::errors::string_chain($error))
+    };
+}
+
+/// Read a `failure` `Error` and print out the causes and a backtrace as
+/// `log::error`s
+pub fn string_chain(e: &Error) -> String {
+    let mut error = e.to_string();
+
+    for cause in e.iter_causes() {
+        error.push_str(&format!("\nCaused by: {}", cause));
     }
 
-    foreign_links {
-        Io(::std::io::Error);
+    if let Ok("1") = ::std::env::var("RUST_BACKTRACE")
+        .as_ref()
+        .map(|s| s.as_str())
+    {
+        error.push_str(&format!("\nBacktrace:\n{}", e.backtrace()))
     }
+
+    error
 }

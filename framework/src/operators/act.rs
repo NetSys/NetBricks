@@ -17,7 +17,7 @@ pub trait Act {
     fn capacity(&self) -> i32;
 
     #[inline]
-    fn drop_packets(&mut self, idxes: &[usize]) -> Option<usize>;
+    fn drop_packets(&mut self, idxes: &[usize]) -> Result<usize>;
 
     /// Remove all packets from the batch (without actually freeing them).
     #[inline]

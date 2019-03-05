@@ -5,10 +5,10 @@ use common::*;
 use headers::NullHeader;
 use interface::*;
 use native::zcsi::*;
-use std::result;
 
-/// Base packet batch structure, this represents an array of mbufs and is the primary interface for sending and
-/// receiving packets from DPDK, allocations, etc. As a result many of the actions implemented in other types of batches
+/// Base packet batch structure, this represents an array of mbufs and is the
+/// primary interface for sending and receiving packets from DPDK, allocations,
+/// etc... As a result many of the actions implemented in other types of batches
 /// ultimately call into this structure.
 pub struct PacketBatch {
     array: Vec<*mut MBuf>,
@@ -54,7 +54,7 @@ impl PacketBatch {
     pub fn allocate_partial_batch_with_size(&mut self, len: u16, cnt: i32) -> Result<&mut Self> {
         match self.alloc_packet_batch(len, cnt) {
             Ok(_) => Ok(self),
-            Err(_) => Err(ErrorKind::FailedAllocation.into()),
+            Err(_) => Err(NetBricksError::FailedAllocation.into()),
         }
     }
 
@@ -63,7 +63,7 @@ impl PacketBatch {
     pub fn deallocate_batch(&mut self) -> Result<&mut Self> {
         match self.free_packet_batch() {
             Ok(_) => Ok(self),
-            Err(_) => Err(ErrorKind::FailedDeallocation.into()),
+            Err(_) => Err(NetBricksError::FailedDeallocation.into()),
         }
     }
 
@@ -98,13 +98,14 @@ impl PacketBatch {
         }
     }
 
-    /// This drops packet buffers and keeps things ordered. We expect that idxes is an ordered vector of indices, no
-    /// guarantees are made when this is not the case.
+    /// This drops packet buffers and keeps things ordered. We expect that idxes
+    /// is an ordered vector of indices, no guarantees are made when this is not
+    /// the case.
     #[inline]
-    fn drop_packets_stable(&mut self, idxes: &[usize]) -> Option<usize> {
+    fn drop_packets_stable(&mut self, idxes: &[usize]) -> Result<usize> {
         // Short circuit when we don't have to do this work.
         if idxes.is_empty() {
-            return Some(0);
+            return Ok(0);
         }
         unsafe {
             let mut idx_orig = 0;
@@ -115,7 +116,6 @@ impl PacketBatch {
             // First go through the list of indexes to be filtered and get rid of them.
             while idx_orig < end && (remove_idx < idxes.len()) {
                 let test_idx: usize = idxes[remove_idx];
-                assert!(idx_orig <= test_idx);
                 if idx_orig == test_idx {
                     self.scratch.push(self.array[idx_orig]);
                     remove_idx += 1;
@@ -132,13 +132,13 @@ impl PacketBatch {
                 idx_new += 1;
             }
 
-            // We did not find an index that was passed in, warn/error out.
+            // We did not find an index that was passed in:
             if remove_idx < idxes.len() {
-                None
+                Err(NetBricksError::FailedToDropPackets.into())
             } else {
                 self.array.set_len(idx_new);
                 if self.scratch.is_empty() {
-                    Some(0)
+                    Ok(0)
                 } else {
                     // Now free the dropped packets
                     let len = self.scratch.len();
@@ -147,9 +147,9 @@ impl PacketBatch {
                     let ret = mbuf_free_bulk(array_ptr, len as i32);
                     self.scratch.clear();
                     if ret == 0 {
-                        Some(len)
+                        Ok(len)
                     } else {
-                        None
+                        Err(NetBricksError::FailedToDropPackets.into())
                     }
                 }
             }
@@ -186,21 +186,21 @@ impl PacketBatch {
     fn alloc_packet_batch(&mut self, len: u16, cnt: i32) -> Result<()> {
         unsafe {
             if self.array.capacity() < (cnt as usize) {
-                Err(ErrorKind::FailedAllocation.into())
+                Err(NetBricksError::FailedAllocation.into())
             } else {
                 let ret = mbuf_alloc_bulk(self.array.as_mut_ptr(), len, cnt);
                 if ret == 0 {
                     self.array.set_len(cnt as usize);
                     Ok(())
                 } else {
-                    Err(ErrorKind::FailedAllocation.into())
+                    Err(NetBricksError::FailedAllocation.into())
                 }
             }
         }
     }
 
     #[inline]
-    fn free_packet_batch(&mut self) -> result::Result<(), ()> {
+    fn free_packet_batch(&mut self) -> Result<()> {
         unsafe {
             if self.array.is_empty() {
                 Ok(())
@@ -215,7 +215,7 @@ impl PacketBatch {
                 if ret == 0 {
                     Ok(())
                 } else {
-                    Err(())
+                    Err(NetBricksError::FailedToFreeMBuf(ret).into())
                 }
             }
         }
@@ -277,7 +277,7 @@ impl Act for PacketBatch {
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: &[usize]) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &[usize]) -> Result<usize> {
         self.drop_packets_stable(idxes)
     }
 

@@ -1,5 +1,6 @@
 use allocators::CacheAligned;
-use config::NetbricksConfiguration;
+use common::*;
+use config::NetBricksConfiguration;
 use interface::dpdk::{init_system, init_thread};
 use interface::{PmdPort, PortQueue, VirtualPort, VirtualQueue};
 use scheduler::*;
@@ -124,7 +125,7 @@ impl NetBricksContext {
                 .unwrap();
             Ok(())
         } else {
-            Err(ErrorKind::NoRunningSchedulerOnCore(core).into())
+            Err(NetBricksError::NoRunningSchedulerOnCore(core).into())
         }
     }
 
@@ -146,7 +147,7 @@ impl NetBricksContext {
                 .unwrap();
             Ok(())
         } else {
-            Err(ErrorKind::NoRunningSchedulerOnCore(core).into())
+            Err(NetBricksError::NoRunningSchedulerOnCore(core).into())
         }
     }
 
@@ -154,7 +155,7 @@ impl NetBricksContext {
     pub fn execute(&mut self) {
         for (core, channel) in &self.scheduler_channels {
             channel.send(SchedulerCommand::Execute).unwrap();
-            println!("Starting scheduler on {}", core);
+            info!("Starting scheduler on {}", core);
         }
     }
 
@@ -188,21 +189,21 @@ impl NetBricksContext {
     pub fn stop(&mut self) {
         for (core, channel) in &self.scheduler_channels {
             channel.send(SchedulerCommand::Shutdown).unwrap();
-            println!("Issued shutdown for core {}", core);
+            info!("Issued shutdown for core {}", core);
         }
         for (core, join_handle) in self.scheduler_handles.drain() {
             join_handle.join().unwrap();
-            println!("Core {} has shutdown", core);
+            info!("Core {} has shutdown", core);
         }
-        println!("System shutdown");
+        info!("System shutdown");
     }
 
     pub fn wait(&mut self) {
         for (core, join_handle) in self.scheduler_handles.drain() {
             join_handle.join().unwrap();
-            println!("Core {} has shutdown", core);
+            info!("Core {} has shutdown", core);
         }
-        println!("System shutdown");
+        info!("System shutdown");
     }
 
     /// Shutdown all schedulers.
@@ -211,15 +212,17 @@ impl NetBricksContext {
     }
 }
 
-/// Initialize the system from a configuration.
-pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBricksContext> {
+/// Initialize NetBricks, incl. handling of dpdk configuration, logging, general
+/// setup.
+///
+/// Return a Context to Execute.
+pub fn initialize_system(configuration: &NetBricksConfiguration) -> Result<NetBricksContext> {
     init_system(configuration);
     let mut ctx: NetBricksContext = Default::default();
     let mut cores: HashSet<_> = configuration.cores.iter().cloned().collect();
     for port in &configuration.ports {
         if ctx.ports.contains_key(&port.name) {
-            println!("Port {} appears twice in specification", port.name);
-            return Err(ErrorKind::ConfigurationError(format!(
+            return Err(NetBricksError::ConfigurationError(format!(
                 "Port {} appears twice in specification",
                 port.name
             ))
@@ -230,7 +233,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
                     ctx.ports.insert(port.name.clone(), p);
                 }
                 Err(e) => {
-                    return Err(ErrorKind::ConfigurationError(format!(
+                    return Err(NetBricksError::ConfigurationError(format!(
                         "Port {} could not be initialized {:?}",
                         port.name, e
                     ))
@@ -247,7 +250,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
                         ctx.rx_queues.entry(*core).or_insert_with(|| vec![]).push(q);
                     }
                     Err(e) => {
-                        return Err(ErrorKind::ConfigurationError(format!(
+                        return Err(NetBricksError::ConfigurationError(format!(
                             "Queue {} on port {} could not be \
                              initialized {:?}",
                             rx_q, port.name, e
@@ -266,7 +269,7 @@ pub fn initialize_system(configuration: &NetbricksConfiguration) -> Result<NetBr
             .collect();
         if !core_diff.is_empty() {
             let missing_str = core_diff.join(", ");
-            return Err(ErrorKind::ConfigurationError(format!(
+            return Err(NetBricksError::ConfigurationError(format!(
                 "Strict configuration selected but core(s) {} appear \
                  in port configuration but not in cores",
                 missing_str

@@ -1,5 +1,6 @@
 use super::{EndOffset, HeaderUpdates};
 use common::*;
+use failure::Error;
 use headers::{NextHeader, NullHeader};
 use hex;
 use num::FromPrimitive;
@@ -64,12 +65,11 @@ impl MacAddress {
 
 impl FromStr for MacAddress {
     type Err = Error;
-    fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
+
+    fn from_str(s: &str) -> Result<Self> {
         match hex::decode(s.replace(":", "").replace("-", "")) {
             Ok(ref v) if v.len() == 6 => Ok(MacAddress::new_from_slice(v.as_slice())),
-            _ => Err(Error::from_kind(ErrorKind::FailedToParseMacAddress(
-                s.to_string(),
-            ))),
+            _ => Err(NetBricksError::FailedToParseMacAddress(s.to_string()).into()),
         }
     }
 }
@@ -233,9 +233,10 @@ mod tests {
         let address = "go:od:ca:fe:be:ef";
         let parsed = MacAddress::from_str(address);
         assert!(parsed.is_err());
-        match parsed.err() {
-            Some(Error(ErrorKind::FailedToParseMacAddress(s), _)) => {
-                assert_eq!(address.to_string(), s);
+        match parsed {
+            Err(e) => {
+                let err = format_err!("Failed to parse MAC address: '{}'", address.to_string());
+                assert_eq!(e.to_string(), err.to_string());
             }
             _ => assert!(false),
         }
@@ -246,9 +247,10 @@ mod tests {
         let address = "ab:ad:ad:d4";
         let parsed = MacAddress::from_str(address);
         assert!(parsed.is_err());
-        match parsed.err() {
-            Some(Error(ErrorKind::FailedToParseMacAddress(s), _)) => {
-                assert_eq!(address.to_string(), s);
+        match parsed {
+            Err(e) => {
+                let err = format_err!("Failed to parse MAC address: '{}'", address.to_string());
+                assert_eq!(e.to_string(), err.to_string());
             }
             _ => assert!(false),
         }

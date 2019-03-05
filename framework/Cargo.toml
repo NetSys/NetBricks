@@ -8,34 +8,33 @@ build = "build.rs"
 doctest = false
 
 [dependencies]
-libc = ">= 0.2.4"
-time = ">=0.1.0"
-getopts = "*"
 byteorder = "*"
 clippy = { version = ">=0.0.197", optional = true }
+crossbeam = "=0.4"
+enum_primitive = "0.1.1"
+failure = "0.1.5"
 fnv = "*"
-twox-hash = "*"
-regex = "*"
+generic-array = ">=0.11.0"
+getopts = "*"
+hex = "0.3.2"
 lazy_static = "*"
+libc = ">= 0.2.4"
+log = { version = "0.4", features = ["std", "serde"]}
 net2 = "*"
 # NIX restricts us to just unix for now, we can fix this if someone cares at a later point.
 nix = "*"
-# Figure out if we want this permanently or just for now.
-rust-sctp = { git="https://github.com/netsys/rust-sctp", optional = true}
-toml = "*"
-serde = "1.0"
-serde_derive = "1.0"
-# Hack for SHM
-uuid = { version = "*", features=["v4"] }
-error-chain = "0.12.0"
 num = "0.1"
 num-derive="0.2"
 num-traits = "0.2"
-generic-array = ">=0.11.0"
-crossbeam = "=0.4"
 rayon = "1.0.3"
-hex = "0.3.2"
-enum_primitive = "0.1.1"
+regex = "*"
+rust-sctp = { git="https://github.com/netsys/rust-sctp", optional = true}
+serde = "1.0"
+serde_derive = "1.0"
+time = ">=0.1.0"
+toml = "*"
+twox-hash = "*"
+uuid = { version = "*", features = ["v4"] }
 
 [features]
 default = []

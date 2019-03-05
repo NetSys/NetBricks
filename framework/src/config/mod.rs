@@ -7,7 +7,7 @@ mod flag_reader;
 /// `NetBricks` control configuration. In theory all applications create one of these, either through the use of
 /// `read_configuration` or manually using args.
 #[derive(Debug, Deserialize)]
-pub struct NetbricksConfiguration {
+pub struct NetBricksConfiguration {
     /// Name, this is passed on to DPDK. If you want to run multiple DPDK apps, this needs to be unique per application.
     pub name: String,
     /// Should this process be run as a secondary process or a primary process?
@@ -31,10 +31,10 @@ pub struct NetbricksConfiguration {
     pub dpdk_args: Option<String>,
 }
 
-/// Create an empty `NetbricksConfiguration`, useful when initializing through arguments.
-impl Default for NetbricksConfiguration {
-    fn default() -> NetbricksConfiguration {
-        NetbricksConfiguration {
+/// Create an empty `NetBricksConfiguration`, useful when initializing through arguments.
+impl Default for NetBricksConfiguration {
+    fn default() -> NetBricksConfiguration {
+        NetBricksConfiguration {
             name: String::new(),
             pool_size: DEFAULT_POOL_SIZE,
             cache_size: DEFAULT_CACHE_SIZE,
@@ -48,17 +48,17 @@ impl Default for NetbricksConfiguration {
     }
 }
 
-impl NetbricksConfiguration {
-    /// Create a `NetbricksConfiguration` with a name.
-    pub fn new_with_name(name: &str) -> NetbricksConfiguration {
-        NetbricksConfiguration {
+impl NetBricksConfiguration {
+    /// Create a `NetBricksConfiguration` with a name.
+    pub fn new_with_name(name: &str) -> NetBricksConfiguration {
+        NetBricksConfiguration {
             name: String::from(name),
             ..Default::default()
         }
     }
 }
 
-impl fmt::Display for NetbricksConfiguration {
+impl fmt::Display for NetBricksConfiguration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(
             f,

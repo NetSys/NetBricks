@@ -11,6 +11,8 @@ pub use self::group_by::*;
 use self::iterator::BatchIterator;
 pub use self::map_batch::MapBatch;
 use self::map_batch::MapFn;
+use self::map_results::MapFnResult;
+pub use self::map_results::MapResults;
 pub use self::merge_batch::MergeBatch;
 pub use self::parsed_batch::ParsedBatch;
 pub use self::receive_batch::ReceiveBatch;
@@ -19,6 +21,8 @@ pub use self::restore_header::*;
 pub use self::send_batch::SendBatch;
 pub use self::transform_batch::TransformBatch;
 use self::transform_batch::TransformFn;
+use self::transform_results::TransformFnResult;
+pub use self::transform_results::TransformResults;
 use headers::*;
 use interface::*;
 use scheduler::Scheduler;
@@ -35,6 +39,7 @@ mod filter_batch;
 mod group_by;
 mod iterator;
 mod map_batch;
+mod map_results;
 mod merge_batch;
 mod packet_batch;
 mod parsed_batch;
@@ -43,6 +48,7 @@ mod reset_parse;
 mod restore_header;
 mod send_batch;
 mod transform_batch;
+mod transform_results;
 
 /// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
 /// the precise batch being processed will be determined by the scheduling policy used.
@@ -104,7 +110,7 @@ pub trait Batch: BatchIterator + Act + Send {
         CompositionBatch::new(self)
     }
 
-    /// Transform a header field.
+    /// Transform header fields.
     fn transform(
         self,
         transformer: TransformFn<Self::Header, Self::Metadata>,
@@ -115,6 +121,17 @@ pub trait Batch: BatchIterator + Act + Send {
         TransformBatch::<Self::Header, Self>::new(self, transformer)
     }
 
+    /// Transform header fields while returning results.
+    fn transform_ok(
+        self,
+        transformer: TransformFnResult<Self::Header, Self::Metadata>,
+    ) -> TransformResults<Self::Header, Self>
+    where
+        Self: Sized,
+    {
+        TransformResults::<Self::Header, Self>::new(self, transformer)
+    }
+
     /// Map over a set of header fields. Map and transform primarily differ in map being immutable. Immutability
     /// provides some optimization opportunities not otherwise available.
     fn map(self, transformer: MapFn<Self::Header, Self::Metadata>) -> MapBatch<Self::Header, Self>
@@ -122,6 +139,17 @@ pub trait Batch: BatchIterator + Act + Send {
         Self: Sized,
     {
         MapBatch::<Self::Header, Self>::new(self, transformer)
+    }
+
+    /// Map over a set of header fields while returning results.
+    fn map_ok(
+        self,
+        transformer: MapFnResult<Self::Header, Self::Metadata>,
+    ) -> MapResults<Self::Header, Self>
+    where
+        Self: Sized,
+    {
+        MapResults::<Self::Header, Self>::new(self, transformer)
     }
 
     /// Filter out packets, any packets for which `filter_f` returns false are dropped from the batch.

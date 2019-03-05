@@ -34,7 +34,8 @@ where
                 ReceiveBatch::new(port.clone()),
                 sched,
                 &Ipv4Addr::new(10, 0, 0, 1),
-            ).send(port.clone())
+            )
+            .send(port.clone())
         })
         .collect();
     println!("Running {} pipelines", pipelines.len());
@@ -90,10 +91,7 @@ fn main() {
             }
         }
         Err(ref e) => {
-            println!("Error: {}", e);
-            if let Some(backtrace) = e.backtrace() {
-                println!("Backtrace: {:?}", backtrace);
-            }
+            println!("Error: {:?}", e);
             process::exit(1);
         }
     }

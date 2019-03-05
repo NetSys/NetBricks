@@ -14,6 +14,7 @@ export examples=(
         test/tcp-checksum
         test/icmpv6
         test/mtu-too-big
+        test/transform-error
         # test/delay-test
         # test/chain-test
         # test/shutdown-test

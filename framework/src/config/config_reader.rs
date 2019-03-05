@@ -1,4 +1,4 @@
-use super::{NetbricksConfiguration, PortConfiguration};
+use super::{NetBricksConfiguration, PortConfiguration};
 use common::*;
 use std::fs::File;
 use std::io::Read;
@@ -19,7 +19,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
         let name = match port_def.get("name") {
             Some(&Value::String(ref name)) => name.clone(),
             _ => {
-                return Err(ErrorKind::ConfigurationError(String::from(
+                return Err(NetBricksError::ConfigurationError(format!(
                     "Could not parse name for port",
                 ))
                 .into());
@@ -30,7 +30,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
             Some(&Value::Integer(rxd)) => rxd as i32,
             None => NUM_RXD,
             v => {
-                return Err(ErrorKind::ConfigurationError(format!(
+                return Err(NetBricksError::ConfigurationError(format!(
                     "Could not parse number of rx descriptors {:?}",
                     v
                 ))
@@ -42,7 +42,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
             Some(&Value::Integer(txd)) => txd as i32,
             None => NUM_TXD,
             v => {
-                return Err(ErrorKind::ConfigurationError(format!(
+                return Err(NetBricksError::ConfigurationError(format!(
                     "Could not parse number of tx descriptors {:?}",
                     v
                 ))
@@ -54,7 +54,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
             Some(&Value::Boolean(l)) => l,
             None => false,
             v => {
-                return Err(ErrorKind::ConfigurationError(format!(
+                return Err(NetBricksError::ConfigurationError(format!(
                     "Could not parse loopback spec {:?}",
                     v
                 ))
@@ -66,7 +66,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
             Some(&Value::Boolean(l)) => l,
             None => false,
             v => {
-                return Err(ErrorKind::ConfigurationError(format!(
+                return Err(NetBricksError::ConfigurationError(format!(
                     "Could not parse tso spec {:?}",
                     v
                 ))
@@ -78,7 +78,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
             Some(&Value::Boolean(l)) => l,
             None => false,
             v => {
-                return Err(ErrorKind::ConfigurationError(format!(
+                return Err(NetBricksError::ConfigurationError(format!(
                     "Could not parse csum spec {:?}",
                     v
                 ))
@@ -90,11 +90,7 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
         if symmetric_queue
             && (port_def.contains_key("rx_cores") || port_def.contains_key("tx_cores"))
         {
-            println!(
-                "cores specified along with rx_cores and/or tx_cores for port {}",
-                name
-            );
-            return Err(ErrorKind::ConfigurationError(format!(
+            return Err(NetBricksError::ConfigurationError(format!(
                 "cores specified along with rx_cores and/or tx_cores \
                  for port {}",
                 name
@@ -110,8 +106,8 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
                         if let Value::Integer(core) = *q {
                             qs.push(core as i32)
                         } else {
-                            return Err(ErrorKind::ConfigurationError(format!(
-                                "Could not parse queue spec {:?}",
+                            return Err(NetBricksError::ConfigurationError(format!(
+                                "Could not parse queue spec {}",
                                 q
                             ))
                             .into());
@@ -153,25 +149,24 @@ fn read_port(value: &Value) -> Result<PortConfiguration> {
             tso: tso,
         })
     } else {
-        Err(ErrorKind::ConfigurationError(String::from("Could not understand port spec")).into())
+        Err(NetBricksError::ConfigurationError(format!("Could not understand port spec")).into())
     }
 }
 
-/// Read a TOML string and create a `NetbricksConfiguration` structure.
+/// Read a TOML string and create a `NetBricksConfiguration` structure.
 /// `configuration` is a TOML formatted string.
 /// `filename` is used for error reporting purposes, and is otherwise meaningless.
 pub fn read_configuration_from_str(
     configuration: &str,
     filename: &str,
-) -> Result<NetbricksConfiguration> {
+) -> Result<NetBricksConfiguration> {
     // Parse string for TOML file.
     let toml = match toml::de::from_str::<Value>(configuration) {
         Ok(toml) => toml,
         Err(error) => {
-            println!("Parse error: {} in file: {}", error, filename);
-            return Err(ErrorKind::ConfigurationError(format!(
-                "Experienced {} parse errors in spec.",
-                error
+            return Err(NetBricksError::ConfigurationError(format!(
+                "Parse error: {} in file: {}",
+                error, filename
             ))
             .into());
         }
@@ -182,8 +177,7 @@ pub fn read_configuration_from_str(
         Some(&Value::String(ref name)) => name.clone(),
         None => String::from(DEFAULT_NAME),
         _ => {
-            println!("Could not parse name");
-            return Err(ErrorKind::ConfigurationError(String::from("Could not parse name")).into());
+            return Err(NetBricksError::ConfigurationError(format!("Could not parse name")).into());
         }
     };
 
@@ -193,7 +187,7 @@ pub fn read_configuration_from_str(
         Some(&Value::String(ref core)) => match core.parse() {
             Ok(c) => c,
             _ => {
-                return Err(ErrorKind::ConfigurationError(format!(
+                return Err(NetBricksError::ConfigurationError(format!(
                     "Could not parse {} as core",
                     core
                 ))
@@ -202,10 +196,11 @@ pub fn read_configuration_from_str(
         },
         None => DEFAULT_PRIMARY_CORE,
         v => {
-            println!("Could not parse core");
-            return Err(
-                ErrorKind::ConfigurationError(format!("Could not parse {:?} as core", v)).into(),
-            );
+            return Err(NetBricksError::ConfigurationError(format!(
+                "Could not parse {:?} as core",
+                v
+            ))
+            .into());
         }
     };
 
@@ -214,9 +209,8 @@ pub fn read_configuration_from_str(
         Some(&Value::Integer(pool)) => pool as u32,
         None => DEFAULT_POOL_SIZE,
         _ => {
-            println!("Could parse pool size");
             return Err(
-                ErrorKind::ConfigurationError(String::from("Could not parse pool size")).into(),
+                NetBricksError::ConfigurationError(format!("Could not parse pool size",)).into(),
             );
         }
     };
@@ -226,9 +220,8 @@ pub fn read_configuration_from_str(
         Some(&Value::Integer(cache)) => cache as u32,
         None => DEFAULT_CACHE_SIZE,
         _ => {
-            println!("Could parse cache size");
             return Err(
-                ErrorKind::ConfigurationError(String::from("Could not parse cache size")).into(),
+                NetBricksError::ConfigurationError(format!("Could not parse cache size",)).into(),
             );
         }
     };
@@ -238,8 +231,7 @@ pub fn read_configuration_from_str(
         Some(&Value::Boolean(secondary)) => secondary,
         None => DEFAULT_SECONDARY,
         _ => {
-            println!("Could not parse whether this is a secondary process");
-            return Err(ErrorKind::ConfigurationError(String::from(
+            return Err(NetBricksError::ConfigurationError(format!(
                 "Could not parse secondary processor spec",
             ))
             .into());
@@ -254,7 +246,7 @@ pub fn read_configuration_from_str(
                 if let Value::Integer(core) = *core {
                     cores.push(core as i32)
                 } else {
-                    return Err(ErrorKind::ConfigurationError(format!(
+                    return Err(NetBricksError::ConfigurationError(format!(
                         "Could not parse core spec {}",
                         core
                     ))
@@ -265,8 +257,9 @@ pub fn read_configuration_from_str(
         }
         None => Vec::with_capacity(0),
         _ => {
-            println!("Cores is not an array");
-            return Err(ErrorKind::ConfigurationError(String::from("Cores is not an array")).into());
+            return Err(
+                NetBricksError::ConfigurationError(format!("Cores is not an array")).into(),
+            );
         }
     };
 
@@ -274,7 +267,7 @@ pub fn read_configuration_from_str(
         Some(&Value::Boolean(l)) => l,
         None => false,
         v => {
-            return Err(ErrorKind::ConfigurationError(format!(
+            return Err(NetBricksError::ConfigurationError(format!(
                 "Could not parse strict spec (should be boolean) {:?}",
                 v
             ))
@@ -288,18 +281,18 @@ pub fn read_configuration_from_str(
             for port in ports {
                 let p = try!(read_port(port));
                 pouts.push(p);
-                // match read_port(port) {
             }
             pouts
         }
         None => Vec::with_capacity(0),
         _ => {
-            println!("Ports is not an array");
-            return Err(ErrorKind::ConfigurationError(String::from("Ports is not an array")).into());
+            return Err(
+                NetBricksError::ConfigurationError(format!("Ports is not an array")).into(),
+            );
         }
     };
 
-    Ok(NetbricksConfiguration {
+    Ok(NetBricksConfiguration {
         name: name,
         primary_core: master_lcore,
         cores: cores,
@@ -312,11 +305,10 @@ pub fn read_configuration_from_str(
     })
 }
 
-/// Read a configuration file and create a `NetbricksConfiguration` structure.
+/// Read a configuration file and create a `NetBricksConfiguration` structure.
 /// `filename` should be TOML formatted file.
-pub fn read_configuration(filename: &str) -> Result<NetbricksConfiguration> {
+pub fn read_configuration(filename: &str) -> Result<NetBricksConfiguration> {
     let mut toml_str = String::new();
-    let _ = try! {File::open(filename).and_then(|mut f| f.read_to_string(&mut toml_str))
-    .chain_err(|| ErrorKind::ConfigurationError(String::from("Could not read file")))};
+    File::open(filename).and_then(|mut f| f.read_to_string(&mut toml_str))?;
     read_configuration_from_str(&toml_str[..], filename)
 }

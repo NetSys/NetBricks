@@ -8,42 +8,48 @@ use interface::Packet;
 use interface::PacketTx;
 use std::marker::PhantomData;
 
-pub type TransformFn<T, M> = Box<FnMut(&mut Packet<T, M>) + Send>;
+pub type TransformFnResult<T, M> = Box<FnMut(&mut Packet<T, M>) -> Result<()> + Send>;
 
-pub struct TransformBatch<T, V>
+pub struct TransformResults<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
 {
     parent: V,
-    transformer: TransformFn<T, V::Metadata>,
+    transformer: TransformFnResult<T, V::Metadata>,
     applied: bool,
+    remove: Vec<usize>,
     phantom_t: PhantomData<T>,
 }
 
-impl<T, V> TransformBatch<T, V>
+impl<T, V> TransformResults<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
 {
-    pub fn new(parent: V, transformer: TransformFn<T, V::Metadata>) -> TransformBatch<T, V> {
-        TransformBatch {
+    pub fn new(
+        parent: V,
+        transformer: TransformFnResult<T, V::Metadata>,
+    ) -> TransformResults<T, V> {
+        let capacity = parent.capacity() as usize;
+        TransformResults {
             parent: parent,
             transformer: transformer,
             applied: false,
+            remove: Vec::with_capacity(capacity),
             phantom_t: PhantomData,
         }
     }
 }
 
-impl<T, V> Batch for TransformBatch<T, V>
+impl<T, V> Batch for TransformResults<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
 {
 }
 
-impl<T, V> BatchIterator for TransformBatch<T, V>
+impl<T, V> BatchIterator for TransformResults<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
@@ -61,7 +67,7 @@ where
     }
 }
 
-impl<T, V> Act for TransformBatch<T, V>
+impl<T, V> Act for TransformResults<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
@@ -72,11 +78,26 @@ where
             self.parent.act();
             {
                 let iter = PayloadEnumerator::<T, V::Metadata>::new(&mut self.parent);
-                while let Some(ParsedDescriptor { mut packet, .. }) = iter.next(&mut self.parent) {
-                    (self.transformer)(&mut packet);
+                while let Some(ParsedDescriptor {
+                    mut packet,
+                    index: idx,
+                }) = iter.next(&mut self.parent)
+                {
+                    if let Err(ref e) = (self.transformer)(&mut packet) {
+                        error_chain!(e);
+                        self.remove.push(idx)
+                    }
                 }
             }
+
             self.applied = true;
+
+            if !self.remove.is_empty() {
+                self.parent
+                    .drop_packets(&self.remove[..])
+                    .map_or_else(|ref e| error_chain!(e), |_| ())
+            }
+            self.remove.clear();
         }
     }
 

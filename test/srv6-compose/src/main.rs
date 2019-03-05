@@ -72,10 +72,7 @@ fn main() {
             }
         }
         Err(ref e) => {
-            println!("Error: {}", e);
-            if let Some(backtrace) = e.backtrace() {
-                println!("Backtrace: {:?}", backtrace);
-            }
+            println!("Error: {:?}", e);
             process::exit(1);
         }
     }

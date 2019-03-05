@@ -91,7 +91,7 @@ where
     }
 
     #[inline]
-    fn drop_packets(&mut self, _: &[usize]) -> Option<usize> {
+    fn drop_packets(&mut self, _: &[usize]) -> Result<usize> {
         panic!("Cannot drop packets from a sent batch")
     }
 

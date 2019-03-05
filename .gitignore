@@ -47,6 +47,7 @@ Vagrantfile
 
 # pcap
 out.pcap
+*.lnk
 
 # logs
 *.log

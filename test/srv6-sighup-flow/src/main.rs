@@ -77,7 +77,7 @@ fn handle_signals(configuration: &'static Atom<Bar>) {
                     let mut nf_stuff = new_config.bar;
                     nf_stuff.baz = true;
                     configuration.set(nf_stuff);
-                    info!(
+                    warn!(
                         "So long, and thanks for all the fish: {:?}",
                         configuration.get()
                     );
@@ -93,7 +93,7 @@ fn handle_signals(configuration: &'static Atom<Bar>) {
 
 fn start_logger() {
     WriteLogger::init(
-        LevelFilter::Info,
+        LevelFilter::Warn,
         SimpleConfig {
             time: None,
             level: Some(Level::Error),
@@ -166,10 +166,7 @@ fn main() {
             }
         }
         Err(ref e) => {
-            println!("Error: {}", e);
-            if let Some(backtrace) = e.backtrace() {
-                println!("Backtrace: {:?}", backtrace);
-            }
+            println!("Error: {:?}", e);
             process::exit(1);
         }
     }

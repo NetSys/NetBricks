@@ -80,7 +80,7 @@ impl<T: PacketRx> Act for ReceiveBatch<T> {
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: &[usize]) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &[usize]) -> Result<usize> {
         self.parent.drop_packets(idxes)
     }
 

@@ -56,7 +56,7 @@ fn srh_into_packet(pkt: &mut Packet<Ipv6Header, MetaDataz>) -> Result<()> {
     if let Some(Ok(())) = insert {
         Ok(())
     } else {
-        Err(ErrorKind::FailedToInsertHeader.into())
+        Err(NetBricksError::FailedToInsertHeader.into())
     }
 }
 

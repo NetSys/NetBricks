@@ -6,68 +6,80 @@ use common::*;
 use headers::EndOffset;
 use interface::Packet;
 use interface::PacketTx;
+use std::marker::PhantomData;
 
-pub type FilterFn<T, M> = Box<FnMut(&Packet<T, M>) -> bool + Send>;
+pub type MapFnResult<T, M> = Box<FnMut(&Packet<T, M>) -> Result<()> + Send>;
 
-pub struct FilterBatch<T, V>
+pub struct MapResults<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
 {
     parent: V,
-    filter: FilterFn<T, V::Metadata>,
-    capacity: usize,
+    transformer: MapFnResult<T, V::Metadata>,
+    applied: bool,
     remove: Vec<usize>,
+    phantom_t: PhantomData<T>,
 }
 
-impl<T, V> FilterBatch<T, V>
+impl<T, V> MapResults<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
 {
-    #[inline]
-    pub fn new(parent: V, filter: FilterFn<T, V::Metadata>) -> FilterBatch<T, V> {
+    pub fn new(parent: V, transformer: MapFnResult<T, V::Metadata>) -> MapResults<T, V> {
         let capacity = parent.capacity() as usize;
-        FilterBatch {
+        MapResults {
             parent: parent,
-            filter: filter,
-            capacity: capacity,
+            transformer: transformer,
+            applied: false,
             remove: Vec::with_capacity(capacity),
+            phantom_t: PhantomData,
         }
     }
 }
 
-batch_no_new! {FilterBatch}
+impl<T, V> Batch for MapResults<T, V>
+where
+    T: EndOffset,
+    V: Batch + BatchIterator<Header = T> + Act,
+{
+}
 
-impl<T, V> Act for FilterBatch<T, V>
+impl<T, V> Act for MapResults<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
 {
     #[inline]
     fn act(&mut self) {
-        self.parent.act();
-        // Filter during the act
-        let iter = PayloadEnumerator::<T, V::Metadata>::new(&mut self.parent);
-        while let Some(ParsedDescriptor {
-            mut packet,
-            index: idx,
-        }) = iter.next(&mut self.parent)
-        {
-            if !(self.filter)(&mut packet) {
-                self.remove.push(idx)
+        if !self.applied {
+            self.parent.act();
+            {
+                let iter = PayloadEnumerator::<T, V::Metadata>::new(&mut self.parent);
+                while let Some(ParsedDescriptor { packet, index: idx }) =
+                    iter.next(&mut self.parent)
+                {
+                    if let Err(ref e) = (self.transformer)(&packet) {
+                        error_chain!(e);
+                        self.remove.push(idx)
+                    }
+                }
             }
+            self.applied = true;
+
+            if !self.remove.is_empty() {
+                self.parent
+                    .drop_packets(&self.remove[..])
+                    .map_or_else(|ref e| error_chain!(e), |_| ())
+            }
+            self.remove.clear();
         }
-        if !self.remove.is_empty() {
-            self.parent
-                .drop_packets(&self.remove[..])
-                .map_or_else(|ref e| error_chain!(e), |_| ())
-        }
-        self.remove.clear();
     }
 
     #[inline]
     fn done(&mut self) {
+        self.applied = false;
         self.parent.done();
     }
 
@@ -78,7 +90,7 @@ where
 
     #[inline]
     fn capacity(&self) -> i32 {
-        self.capacity as i32
+        self.parent.capacity()
     }
 
     #[inline]
@@ -102,7 +114,7 @@ where
     }
 }
 
-impl<T, V> BatchIterator for FilterBatch<T, V>
+impl<T, V> BatchIterator for MapResults<T, V>
 where
     T: EndOffset,
     V: Batch + BatchIterator<Header = T> + Act,
@@ -117,6 +129,7 @@ where
 
     #[inline]
     unsafe fn next_payload(&mut self, idx: usize) -> Option<PacketDescriptor<T, Self::Metadata>> {
+        // self.parent.next_payload(idx).map(|p| {(self.transformer)(&p.packet); p})
         self.parent.next_payload(idx)
     }
 }

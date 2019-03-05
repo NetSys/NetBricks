@@ -1,7 +1,5 @@
-extern crate getopts;
-use self::getopts::{Matches, Options};
-use super::{read_configuration, NetbricksConfiguration, PortConfiguration};
-use common::print_error;
+use super::{read_configuration, NetBricksConfiguration, PortConfiguration};
+use getopts::{Matches, Options};
 use std::collections::HashMap;
 use std::env;
 use std::process;
@@ -21,14 +19,13 @@ pub fn basic_opts() -> Options {
     opts.optopt("", "cache_size", "Core Cache Size", "size");
     opts.optopt("f", "configuration", "Configuration file", "path");
     opts.optmulti("", "dpdk_args", "DPDK arguments", "DPDK arguments");
-
     opts
 }
 
 /// Read the commonly used configuration flags parsed by `basic_opts()` into
-/// a `NetbricksConfiguration`. Some flags may cause side effects -- for example, the
+/// a `NetBricksConfiguration`. Some flags may cause side effects -- for example, the
 /// help flag will print usage information and then exit the process.
-pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration {
+pub fn read_matches(matches: &Matches, opts: &Options) -> NetBricksConfiguration {
     if matches.opt_present("h") {
         let program = env::args().next().unwrap();
         print!("{}", opts.usage(&format!("Usage: {} [options]", program)));
@@ -46,17 +43,17 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
         match read_configuration(&config_file[..]) {
             Ok(cfg) => cfg,
             Err(ref e) => {
-                print_error(e);
+                eprintln!("Error reading configuration file ~ {}", e);
                 process::exit(1);
             }
         }
     } else {
         let name = matches.opt_str("n").unwrap_or_else(|| String::from("recv"));
-        NetbricksConfiguration::new_with_name(&name[..])
+        NetBricksConfiguration::new_with_name(&name[..])
     };
 
     let configuration = if matches.opt_present("m") {
-        NetbricksConfiguration {
+        NetBricksConfiguration {
             primary_core: matches
                 .opt_str("m")
                 .unwrap()
@@ -70,7 +67,7 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
     };
 
     let configuration = if matches.opt_present("secondary") {
-        NetbricksConfiguration {
+        NetBricksConfiguration {
             secondary: true,
             ..configuration
         }
@@ -79,7 +76,7 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
     };
 
     let configuration = if matches.opt_present("primary") {
-        NetbricksConfiguration {
+        NetBricksConfiguration {
             secondary: false,
             ..configuration
         }
@@ -88,7 +85,7 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
     };
 
     let configuration = if matches.opt_present("pool_size") {
-        NetbricksConfiguration {
+        NetBricksConfiguration {
             pool_size: matches
                 .opt_str("pool_size")
                 .unwrap()
@@ -101,7 +98,7 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
     };
 
     let configuration = if matches.opt_present("cache_size") {
-        NetbricksConfiguration {
+        NetBricksConfiguration {
             cache_size: matches
                 .opt_str("cache_size")
                 .unwrap()
@@ -136,7 +133,7 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
             ports.push(PortConfiguration::new_with_queues(*port, cores, cores))
         }
         cores.dedup();
-        NetbricksConfiguration {
+        NetBricksConfiguration {
             cores: cores,
             ports: ports,
             ..configuration
@@ -145,7 +142,7 @@ pub fn read_matches(matches: &Matches, opts: &Options) -> NetbricksConfiguration
         configuration
     };
 
-    println!("Going to start with configuration {}", configuration);
+    info!("Going to start with configuration {}", configuration);
     configuration
 }
 

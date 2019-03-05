@@ -72,7 +72,7 @@ impl<T: Batch> Act for MergeBatch<T> {
     }
 
     #[inline]
-    fn drop_packets(&mut self, idxes: &[usize]) -> Option<usize> {
+    fn drop_packets(&mut self, idxes: &[usize]) -> Result<usize> {
         self.parents[self.which].drop_packets(idxes)
     }
 

@@ -13,7 +13,7 @@ fn tcp_sr_nf<T: 'static + Batch<Header = Ipv6Header>>(parent: T) -> CompositionB
     parent
         .parse::<SRH<Ipv6Header>>()
         .map(box |pkt| {
-            info!("SR-hdr {}", pkt.get_header());
+            warn!("SR-hdr {}", pkt.get_header());
         })
         .compose()
 }
@@ -35,7 +35,7 @@ pub fn nf<T: 'static + Batch<Header = NullHeader>, S: Scheduler + Sized>(
             _ => false,
         })
         .map(box move |_pkt| {
-            info!(
+            warn!(
                 "Settings/Configuration Static State Val: {:?}",
                 ATOM_CONF.get()
             );

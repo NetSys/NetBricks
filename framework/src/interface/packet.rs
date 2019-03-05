@@ -332,7 +332,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
     #[inline]
     pub fn write_metadata<M2: Sized + Send>(&mut self, metadata: &M2) -> Result<()> {
         if size_of::<M2>() >= FREEFORM_METADATA_SIZE {
-            Err(ErrorKind::MetadataTooLarge.into())
+            Err(NetBricksError::MetadataTooLarge.into())
         } else {
             unsafe {
                 let ptr = MBuf::mut_metadata_as::<M2>(self.mbuf, FREEFORM_METADATA_SLOT);
@@ -429,7 +429,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                 ptr::copy_nonoverlapping(hdr, fin_dst as *mut T2, 1);
                 Ok(header_size as isize)
             } else {
-                Err(ErrorKind::FailedToInsertHeader.into())
+                Err(NetBricksError::FailedToInsertHeader.into())
             }
         }
     }
@@ -463,7 +463,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                 on_insert(current_header);
                 Ok(())
             } else {
-                Err(ErrorKind::FailedToInsertHeader.into())
+                Err(NetBricksError::FailedToInsertHeader.into())
             }
         }
     }
@@ -510,12 +510,12 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                 let removed = (*self.mbuf).remove_data_end(var_header_size);
 
                 if removed != var_header_size {
-                    Err(ErrorKind::FailedToRemoveHeader.into())
+                    Err(NetBricksError::FailedToRemoveHeader.into())
                 } else {
                     Ok(-(var_header_size as isize))
                 }
             } else {
-                Err(ErrorKind::FailedToRemoveHeader.into())
+                Err(NetBricksError::FailedToRemoveHeader.into())
             }
         }
     }
@@ -558,7 +558,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                     on_remove(current_header);
                     Ok(())
                 }
-                _ => Err(ErrorKind::FailedToRemoveHeader.into()),
+                _ => Err(NetBricksError::FailedToRemoveHeader.into()),
             }
         }
     }
@@ -602,7 +602,9 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
 
                     let removed = (*self.mbuf).remove_data_end(diff);
                     if removed <= new_hdr_size && diff != removed {
-                        return Err(ErrorKind::FailedToSwapHeader(format!("{}", new_header)).into());
+                        return Err(
+                            NetBricksError::FailedToSwapHeader(format!("{}", new_header)).into(),
+                        );
                     }
                 }
                 Ordering::Greater => {
@@ -611,7 +613,9 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
 
                     let added = (*self.mbuf).add_data_end(diff);
                     if added >= new_hdr_size && diff != added {
-                        return Err(ErrorKind::FailedToSwapHeader(format!("{}", new_header)).into());
+                        return Err(
+                            NetBricksError::FailedToSwapHeader(format!("{}", new_header)).into(),
+                        );
                     }
                     ptr::copy(payload, move_loc, to_move);
                 }
@@ -634,7 +638,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                 on_swap(current_header);
                 Ok(diff)
             } else {
-                Err(ErrorKind::FailedToSwapHeader(format!("{}", new_header)).into())
+                Err(NetBricksError::FailedToSwapHeader(format!("{}", new_header)).into())
             }
         }
     }
@@ -662,7 +666,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
                 ptr::copy_nonoverlapping(src, dst, size);
                 Ok(())
             } else {
-                Err(ErrorKind::FailedAllocation.into())
+                Err(NetBricksError::FailedAllocation.into())
             }
         }
     }
@@ -682,7 +686,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
             if added >= size {
                 Ok(())
             } else {
-                Err(ErrorKind::FailedAllocation.into())
+                Err(NetBricksError::FailedAllocation.into())
             }
         }
     }
@@ -694,7 +698,7 @@ impl<T: EndOffset, M: Sized + Send> Packet<T, M> {
         offset: usize,
     ) -> Result<()> {
         if offset > self.payload_size() {
-            Err(ErrorKind::BadOffset(offset).into())
+            Err(NetBricksError::BadOffset(offset).into())
         } else {
             unsafe {
                 let dst = self.payload().offset(offset as isize);

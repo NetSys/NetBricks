@@ -1,18 +1,42 @@
 #![feature(box_syntax)]
 #![feature(asm)]
+#[macro_use]
+extern crate log;
 extern crate netbricks;
+extern crate simplelog;
+#[macro_use]
+extern crate failure;
+
 use self::nf::*;
+use log::Level;
 use netbricks::config::{basic_opts, read_matches};
 use netbricks::interface::*;
 use netbricks::operators::*;
 use netbricks::scheduler::*;
+use simplelog::{Config as SimpleConfig, LevelFilter, WriteLogger};
 use std::env;
 use std::fmt::Display;
+use std::fs::File as StdFile;
 use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 mod nf;
+
+fn start_logger() {
+    WriteLogger::init(
+        LevelFilter::Warn,
+        SimpleConfig {
+            time: None,
+            level: Some(Level::Error),
+            target: Some(Level::Debug),
+            location: Some(Level::Trace),
+            time_format: None,
+        },
+        StdFile::create("test.log").unwrap(),
+    )
+    .unwrap();
+}
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
 where
@@ -23,7 +47,7 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| nf(ReceiveBatch::new(port.clone()), sched).send(port.clone()))
+        .map(|port| nf(ReceiveBatch::new(port.clone())).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
@@ -32,6 +56,8 @@ where
 }
 
 fn main() {
+    start_logger();
+
     let mut opts = basic_opts();
     opts.optopt(
         "",

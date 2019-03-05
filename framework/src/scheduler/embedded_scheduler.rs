@@ -70,7 +70,7 @@ impl EmbeddedScheduler {
                 self.display_dependencies_internal(dep_task, depth + 1)
             }
         }
-        println!("{} Task {}", depth, task_id);
+        info!("{} Task {}", depth, task_id);
     }
 
     /// For debugging purposes

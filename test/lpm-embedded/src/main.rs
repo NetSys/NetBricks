@@ -14,8 +14,8 @@ mod nf;
 
 fn main() {
     let name = String::from("recv");
-    let configuration = NetbricksConfiguration::new_with_name(&name[..]);
-    let configuration = NetbricksConfiguration {
+    let configuration = NetBricksConfiguration::new_with_name(&name[..]);
+    let configuration = NetBricksConfiguration {
         primary_core: 0,
         ..configuration
     };
@@ -36,10 +36,7 @@ fn main() {
             sched.display_dependencies(task);
         }
         Err(ref e) => {
-            println!("Error: {}", e);
-            if let Some(backtrace) = e.backtrace() {
-                println!("Backtrace: {:?}", backtrace);
-            }
+            println!("Error: {:?}", e);
             process::exit(1);
         }
     }

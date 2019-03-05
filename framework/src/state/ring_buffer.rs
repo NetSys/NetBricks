@@ -25,7 +25,7 @@ impl RingBuffer {
     pub fn new(bytes: usize) -> Result<RingBuffer> {
         if bytes & (bytes - 1) != 0 {
             // We need pages to be a power of 2.
-            return Err(ErrorKind::InvalidRingSize(bytes).into());
+            return Err(NetBricksError::InvalidRingSize(bytes).into());
         }
 
         Ok(RingBuffer {
@@ -85,7 +85,7 @@ impl RingBuffer {
         let available = self.mask.wrapping_add(self.head).wrapping_sub(self.tail);
         let write = min(data.len(), available);
         if write != data.len() {
-            println!("Not writing all, available {}", available);
+            info!("Not writing all, available {}", available);
         }
         let offset = self.tail & self.mask;
         self.seek_tail(write);

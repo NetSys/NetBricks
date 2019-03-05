@@ -1,5 +1,5 @@
 use super::METADATA_SLOTS;
-use config::{NetbricksConfiguration, DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE};
+use config::{NetBricksConfiguration, DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE};
 use native::libnuma;
 use native::zcsi;
 use std::cell::Cell;
@@ -60,10 +60,11 @@ pub fn init_system_secondary(name: &str, core: i32) {
 }
 
 /// Initialize the system based on the supplied scheduler configuration.
-pub fn init_system(config: &NetbricksConfiguration) {
+pub fn init_system(config: &NetBricksConfiguration) {
     if config.name.is_empty() {
         panic!("Configuration must provide a name.");
     }
+
     // We init with all devices blacklisted and rely on the attach logic to white list them as necessary.
     if config.secondary {
         // We do not have control over any of the other settings in this case.
@@ -85,11 +86,11 @@ thread_local!(static NUMA_DOMAIN: Cell<i32> = Cell::new(-1));
 pub fn set_numa_domain() {
     let domain = unsafe {
         if libnuma::numa_available() == -1 {
-            println!("No NUMA information found, support disabled");
+            info!("No NUMA information found, support disabled");
             -1
         } else {
             let domain = libnuma::numa_preferred();
-            println!("Running on node {}", domain);
+            info!("Running on node {}", domain);
             domain
         }
     };
@@ -103,9 +104,9 @@ pub fn init_thread(tid: i32, core: i32) {
         f.set(numa);
     });
     if numa == -1 {
-        println!("No NUMA information found, support disabled");
+        info!("No NUMA information found, support disabled");
     } else {
-        println!("Running on node {}", numa);
+        info!("Running on node {}", numa);
     };
 }
 
