@@ -1,6 +1,6 @@
 use native::zcsi::MBuf;
 use std::fmt;
-use super::{Packet, Header, RawPacket};
+use packets::{Packet, Header, RawPacket};
 
 /* Ethernet Type II Frame
 
@@ -75,8 +75,8 @@ impl fmt::Display for EtherType {
             f,
             "{}",
             match self {
-                &EtherTypes::Ipv4 => "Ipv4".to_string(),
-                &EtherTypes::Ipv6 => "Ipv6".to_string(),
+                &EtherTypes::Ipv4 => "IPv4".to_string(),
+                &EtherTypes::Ipv6 => "IPv6".to_string(),
                 _ => format!("0x{:04x}", self.0)
             }
         )
@@ -89,7 +89,7 @@ impl fmt::Display for EtherType {
 pub struct MacHeader {
     dst: MacAddr,
     src: MacAddr,
-    ether_type: EtherType
+    ether_type: u16
 }
 
 impl Header for MacHeader {
@@ -129,12 +129,12 @@ impl Ethernet {
 
     #[inline]
     pub fn ether_type(&self) -> EtherType {
-        EtherType::new(u16::from_be(self.header().ether_type.0))
+        EtherType::new(u16::from_be(self.header().ether_type))
     }
 
     #[inline]
     pub fn set_ether_type(&mut self, ether_type: EtherType) {
-        self.header().ether_type = EtherType::new(u16::to_be(ether_type.0))
+        self.header().ether_type = u16::to_be(ether_type.0)
     }
 }
 
@@ -197,8 +197,8 @@ mod tests {
 
     #[test]
     fn str_from_ether_type() {
-        assert_eq!(format!("{}", EtherTypes::Ipv4), "Ipv4");
-        assert_eq!(format!("{}", EtherTypes::Ipv6), "Ipv6");
+        assert_eq!(format!("{}", EtherTypes::Ipv4), "IPv4");
+        assert_eq!(format!("{}", EtherTypes::Ipv6), "IPv6");
         assert_eq!(format!("{}", EtherType::new(0)), "0x0000");
     }
 
@@ -207,7 +207,7 @@ mod tests {
         dpdk_test! {
             let packet = RawPacket::from_bytes(&V6_BYTES).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
-            assert_eq!(format!("{}", ethernet), "00:00:00:00:00:02 > 00:00:00:00:00:01 [Ipv6]");
+            assert_eq!(format!("{}", ethernet), "00:00:00:00:00:02 > 00:00:00:00:00:01 [IPv6]");
         }
     }
 }

@@ -1,7 +1,7 @@
 use common::{Result, NetBricksError};
 use native::zcsi::{MBuf, mbuf_alloc};
 use std::ptr;
-use super::{Packet, Header};
+use packets::{Packet, Header};
 
 /// empty header
 pub struct NullHeader;
