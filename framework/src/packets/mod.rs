@@ -5,6 +5,7 @@ pub use self::ethernet::*;
 pub use self::raw::*;
 
 pub mod ethernet;
+pub mod icmp;
 pub mod ip;
 pub mod raw;
 
