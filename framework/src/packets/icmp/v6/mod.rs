@@ -3,29 +3,34 @@ use std::fmt;
 use packets::{Packet, Header};
 use packets::ip::v6::Ipv6;
 
-/* From (https://tools.ietf.org/html/rfc4443)
-   The ICMPv6 messages have the following general format:
+pub use self::ndp::*;
+pub use self::ndp::router_advert::*;
 
-   0                   1                   2                   3
-   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |     Type      |     Code      |          Checksum             |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                                                               |
-   +                         Message Body                          +
-   |                                                               |
+pub mod ndp;
 
-   The type field indicates the type of the message.  Its value
-   determines the format of the remaining data.
+/*  From (https://tools.ietf.org/html/rfc4443)
+    The ICMPv6 messages have the following general format:
 
-   The code field depends on the message type.  It is used to create an
-   additional level of message granularity.
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |     Type      |     Code      |          Checksum             |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                                                               |
+    +                         Message Body                          +
+    |                                                               |
 
-   The checksum field is used to detect data corruption in the ICMPv6
-   message and parts of the IPv6 header.
+    The type field indicates the type of the message.  Its value
+    determines the format of the remaining data.
+
+    The code field depends on the message type.  It is used to create an
+    additional level of message granularity.
+
+    The checksum field is used to detect data corruption in the ICMPv6
+    message and parts of the IPv6 header.
 */
 
-/// next header
+/// type
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C, packed)]
 pub struct Type(pub u8);
@@ -81,8 +86,15 @@ impl Header for Icmpv6Header {
     }
 }
 
+/// icmpv6 payload marker trait
+pub trait Icmpv6Payload {}
+
+impl Icmpv6Payload for () {}
+
 /// common fn all icmpv6 packets share
-pub trait Icmpv6Packet: Packet<Header=Icmpv6Header> {
+pub trait Icmpv6Packet<T: Icmpv6Payload>: Packet<Header=Icmpv6Header> {
+    fn payload(&self) -> &mut T;
+
     #[inline]
     fn msg_type(&self) -> Type {
         Type::new(self.header().msg_type)
@@ -115,11 +127,6 @@ pub trait Icmpv6Packet: Packet<Header=Icmpv6Header> {
     }
 }
 
-/// icmpv6 payload marker trait
-pub trait Icmpv6Payload {}
-
-impl Icmpv6Payload for () {}
-
 /// icmpv6 packet
 pub struct Icmpv6<T: Icmpv6Payload> {
     mbuf: *mut MBuf,
@@ -129,9 +136,21 @@ pub struct Icmpv6<T: Icmpv6Payload> {
     previous: Ipv6
 }
 
+impl Icmpv6<()> {
+    pub fn downcast<T: Icmpv6Payload>(self) -> Icmpv6<T> {
+        Icmpv6::<T>::from_packet(self.previous, self.mbuf, self.offset, self.header)
+    }
+}
+
 impl fmt::Display for Icmpv6<()> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "type: {} code: {} checksum: 0x{:04x}", self.msg_type(), self.code(), self.checksum())
+        write!(
+            f,
+            "type: {} code: {} checksum: 0x{:04x}",
+            self.msg_type(),
+            self.code(),
+            self.checksum()
+        )
     }
 }
 
@@ -177,7 +196,11 @@ impl<T: Icmpv6Payload> Packet for Icmpv6<T> {
     }
 }
 
-impl<T: Icmpv6Payload> Icmpv6Packet for Icmpv6<T> {}
+impl Icmpv6Packet<()> for Icmpv6<()> {
+    fn payload(&self) -> &mut () {
+        unsafe { &mut (*self.payload) }
+    }
+}
 
 #[cfg(test)]
 mod tests {
