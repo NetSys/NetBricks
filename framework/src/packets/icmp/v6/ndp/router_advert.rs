@@ -75,19 +75,19 @@ use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, NdpPayload};
 
    Possible options:
 
-      Source link-layer address
+    Source link-layer address
                    The link-layer address of the interface from which
                    the Router Advertisement is sent.  Only used on
                    link layers that have addresses.  A router MAY omit
                    this option in order to enable inbound load sharing
                    across multiple link-layer addresses.
 
-      MTU          SHOULD be sent on links that have a variable MTU
+    MTU            SHOULD be sent on links that have a variable MTU
                    (as specified in the document that describes how to
                    run IP over the particular link type).  MAY be sent
                    on other links.
 
-      Prefix Information
+    Prefix Information
                    These options specify the prefixes that are on-link
                    and/or are used for stateless address
                    autoconfiguration.  A router SHOULD include all its
@@ -113,8 +113,14 @@ pub struct RouterAdvertisement {
 }
 
 impl NdpPayload for RouterAdvertisement {}
-impl Icmpv6Payload for RouterAdvertisement {}
 
+impl Icmpv6Payload for RouterAdvertisement {
+    fn size() -> usize {
+        12
+    }
+}
+
+/// router advertisement packet
 impl Icmpv6<RouterAdvertisement> {
     #[inline]
     pub fn current_hop_limit(&self) -> u8 {
@@ -217,7 +223,7 @@ mod tests {
     use super::*;
     use packets::{Packet, RawPacket, Ethernet};
     use packets::ip::v6::Ipv6;
-    use packets::icmp::v6::Icmpv6;
+    use packets::icmp::v6::{Icmpv6, NdpPacket, SourceLinkLayerAddress};
     use dpdk_test;
     use tests::ICMP_RTR_ADV_BYTES;
 
@@ -230,9 +236,22 @@ mod tests {
             let icmpv6 = ipv6.parse::<Icmpv6<()>>().unwrap();
             let advert = icmpv6.downcast::<RouterAdvertisement>();
             assert_eq!(
-                "type: Router Advertisement code: 0 checksum: 0xf50c\ncurrent_hop_limit: 64 managed address cfg: false other cfg: true\nrouter_lifetime: 3600 reachable_time: 772, retrans_timer: 1086324736",
+                "type: Router Advertisement code: 0 checksum: 0xf50c\ncurrent_hop_limit: 64 managed address cfg: false other cfg: true\nrouter_lifetime: 3600 reachable_time: 0, retrans_timer: 0",
                 advert.to_string()
             )
+        }
+    }
+
+    #[test]
+    fn find_source_link_layer_address() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&ICMP_RTR_ADV_BYTES).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            let icmpv6 = ipv6.parse::<Icmpv6<()>>().unwrap();
+            let advert = icmpv6.downcast::<RouterAdvertisement>();
+            let addr = advert.find_option::<SourceLinkLayerAddress>().unwrap();
+            assert_eq!("type: 1 length: 1 addr: 70:3a:cb:1b:f9:7a", addr.to_string())
         }
     }
 }

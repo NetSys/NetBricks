@@ -4,7 +4,9 @@ use packets::{Packet, Header};
 use packets::ip::v6::Ipv6;
 
 pub use self::ndp::*;
+pub use self::ndp::options::*;
 pub use self::ndp::router_advert::*;
+pub use self::ndp::router_solicit::*;
 
 pub mod ndp;
 
@@ -86,10 +88,15 @@ impl Header for Icmpv6Header {
     }
 }
 
-/// icmpv6 payload marker trait
-pub trait Icmpv6Payload {}
+pub trait Icmpv6Payload {
+    fn size() -> usize;
+}
 
-impl Icmpv6Payload for () {}
+impl Icmpv6Payload for () {
+    fn size() -> usize {
+        0
+    }
+}
 
 /// common fn all icmpv6 packets share
 pub trait Icmpv6Packet<T: Icmpv6Payload>: Packet<Header=Icmpv6Header> {
@@ -216,6 +223,7 @@ mod tests {
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
             let icmpv6 = ipv6.parse::<Icmpv6<()>>().unwrap();
+
             assert_eq!("type: Router Advertisement code: 0 checksum: 0xf50c", icmpv6.to_string())
         }
     }
