@@ -101,7 +101,7 @@ use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, NdpPayload};
                    neighbors.
 */
 
-/// router advertisement payload
+/// Router advertisement packet
 #[derive(Default, Debug)]
 #[repr(C, packed)]
 pub struct RouterAdvertisement {
@@ -120,7 +120,6 @@ impl Icmpv6Payload for RouterAdvertisement {
     }
 }
 
-/// router advertisement packet
 impl Icmpv6<RouterAdvertisement> {
     #[inline]
     pub fn current_hop_limit(&self) -> u8 {
@@ -162,9 +161,9 @@ impl Icmpv6<RouterAdvertisement> {
         self.payload().flags &= 0xbf;
     }
 
-    /// TODO: should these times be translated to duration?
     #[inline]
     pub fn router_lifetime(&self) -> u16 {
+        // TODO: should these times be translated to duration?
         u16::from_be(self.payload().router_lifetime)
     }
 
@@ -198,7 +197,7 @@ impl fmt::Display for Icmpv6<RouterAdvertisement> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "type: {} code: {} checksum: 0x{:04x}\ncurrent_hop_limit: {} managed address cfg: {} other cfg: {}\nrouter_lifetime: {} reachable_time: {}, retrans_timer: {}",
+            "type: {}, code: {}, checksum: 0x{:04x}, current_hop_limit: {}, managed address cfg: {}, other cfg: {}, router_lifetime: {}, reachable_time: {}, retrans_timer: {}",
             self.msg_type(),
             self.code(),
             self.checksum(),
@@ -223,35 +222,99 @@ mod tests {
     use super::*;
     use packets::{Packet, RawPacket, Ethernet};
     use packets::ip::v6::Ipv6;
-    use packets::icmp::v6::{Icmpv6, NdpPacket, SourceLinkLayerAddress};
+    use packets::icmp::v6::{Icmpv6, Icmpv6Types, NdpPacket, SourceLinkLayerAddress, TargetLinkLayerAddress};
     use dpdk_test;
-    use tests::ICMP_RTR_ADV_BYTES;
+
+    #[rustfmt::skip]
+    const ROUTER_ADVERT_PACKET: [u8; 142] = [
+        // ** ethernet header
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+        0x86, 0xDD,
+        // ** IPv6 header
+        0x60, 0x00, 0x00, 0x00,
+        // payload length
+        0x00, 0x58,
+        0x3a,
+        0xff,
+        0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b,
+        0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        // ** ICMPv6 header
+        // type
+        0x86,
+        // code
+        0x00,
+        // checksum
+        0xf5, 0x0c,
+        // ** router advertisement message
+        // current hop limit
+        0x40,
+        // flags
+        0x40,
+        // router lifetime
+        0x0e, 0x10,
+        // reachable time
+        0x00, 0x00, 0x00, 0x00,
+        // retrans timer
+        0x00, 0x00, 0x00, 0x00,
+        // ** prefix information option
+        0x03, 0x04, 0x40, 0xc0, 0x00, 0x00, 0x09, 0x3e, 0x00, 0x00, 0x09, 0x3e, 0x00, 0x00, 0x00, 0x00,
+        0x26, 0x07, 0xfc, 0xc8, 0xf1, 0x42, 0xb0, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        // ** MTU option
+        0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0x05, 0xdc,
+        // ** source link-layer address option
+        0x01, 0x01, 0x70, 0x3a, 0xcb, 0x1b, 0xf9, 0x7a,
+        // ** recursive DNS server option
+        0x19, 0x03, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x26, 0x07, 0xfc, 0xc8, 0xf1, 0x42, 0xb0, 0xf0,
+        0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b
+    ];
 
     #[test]
-    fn str_from_router_advertisement_packet() {
+    fn parse_router_advertisement_packet() {
         dpdk_test! {
-            let packet = RawPacket::from_bytes(&ICMP_RTR_ADV_BYTES).unwrap();
+            let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
             let icmpv6 = ipv6.parse::<Icmpv6<()>>().unwrap();
             let advert = icmpv6.downcast::<RouterAdvertisement>();
-            assert_eq!(
-                "type: Router Advertisement code: 0 checksum: 0xf50c\ncurrent_hop_limit: 64 managed address cfg: false other cfg: true\nrouter_lifetime: 3600 reachable_time: 0, retrans_timer: 0",
-                advert.to_string()
-            )
+
+            assert_eq!(Icmpv6Types::RouterAdvertisement, advert.msg_type());
+            assert_eq!(0, advert.code());
+            assert_eq!(0xf50c, advert.checksum());
+            assert_eq!(64, advert.current_hop_limit());
+            assert!(!advert.managed_addr_cfg());
+            assert!(advert.other_cfg());
+            assert_eq!(3600, advert.router_lifetime());
+            assert_eq!(0, advert.reachable_time());
+            assert_eq!(0, advert.retrans_timer());
         }
     }
 
     #[test]
     fn find_source_link_layer_address() {
         dpdk_test! {
-            let packet = RawPacket::from_bytes(&ICMP_RTR_ADV_BYTES).unwrap();
+            let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
             let icmpv6 = ipv6.parse::<Icmpv6<()>>().unwrap();
             let advert = icmpv6.downcast::<RouterAdvertisement>();
-            let addr = advert.find_option::<SourceLinkLayerAddress>().unwrap();
-            assert_eq!("type: 1 length: 1 addr: 70:3a:cb:1b:f9:7a", addr.to_string())
+            let sll = advert.find_option::<SourceLinkLayerAddress>().unwrap();
+
+            assert_eq!(1, sll.length());
+            assert_eq!("70:3a:cb:1b:f9:7a", sll.addr().to_string());
+        }
+    }
+
+    #[test]
+    fn find_target_link_layer_address() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            let icmpv6 = ipv6.parse::<Icmpv6<()>>().unwrap();
+            let advert = icmpv6.downcast::<RouterAdvertisement>();
+
+            assert!(advert.find_option::<TargetLinkLayerAddress>().is_none());
         }
     }
 }

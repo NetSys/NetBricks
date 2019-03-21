@@ -23,7 +23,7 @@ use packets::{Packet, Header, RawPacket};
 */
 
 /// mac address
-#[derive(Default, Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C, packed)]
 pub struct MacAddr(pub [u8; 6]);
 

@@ -32,48 +32,52 @@ pub mod ndp;
     message and parts of the IPv6 header.
 */
 
-/// type
+/// Type of ICMPv6 message
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C, packed)]
-pub struct Type(pub u8);
+pub struct Icmpv6Type(pub u8);
 
-impl Type {
+impl Icmpv6Type {
     pub fn new(value: u8) -> Self {
-        Type(value)
+        Icmpv6Type(value)
     }
 }
 
+/// Supported ICMPv6 message types
 #[allow(non_snake_case)]
 #[allow(non_upper_case_globals)]
-pub mod Types {
-    use super::Type;
+pub mod Icmpv6Types {
+    use super::Icmpv6Type;
 
-    pub const PacketTooBig: Type = Type(2);
+    pub const PacketTooBig: Icmpv6Type = Icmpv6Type(2);
 
-    pub const RouterSolicitation: Type = Type(133);
-    pub const RouterAdvertisement: Type = Type(134);
-    pub const NeighborSolicitation: Type = Type(135);
-    pub const NeighborAdvertisement: Type = Type(136);
+    // NDP types
+    pub const RouterSolicitation: Icmpv6Type = Icmpv6Type(133);
+    pub const RouterAdvertisement: Icmpv6Type = Icmpv6Type(134);
+    pub const NeighborSolicitation: Icmpv6Type = Icmpv6Type(135);
+    pub const NeighborAdvertisement: Icmpv6Type = Icmpv6Type(136);
+    pub const Redirect: Icmpv6Type = Icmpv6Type(137);
 }
 
-impl fmt::Display for Type {
+impl fmt::Display for Icmpv6Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                &Types::PacketTooBig => "Packet Too Big".to_string(),
-                &Types::RouterSolicitation => "Router Solicitation".to_string(),
-                &Types::RouterAdvertisement => "Router Advertisement".to_string(),
-                &Types::NeighborSolicitation => "Neighbor Solicitation".to_string(),
-                &Types::NeighborAdvertisement => "Neighbor Advertisement".to_string(),
+                &Icmpv6Types::PacketTooBig => "Packet Too Big".to_string(),
+                &Icmpv6Types::RouterSolicitation => "Router Solicitation".to_string(),
+                &Icmpv6Types::RouterAdvertisement => "Router Advertisement".to_string(),
+                &Icmpv6Types::NeighborSolicitation => "Neighbor Solicitation".to_string(),
+                &Icmpv6Types::NeighborAdvertisement => "Neighbor Advertisement".to_string(),
+                &Icmpv6Types::Redirect => "Redirect".to_string(),
                 _ => format!("{}", self.0)
             }
         )
     }
 }
 
-/// icmpv6 header
+/// ICMPv6 packet header
 #[derive(Default, Debug)]
 #[repr(C, packed)]
 pub struct Icmpv6Header {
@@ -88,27 +92,35 @@ impl Header for Icmpv6Header {
     }
 }
 
+/// ICMPv6 packet payload
+/// 
+/// The ICMPv6 packet may contain a variable length payload. This 
+/// is only the fixed portion. The variable length portion has to 
+/// be parsed separately.
 pub trait Icmpv6Payload {
+    /// Returns the size of the fixed payload in bytes
     fn size() -> usize;
 }
 
+/// ICMPv6 unit payload `()`
 impl Icmpv6Payload for () {
     fn size() -> usize {
         0
     }
 }
 
-/// common fn all icmpv6 packets share
-pub trait Icmpv6Packet<T: Icmpv6Payload>: Packet<Header=Icmpv6Header> {
-    fn payload(&self) -> &mut T;
+/// Common behaviors shared by ICMPv6 packets
+pub trait Icmpv6Packet<P: Icmpv6Payload>: Packet<Header=Icmpv6Header> {
+    /// Returns the fixed payload
+    fn payload(&self) -> &mut P;
 
     #[inline]
-    fn msg_type(&self) -> Type {
-        Type::new(self.header().msg_type)
+    fn msg_type(&self) -> Icmpv6Type {
+        Icmpv6Type::new(self.header().msg_type)
     }
 
     #[inline]
-    fn set_msg_type(&mut self, msg_type: Type) {
+    fn set_msg_type(&mut self, msg_type: Icmpv6Type) {
         self.header().msg_type = msg_type.0
     }
 
@@ -127,25 +139,45 @@ pub trait Icmpv6Packet<T: Icmpv6Payload>: Packet<Header=Icmpv6Header> {
         u16::from_be(self.header().checksum)
     }
 
-    // TODO: replace this with checksum calculation
     #[inline]
     fn set_checksum(&mut self, checksum: u16) {
+        // TODO: replace this with checksum calculation
         self.header().checksum = u16::to_be(checksum)
     }
 }
 
-/// icmpv6 packet
-pub struct Icmpv6<T: Icmpv6Payload> {
+/// ICMPv6 packet
+pub struct Icmpv6<P: Icmpv6Payload> {
     mbuf: *mut MBuf,
     offset: usize,
     header: *mut Icmpv6Header,
-    payload: *mut T,    // this is only the fixed part of the payload
+    payload: *mut P,
     previous: Ipv6
 }
 
+/// ICMPv6 packet with unit payload
+/// 
+/// Use unit payload `()` when the payload type is not known yet.
+/// 
+/// # Example
+/// 
+/// ```
+/// if ipv6.next_header() == NextHeaders::Icmpv6 {
+///     let icmpv6 = ipv6.parse::<Icmpv6<()>>().unwrap();
+/// }
+/// ```
 impl Icmpv6<()> {
-    pub fn downcast<T: Icmpv6Payload>(self) -> Icmpv6<T> {
-        Icmpv6::<T>::from_packet(self.previous, self.mbuf, self.offset, self.header)
+    /// Downcasts from unit payload to typed payload
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// if icmpv6.msg_type() == Icmpv6Types::RouterAdvertisement {
+    ///     let advert = icmpv6.downcast::<RouterAdvertisement>();
+    /// }
+    /// ```
+    pub fn downcast<P: Icmpv6Payload>(self) -> Icmpv6<P> {
+        Icmpv6::<P>::from_packet(self.previous, self.mbuf, self.offset, self.header)
     }
 }
 
@@ -153,7 +185,7 @@ impl fmt::Display for Icmpv6<()> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "type: {} code: {} checksum: 0x{:04x}",
+            "type: {}, code: {}, checksum: 0x{:04x}",
             self.msg_type(),
             self.code(),
             self.checksum()
@@ -161,7 +193,13 @@ impl fmt::Display for Icmpv6<()> {
     }
 }
 
-impl<T: Icmpv6Payload> Packet for Icmpv6<T> {
+impl Icmpv6Packet<()> for Icmpv6<()> {
+    fn payload(&self) -> &mut () {
+        unsafe { &mut (*self.payload) }
+    }
+}
+
+impl<P: Icmpv6Payload> Packet for Icmpv6<P> {
     type Header = Icmpv6Header;
     type PreviousPacket = Ipv6;
 
@@ -171,7 +209,7 @@ impl<T: Icmpv6Payload> Packet for Icmpv6<T> {
                    offset: usize,
                    header: *mut Self::Header) -> Self {
         // TODO: should be a better way to do this
-        let payload = previous.get_mut_item::<T>(offset + Icmpv6Header::size());
+        let payload = previous.get_mut_item::<P>(offset + Icmpv6Header::size());
 
         Icmpv6 {
             previous,
@@ -203,28 +241,48 @@ impl<T: Icmpv6Payload> Packet for Icmpv6<T> {
     }
 }
 
-impl Icmpv6Packet<()> for Icmpv6<()> {
-    fn payload(&self) -> &mut () {
-        unsafe { &mut (*self.payload) }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use packets::{RawPacket, Ethernet};
     use dpdk_test;
-    use tests::ICMP_RTR_ADV_BYTES;
+
+    #[rustfmt::skip]
+    const ICMPV6_PACKET: [u8; 62] = [
+        // ** ethernet header
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+        0x86, 0xDD,
+        // ** IPv6 header
+        0x60, 0x00, 0x00, 0x00,
+        // payload length
+        0x00, 0x08,
+        0x3a,
+        0xff,
+        0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b,
+        0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        // ** ICMPv6 header
+        // type
+        0x81,
+        // code
+        0x00,
+        // checksum
+        0xf5, 0x0c,
+        // ** echo request
+        0x00, 0x00, 0x00, 0x00
+    ];
 
     #[test]
-    fn str_from_icmpv6_packet() {
+    fn parse_icmpv6_packet() {
         dpdk_test! {
-            let packet = RawPacket::from_bytes(&ICMP_RTR_ADV_BYTES).unwrap();
+            let packet = RawPacket::from_bytes(&ICMPV6_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
             let icmpv6 = ipv6.parse::<Icmpv6<()>>().unwrap();
 
-            assert_eq!("type: Router Advertisement code: 0 checksum: 0xf50c", icmpv6.to_string())
+            assert_eq!(Icmpv6Type::new(0x81), icmpv6.msg_type());
+            assert_eq!(0, icmpv6.code());
+            assert_eq!(0xf50c, icmpv6.checksum());
         }
     }
 }
