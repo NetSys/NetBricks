@@ -148,11 +148,11 @@ pub trait Icmpv6Packet<P: Icmpv6Payload>: Packet<Header=Icmpv6Header> {
 
 /// ICMPv6 packet
 pub struct Icmpv6<P: Icmpv6Payload> {
+    envelope: Ipv6,
     mbuf: *mut MBuf,
     offset: usize,
     header: *mut Icmpv6Header,
-    payload: *mut P,
-    previous: Ipv6
+    payload: *mut P
 }
 
 /// ICMPv6 packet with unit payload
@@ -177,7 +177,7 @@ impl Icmpv6<()> {
     /// }
     /// ```
     pub fn downcast<P: Icmpv6Payload>(self) -> Icmpv6<P> {
-        Icmpv6::<P>::from_packet(self.previous, self.mbuf, self.offset, self.header)
+        Icmpv6::<P>::from_packet(self.envelope, self.mbuf, self.offset, self.header)
     }
 }
 
@@ -201,23 +201,28 @@ impl Icmpv6Packet<()> for Icmpv6<()> {
 
 impl<P: Icmpv6Payload> Packet for Icmpv6<P> {
     type Header = Icmpv6Header;
-    type PreviousPacket = Ipv6;
+    type Envelope = Ipv6;
 
     #[inline]
-    fn from_packet(previous: Self::PreviousPacket,
+    fn from_packet(envelope: Self::Envelope,
                    mbuf: *mut MBuf,
                    offset: usize,
                    header: *mut Self::Header) -> Self {
         // TODO: should be a better way to do this
-        let payload = previous.get_mut_item::<P>(offset + Icmpv6Header::size());
+        let payload = envelope.get_mut_item::<P>(offset + Icmpv6Header::size());
 
         Icmpv6 {
-            previous,
+            envelope,
             mbuf,
             offset,
             header,
             payload
         }
+    }
+
+    #[inline]
+    fn envelope(&self) -> &Self::Envelope {
+        &self.envelope
     }
 
     #[inline]

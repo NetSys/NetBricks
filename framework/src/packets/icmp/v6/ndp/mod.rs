@@ -37,4 +37,4 @@ pub trait NdpPacket<P: NdpPayload>: Icmpv6Packet<P> {
     }
 }
 
-impl<T: NdpPayload> NdpPacket<T> for Icmpv6<T> where Icmpv6<T>: Icmpv6Packet<T> {}
+impl<P: NdpPayload> NdpPacket<P> for Icmpv6<P> where Icmpv6<P>: Icmpv6Packet<P> {}

@@ -3,56 +3,56 @@ use std::fmt;
 use std::net::Ipv6Addr;
 use packets::{Packet, Header, Ethernet};
 
-/* (From RFC8200 https://tools.ietf.org/html/rfc8200#section-3)
-   IPv6 Header Format
+/*  (From RFC8200 https://tools.ietf.org/html/rfc8200#section-3)
+    IPv6 Header Format
 
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |Version| Traffic Class |           Flow Label                  |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |         Payload Length        |  Next Header  |   Hop Limit   |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                                                               |
-   +                                                               +
-   |                                                               |
-   +                         Source Address                        +
-   |                                                               |
-   +                                                               +
-   |                                                               |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                                                               |
-   +                                                               +
-   |                                                               |
-   +                      Destination Address                      +
-   |                                                               |
-   +                                                               +
-   |                                                               |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |Version| Traffic Class |           Flow Label                  |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |         Payload Length        |  Next Header  |   Hop Limit   |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                                                               |
+    +                                                               +
+    |                                                               |
+    +                         Source Address                        +
+    |                                                               |
+    +                                                               +
+    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                                                               |
+    +                                                               +
+    |                                                               |
+    +                      Destination Address                      +
+    |                                                               |
+    +                                                               +
+    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-   Version              4-bit Internet Protocol version number = 6.
+    Version             4-bit Internet Protocol version number = 6.
 
-   Traffic Class        8-bit traffic class field.
+    Traffic Class       8-bit traffic class field.
 
-   Flow Label           20-bit flow label.
+    Flow Label          20-bit flow label.
 
-   Payload Length       16-bit unsigned integer.  Length of the IPv6
+    Payload Length      16-bit unsigned integer.  Length of the IPv6
                         payload, i.e., the rest of the packet following
                         this IPv6 header, in octets.  (Note that any
                         extension headers present are considered part of
                         the payload, i.e., included in the length count.)
 
-   Next Header          8-bit selector.  Identifies the type of header
+    Next Header         8-bit selector.  Identifies the type of header
                         immediately following the IPv6 header.  Uses the
                         same values as the IPv4 Protocol field [RFC-1700
                         et seq.].
 
-   Hop Limit            8-bit unsigned integer.  Decremented by 1 by
+    Hop Limit           8-bit unsigned integer.  Decremented by 1 by
                         each node that forwards the packet. The packet
                         is discarded if Hop Limit is decremented to
                         zero.
 
-   Source Address       128-bit address of the originator of the packet.
+    Source Address      128-bit address of the originator of the packet.
 
-   Destination Address  128-bit address of the intended recipient of the
+    Destination Address 128-bit address of the intended recipient of the
                         packet (possibly not the ultimate recipient, if
                         a Routing header is present).
 */
@@ -135,10 +135,10 @@ impl Header for Ipv6Header {
 
 /// ipv6 packet
 pub struct Ipv6 {
+    envelope: Ethernet,
     mbuf: *mut MBuf,
     offset: usize,
-    header: *mut Ipv6Header,
-    previous: Ethernet
+    header: *mut Ipv6Header
 }
 
 impl Ipv6 {
@@ -243,19 +243,24 @@ impl fmt::Display for Ipv6 {
 
 impl Packet for Ipv6 {
     type Header = Ipv6Header;
-    type PreviousPacket = Ethernet;
+    type Envelope = Ethernet;
 
     #[inline]
-    fn from_packet(previous: Self::PreviousPacket,
+    fn from_packet(envelope: Self::Envelope,
                    mbuf: *mut MBuf,
                    offset: usize,
                    header: *mut Self::Header) -> Self {
         Ipv6 {
-            previous,
+            envelope,
             mbuf,
             offset,
             header
         }
+    }
+
+    #[inline]
+    fn envelope(&self) -> &Self::Envelope {
+        &self.envelope
     }
 
     #[inline]

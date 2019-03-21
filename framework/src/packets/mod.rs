@@ -9,55 +9,64 @@ pub mod icmp;
 pub mod ip;
 pub mod raw;
 
-/// trait all headers implement
+/// Fixed packet header
+/// 
+/// Some packet headers are variable in length, such as the IPv6 
+/// segment routing header. The fixed portion can be statically 
+/// defined, but the variable portion has to be parsed separately.
 pub trait Header {
-    /// size of the header struct
+    /// Returns the size of the fixed header in bytes
     fn size() -> usize;
 }
 
-/// trait all packets implement
+/// Common behaviors shared by all packets
 pub trait Packet {
+    /// The header type of the packet
     type Header: Header;
-    type PreviousPacket: Packet;
+    /// The outer packet type that encapsulates the packet
+    type Envelope: Packet;
 
-    /// packet from the previous packet
+    /// Creates a new packet
     fn from_packet(
-        previous: Self::PreviousPacket,
+        envelope: Self::Envelope,
         mbuf: *mut MBuf,
         offset: usize,
         header: *mut Self::Header) -> Self;
 
-    /// reference to the underlying mbuf
+    /// Returns the packet that encapsulated this packet
+    fn envelope(&self) -> &Self::Envelope;
+
+    /// Returns the DPDK buffer
     fn mbuf(&self) -> *mut MBuf;
 
-    /// offset where the packet starts
+    /// Returns the buffer offset where the packet header begins
     fn offset(&self) -> usize;
 
-    /// mutable reference to the packet header
+    /// Returns a mutable reference to the packet header
     fn header(&self) -> &mut Self::Header;
 
-    /// the length of the packet header
+    /// Returns the length of the packet header
     fn header_len(&self) -> usize;
 
-    /// length of the packet
+    /// Returns the length of the packet
     #[inline]
     fn len(&self) -> usize {
         unsafe { (*self.mbuf()).data_len() - self.offset() }
     }
 
+    /// Returns the buffer offset where the packet payload begins
     #[inline]
-    /// offset where the packet payload starts
     fn payload_offset(&self) -> usize {
         self.offset() + self.header_len()
     }
 
+    /// Returns the length of the packet payload
     #[inline]
-    /// length of the payload
     fn payload_len(&self) -> usize {
         self.len() - self.header_len()
     }
 
-    /// extends the packet by n bytes
+    /// Extends the end of the packet buffer by n bytes
     #[inline]
     fn extend(&self, extend_by: usize) -> Result<()> {
         unsafe {
@@ -68,7 +77,7 @@ pub trait Packet {
         }
     }
 
-    /// get a mutable reference to T at offset
+    /// Casts data at offset as a mutable reference T
     #[inline]
     fn get_mut_item<T>(&self, offset: usize) -> *mut T {
         unsafe {
@@ -76,9 +85,9 @@ pub trait Packet {
         }
     }
 
-    /// parse the payload as the next packet
+    /// Parses the packet payload as another packet
     #[inline]
-    fn parse<T: Packet<PreviousPacket=Self>>(self) -> Result<T> where Self: std::marker::Sized {
+    fn parse<T: Packet<Envelope=Self>>(self) -> Result<T> where Self: std::marker::Sized {
         if self.payload_len() >= T::Header::size() {
             let mbuf = self.mbuf();
             let offset = self.payload_offset();

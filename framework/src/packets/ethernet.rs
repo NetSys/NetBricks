@@ -22,7 +22,7 @@ use packets::{Packet, Header, RawPacket};
                         encapsulated in the payload of the frame.
 */
 
-/// mac address
+/// MAC address
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C, packed)]
 pub struct MacAddr(pub [u8; 6]);
@@ -47,7 +47,7 @@ impl fmt::Display for MacAddr {
     }
 }
 
-/// ethernet type
+/// The protocol type in the ethernet packet payload
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C, packed)]
 pub struct EtherType(pub u16);
@@ -58,6 +58,7 @@ impl EtherType {
     }
 }
 
+/// Supported ethernet payload protocol types
 #[allow(non_snake_case)]
 #[allow(non_upper_case_globals)]
 pub mod EtherTypes {
@@ -83,27 +84,27 @@ impl fmt::Display for EtherType {
     }
 }
 
-/// ethernet header
+/// Ethernet header
 #[derive(Default, Debug)]
 #[repr(C, packed)]
-pub struct MacHeader {
+pub struct EthernetHeader {
     dst: MacAddr,
     src: MacAddr,
     ether_type: u16
 }
 
-impl Header for MacHeader {
+impl Header for EthernetHeader {
     fn size() -> usize {
         14
     }
 }
 
-/// ethernet packet
+/// Ethernet packet
 pub struct Ethernet {
+    envelope: RawPacket,
     mbuf: *mut MBuf,
     offset: usize,
-    header: *mut MacHeader,
-    previous: RawPacket
+    header: *mut EthernetHeader
 }
 
 impl Ethernet {
@@ -140,25 +141,30 @@ impl Ethernet {
 
 impl fmt::Display for Ethernet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} > {} [{}]", self.src(), self.dst(), self.ether_type())
+        write!(f, "{} > {}, ether_type: {}", self.src(), self.dst(), self.ether_type())
     }
 }
 
 impl Packet for Ethernet {
-    type Header = MacHeader;
-    type PreviousPacket = RawPacket;
+    type Header = EthernetHeader;
+    type Envelope = RawPacket;
 
     #[inline]
-    fn from_packet(previous: Self::PreviousPacket,
+    fn from_packet(envelope: Self::Envelope,
                    mbuf: *mut MBuf,
                    offset: usize,
                    header: *mut Self::Header) -> Self {
         Ethernet {
-            previous,
+            envelope,
             mbuf,
             offset,
             header
         }
+    }
+
+    #[inline]
+    fn envelope(&self) -> &Self::Envelope {
+        &self.envelope
     }
 
     #[inline]
@@ -186,28 +192,51 @@ impl Packet for Ethernet {
 mod tests {
     use super::*;
     use dpdk_test;
-    use tests::V6_BYTES;
+
+    #[rustfmt::skip]
+    const UDP_PACKET: [u8; 52] = [
+        // ** ethernet header
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+        0x08, 0x00,
+        // ** IPv4 header
+        0x45, 0x00,
+        // payload length
+        0x00, 0x26,
+        0xab, 0x49, 0x40, 0x00,
+        0xff, 0x11, 0xf7, 0x00,
+        0x8b, 0x85, 0xd9, 0x6e,
+        0x8b, 0x85, 0xe9, 0x02,
+        // ** UDP header
+        0x99, 0xd0, 0x04, 0x3f,
+        0x00, 0x12, 0x72, 0x28,
+        // ** UDP payload
+        0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x68, 0x65, 0x6c, 0x6c, 0x6f
+    ];
 
     #[test]
-    fn str_from_mac_addr() {
-        assert_eq!(format!("{}", MacAddr::new(0, 0, 0, 0, 0, 0)), "00:00:00:00:00:00");
-        assert_eq!(format!("{}", MacAddr::new(255, 255, 255, 255, 255, 255)), "ff:ff:ff:ff:ff:ff");
-        assert_eq!(format!("{}", MacAddr::new(0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF)), "12:34:56:ab:cd:ef");
+    fn mac_addr_to_string() {
+        assert_eq!("00:00:00:00:00:00", MacAddr::new(0, 0, 0, 0, 0, 0).to_string());
+        assert_eq!("ff:ff:ff:ff:ff:ff", MacAddr::new(255, 255, 255, 255, 255, 255).to_string());
+        assert_eq!("12:34:56:ab:cd:ef", MacAddr::new(0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF).to_string());
     }
 
     #[test]
-    fn str_from_ether_type() {
-        assert_eq!(format!("{}", EtherTypes::Ipv4), "IPv4");
-        assert_eq!(format!("{}", EtherTypes::Ipv6), "IPv6");
-        assert_eq!(format!("{}", EtherType::new(0)), "0x0000");
+    fn ether_type_to_string() {
+        assert_eq!("IPv4", EtherTypes::Ipv4.to_string());
+        assert_eq!("IPv6", EtherTypes::Ipv6.to_string());
+        assert_eq!("0x0000", EtherType::new(0).to_string());
     }
 
     #[test]
-    fn str_from_ethernet_packet() {
+    fn parse_ethernet_packet() {
         dpdk_test! {
-            let packet = RawPacket::from_bytes(&V6_BYTES).unwrap();
+            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
-            assert_eq!(format!("{}", ethernet), "00:00:00:00:00:02 > 00:00:00:00:00:01 [IPv6]");
+
+            assert_eq!("00:00:00:00:00:01", ethernet.dst().to_string());
+            assert_eq!("00:00:00:00:00:02", ethernet.src().to_string());
+            assert_eq!(EtherTypes::Ipv4, ethernet.ether_type());
         }
     }
 }

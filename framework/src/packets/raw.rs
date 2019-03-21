@@ -3,24 +3,22 @@ use native::zcsi::{MBuf, mbuf_alloc};
 use std::ptr;
 use packets::{Packet, Header};
 
-/// empty header
-pub struct NullHeader;
-
-impl Header for NullHeader {
+/// Unit header
+impl Header for () {
     fn size() -> usize {
         0
     }
 }
 
-/// raw network packet
+/// The raw network packet
 ///
-/// simply a wrapper around the underlying buffer
-pub struct RawPacket<> {
+/// Simply a wrapper around the underlying buffer with packet semantic
+pub struct RawPacket {
     mbuf: *mut MBuf
 }
 
 impl RawPacket {
-    /// allocates a new packet
+    /// Creates a new packet by allocating a new buffer
     pub fn new() -> Result<Self> {
         unsafe {
             let mbuf = mbuf_alloc();
@@ -32,15 +30,15 @@ impl RawPacket {
         }
     }
 
-    /// new packet from a byte array
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+    /// Creates a new packet and initialize the buffer with a byte array
+    pub fn from_bytes(data: &[u8]) -> Result<Self> {
         let packet = RawPacket::new()?;
-        packet.extend(bytes.len())?;
+        packet.extend(data.len())?;
         unsafe {
             ptr::copy_nonoverlapping(
-                &bytes[0] as *const u8,
+                &data[0] as *const u8,
                 (*packet.mbuf).data_address(0) as *mut u8,
-                bytes.len()
+                data.len()
             )
         }
         Ok(packet)
@@ -48,15 +46,20 @@ impl RawPacket {
 }
 
 impl Packet for RawPacket {
-    type Header = NullHeader;
-    type PreviousPacket = RawPacket;
+    type Header = ();
+    type Envelope = RawPacket;
 
     #[inline]
-    fn from_packet(previous: Self::PreviousPacket,
+    fn from_packet(envelope: Self::Envelope,
                    _mbuf: *mut MBuf,
                    _offset: usize,
                    _header: *mut Self::Header) -> Self {
-        previous
+        envelope
+    }
+
+    #[inline]
+    fn envelope(&self) -> &Self::Envelope {
+        &self
     }
 
     #[inline]
@@ -86,7 +89,27 @@ impl Packet for RawPacket {
 mod tests {
     use super::*;
     use dpdk_test;
-    use tests::V6_BYTES;
+
+    #[rustfmt::skip]
+    const UDP_PACKET: [u8; 52] = [
+        // ** ethernet header
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+        0x08, 0x00,
+        // ** IPv4 header
+        0x45, 0x00,
+        // payload length
+        0x00, 0x26,
+        0xab, 0x49, 0x40, 0x00,
+        0xff, 0x11, 0xf7, 0x00,
+        0x8b, 0x85, 0xd9, 0x6e,
+        0x8b, 0x85, 0xe9, 0x02,
+        // ** UDP header
+        0x99, 0xd0, 0x04, 0x3f,
+        0x00, 0x12, 0x72, 0x28,
+        // ** UDP payload
+        0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x68, 0x65, 0x6c, 0x6c, 0x6f
+    ];
 
     #[test]
     fn new_raw_packet() {
@@ -98,7 +121,7 @@ mod tests {
     #[test]
     fn raw_packet_from_bytes() {
         dpdk_test! {
-            assert!(RawPacket::from_bytes(&V6_BYTES).is_ok());
+            assert!(RawPacket::from_bytes(&UDP_PACKET).is_ok());
         }
     }
 
