@@ -1,3 +1,4 @@
+use packets::ip::v6::Ipv6Packet;
 use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, NdpOption};
 
 pub mod options;
@@ -37,4 +38,4 @@ pub trait NdpPacket<P: NdpPayload>: Icmpv6Packet<P> {
     }
 }
 
-impl<P: NdpPayload> NdpPacket<P> for Icmpv6<P> where Icmpv6<P>: Icmpv6Packet<P> {}
+impl<E: Ipv6Packet, P: NdpPayload> NdpPacket<P> for Icmpv6<E, P> where Icmpv6<E, P>: Icmpv6Packet<P> {}

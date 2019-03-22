@@ -2,6 +2,7 @@ use native::zcsi::MBuf;
 use std::fmt;
 use std::net::Ipv6Addr;
 use packets::{Packet, Header, Ethernet};
+use packets::ip::IpPacket;
 
 /*  (From RFC8200 https://tools.ietf.org/html/rfc8200#section-3)
     IPv6 Header Format
@@ -57,7 +58,7 @@ use packets::{Packet, Header, Ethernet};
                         a Routing header is present).
 */
 
-/// next header
+/// Next header following the current header
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C, packed)]
 pub struct NextHeader(pub u8);
@@ -68,6 +69,7 @@ impl NextHeader {
     }
 }
 
+/// Supported next headers
 #[allow(non_snake_case)]
 #[allow(non_upper_case_globals)]
 pub mod NextHeaders {
@@ -102,7 +104,7 @@ impl fmt::Display for NextHeader {
     }
 }
 
-/// ipv6 header
+/// IPv6 header
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Ipv6Header {
@@ -133,7 +135,10 @@ impl Header for Ipv6Header {
     }
 }
 
-/// ipv6 packet
+/// IPv6 and extension headers marker trait
+pub trait Ipv6Packet: IpPacket {}
+
+/// IPv6 packet
 pub struct Ipv6 {
     envelope: Ethernet,
     mbuf: *mut MBuf,
@@ -142,9 +147,9 @@ pub struct Ipv6 {
 }
 
 impl Ipv6 {
-    // Protocol Version, should always be `6`
     #[inline]
     pub fn version(&self) -> u8 {
+        // Protocol Version, should always be `6`
         ((u32::from_be(self.header().version_to_flow_label) & 0xf0000000) >> 28) as u8
     }
 
@@ -228,7 +233,7 @@ impl fmt::Display for Ipv6 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} > {} version: {} traffic_class: {} flow_label: {} len: {} next_header: {} hop_limit: {}",
+            "{} > {}, version: {}, traffic_class: {}, flow_label: {}, len: {}, next_header: {}, hop_limit: {}",
             self.src(),
             self.dst(),
             self.version(),
@@ -284,20 +289,61 @@ impl Packet for Ipv6 {
     }
 }
 
+impl IpPacket for Ipv6 {}
+
+impl Ipv6Packet for Ipv6 {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use packets::RawPacket;
     use dpdk_test;
-    use tests::V6_BYTES;
+
+    #[rustfmt::skip]
+    pub const IPV6_PACKET: [u8; 62] = [
+        // ** ethernet header
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+        0x86, 0xDD,
+        // ** IPv6 header
+        // version, traffic class, flow label
+        0x60, 0x00, 0x00, 0x00,
+        // payload length
+        0x00, 0x08,
+        // next Header
+        0x11,
+        // hop limit
+        0x02,
+        // src addr
+        0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        // dst addr
+        0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
+        // ** UDP header
+        // src port
+        0x0d, 0x88,
+        // dst port
+        0x04, 0x00,
+        // length
+        0x00, 0x08,
+        // checksum
+        0x00, 0x00
+    ];
 
     #[test]
-    fn str_from_ipv6_packet() {
+    fn parse_ipv6_packet() {
         dpdk_test! {
-            let packet = RawPacket::from_bytes(&V6_BYTES).unwrap();
+            let packet = RawPacket::from_bytes(&IPV6_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            assert_eq!("2001:db8:85a3::1 > 2001:db8:85a3::8a2e:370:7334 version: 6 traffic_class: 0 flow_label: 0 len: 8 next_header: UDP hop_limit: 2", ipv6.to_string())
+
+            assert_eq!(6, ipv6.version());
+            assert_eq!(0, ipv6.traffic_class());
+            assert_eq!(0, ipv6.flow_label());
+            assert_eq!(8, ipv6.payload_len());
+            assert_eq!(NextHeaders::Udp, ipv6.next_header());
+            assert_eq!(2, ipv6.hop_limit());
+            assert_eq!("2001:db8:85a3::1", ipv6.src().to_string());
+            assert_eq!("2001:db8:85a3::8a2e:370:7334", ipv6.dst().to_string());
         }
     }
 }

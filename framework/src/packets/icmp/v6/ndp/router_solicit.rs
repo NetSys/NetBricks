@@ -1,4 +1,5 @@
 use std::fmt;
+use packets::ip::v6::Ipv6Packet;
 use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, NdpPayload};
 
 /*  From (https://tools.ietf.org/html/rfc4861#section-4.1)
@@ -42,14 +43,14 @@ impl Icmpv6Payload for RouterSolicitation {
     }
 }
 
-impl Icmpv6<RouterSolicitation> {
+impl<E: Ipv6Packet> Icmpv6<E, RouterSolicitation> {
     #[inline]
     pub fn reserved(&self) -> u32 {
         u32::from_be(self.payload().reserved)
     }
 }
 
-impl fmt::Display for Icmpv6<RouterSolicitation> {
+impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, RouterSolicitation> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -62,7 +63,7 @@ impl fmt::Display for Icmpv6<RouterSolicitation> {
     }
 }
 
-impl Icmpv6Packet<RouterSolicitation> for Icmpv6<RouterSolicitation> {
+impl<E: Ipv6Packet> Icmpv6Packet<RouterSolicitation> for Icmpv6<E, RouterSolicitation> {
     fn payload(&self) -> &mut RouterSolicitation {
         unsafe { &mut (*self.payload) }
     }
@@ -110,7 +111,7 @@ mod tests {
             let packet = RawPacket::from_bytes(&ROUTER_SOLICIT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            let icmpv6 = ipv6.parse::<Icmpv6<()>>().unwrap();
+            let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
             let solicit = icmpv6.downcast::<RouterSolicitation>();
 
             assert_eq!(Icmpv6Types::RouterSolicitation, solicit.msg_type());
