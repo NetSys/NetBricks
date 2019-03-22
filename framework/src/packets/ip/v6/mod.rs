@@ -2,7 +2,11 @@ use native::zcsi::MBuf;
 use std::fmt;
 use std::net::Ipv6Addr;
 use packets::{Packet, Header, Ethernet};
-use packets::ip::IpPacket;
+use packets::ip::{IpPacket, ProtocolNumber};
+
+/// Common behaviors shared by IPv6 and extension packets
+pub trait Ipv6Packet: IpPacket {
+}
 
 /*  (From RFC8200 https://tools.ietf.org/html/rfc8200#section-3)
     IPv6 Header Format
@@ -58,52 +62,6 @@ use packets::ip::IpPacket;
                         a Routing header is present).
 */
 
-/// Next header following the current header
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
-#[repr(C, packed)]
-pub struct NextHeader(pub u8);
-
-impl NextHeader {
-    pub fn new(value: u8) -> Self {
-        NextHeader(value)
-    }
-}
-
-/// Supported next headers
-#[allow(non_snake_case)]
-#[allow(non_upper_case_globals)]
-pub mod NextHeaders {
-    use super::NextHeader;
-
-    // Transmission Control Protocol
-    pub const Tcp: NextHeader = NextHeader(0x06);
-
-    // User Datagram Protocol
-    pub const Udp: NextHeader = NextHeader(0x11);
-
-    // Routing Header for IPv6
-    pub const Routing: NextHeader = NextHeader(0x2B);
-
-    // Internet Control Message Protocol for IPv6
-    pub const Icmp: NextHeader = NextHeader(0x3A);
-}
-
-impl fmt::Display for NextHeader {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                &NextHeaders::Tcp => "TCP".to_string(),
-                &NextHeaders::Udp => "UDP".to_string(),
-                &NextHeaders::Routing => "Routing".to_string(),
-                &NextHeaders::Icmp => "ICMP".to_string(),
-                _ => format!("0x{:02x}", self.0)
-            }
-        )
-    }
-}
-
 /// IPv6 header
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -134,9 +92,6 @@ impl Header for Ipv6Header {
         40
     }
 }
-
-/// IPv6 and extension headers marker trait
-pub trait Ipv6Packet: IpPacket {}
 
 /// IPv6 packet
 pub struct Ipv6 {
@@ -189,12 +144,12 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn next_header(&self) -> NextHeader {
-        NextHeader::new(self.header().next_header)
+    pub fn next_header(&self) -> ProtocolNumber {
+        ProtocolNumber::new(self.header().next_header)
     }
 
     #[inline]
-    pub fn set_next_header(&mut self, next_header: NextHeader) {
+    pub fn set_next_header(&mut self, next_header: ProtocolNumber) {
         self.header().next_header = next_header.0
     }
 
@@ -289,7 +244,11 @@ impl Packet for Ipv6 {
     }
 }
 
-impl IpPacket for Ipv6 {}
+impl IpPacket for Ipv6 {
+    fn next_proto(&self) -> ProtocolNumber {
+        self.next_header()
+    }
+}
 
 impl Ipv6Packet for Ipv6 {}
 
@@ -297,6 +256,7 @@ impl Ipv6Packet for Ipv6 {}
 mod tests {
     use super::*;
     use packets::RawPacket;
+    use packets::ip::ProtocolNumbers;
     use dpdk_test;
 
     #[rustfmt::skip]
@@ -340,7 +300,7 @@ mod tests {
             assert_eq!(0, ipv6.traffic_class());
             assert_eq!(0, ipv6.flow_label());
             assert_eq!(8, ipv6.payload_len());
-            assert_eq!(NextHeaders::Udp, ipv6.next_header());
+            assert_eq!(ProtocolNumbers::Udp, ipv6.next_header());
             assert_eq!(2, ipv6.hop_limit());
             assert_eq!("2001:db8:85a3::1", ipv6.src().to_string());
             assert_eq!("2001:db8:85a3::8a2e:370:7334", ipv6.dst().to_string());

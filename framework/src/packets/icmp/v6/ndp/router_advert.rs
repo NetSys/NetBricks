@@ -219,15 +219,15 @@ impl<E: Ipv6Packet> Icmpv6Packet<RouterAdvertisement> for Icmpv6<E, RouterAdvert
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use packets::{Packet, RawPacket, Ethernet};
     use packets::ip::v6::Ipv6;
-    use packets::icmp::v6::{Icmpv6, Icmpv6Types, NdpPacket, SourceLinkLayerAddress, TargetLinkLayerAddress};
+    use packets::icmp::v6::{Icmpv6Types, Icmpv6Message, Icmpv6Parse, NdpPacket, SourceLinkLayerAddress, TargetLinkLayerAddress};
     use dpdk_test;
 
     #[rustfmt::skip]
-    const ROUTER_ADVERT_PACKET: [u8; 142] = [
+    pub const ROUTER_ADVERT_PACKET: [u8; 142] = [
         // ** ethernet header
         0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
@@ -276,18 +276,20 @@ mod tests {
             let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
-            let advert = icmpv6.downcast::<RouterAdvertisement>();
 
-            assert_eq!(Icmpv6Types::RouterAdvertisement, advert.msg_type());
-            assert_eq!(0, advert.code());
-            assert_eq!(0xf50c, advert.checksum());
-            assert_eq!(64, advert.current_hop_limit());
-            assert!(!advert.managed_addr_cfg());
-            assert!(advert.other_cfg());
-            assert_eq!(3600, advert.router_lifetime());
-            assert_eq!(0, advert.reachable_time());
-            assert_eq!(0, advert.retrans_timer());
+            if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
+                assert_eq!(Icmpv6Types::RouterAdvertisement, advert.msg_type());
+                assert_eq!(0, advert.code());
+                assert_eq!(0xf50c, advert.checksum());
+                assert_eq!(64, advert.current_hop_limit());
+                assert!(!advert.managed_addr_cfg());
+                assert!(advert.other_cfg());
+                assert_eq!(3600, advert.router_lifetime());
+                assert_eq!(0, advert.reachable_time());
+                assert_eq!(0, advert.retrans_timer());
+            } else {
+                panic!("bad packet");
+            }
         }
     }
 
@@ -297,25 +299,30 @@ mod tests {
             let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
-            let advert = icmpv6.downcast::<RouterAdvertisement>();
-            let sll = advert.find_option::<SourceLinkLayerAddress>().unwrap();
 
-            assert_eq!(1, sll.length());
-            assert_eq!("70:3a:cb:1b:f9:7a", sll.addr().to_string());
+            if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
+                let sll = advert.find_option::<SourceLinkLayerAddress>().unwrap();
+
+                assert_eq!(1, sll.length());
+                assert_eq!("70:3a:cb:1b:f9:7a", sll.addr().to_string());
+            } else {
+                panic!("bad packet");
+            }
         }
     }
 
     #[test]
-    fn find_target_link_layer_address() {
+    fn not_find_target_link_layer_address() {
         dpdk_test! {
             let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
-            let advert = icmpv6.downcast::<RouterAdvertisement>();
-
-            assert!(advert.find_option::<TargetLinkLayerAddress>().is_none());
+            
+            if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
+                assert!(advert.find_option::<TargetLinkLayerAddress>().is_none());
+            } else {
+                panic!("bad packet");
+            }
         }
     }
 }

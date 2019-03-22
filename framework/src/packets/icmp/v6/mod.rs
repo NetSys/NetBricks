@@ -1,6 +1,8 @@
+use common::Result;
 use native::zcsi::MBuf;
 use std::fmt;
-use packets::{Packet, Header};
+use packets::{Packet, Header, ParseError};
+use packets::ip::ProtocolNumbers;
 use packets::ip::v6::Ipv6Packet;
 
 pub use self::ndp::*;
@@ -246,12 +248,67 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
     }
 }
 
+/// An ICMPv6 message with parsed payload
+pub enum Icmpv6Message<E: Ipv6Packet> {
+    RouterSolicitation(Icmpv6<E, RouterSolicitation>),
+    RouterAdvertisement(Icmpv6<E, RouterAdvertisement>),
+    /// an ICMPv6 message with undefined payload
+    Undefined(Icmpv6<E, ()>)
+}
+
+/// ICMPv6 helper functions for IPv6 packets
+pub trait Icmpv6Parse {
+    type Envelope: Ipv6Packet;
+
+    /// Parses the payload as an ICMPv6 packet
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// match ipv6.parse_icmpv6()? {
+    ///     Icmpv6Message::RouterAdvertisement(advert) => {
+    ///         advert.set_router_lifetime(0);
+    ///     },
+    ///     Icmpv6Message::Undefined(icmpv6) => {
+    ///         println!("undefined");
+    ///     }
+    /// }
+    /// ```
+    fn parse_icmpv6(self) -> Result<Icmpv6Message<Self::Envelope>>;
+}
+
+impl<T: Ipv6Packet> Icmpv6Parse for T {
+    type Envelope = T;
+
+    fn parse_icmpv6(self) -> Result<Icmpv6Message<Self::Envelope>> {
+        if self.next_proto() == ProtocolNumbers::Icmpv6 {
+            let icmpv6 = self.parse::<Icmpv6<Self::Envelope, ()>>()?;
+            match icmpv6.msg_type() {
+                Icmpv6Types::RouterAdvertisement => {
+                    let packet = icmpv6.downcast::<RouterAdvertisement>();
+                    Ok(Icmpv6Message::RouterAdvertisement(packet))
+                },
+                Icmpv6Types::RouterSolicitation => {
+                    let packet = icmpv6.downcast::<RouterSolicitation>();
+                    Ok(Icmpv6Message::RouterSolicitation(packet))
+                },
+                _ => Ok(Icmpv6Message::Undefined(icmpv6))
+            }
+        } else {
+            Err(ParseError {
+                packet_type: ProtocolNumbers::Icmpv6.to_string()
+            }.into())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use packets::{RawPacket, Ethernet};
     use packets::ip::v6::Ipv6;
     use dpdk_test;
+    use packets::icmp::v6::ndp::router_advert::tests::ROUTER_ADVERT_PACKET;
 
     #[rustfmt::skip]
     const ICMPV6_PACKET: [u8; 62] = [
@@ -289,6 +346,34 @@ mod tests {
             assert_eq!(Icmpv6Type::new(0x81), icmpv6.msg_type());
             assert_eq!(0, icmpv6.code());
             assert_eq!(0xf50c, icmpv6.checksum());
+        }
+    }
+
+    #[test]
+    fn downcast_icmpv6() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
+            let advert = icmpv6.downcast::<RouterAdvertisement>();
+
+            // check one accessor that belongs to `RouterAdvertisement`
+            assert_eq!(64, advert.current_hop_limit());
+        }
+    }
+
+    #[test]
+    fn matchable_imcpv6_packets() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&ICMPV6_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            if let Ok(Icmpv6Message::Undefined(icmpv6)) = ipv6.parse_icmpv6() {
+                assert_eq!(Icmpv6Type::new(0x81), icmpv6.msg_type());
+            } else {
+                panic!("bad packet");
+            }
         }
     }
 }

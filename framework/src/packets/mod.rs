@@ -1,4 +1,5 @@
 use common::{Result, NetBricksError};
+use failure::Fail;
 use native::zcsi::MBuf;
 
 pub use self::ethernet::*;
@@ -97,4 +98,11 @@ pub trait Packet {
             Err(NetBricksError::BadOffset(self.payload_offset()).into())
         }
     }
+}
+
+/// Error when the packet does not match the expected type
+#[derive(Fail, Debug)]
+#[fail(display = "The packet is not {}", packet_type)]
+pub struct ParseError {
+    pub packet_type: String
 }
