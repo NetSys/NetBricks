@@ -1,3 +1,4 @@
+use packets::buffer;
 use packets::ip::v6::Ipv6Packet;
 use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, NdpOption};
 
@@ -14,16 +15,20 @@ pub trait NdpPayload: Icmpv6Payload {}
 pub trait NdpPacket<P: NdpPayload>: Icmpv6Packet<P> {
     /// finds a NDP option in the payload by option type
     fn find_option<O: NdpOption>(&self) -> Option<&mut O> {
+        let payload_size = std::mem::size_of::<P>();
+        let option_size = std::mem::size_of::<O>();
+
         unsafe {
             // options are after the fixed part of the payload
-            let mut offset = self.payload_offset() + P::size();
-            let mut buffer_left = self.payload_len() - P::size();
+            let mut offset = self.payload_offset() + payload_size;
+            let mut buffer_left = self.payload_len() - payload_size;
 
-            while buffer_left > O::size() {
-                let [option_type, length] = *(self.get_mut_item::<[u8; 2]>(offset));
+            while buffer_left > option_size {
+                let mbuf = self.mbuf();
+                let [option_type, length] = *(buffer::read_item::<[u8; 2]>(mbuf, offset).unwrap());
 
                 if option_type == O::option_type() {
-                    return Some(&mut (*(self.get_mut_item::<O>(offset))))
+                    return Some(&mut (*(buffer::read_item::<O>(mbuf, offset).unwrap())))
                 } else if length == 0 {
                     return None    // TODO: should we error?
                 } else {

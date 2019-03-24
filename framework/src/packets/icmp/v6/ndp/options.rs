@@ -1,5 +1,6 @@
 use std::fmt;
 use std::net::Ipv6Addr;
+use packets::Fixed;
 use packets::ethernet::MacAddr;
 
 const OPT_SOURCE_LINK_LAYER_ADDR: u8 = 1;
@@ -9,10 +10,7 @@ const OPT_PREFIX_INFORMATION: u8 = 3;
 const OPT_MTU: u8 = 5;
 
 /// Neighbor discovery message option
-pub trait NdpOption {
-    /// Returns the size of the NDP option in bytes
-    fn size() -> usize;
-
+pub trait NdpOption: Fixed {
     /// Returns the type code of the NDP option
     fn option_type() -> u8;
 }
@@ -93,11 +91,6 @@ impl fmt::Display for SourceLinkLayerAddress {
 
 impl NdpOption for SourceLinkLayerAddress {
     #[inline]
-    fn size() -> usize {
-        8
-    }
-
-    #[inline]
     fn option_type() -> u8 {
         OPT_SOURCE_LINK_LAYER_ADDR
     }
@@ -152,11 +145,6 @@ impl fmt::Display for TargetLinkLayerAddress {
 }
 
 impl NdpOption for TargetLinkLayerAddress {
-    #[inline]
-    fn size() -> usize {
-        8
-    }
-
     #[inline]
     fn option_type() -> u8 {
         OPT_TARGET_LINK_LAYER_ADDR
@@ -374,10 +362,6 @@ impl fmt::Display for PrefixInformation {
 }
 
 impl NdpOption for PrefixInformation {
-    fn size() -> usize {
-        32
-    }
-
     fn option_type() -> u8 {
         OPT_PREFIX_INFORMATION
     }
@@ -454,10 +438,6 @@ impl fmt::Display for Mtu {
 }
 
 impl NdpOption for Mtu {
-    fn size() -> usize {
-        8
-    }
-
     fn option_type() -> u8 {
         OPT_MTU
     }
@@ -480,6 +460,11 @@ mod tests {
     }
 
     #[test]
+    fn size_of_source_link_layer_address() {
+        assert_eq!(8, SourceLinkLayerAddress::size());
+    }
+
+    #[test]
     fn target_link_layer_address() {
         let mut opt: TargetLinkLayerAddress = Default::default();
 
@@ -488,6 +473,11 @@ mod tests {
         let addr = MacAddr::new(1, 1, 1, 1, 1, 1);
         opt.set_addr(addr);
         assert_eq!(addr, opt.addr());
+    }
+
+    #[test]
+    fn size_of_target_link_layer_address() {
+        assert_eq!(8, TargetLinkLayerAddress::size());
     }
 
     #[test]
@@ -514,6 +504,11 @@ mod tests {
     }
 
     #[test]
+    fn size_of_prefix_information() {
+        assert_eq!(32, PrefixInformation::size());
+    }
+
+    #[test]
     fn mtu() {
         let mut opt: Mtu = Default::default();
 
@@ -521,5 +516,10 @@ mod tests {
 
         opt.set_mtu(1500);
         assert_eq!(1500, opt.mtu());
+    }
+
+    #[test]
+    fn size_of_mtu() {
+        assert_eq!(8, Mtu::size());
     }
 }

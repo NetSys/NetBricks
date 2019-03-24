@@ -1,8 +1,13 @@
+use common::Result;
 use native::zcsi::MBuf;
 use std::fmt;
 use std::net::Ipv6Addr;
-use packets::{Packet, Header, Ethernet};
+use packets::{Fixed, Packet, Header, Ethernet};
 use packets::ip::{IpPacket, ProtocolNumber};
+
+pub use self::srh::*;
+
+pub mod srh;
 
 /// Common behaviors shared by IPv6 and extension packets
 pub trait Ipv6Packet: IpPacket {
@@ -87,11 +92,7 @@ impl Default for Ipv6Header {
     }
 }
 
-impl Header for Ipv6Header {
-    fn size() -> usize {
-        40
-    }
-}
+impl Header for Ipv6Header {}
 
 /// IPv6 packet
 pub struct Ipv6 {
@@ -209,13 +210,13 @@ impl Packet for Ipv6 {
     fn from_packet(envelope: Self::Envelope,
                    mbuf: *mut MBuf,
                    offset: usize,
-                   header: *mut Self::Header) -> Self {
-        Ipv6 {
+                   header: *mut Self::Header) -> Result<Self> {
+        Ok(Ipv6 {
             envelope,
             mbuf,
             offset,
             header
-        }
+        })
     }
 
     #[inline]
@@ -288,6 +289,11 @@ mod tests {
         // checksum
         0x00, 0x00
     ];
+
+    #[test]
+    fn size_of_ipv6_header() {
+        assert_eq!(40, Ipv6Header::size());
+    }
 
     #[test]
     fn parse_ipv6_packet() {

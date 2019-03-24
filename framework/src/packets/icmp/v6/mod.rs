@@ -1,7 +1,7 @@
 use common::Result;
 use native::zcsi::MBuf;
 use std::fmt;
-use packets::{Packet, Header, ParseError};
+use packets::{buffer, Fixed, Packet, Header, ParseError};
 use packets::ip::ProtocolNumbers;
 use packets::ip::v6::Ipv6Packet;
 
@@ -88,28 +88,17 @@ pub struct Icmpv6Header {
     checksum: u16
 }
 
-impl Header for Icmpv6Header {
-    fn size() -> usize {
-        4
-    }
-}
+impl Header for Icmpv6Header {}
 
 /// ICMPv6 packet payload
 /// 
 /// The ICMPv6 packet may contain a variable length payload. This 
 /// is only the fixed portion. The variable length portion has to 
 /// be parsed separately.
-pub trait Icmpv6Payload {
-    /// Returns the size of the fixed payload in bytes
-    fn size() -> usize;
-}
+pub trait Icmpv6Payload : Fixed {}
 
 /// ICMPv6 unit payload `()`
-impl Icmpv6Payload for () {
-    fn size() -> usize {
-        0
-    }
-}
+impl Icmpv6Payload for () {}
 
 /// Common behaviors shared by ICMPv6 packets
 pub trait Icmpv6Packet<P: Icmpv6Payload>: Packet<Header=Icmpv6Header> {
@@ -175,10 +164,10 @@ impl<E: Ipv6Packet> Icmpv6<E, ()> {
     /// 
     /// ```
     /// if icmpv6.msg_type() == Icmpv6Types::RouterAdvertisement {
-    ///     let advert = icmpv6.downcast::<RouterAdvertisement>();
+    ///     let advert = icmpv6.downcast::<RouterAdvertisement>().unwrap();
     /// }
     /// ```
-    pub fn downcast<P: Icmpv6Payload>(self) -> Icmpv6<E, P> {
+    pub fn downcast<P: Icmpv6Payload>(self) -> Result<Icmpv6<E, P>> {
         Icmpv6::<E, P>::from_packet(self.envelope, self.mbuf, self.offset, self.header)
     }
 }
@@ -209,17 +198,17 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
     fn from_packet(envelope: Self::Envelope,
                    mbuf: *mut MBuf,
                    offset: usize,
-                   header: *mut Self::Header) -> Self {
-        // TODO: should be a better way to do this
-        let payload = envelope.get_mut_item::<P>(offset + Icmpv6Header::size());
+                   header: *mut Self::Header) -> Result<Self> {
+        let payload_offset = offset + std::mem::size_of::<Icmpv6Header>();
+        let payload = buffer::read_item::<P>(mbuf, payload_offset)?;
 
-        Icmpv6 {
+        Ok(Icmpv6 {
             envelope,
             mbuf,
             offset,
             header,
             payload
-        }
+        })
     }
 
     #[inline]
@@ -285,19 +274,17 @@ impl<T: Ipv6Packet> Icmpv6Parse for T {
             let icmpv6 = self.parse::<Icmpv6<Self::Envelope, ()>>()?;
             match icmpv6.msg_type() {
                 Icmpv6Types::RouterAdvertisement => {
-                    let packet = icmpv6.downcast::<RouterAdvertisement>();
+                    let packet = icmpv6.downcast::<RouterAdvertisement>()?;
                     Ok(Icmpv6Message::RouterAdvertisement(packet))
                 },
                 Icmpv6Types::RouterSolicitation => {
-                    let packet = icmpv6.downcast::<RouterSolicitation>();
+                    let packet = icmpv6.downcast::<RouterSolicitation>()?;
                     Ok(Icmpv6Message::RouterSolicitation(packet))
                 },
                 _ => Ok(Icmpv6Message::Undefined(icmpv6))
             }
         } else {
-            Err(ParseError {
-                packet_type: ProtocolNumbers::Icmpv6.to_string()
-            }.into())
+            Err(ParseError::new("Packet is not ICMPv6").into())
         }
     }
 }
@@ -336,6 +323,11 @@ mod tests {
     ];
 
     #[test]
+    fn size_of_icmpv6_header() {
+        assert_eq!(4, Icmpv6Header::size());
+    }
+
+    #[test]
     fn parse_icmpv6_packet() {
         dpdk_test! {
             let packet = RawPacket::from_bytes(&ICMPV6_PACKET).unwrap();
@@ -356,7 +348,7 @@ mod tests {
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
             let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
-            let advert = icmpv6.downcast::<RouterAdvertisement>();
+            let advert = icmpv6.downcast::<RouterAdvertisement>().unwrap();
 
             // check one accessor that belongs to `RouterAdvertisement`
             assert_eq!(64, advert.current_hop_limit());

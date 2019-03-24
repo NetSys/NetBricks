@@ -1,14 +1,9 @@
 use common::{Result, NetBricksError};
 use native::zcsi::{MBuf, mbuf_alloc};
-use std::ptr;
-use packets::{Packet, Header};
+use packets::{buffer, Packet, Header};
 
 /// Unit header
-impl Header for () {
-    fn size() -> usize {
-        0
-    }
-}
+impl Header for () {}
 
 /// The raw network packet
 ///
@@ -33,14 +28,8 @@ impl RawPacket {
     /// Creates a new packet and initialize the buffer with a byte array
     pub fn from_bytes(data: &[u8]) -> Result<Self> {
         let packet = RawPacket::new()?;
-        packet.extend(data.len())?;
-        unsafe {
-            ptr::copy_nonoverlapping(
-                &data[0] as *const u8,
-                (*packet.mbuf).data_address(0) as *mut u8,
-                data.len()
-            )
-        }
+        buffer::alloc(packet.mbuf, 0, data.len())?;
+        buffer::write_slice(packet.mbuf, 0, data)?;
         Ok(packet)
     }
 }
@@ -53,8 +42,8 @@ impl Packet for RawPacket {
     fn from_packet(envelope: Self::Envelope,
                    _mbuf: *mut MBuf,
                    _offset: usize,
-                   _header: *mut Self::Header) -> Self {
-        envelope
+                   _header: *mut Self::Header) -> Result<Self> {
+        Ok(envelope)
     }
 
     #[inline]
@@ -74,9 +63,7 @@ impl Packet for RawPacket {
 
     #[inline]
     fn header(&self) -> &mut Self::Header {
-        unsafe {
-            &mut (*self.get_mut_item::<Self::Header>(0))
-        }
+        unreachable!("raw packet has no defined header!");
     }
 
     #[inline]
@@ -122,23 +109,6 @@ mod tests {
     fn raw_packet_from_bytes() {
         dpdk_test! {
             assert!(RawPacket::from_bytes(&UDP_PACKET).is_ok());
-        }
-    }
-
-    #[test]
-    fn extend_packet() {
-        dpdk_test! {
-            let packet = RawPacket::new().unwrap();
-            packet.extend(200).unwrap();
-            assert_eq!(packet.len(), 200);
-        }
-    }
-
-    #[test]
-    fn exceed_mbuf_tailroom() {
-        dpdk_test! {
-            let packet = RawPacket::new().unwrap();
-            assert!(packet.extend(999999).is_err());
         }
     }
 }

@@ -113,13 +113,9 @@ pub struct RouterAdvertisement {
     retrans_timer: u32
 }
 
-impl NdpPayload for RouterAdvertisement {}
+impl Icmpv6Payload for RouterAdvertisement {}
 
-impl Icmpv6Payload for RouterAdvertisement {
-    fn size() -> usize {
-        12
-    }
-}
+impl NdpPayload for RouterAdvertisement {}
 
 impl<E: Ipv6Packet> Icmpv6<E, RouterAdvertisement> {
     #[inline]
@@ -221,7 +217,7 @@ impl<E: Ipv6Packet> Icmpv6Packet<RouterAdvertisement> for Icmpv6<E, RouterAdvert
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use packets::{Packet, RawPacket, Ethernet};
+    use packets::{Fixed, Packet, RawPacket, Ethernet};
     use packets::ip::v6::Ipv6;
     use packets::icmp::v6::{Icmpv6Types, Icmpv6Message, Icmpv6Parse, NdpPacket, SourceLinkLayerAddress, TargetLinkLayerAddress};
     use dpdk_test;
@@ -269,6 +265,11 @@ pub mod tests {
         0x19, 0x03, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x26, 0x07, 0xfc, 0xc8, 0xf1, 0x42, 0xb0, 0xf0,
         0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b
     ];
+
+    #[test]
+    fn size_of_router_advertisement() {
+        assert_eq!(12, RouterAdvertisement::size());
+    }
 
     #[test]
     fn parse_router_advertisement_packet() {

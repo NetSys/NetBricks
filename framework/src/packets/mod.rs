@@ -5,20 +5,33 @@ use native::zcsi::MBuf;
 pub use self::ethernet::*;
 pub use self::raw::*;
 
+pub mod buffer;
 pub mod ethernet;
 pub mod icmp;
 pub mod ip;
 pub mod raw;
 
-/// Fixed packet header
+/// Type that has a fixed size
+/// 
+/// Size of the structs are used for buffer bound check when parsing packets
+pub trait Fixed {
+    /// Returns the size of the type
+    fn size() -> usize;
+}
+
+impl<T> Fixed for T {
+    #[inline]
+    fn size() -> usize {
+        std::mem::size_of::<T>()
+    }
+}
+
+/// Fixed packet header marker trait
 /// 
 /// Some packet headers are variable in length, such as the IPv6 
 /// segment routing header. The fixed portion can be statically 
 /// defined, but the variable portion has to be parsed separately.
-pub trait Header {
-    /// Returns the size of the fixed header in bytes
-    fn size() -> usize;
-}
+pub trait Header: Fixed {}
 
 /// Common behaviors shared by all packets
 pub trait Packet {
@@ -32,7 +45,7 @@ pub trait Packet {
         envelope: Self::Envelope,
         mbuf: *mut MBuf,
         offset: usize,
-        header: *mut Self::Header) -> Self;
+        header: *mut Self::Header) -> Result<Self> where Self: Sized;
 
     /// Returns the packet that encapsulated this packet
     fn envelope(&self) -> &Self::Envelope;
@@ -78,31 +91,23 @@ pub trait Packet {
         }
     }
 
-    /// Casts data at offset as a mutable reference T
-    #[inline]
-    fn get_mut_item<T>(&self, offset: usize) -> *mut T {
-        unsafe {
-            (*self.mbuf()).data_address(offset) as *mut T
-        }
-    }
-
     /// Parses the packet payload as another packet
     #[inline]
     fn parse<T: Packet<Envelope=Self>>(self) -> Result<T> where Self: std::marker::Sized {
-        if self.payload_len() >= T::Header::size() {
-            let mbuf = self.mbuf();
-            let offset = self.payload_offset();
-            let header = self.get_mut_item::<T::Header>(offset);
-            Ok(T::from_packet(self, mbuf, offset, header))
-        } else {
-            Err(NetBricksError::BadOffset(self.payload_offset()).into())
-        }
+        let mbuf = self.mbuf();
+        let offset = self.payload_offset();
+        let header = buffer::read_item::<T::Header>(mbuf, offset)?;
+        T::from_packet(self, mbuf, offset, header)
     }
 }
 
-/// Error when the packet does not match the expected type
+/// Error when packet failed to parse
 #[derive(Fail, Debug)]
-#[fail(display = "The packet is not {}", packet_type)]
-pub struct ParseError {
-    pub packet_type: String
+#[fail(display = "{}", _0)]
+pub struct ParseError(String);
+
+impl ParseError {
+    fn new(msg: &str) -> ParseError {
+        ParseError(msg.into())
+    }
 }
