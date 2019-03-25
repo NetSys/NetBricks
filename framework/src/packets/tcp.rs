@@ -2,7 +2,7 @@ use common::Result;
 use native::zcsi::MBuf;
 use std::fmt;
 use packets::{Fixed, Header, Packet};
-use packets::ip::IpPacket;
+use packets::ip::{Flow, IpPacket, ProtocolNumbers};
 
 /*  From (https://tools.ietf.org/html/rfc793#section-3.1)
     TCP Header Format
@@ -359,6 +359,17 @@ impl<E: IpPacket> Tcp<E> {
     pub fn set_urgent_pointer(&self, urgent_pointer: u16) {
         self.header().urgent_pointer = u16::to_be(urgent_pointer);
     }
+
+    #[inline]
+    pub fn flow(&self) -> Flow {
+        Flow::new(
+            self.envelope().src(),
+            self.envelope().dst(),
+            self.src_port(),
+            self.dst_port(),
+            ProtocolNumbers::Tcp
+        )
+    }
 }
 
 impl<E: IpPacket> fmt::Display for Tcp<E> {
@@ -437,6 +448,8 @@ pub mod tests {
     use dpdk_test;
     use packets::{Ethernet, RawPacket};
     use packets::ip::v4::Ipv4;
+    use packets::ip::v6::{Ipv6, SegmentRouting};
+    use packets::ip::v6::srh::tests::SRH_PACKET;
 
     #[rustfmt::skip]
     pub const TCP_PACKET: [u8; 58] = [
@@ -501,6 +514,41 @@ pub mod tests {
             assert!(!tcp.rst());
             assert!(tcp.syn());
             assert!(!tcp.fin());
+        }
+    }
+
+    #[test]
+    fn tcp_flow_v4() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+            let tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
+            let flow = tcp.flow();
+
+            assert_eq!("139.133.217.110", flow.src_ip().to_string());
+            assert_eq!("139.133.233.2", flow.dst_ip().to_string());
+            assert_eq!(36869, flow.src_port());
+            assert_eq!(23, flow.dst_port());
+            assert_eq!(ProtocolNumbers::Tcp, flow.protocol());
+        }
+    }
+
+    #[test]
+    fn tcp_flow_v6() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&SRH_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            let srh = ipv6.parse::<SegmentRouting<Ipv6>>().unwrap();
+            let tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
+            let flow = tcp.flow();
+
+            assert_eq!("2001:db8:85a3::1", flow.src_ip().to_string());
+            assert_eq!("2001:db8:85a3::8a2e:370:7334", flow.dst_ip().to_string());
+            assert_eq!(3464, flow.src_port());
+            assert_eq!(1024, flow.dst_port());
+            assert_eq!(ProtocolNumbers::Tcp, flow.protocol());
         }
     }
 }

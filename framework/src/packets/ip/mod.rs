@@ -1,4 +1,5 @@
 use std::fmt;
+use std::net::IpAddr;
 use packets::Packet;
 
 pub mod v4;
@@ -59,6 +60,53 @@ pub trait IpPacket: Packet {
     /// For IPv4 headers, this should be the `protocol` field.
     /// For IPv6 and extension headers, this should be the `next header` field.
     fn next_proto(&self) -> ProtocolNumber;
+
+    /// Returns the source IP address
+    fn src(&self) -> IpAddr;
+
+    /// Returns the destination IP address
+    fn dst(&self) -> IpAddr;
+}
+
+/// 5-tuple IP connection identifier
+pub struct Flow {
+    src_ip: IpAddr,
+    dst_ip: IpAddr,
+    src_port: u16,
+    dst_port: u16,
+    protocol: ProtocolNumber
+}
+
+impl Flow {
+    pub fn new(src_ip: IpAddr, dst_ip: IpAddr, src_port: u16, dst_port: u16, protocol: ProtocolNumber) -> Self {
+        Flow {
+            src_ip,
+            dst_ip,
+            src_port,
+            dst_port,
+            protocol
+        }
+    }
+
+    pub fn src_ip(&self) -> IpAddr {
+        self.src_ip
+    }
+
+    pub fn dst_ip(&self) -> IpAddr {
+        self.dst_ip
+    }
+
+    pub fn src_port(&self) -> u16 {
+        self.src_port
+    }
+
+    pub fn dst_port(&self) -> u16 {
+        self.dst_port
+    }
+
+    pub fn protocol(&self) -> ProtocolNumber {
+        self.protocol
+    }
 }
 
 #[cfg(test)]

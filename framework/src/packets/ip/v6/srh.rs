@@ -2,7 +2,7 @@ use common::Result;
 use failure::Fail;
 use native::zcsi::MBuf;
 use std::fmt;
-use std::net::Ipv6Addr;
+use std::net::{IpAddr, Ipv6Addr};
 use packets::{buffer, Fixed, Header, Packet, ParseError};
 use packets::ip::{IpPacket, ProtocolNumber};
 use packets::ip::v6::Ipv6Packet;
@@ -294,12 +294,20 @@ impl<E: Ipv6Packet> IpPacket for SegmentRouting<E> {
     fn next_proto(&self) -> ProtocolNumber {
         self.next_header()
     }
+
+    fn src(&self) -> IpAddr {
+        self.envelope().src()
+    }
+
+    fn dst(&self) -> IpAddr {
+        self.envelope().dst()
+    }
 }
 
 impl<E: Ipv6Packet> Ipv6Packet for SegmentRouting<E> {}
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use packets::{RawPacket, Ethernet};
     use packets::ip::ProtocolNumbers;

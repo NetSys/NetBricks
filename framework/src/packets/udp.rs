@@ -2,7 +2,7 @@ use common::Result;
 use native::zcsi::MBuf;
 use std::fmt;
 use packets::{Fixed, Header, Packet};
-use packets::ip::IpPacket;
+use packets::ip::{Flow, IpPacket, ProtocolNumbers};
 
 /*  From (https://tools.ietf.org/html/rfc768)
     User Datagram Header Format
@@ -116,6 +116,17 @@ impl<E: IpPacket> Udp<E> {
     pub fn set_checksum(&mut self, checksum: u16) {
         self.header().checksum = u16::to_be(checksum);
     }
+
+    #[inline]
+    pub fn flow(&self) -> Flow {
+        Flow::new(
+            self.envelope().src(),
+            self.envelope().dst(),
+            self.src_port(),
+            self.dst_port(),
+            ProtocolNumbers::Udp
+        )
+    }
 }
 
 impl<E: IpPacket> fmt::Display for Udp<E> {
@@ -225,6 +236,23 @@ pub mod tests {
             assert_eq!(1087, udp.dst_port());
             assert_eq!(18, udp.length());
             assert_eq!(0x7228, udp.checksum());
+        }
+    }
+
+    #[test]
+    fn udp_flow_v4() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+            let udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
+            let flow = udp.flow();
+
+            assert_eq!("139.133.217.110", flow.src_ip().to_string());
+            assert_eq!("139.133.233.2", flow.dst_ip().to_string());
+            assert_eq!(39376, flow.src_port());
+            assert_eq!(1087, flow.dst_port());
+            assert_eq!(ProtocolNumbers::Udp, flow.protocol());
         }
     }
 }

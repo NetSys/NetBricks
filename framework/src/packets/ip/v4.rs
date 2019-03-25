@@ -1,7 +1,7 @@
 use common::Result;
 use native::zcsi::MBuf;
 use std::fmt;
-use std::net::Ipv4Addr;
+use std::net::{IpAddr, Ipv4Addr};
 use packets::{Ethernet, Fixed, Header, Packet};
 use packets::ip::{IpPacket, ProtocolNumber};
 
@@ -305,6 +305,14 @@ impl Packet for Ipv4 {
 impl IpPacket for Ipv4 {
     fn next_proto(&self) -> ProtocolNumber {
         self.protocol()
+    }
+
+    fn src(&self) -> IpAddr {
+        IpAddr::V4(self.src())
+    }
+
+    fn dst(&self) -> IpAddr {
+        IpAddr::V4(self.dst())
     }
 }
 
