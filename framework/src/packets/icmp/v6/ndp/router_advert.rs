@@ -5,8 +5,8 @@ use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, NdpPayload};
 /*  From (https://tools.ietf.org/html/rfc4861#section-4.2)
     Router Advertisement Message Format
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |     Type      |     Code      |          Checksum             |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -117,6 +117,9 @@ impl Icmpv6Payload for RouterAdvertisement {}
 
 impl NdpPayload for RouterAdvertisement {}
 
+const M_FLAG: u8 = 0b1000_0000;
+const O_FLAG: u8 = 0b0100_0000;
+
 impl<E: Ipv6Packet> Icmpv6<E, RouterAdvertisement> {
     #[inline]
     pub fn current_hop_limit(&self) -> u8 {
@@ -130,32 +133,32 @@ impl<E: Ipv6Packet> Icmpv6<E, RouterAdvertisement> {
 
     #[inline]
     pub fn managed_addr_cfg(&self) -> bool {
-        self.payload().flags & 0x80 > 0
+        self.payload().flags & M_FLAG != 0
     }
 
     #[inline]
     pub fn set_managed_addr_cfg(&self) {
-        self.payload().flags |= 0x80;
+        self.payload().flags |= M_FLAG;
     }
 
     #[inline]
     pub fn unset_managed_addr_cfg(&self) {
-        self.payload().flags &= 0x7f;
+        self.payload().flags &= !M_FLAG;
     }
 
     #[inline]
     pub fn other_cfg(&self) -> bool {
-        self.payload().flags & 0x40 > 0
+        self.payload().flags & O_FLAG != 0
     }
 
     #[inline]
     pub fn set_other_cfg(&self) {
-        self.payload().flags |= 0x40;
+        self.payload().flags |= O_FLAG;
     }
 
     #[inline]
     pub fn unset_other_cfg(&self) {
-        self.payload().flags &= 0xbf;
+        self.payload().flags &= !O_FLAG;
     }
 
     #[inline]

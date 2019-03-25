@@ -16,8 +16,8 @@ use packets::ip::v6::Ipv6Packet;
 
     The Segment Routing Header (SRH) is defined as follows:
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Next Header   |  Hdr Ext Len  | Routing Type  | Segments Left |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -181,7 +181,7 @@ impl<E: Ipv6Packet> SegmentRouting<E> {
 
     #[inline]
     pub fn set_tag(&self, tag: u16) {
-        self.header().tag = u16::to_be(tag)
+        self.header().tag = u16::to_be(tag);
     }
 
     #[inline]

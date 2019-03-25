@@ -1,6 +1,7 @@
 use std::fmt;
 use packets::Packet;
 
+pub mod v4;
 pub mod v6;
 
 /// Assigned internet protocol number
