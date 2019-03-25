@@ -1,7 +1,7 @@
 use common::Result;
 use native::zcsi::MBuf;
 use std::fmt;
-use packets::{Fixed, Packet, Header, RawPacket};
+use packets::{buffer, Fixed, Packet, Header, RawPacket};
 
 /* Ethernet Type II Frame
 
@@ -147,19 +147,6 @@ impl Packet for Ethernet {
     type Envelope = RawPacket;
 
     #[inline]
-    fn from_packet(envelope: Self::Envelope,
-                   mbuf: *mut MBuf,
-                   offset: usize,
-                   header: *mut Self::Header) -> Result<Self> {
-        Ok(Ethernet {
-            envelope,
-            mbuf,
-            offset,
-            header
-        })
-    }
-
-    #[inline]
     fn envelope(&self) -> &Self::Envelope {
         &self.envelope
     }
@@ -182,6 +169,21 @@ impl Packet for Ethernet {
     #[inline]
     fn header_len(&self) -> usize {
         Self::Header::size()
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_parse(envelope: Self::Envelope) -> Result<Self> {
+        let mbuf = envelope.mbuf();
+        let offset = envelope.payload_offset();
+        let header = buffer::read_item::<Self::Header>(mbuf, offset)?;
+
+        Ok(Ethernet {
+            envelope,
+            mbuf,
+            offset,
+            header
+        })
     }
 }
 

@@ -236,35 +236,6 @@ impl<E: Ipv6Packet> Packet for SegmentRouting<E> {
     type Envelope = E;
 
     #[inline]
-    fn from_packet(envelope: Self::Envelope,
-                   mbuf: *mut MBuf,
-                   offset: usize,
-                   header: *mut Self::Header) -> Result<Self> {
-        unsafe {
-            let hdr_ext_len = (*header).hdr_ext_len;
-            let segments_len = (*header).last_entry + 1;
-
-            if hdr_ext_len != 0 && (2 * segments_len == hdr_ext_len) {
-                let segments = buffer::read_slice::<Segment>(
-                    mbuf,
-                    offset + SegmentRoutingHeader::size(),
-                    segments_len as usize
-                )?;
-
-                Ok(SegmentRouting {
-                    envelope,
-                    mbuf,
-                    offset,
-                    header,
-                    segments
-                })
-            } else {
-                Err(ParseError::new("Packet has inconsistent segment list length").into())
-            }
-        }
-    }
-
-    #[inline]
     fn envelope(&self) -> &Self::Envelope {
         &self.envelope
     }
@@ -287,6 +258,37 @@ impl<E: Ipv6Packet> Packet for SegmentRouting<E> {
     #[inline]
     fn header_len(&self) -> usize {
         Self::Header::size() + self.segments().len() * 16
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_parse(envelope: Self::Envelope) -> Result<Self> {
+        unsafe {
+            let mbuf = envelope.mbuf();
+            let offset = envelope.payload_offset();
+            let header = buffer::read_item::<Self::Header>(mbuf, offset)?;
+
+            let hdr_ext_len = (*header).hdr_ext_len;
+            let segments_len = (*header).last_entry + 1;
+
+            if hdr_ext_len != 0 && (2 * segments_len == hdr_ext_len) {
+                let segments = buffer::read_slice::<Segment>(
+                    mbuf,
+                    offset + SegmentRoutingHeader::size(),
+                    segments_len as usize
+                )?;
+
+                Ok(SegmentRouting {
+                    envelope,
+                    mbuf,
+                    offset,
+                    header,
+                    segments
+                })
+            } else {
+                Err(ParseError::new("Packet has inconsistent segment list length").into())
+            }
+        }
     }
 }
 

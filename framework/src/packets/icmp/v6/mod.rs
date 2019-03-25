@@ -168,7 +168,7 @@ impl<E: Ipv6Packet> Icmpv6<E, ()> {
     /// }
     /// ```
     pub fn downcast<P: Icmpv6Payload>(self) -> Result<Icmpv6<E, P>> {
-        Icmpv6::<E, P>::from_packet(self.envelope, self.mbuf, self.offset, self.header)
+        Icmpv6::<E, P>::do_parse(self.envelope)
     }
 }
 
@@ -195,23 +195,6 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
     type Envelope = E;
 
     #[inline]
-    fn from_packet(envelope: Self::Envelope,
-                   mbuf: *mut MBuf,
-                   offset: usize,
-                   header: *mut Self::Header) -> Result<Self> {
-        let payload_offset = offset + std::mem::size_of::<Icmpv6Header>();
-        let payload = buffer::read_item::<P>(mbuf, payload_offset)?;
-
-        Ok(Icmpv6 {
-            envelope,
-            mbuf,
-            offset,
-            header,
-            payload
-        })
-    }
-
-    #[inline]
     fn envelope(&self) -> &Self::Envelope {
         &self.envelope
     }
@@ -234,6 +217,23 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
     #[inline]
     fn header_len(&self) -> usize {
         Self::Header::size()
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_parse(envelope: Self::Envelope) -> Result<Self> {
+        let mbuf = envelope.mbuf();
+        let offset = envelope.payload_offset();
+        let header = buffer::read_item::<Self::Header>(mbuf, offset)?;
+        let payload = buffer::read_item::<P>(mbuf, offset + Self::Header::size())?;
+
+        Ok(Icmpv6 {
+            envelope,
+            mbuf,
+            offset,
+            header,
+            payload
+        })
     }
 }
 

@@ -1,4 +1,4 @@
-use common::{Result, NetBricksError};
+use common::Result;
 use failure::Fail;
 use native::zcsi::MBuf;
 
@@ -44,17 +44,10 @@ pub trait Packet {
     /// The outer packet type that encapsulates the packet
     type Envelope: Packet;
 
-    /// Creates a new packet
-    fn from_packet(
-        envelope: Self::Envelope,
-        mbuf: *mut MBuf,
-        offset: usize,
-        header: *mut Self::Header) -> Result<Self> where Self: Sized;
-
     /// Returns the packet that encapsulated this packet
     fn envelope(&self) -> &Self::Envelope;
 
-    /// Returns the DPDK buffer
+    /// Returns a pointer to the DPDK message buffer
     fn mbuf(&self) -> *mut MBuf;
 
     /// Returns the buffer offset where the packet header begins
@@ -64,6 +57,8 @@ pub trait Packet {
     fn header(&self) -> &mut Self::Header;
 
     /// Returns the length of the packet header
+    /// 
+    /// Includes both the fixed and variable portion of the header
     fn header_len(&self) -> usize;
 
     /// Returns the length of the packet
@@ -84,25 +79,15 @@ pub trait Packet {
         self.len() - self.header_len()
     }
 
-    /// Extends the end of the packet buffer by n bytes
-    #[inline]
-    fn extend(&self, extend_by: usize) -> Result<()> {
-        unsafe {
-            match (*self.mbuf()).add_data_end(extend_by) {
-                0 => Err(NetBricksError::FailedAllocation.into()),
-                _ => Ok(())
-            }
-        }
-    }
-
     /// Parses the packet payload as another packet
     #[inline]
-    fn parse<T: Packet<Envelope=Self>>(self) -> Result<T> where Self: std::marker::Sized {
-        let mbuf = self.mbuf();
-        let offset = self.payload_offset();
-        let header = buffer::read_item::<T::Header>(mbuf, offset)?;
-        T::from_packet(self, mbuf, offset, header)
+    fn parse<T: Packet<Envelope=Self>>(self) -> Result<T> where Self: Sized {
+        T::do_parse(self)
     }
+
+    #[doc(hidden)]
+    // the public `parse::<T>` delegates to this function
+    fn do_parse(envelope: Self::Envelope) -> Result<Self> where Self: Sized;
 }
 
 /// Error when packet failed to parse
