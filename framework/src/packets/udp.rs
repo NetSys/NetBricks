@@ -185,6 +185,23 @@ impl<E: IpPacket> Packet for Udp<E> {
             header
         })
     }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_push(envelope: Self::Envelope) -> Result<Self> {
+        let mbuf = envelope.mbuf();
+        let offset = envelope.payload_offset();
+
+        buffer::alloc(mbuf, offset, Self::Header::size())?;
+        let header = buffer::write_item::<Self::Header>(mbuf, offset, &Default::default())?;
+
+        Ok(Udp {
+            envelope,
+            mbuf,
+            offset,
+            header
+        })
+    }
 }
 
 #[cfg(test)]
@@ -255,6 +272,18 @@ pub mod tests {
             assert_eq!(39376, flow.src_port());
             assert_eq!(1087, flow.dst_port());
             assert_eq!(ProtocolNumbers::Udp, flow.protocol());
+        }
+    }
+
+    #[test]
+    fn push_udp_packet() {
+        dpdk_test! {
+            let packet = RawPacket::new().unwrap();
+            let ethernet = packet.push::<Ethernet>().unwrap();
+            let ipv4 = ethernet.push::<Ipv4>().unwrap();
+            let udp = ipv4.push::<Udp<Ipv4>>().unwrap();
+
+            assert_eq!(UdpHeader::size(), udp.len());
         }
     }
 }

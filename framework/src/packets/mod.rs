@@ -79,15 +79,25 @@ pub trait Packet {
         self.len() - self.header_len()
     }
 
-    /// Parses the packet payload as another packet
+    /// Parses the payload as packet of `T`
     #[inline]
     fn parse<T: Packet<Envelope=Self>>(self) -> Result<T> where Self: Sized {
         T::do_parse(self)
     }
 
-    #[doc(hidden)]
     // the public `parse::<T>` delegates to this function
+    #[doc(hidden)]
     fn do_parse(envelope: Self::Envelope) -> Result<Self> where Self: Sized;
+
+    /// Pushes a new packet `T` as the payload
+    #[inline]
+    fn push<T: Packet<Envelope=Self>>(self) -> Result<T> where Self: Sized {
+        T::do_push(self)
+    }
+
+    // the public `push::<T>` delegates to this function
+    #[doc(hidden)]
+    fn do_push(envelope: Self::Envelope) -> Result<Self> where Self: Sized;
 }
 
 /// Error when packet failed to parse

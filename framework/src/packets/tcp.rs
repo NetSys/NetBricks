@@ -442,6 +442,23 @@ impl<E: IpPacket> Packet for Tcp<E> {
             header
         })
     }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_push(envelope: Self::Envelope) -> Result<Self> {
+        let mbuf = envelope.mbuf();
+        let offset = envelope.payload_offset();
+
+        buffer::alloc(mbuf, offset, Self::Header::size())?;
+        let header = buffer::write_item::<Self::Header>(mbuf, offset, &Default::default())?;
+
+        Ok(Tcp {
+            envelope,
+            mbuf,
+            offset,
+            header
+        })
+    }
 }
 
 #[cfg(test)]
@@ -451,7 +468,6 @@ pub mod tests {
     use packets::{Ethernet, RawPacket};
     use packets::ip::v4::Ipv4;
     use packets::ip::v6::{Ipv6, SegmentRouting};
-    use packets::ip::v6::srh::tests::SRH_PACKET;
 
     #[rustfmt::skip]
     pub const TCP_PACKET: [u8; 58] = [
@@ -538,6 +554,8 @@ pub mod tests {
 
     #[test]
     fn tcp_flow_v6() {
+        use packets::ip::v6::srh::tests::SRH_PACKET;
+
         dpdk_test! {
             let packet = RawPacket::from_bytes(&SRH_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
@@ -551,6 +569,18 @@ pub mod tests {
             assert_eq!(3464, flow.src_port());
             assert_eq!(1024, flow.dst_port());
             assert_eq!(ProtocolNumbers::Tcp, flow.protocol());
+        }
+    }
+
+    #[test]
+    fn push_tcp_packet() {
+        dpdk_test! {
+            let packet = RawPacket::new().unwrap();
+            let ethernet = packet.push::<Ethernet>().unwrap();
+            let ipv4 = ethernet.push::<Ipv4>().unwrap();
+            let tcp = ipv4.push::<Tcp<Ipv4>>().unwrap();
+
+            assert_eq!(TcpHeader::size(), tcp.len());
         }
     }
 }

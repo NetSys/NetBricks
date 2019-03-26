@@ -68,13 +68,18 @@ impl Packet for RawPacket {
     fn do_parse(envelope: Self::Envelope) -> Result<Self> where Self: Sized {
         Ok(envelope)
     }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_push(envelope: Self::Envelope) -> Result<Self> where Self: Sized {
+        Ok(envelope)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use dpdk_test;
-    use packets::udp::tests::UDP_PACKET;
 
     #[test]
     fn new_raw_packet() {
@@ -85,6 +90,8 @@ mod tests {
 
     #[test]
     fn raw_packet_from_bytes() {
+        use packets::udp::tests::UDP_PACKET;
+        
         dpdk_test! {
             assert!(RawPacket::from_bytes(&UDP_PACKET).is_ok());
         }

@@ -29,6 +29,8 @@ use packets::{buffer, Fixed, Packet, Header, RawPacket};
 pub struct MacAddr(pub [u8; 6]);
 
 impl MacAddr {
+    pub const UNSPECIFIED: Self = MacAddr([0, 0, 0, 0, 0, 0]);
+
     pub fn new(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8) -> Self {
         MacAddr([a, b, c, d, e, f])
     }
@@ -185,13 +187,29 @@ impl Packet for Ethernet {
             header
         })
     }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_push(envelope: Self::Envelope) -> Result<Self> {
+        let mbuf = envelope.mbuf();
+        let offset = envelope.payload_offset();
+
+        buffer::alloc(mbuf, offset, Self::Header::size())?;
+        let header = buffer::write_item::<Self::Header>(mbuf, offset, &Default::default())?;
+
+        Ok(Ethernet {
+            envelope,
+            mbuf,
+            offset,
+            header
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use dpdk_test;
-    use packets::udp::tests::UDP_PACKET;
 
     #[test]
     fn size_of_ethernet_header() {
@@ -214,6 +232,8 @@ mod tests {
 
     #[test]
     fn parse_ethernet_packet() {
+        use packets::udp::tests::UDP_PACKET;
+
         dpdk_test! {
             let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
@@ -221,6 +241,16 @@ mod tests {
             assert_eq!("00:00:00:00:00:01", ethernet.dst().to_string());
             assert_eq!("00:00:00:00:00:02", ethernet.src().to_string());
             assert_eq!(EtherTypes::Ipv4, ethernet.ether_type());
+        }
+    }
+
+    #[test]
+    fn push_ethernet_packet() {
+        dpdk_test! {
+            let packet = RawPacket::new().unwrap();
+            let ethernet = packet.push::<Ethernet>().unwrap();
+
+            assert_eq!(EthernetHeader::size(), ethernet.len());
         }
     }
 }

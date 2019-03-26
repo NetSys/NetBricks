@@ -9,8 +9,10 @@ pub use self::ndp::*;
 pub use self::ndp::options::*;
 pub use self::ndp::router_advert::*;
 pub use self::ndp::router_solicit::*;
+pub use self::too_big::*;
 
 pub mod ndp;
+pub mod too_big;
 
 /*  From (https://tools.ietf.org/html/rfc4443)
     The ICMPv6 messages have the following general format:
@@ -95,10 +97,18 @@ impl Header for Icmpv6Header {}
 /// The ICMPv6 packet may contain a variable length payload. This 
 /// is only the fixed portion. The variable length portion has to 
 /// be parsed separately.
-pub trait Icmpv6Payload : Fixed {}
+pub trait Icmpv6Payload : Fixed + Default {
+    /// Returns the ICMPv6 message type that corresponds to the payload
+    fn msg_type() -> Icmpv6Type;
+}
 
 /// ICMPv6 unit payload `()`
-impl Icmpv6Payload for () {}
+impl Icmpv6Payload for () {
+    fn msg_type() -> Icmpv6Type {
+        // Unit payload does not have a type
+        unreachable!();
+    }
+}
 
 /// Common behaviors shared by ICMPv6 packets
 pub trait Icmpv6Packet<P: Icmpv6Payload>: Packet<Header=Icmpv6Header> {
@@ -108,11 +118,6 @@ pub trait Icmpv6Packet<P: Icmpv6Payload>: Packet<Header=Icmpv6Header> {
     #[inline]
     fn msg_type(&self) -> Icmpv6Type {
         Icmpv6Type::new(self.header().msg_type)
-    }
-
-    #[inline]
-    fn set_msg_type(&mut self, msg_type: Icmpv6Type) {
-        self.header().msg_type = msg_type.0
     }
 
     #[inline]
@@ -235,6 +240,29 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
             payload
         })
     }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_push(envelope: Self::Envelope) -> Result<Self> {
+        let mbuf = envelope.mbuf();
+        let offset = envelope.payload_offset();
+
+        buffer::alloc(mbuf, offset, Self::Header::size() + P::size())?;
+        let header = buffer::write_item::<Self::Header>(mbuf, offset, &Default::default())?;
+        let payload = buffer::write_item::<P>(mbuf, offset + Self::Header::size(), &Default::default())?;
+        
+        unsafe {
+            (*header).msg_type = P::msg_type().0;
+        }
+
+        Ok(Icmpv6 {
+            envelope,
+            mbuf,
+            offset,
+            header,
+            payload
+        })
+    }
 }
 
 /// An ICMPv6 message with parsed payload
@@ -295,7 +323,6 @@ mod tests {
     use packets::{RawPacket, Ethernet};
     use packets::ip::v6::Ipv6;
     use dpdk_test;
-    use packets::icmp::v6::ndp::router_advert::tests::ROUTER_ADVERT_PACKET;
 
     #[rustfmt::skip]
     const ICMPV6_PACKET: [u8; 62] = [
@@ -343,6 +370,8 @@ mod tests {
 
     #[test]
     fn downcast_icmpv6() {
+        use packets::icmp::v6::ndp::router_advert::tests::ROUTER_ADVERT_PACKET;
+        
         dpdk_test! {
             let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();

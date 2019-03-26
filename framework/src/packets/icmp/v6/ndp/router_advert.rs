@@ -1,6 +1,6 @@
 use std::fmt;
 use packets::ip::v6::Ipv6Packet;
-use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, NdpPayload};
+use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, Icmpv6Type, Icmpv6Types, NdpPayload};
 
 /*  From (https://tools.ietf.org/html/rfc4861#section-4.2)
     Router Advertisement Message Format
@@ -113,7 +113,11 @@ pub struct RouterAdvertisement {
     retrans_timer: u32
 }
 
-impl Icmpv6Payload for RouterAdvertisement {}
+impl Icmpv6Payload for RouterAdvertisement {
+    fn msg_type() -> Icmpv6Type {
+        Icmpv6Types::RouterAdvertisement
+    }
+}
 
 impl NdpPayload for RouterAdvertisement {}
 

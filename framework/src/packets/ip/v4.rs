@@ -302,6 +302,23 @@ impl Packet for Ipv4 {
             header
         })
     }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_push(envelope: Self::Envelope) -> Result<Self> {
+        let mbuf = envelope.mbuf();
+        let offset = envelope.payload_offset();
+
+        buffer::alloc(mbuf, offset, Self::Header::size())?;
+        let header = buffer::write_item::<Self::Header>(mbuf, offset, &Default::default())?;
+
+        Ok(Ipv4 {
+            envelope,
+            mbuf,
+            offset,
+            header
+        })
+    }
 }
 
 impl IpPacket for Ipv4 {
@@ -324,7 +341,6 @@ mod tests {
     use dpdk_test;
     use packets::{Ethernet, RawPacket};
     use packets::ip::ProtocolNumbers;
-    use packets::udp::tests::UDP_PACKET;
 
     #[test]
     fn size_of_ipv4_header() {
@@ -333,6 +349,8 @@ mod tests {
 
     #[test]
     fn parse_ipv4_packet() {
+        use packets::udp::tests::UDP_PACKET;
+        
         dpdk_test! {
             let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
@@ -347,6 +365,18 @@ mod tests {
             assert_eq!(0xf700, ipv4.checksum());
             assert_eq!("139.133.217.110", ipv4.src().to_string());
             assert_eq!("139.133.233.2", ipv4.dst().to_string());
+        }
+    }
+
+    #[test]
+    fn push_ipv4_packet() {
+        dpdk_test! {
+            let packet = RawPacket::new().unwrap();
+            let ethernet = packet.push::<Ethernet>().unwrap();
+            let ipv4 = ethernet.push::<Ipv4>().unwrap();
+
+            assert_eq!(4, ipv4.version());
+            assert_eq!(Ipv4Header::size(), ipv4.len());
         }
     }
 }

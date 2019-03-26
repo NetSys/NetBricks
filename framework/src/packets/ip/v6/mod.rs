@@ -245,6 +245,23 @@ impl Packet for Ipv6 {
             header
         })
     }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_push(envelope: Self::Envelope) -> Result<Self> {
+        let mbuf = envelope.mbuf();
+        let offset = envelope.payload_offset();
+
+        buffer::alloc(mbuf, offset, Self::Header::size())?;
+        let header = buffer::write_item::<Self::Header>(mbuf, offset, &Default::default())?;
+
+        Ok(Ipv6 {
+            envelope,
+            mbuf,
+            offset,
+            header
+        })
+    }
 }
 
 impl IpPacket for Ipv6 {
@@ -264,14 +281,14 @@ impl IpPacket for Ipv6 {
 impl Ipv6Packet for Ipv6 {}
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use packets::RawPacket;
     use packets::ip::ProtocolNumbers;
     use dpdk_test;
 
     #[rustfmt::skip]
-    pub const IPV6_PACKET: [u8; 62] = [
+    pub const IPV6_PACKET: [u8; 78] = [
         // ** ethernet header
         0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
@@ -280,7 +297,7 @@ mod tests {
         // version, traffic class, flow label
         0x60, 0x00, 0x00, 0x00,
         // payload length
-        0x00, 0x08,
+        0x00, 0x18,
         // next Header
         0x11,
         // hop limit
@@ -289,15 +306,19 @@ mod tests {
         0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
         // dst addr
         0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
-        // ** UDP header
-        // src port
-        0x0d, 0x88,
-        // dst port
-        0x04, 0x00,
-        // length
-        0x00, 0x08,
-        // checksum
-        0x00, 0x00
+        // ** TCP header
+        // src_port = 36869, dst_port = 23
+        0x90, 0x05, 0x00, 0x17,
+        // seq_no = 1913975060
+        0x72, 0x14, 0xf1, 0x14,
+        // ack_no = 0
+        0x00, 0x00, 0x00, 0x00,
+        // data_offset = 24, flags = 0x02
+        0x60, 0x02,
+        // window = 8760, checksum = 0xa92c, urgent = 0
+        0x22, 0x38, 0xa9, 0x2c, 0x00, 0x00,
+        // options
+        0x02, 0x04, 0x05, 0xb4
     ];
 
     #[test]
@@ -315,11 +336,23 @@ mod tests {
             assert_eq!(6, ipv6.version());
             assert_eq!(0, ipv6.traffic_class());
             assert_eq!(0, ipv6.flow_label());
-            assert_eq!(8, ipv6.payload_len());
+            assert_eq!(24, ipv6.payload_len());
             assert_eq!(ProtocolNumbers::Udp, ipv6.next_header());
             assert_eq!(2, ipv6.hop_limit());
             assert_eq!("2001:db8:85a3::1", ipv6.src().to_string());
             assert_eq!("2001:db8:85a3::8a2e:370:7334", ipv6.dst().to_string());
+        }
+    }
+
+    #[test]
+    fn push_ipv6_packet() {
+        dpdk_test! {
+            let packet = RawPacket::new().unwrap();
+            let ethernet = packet.push::<Ethernet>().unwrap();
+            let ipv6 = ethernet.push::<Ipv6>().unwrap();
+
+            assert_eq!(6, ipv6.version());
+            assert_eq!(Ipv6Header::size(), ipv6.len());
         }
     }
 }

@@ -98,30 +98,30 @@ pub fn realloc(mbuf: *mut MBuf, offset: usize, len: isize) -> Result<()> {
     }
 }
 
-/// Writes `T` to buffer at offset
+/// Writes `T` to buffer at offset and returns a mutable reference
 #[inline]
-pub fn write_item<T: Fixed>(mbuf: *mut MBuf, offset: usize, item: &T) -> Result<()> {
+pub fn write_item<T: Fixed>(mbuf: *mut MBuf, offset: usize, item: &T) -> Result<*mut T> {
     unsafe {
         if (*mbuf).data_len() >= offset + T::size() {
             let src = item as (* const T);
             let dst = (*mbuf).data_address(offset) as (*mut T);
             std::ptr::copy_nonoverlapping(src, dst, 1);
-            Ok(())
+            read_item::<T>(mbuf, offset)
         } else {
             Err(BufferError::BadOffset(offset).into())
         }
     }
 }
 
-/// Writes slice of `T` to buffer at offset
+/// Writes slice of `T` to buffer at offset and returns a mutable reference
 #[inline]
-pub fn write_slice<T: Fixed>(mbuf: *mut MBuf, offset: usize, slice: &[T]) -> Result<()> {
+pub fn write_slice<T: Fixed>(mbuf: *mut MBuf, offset: usize, slice: &[T]) -> Result<*mut [T]> {
     unsafe {
         if (*mbuf).data_len() >= offset + (T::size() * slice.len()) {
             let src = slice.as_ptr();
             let dst = (*mbuf).data_address(offset) as (*mut T);
             std::ptr::copy_nonoverlapping(src, dst, slice.len());
-            Ok(())
+            read_slice::<T>(mbuf, offset, slice.len())
         } else {
             Err(BufferError::BadOffset(offset).into())
         }

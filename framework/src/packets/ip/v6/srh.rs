@@ -103,6 +103,20 @@ pub struct SegmentRoutingHeader {
     tag: u16
 }
 
+impl Default for SegmentRoutingHeader {
+    fn default() -> SegmentRoutingHeader {
+        SegmentRoutingHeader {
+            next_header: 0,
+            hdr_ext_len: 2,
+            routing_type: 4,
+            segments_left: 0,
+            last_entry: 0,
+            flags: 0,
+            tag: 0
+        }
+    }
+}
+
 impl Header for SegmentRoutingHeader {}
 
 /// Type alias for a segment in segment routing header
@@ -197,10 +211,9 @@ impl<E: Ipv6Packet> SegmentRouting<E> {
             let segments_offset = self.offset + SegmentRoutingHeader::size();
 
             buffer::realloc(self.mbuf, segments_offset, new_len as isize - old_len as isize)?;
-            buffer::write_slice(self.mbuf, segments_offset, segments)?;
+            self.segments = buffer::write_slice(self.mbuf, segments_offset, segments)?;
             self.set_hdr_ext_len(new_len * 2);
             self.set_last_entry(new_len - 1);
-            self.segments = buffer::read_slice::<Segment>(self.mbuf, segments_offset, new_len as usize)?;
             Ok(())
         } else {
             Err(BadSegmentsError(()).into())
@@ -290,6 +303,26 @@ impl<E: Ipv6Packet> Packet for SegmentRouting<E> {
             }
         }
     }
+
+    #[doc(hidden)]
+    #[inline]
+    fn do_push(envelope: Self::Envelope) -> Result<Self> {
+        let mbuf = envelope.mbuf();
+        let offset = envelope.payload_offset();
+
+        // also add a default segment list of one element
+        buffer::alloc(mbuf, offset, Self::Header::size() + Segment::size())?;
+        let header = buffer::write_item::<Self::Header>(mbuf, offset, &Default::default())?;
+        let segments = buffer::write_slice(mbuf, offset + Self::Header::size(), &vec![Segment::UNSPECIFIED])?;
+
+        Ok(SegmentRouting {
+            envelope,
+            mbuf,
+            offset,
+            header,
+            segments
+        })
+    }
 }
 
 impl<E: Ipv6Packet> IpPacket for SegmentRouting<E> {
@@ -311,7 +344,7 @@ impl<E: Ipv6Packet> Ipv6Packet for SegmentRouting<E> {}
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use packets::{RawPacket, Ethernet};
+    use packets::{Ethernet, RawPacket, Tcp};
     use packets::ip::ProtocolNumbers;
     use packets::ip::v6::Ipv6;
     use dpdk_test;
@@ -434,6 +467,28 @@ pub mod tests {
             assert_eq!(segment4, srh.segments()[3]);
 
             assert!(srh.set_segments(&vec![]).is_err());
+        }
+    }
+
+    #[test]
+    fn insert_segment_routing_packet() {
+        use packets::ip::v6::tests::IPV6_PACKET;
+
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&IPV6_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            let ipv6_payload_len = ipv6.payload_len() as usize;
+            let srh = ipv6.push::<SegmentRouting<Ipv6>>().unwrap();
+
+            assert_eq!(2, srh.hdr_ext_len());
+            assert_eq!(1, srh.segments().len());
+            assert_eq!(4, srh.routing_type());
+            assert_eq!(SegmentRoutingHeader::size() + Segment::size() + ipv6_payload_len, srh.len());
+
+            // make sure rest of the packet still valid
+            let tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
+            assert_eq!(36869, tcp.src_port());
         }
     }
 }
