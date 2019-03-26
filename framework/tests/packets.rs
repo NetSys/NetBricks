@@ -24,9 +24,9 @@ fn packet_from_bytes(bytes: &[u8]) -> Packet<NullHeader, EmptyMetadata> {
 }
 
 #[test]
-fn icmpv6_from_bytes() {
+fn ndp_router_advertisement_from_bytes() {
     dpdk_test! {
-        let pkt = packet_from_bytes(&ICMP_RTR_ADV_BYTES);
+        let pkt = packet_from_bytes(&ICMP_ROUTER_ADVERTISEMENT_BYTES);
         // Check Ethernet header
         let epkt = pkt.parse_header::<MacHeader>();
         {
@@ -38,6 +38,8 @@ fn icmpv6_from_bytes() {
 
          // Check IPv6 header
         let v6pkt = epkt.parse_header::<Ipv6Header>();
+        let &v6 = v6pkt.get_header();
+        let payload_len = v6.payload_len();
         {
             let v6 = v6pkt.get_header();
             let src = Ipv6Addr::from_str("fe80::d4f0:45ff:fe0c:664b").unwrap();
@@ -45,7 +47,7 @@ fn icmpv6_from_bytes() {
             assert_eq!(v6.version(), 6);
             assert_eq!(v6.traffic_class(), 0);
             assert_eq!(v6.flow_label(), 0);
-            assert_eq!(v6.payload_len(), 88);
+            assert_eq!(payload_len, 64);
             assert_eq!(v6.next_header().unwrap(), NextHeader::Icmp);
             assert_eq!(v6.hop_limit(), 255);
             assert_eq!(Ipv6Addr::from(v6.src()), src);
@@ -53,12 +55,173 @@ fn icmpv6_from_bytes() {
         }
 
         //Check Icmp header
-        let icmp_pkt = v6pkt.parse_header::<Icmpv6Header<Ipv6Header>>();
+        let icmp_pkt = v6pkt.parse_header::<Icmpv6RouterAdvertisement<Ipv6Header>>();
         {
             let icmpv6h = icmp_pkt.get_header();
             assert_eq!(icmpv6h.msg_type().unwrap(), IcmpMessageType::RouterAdvertisement);
             assert_eq!(icmpv6h.checksum(), 0xf50c);
             assert_eq!(icmpv6h.code(), 0);
+            assert_eq!(icmpv6h.current_hop_limit(), 64);
+            assert_eq!(icmpv6h.managed_addr_cfg(), false);
+            assert_eq!(icmpv6h.other_cfg(), true);
+            assert_eq!(icmpv6h.router_lifetime(), 1800);
+            assert_eq!(icmpv6h.reachable_time(), 2055);
+            assert_eq!(icmpv6h.retrans_timer(), 1500);
+            assert_eq!(
+                format!("{:X?}", icmpv6h.get_source_link_layer_address_option(payload_len).unwrap()),
+                format!("{:X?}", MacAddress::from_str("c2:00:54:f5:00:00").unwrap())
+            );
+            assert_eq!(icmpv6h.get_mtu_option(payload_len).unwrap(), 1500);
+        }
+    }
+}
+
+#[test]
+fn ndp_router_advertisement_from_bytes_no_link_layer_address() {
+    dpdk_test! {
+        let pkt = packet_from_bytes(&ICMP_ROUTER_ADVERTISEMENT_BYTES_NO_LINK_LAYER_ADDRESS  );
+        // Check Ethernet header
+        let epkt = pkt.parse_header::<MacHeader>();
+        {
+            let eth = epkt.get_header();
+            assert_eq!(eth.dst().addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
+            assert_eq!(eth.src().addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
+            assert_eq!(eth.etype(), Some(EtherType::IPv6));
+        }
+
+         // Check IPv6 header
+        let v6pkt = epkt.parse_header::<Ipv6Header>();
+        let &v6 = v6pkt.get_header();
+        let payload_len = v6.payload_len();
+        {
+            let v6 = v6pkt.get_header();
+            let src = Ipv6Addr::from_str("fe80::d4f0:45ff:fe0c:664b").unwrap();
+            let dst = Ipv6Addr::from_str("ff02::1").unwrap();
+            assert_eq!(v6.version(), 6);
+            assert_eq!(v6.traffic_class(), 0);
+            assert_eq!(v6.flow_label(), 0);
+            assert_eq!(v6.payload_len(), 56);
+            assert_eq!(v6.next_header().unwrap(), NextHeader::Icmp);
+            assert_eq!(v6.hop_limit(), 255);
+            assert_eq!(Ipv6Addr::from(v6.src()), src);
+            assert_eq!(Ipv6Addr::from(v6.dst()), dst);
+        }
+
+        //Check Icmp header
+        let icmp_pkt = v6pkt.parse_header::<Icmpv6RouterAdvertisement<Ipv6Header>>();
+        {
+            let icmpv6h = icmp_pkt.get_header();
+            assert_eq!(icmpv6h.msg_type().unwrap(), IcmpMessageType::RouterAdvertisement);
+            assert_eq!(icmpv6h.checksum(), 0xf50c);
+            assert_eq!(icmpv6h.code(), 0);
+            assert_eq!(icmpv6h.current_hop_limit(), 64);
+            assert_eq!(icmpv6h.managed_addr_cfg(), false);
+            assert_eq!(icmpv6h.other_cfg(), true);
+            assert_eq!(icmpv6h.router_lifetime(), 1800);
+            assert_eq!(icmpv6h.reachable_time(), 2055);
+            assert_eq!(icmpv6h.retrans_timer(), 1500);
+            assert_eq!(icmpv6h.get_source_link_layer_address_option(payload_len).is_some(), false);
+            assert_eq!(icmpv6h.get_mtu_option(payload_len).unwrap(), 1500);
+        }
+    }
+}
+
+#[test]
+fn ndp_router_advertisement_from_bytes_invalid_option_length() {
+    dpdk_test! {
+        let pkt = packet_from_bytes(&ICMP_ROUTER_ADVERTISEMENT_BYTES_INVALID_OPTION_LENGTH  );
+        // Check Ethernet header
+        let epkt = pkt.parse_header::<MacHeader>();
+        {
+            let eth = epkt.get_header();
+            assert_eq!(eth.dst().addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
+            assert_eq!(eth.src().addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
+            assert_eq!(eth.etype(), Some(EtherType::IPv6));
+        }
+
+         // Check IPv6 header
+        let v6pkt = epkt.parse_header::<Ipv6Header>();
+        let &v6 = v6pkt.get_header();
+        let payload_len = v6.payload_len();
+        {
+            let v6 = v6pkt.get_header();
+            let src = Ipv6Addr::from_str("fe80::d4f0:45ff:fe0c:664b").unwrap();
+            let dst = Ipv6Addr::from_str("ff02::1").unwrap();
+            assert_eq!(v6.version(), 6);
+            assert_eq!(v6.traffic_class(), 0);
+            assert_eq!(v6.flow_label(), 0);
+            assert_eq!(v6.payload_len(), 24);
+            assert_eq!(v6.next_header().unwrap(), NextHeader::Icmp);
+            assert_eq!(v6.hop_limit(), 255);
+            assert_eq!(Ipv6Addr::from(v6.src()), src);
+            assert_eq!(Ipv6Addr::from(v6.dst()), dst);
+        }
+
+        //Check Icmp header
+        let icmp_pkt = v6pkt.parse_header::<Icmpv6RouterAdvertisement<Ipv6Header>>();
+        {
+            let icmpv6h = icmp_pkt.get_header();
+            assert_eq!(icmpv6h.msg_type().unwrap(), IcmpMessageType::RouterAdvertisement);
+            assert_eq!(icmpv6h.checksum(), 0xf50c);
+            assert_eq!(icmpv6h.code(), 0);
+            assert_eq!(icmpv6h.current_hop_limit(), 64);
+            assert_eq!(icmpv6h.managed_addr_cfg(), false);
+            assert_eq!(icmpv6h.other_cfg(), true);
+            assert_eq!(icmpv6h.router_lifetime(), 1800);
+            assert_eq!(icmpv6h.reachable_time(), 2055);
+            assert_eq!(icmpv6h.retrans_timer(), 1500);
+            assert_eq!(icmpv6h.get_source_link_layer_address_option(payload_len).is_some(), false);
+            assert_eq!(icmpv6h.get_mtu_option(payload_len).is_some(), false);
+        }
+    }
+}
+
+#[test]
+fn ndp_router_advertisement_from_bytes_invalid_option_type() {
+    dpdk_test! {
+        let pkt = packet_from_bytes(&ICMP_ROUTER_ADVERTISEMENT_BYTES_INVALID_OPTION_TYPE  );
+        // Check Ethernet header
+        let epkt = pkt.parse_header::<MacHeader>();
+        {
+            let eth = epkt.get_header();
+            assert_eq!(eth.dst().addr, MacAddress::new(0, 0, 0, 0, 0, 1).addr);
+            assert_eq!(eth.src().addr, MacAddress::new(0, 0, 0, 0, 0, 2).addr);
+            assert_eq!(eth.etype(), Some(EtherType::IPv6));
+        }
+
+         // Check IPv6 header
+        let v6pkt = epkt.parse_header::<Ipv6Header>();
+        let &v6 = v6pkt.get_header();
+        let payload_len = v6.payload_len();
+        {
+            let v6 = v6pkt.get_header();
+            let src = Ipv6Addr::from_str("fe80::d4f0:45ff:fe0c:664b").unwrap();
+            let dst = Ipv6Addr::from_str("ff02::1").unwrap();
+            assert_eq!(v6.version(), 6);
+            assert_eq!(v6.traffic_class(), 0);
+            assert_eq!(v6.flow_label(), 0);
+            assert_eq!(v6.payload_len(), 24);
+            assert_eq!(v6.next_header().unwrap(), NextHeader::Icmp);
+            assert_eq!(v6.hop_limit(), 255);
+            assert_eq!(Ipv6Addr::from(v6.src()), src);
+            assert_eq!(Ipv6Addr::from(v6.dst()), dst);
+        }
+
+        //Check Icmp header
+        let icmp_pkt = v6pkt.parse_header::<Icmpv6RouterAdvertisement<Ipv6Header>>();
+        {
+            let icmpv6h = icmp_pkt.get_header();
+            assert_eq!(icmpv6h.msg_type().unwrap(), IcmpMessageType::RouterAdvertisement);
+            assert_eq!(icmpv6h.checksum(), 0xf50c);
+            assert_eq!(icmpv6h.code(), 0);
+            assert_eq!(icmpv6h.current_hop_limit(), 64);
+            assert_eq!(icmpv6h.managed_addr_cfg(), false);
+            assert_eq!(icmpv6h.other_cfg(), true);
+            assert_eq!(icmpv6h.router_lifetime(), 1800);
+            assert_eq!(icmpv6h.reachable_time(), 2055);
+            assert_eq!(icmpv6h.retrans_timer(), 1500);
+            assert_eq!(icmpv6h.get_source_link_layer_address_option(payload_len).is_some(), false);
+            assert_eq!(icmpv6h.get_mtu_option(payload_len).is_some(), false);
         }
     }
 }

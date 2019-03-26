@@ -1,4 +1,7 @@
+pub use self::ndp::*;
+pub use self::ndp_options::*;
 pub use self::packet_too_big::*;
+pub use self::router_advertisement::*;
 use super::{EndOffset, Ipv6VarHeader};
 use headers::CalcChecksums;
 use num::FromPrimitive;
@@ -6,7 +9,10 @@ use std::default::Default;
 use std::fmt;
 use std::marker::PhantomData;
 
+mod ndp;
+mod ndp_options;
 mod packet_too_big;
+mod router_advertisement;
 
 /*
   ICMPv6 messages are contained in IPv6 packets. The IPv6 packet contains an IPv6 header followed by the
@@ -103,7 +109,7 @@ where
 
     #[inline]
     fn offset(&self) -> usize {
-        // ICMPv6 Header(Type + Code + Checksum) is always 4 bytes: (8 + 8 + 16) / 8 = 4
+        // Standard ICMPv6 Header(Type + Code + Checksum) is 4 bytes: (8 + 8 + 16) / 8 = 4
         4
     }
 

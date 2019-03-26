@@ -12,9 +12,9 @@ export examples=(
         test/srv6-sighup-flow
         test/srv6-inject
         test/tcp-checksum
-        test/icmpv6
         test/mtu-too-big
         test/transform-error
+        test/ndp-router-advertisement
         # test/delay-test
         # test/chain-test
         # test/shutdown-test

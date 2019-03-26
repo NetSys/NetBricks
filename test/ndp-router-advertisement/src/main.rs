@@ -13,7 +13,6 @@ use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-
 mod nf;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
@@ -25,7 +24,7 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| icmp_nf(ReceiveBatch::new(port.clone())).send(port.clone()))
+        .map(|port| ndp_nf(ReceiveBatch::new(port.clone())).send(port.clone()))
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
@@ -72,7 +71,7 @@ fn main() {
             }
         }
         Err(ref e) => {
-            println!("Error: {:?}", e);
+            println!("Error: {}", e);
             process::exit(1);
         }
     }
