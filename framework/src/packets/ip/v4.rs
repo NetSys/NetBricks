@@ -99,6 +99,10 @@ use std::slice;
         implementation.
 */
 
+// Bits and Flags
+const FLAGS_DF: u16 = 0x4000;
+const FLAGS_MF: u16 = 0x8000;
+
 /// IPv4 header
 ///
 /// The header only include the fixed portion of the IPv4 header.
@@ -190,6 +194,63 @@ impl Ipv4 {
     #[inline]
     pub fn set_identification(&self, identification: u16) {
         self.header().identification = u16::to_be(identification);
+    }
+
+    #[inline]
+    pub fn dont_fragment(&self) -> bool {
+        u16::from_be(self.header().flags_to_frag_offset) & FLAGS_DF != 0
+    }
+
+    #[inline]
+    pub fn set_dont_fragment(&self) {
+        self.header().flags_to_frag_offset =
+            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) | FLAGS_DF)
+    }
+
+    #[inline]
+    pub fn unset_dont_fragment(&self) {
+        self.header().flags_to_frag_offset =
+            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !FLAGS_DF)
+    }
+
+    #[inline]
+    pub fn more_fragments(&self) -> bool {
+        u16::from_be(self.header().flags_to_frag_offset) & FLAGS_MF != 0
+    }
+
+    #[inline]
+    pub fn set_more_fragments(&self) {
+        self.header().flags_to_frag_offset =
+            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) | FLAGS_MF)
+    }
+
+    #[inline]
+    pub fn unset_more_fragments(&self) {
+        self.header().flags_to_frag_offset =
+            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !FLAGS_MF)
+    }
+
+    #[inline]
+    pub fn clear_flags(&self) {
+        self.header().flags_to_frag_offset =
+            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !0xe000)
+    }
+
+    #[inline]
+    pub fn flags(&self) -> u8 {
+        (u16::from_be(self.header().flags_to_frag_offset) >> 13) as u8
+    }
+
+    #[inline]
+    pub fn fragment_offset(&self) -> u16 {
+        u16::from_be(self.header().flags_to_frag_offset) & 0x1fff
+    }
+
+    #[inline]
+    pub fn set_fragment_offset(&self, offset: u16) {
+        self.header().flags_to_frag_offset = u16::to_be(
+            (u16::from_be(self.header().flags_to_frag_offset) & 0xe000) | (offset & 0x1fff),
+        )
     }
 
     #[inline]
@@ -418,11 +479,37 @@ mod tests {
             assert_eq!(5, ipv4.ihl());
             assert_eq!(38, ipv4.total_length());
             assert_eq!(43849, ipv4.identification());
+            assert_eq!(true, ipv4.dont_fragment());
+            assert_eq!(0, ipv4.fragment_offset());
             assert_eq!(255, ipv4.ttl());
             assert_eq!(ProtocolNumbers::Udp, ipv4.protocol());
             assert_eq!(0xf700, ipv4.checksum());
             assert_eq!("139.133.217.110", ipv4.src().to_string());
             assert_eq!("139.133.233.2", ipv4.dst().to_string());
+        }
+    }
+
+    #[test]
+    fn parse_ipv4_set_flags() {
+        use packets::udp::tests::UDP_PACKET;
+
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+
+            assert_eq!(2, ipv4.flags());
+            assert_eq!(true, ipv4.dont_fragment());
+            assert_eq!(false, ipv4.more_fragments());
+            ipv4.unset_dont_fragment();
+            assert_eq!(false, ipv4.dont_fragment());
+            ipv4.set_more_fragments();
+            assert_eq!(true, ipv4.more_fragments());
+            ipv4.set_fragment_offset(5);
+            assert_eq!(5, ipv4.fragment_offset());
+            ipv4.clear_flags();
+            assert_eq!(false, ipv4.dont_fragment());
+            assert_eq!(false, ipv4.more_fragments());
         }
     }
 
