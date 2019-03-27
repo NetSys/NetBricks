@@ -2,8 +2,9 @@ use common::Result;
 use native::zcsi::MBuf;
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr};
+use std::slice;
 use packets::{buffer, Ethernet, Fixed, Header, Packet};
-use packets::ip::{IpPacket, ProtocolNumber};
+use packets::ip::{IpPacket, ProtocolNumber, IpAddrMismatchError};
 
 /*  From (https://tools.ietf.org/html/rfc791#section-3.1)
     Internet Datagram Header
@@ -227,7 +228,7 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_src(&mut self, src: Ipv4Addr) {
+    fn set_src(&self, src: Ipv4Addr) {
         self.header().src = src;
     }
 
@@ -237,7 +238,7 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_dst(&mut self, dst: Ipv4Addr) {
+    fn set_dst(&self, dst: Ipv4Addr) {
         self.header().dst = dst;
     }
 }
@@ -322,16 +323,71 @@ impl Packet for Ipv4 {
 }
 
 impl IpPacket for Ipv4 {
+    #[inline]
     fn next_proto(&self) -> ProtocolNumber {
         self.protocol()
     }
 
+    #[inline]
     fn src(&self) -> IpAddr {
         IpAddr::V4(self.src())
     }
 
+    #[inline]
+    fn set_src(&self, src: IpAddr) -> Result<()> {
+        match src {
+            IpAddr::V4(addr) => {
+                self.set_src(addr);
+                Ok(())
+            },
+            _ => Err(IpAddrMismatchError.into())
+        }
+    }
+
+    #[inline]
     fn dst(&self) -> IpAddr {
         IpAddr::V4(self.dst())
+    }
+
+    #[inline]
+    fn set_dst(&self, dst: IpAddr) -> Result<()> {
+        match dst {
+            IpAddr::V4(addr) => {
+                self.set_dst(addr);
+                Ok(())
+            },
+            _ => Err(IpAddrMismatchError.into())
+        }
+    }
+
+    /// Returns the IPv4 pseudo-header sum
+    /// 
+    ///  0      7 8     15 16    23 24    31
+    /// +--------+--------+--------+--------+
+    /// |          source address           |
+    /// +--------+--------+--------+--------+
+    /// |        destination address        |
+    /// +--------+--------+--------+--------+
+    /// |  zero  |protocol|  packet length  |
+    /// +--------+--------+--------+--------+
+    #[inline]
+    fn pseudo_header_sum(&self, packet_len: u16, protocol: ProtocolNumber) -> u16 {
+        // a bit of unsafe magic to cast [u8; 4] to [u16; 2]
+        let src = unsafe { slice::from_raw_parts((&self.src().octets()).as_ptr() as *const u16, 2) };
+        let dst = unsafe { slice::from_raw_parts((&self.dst().octets()).as_ptr() as *const u16, 2) };
+
+        let mut sum = src[0] as u32 + 
+            src[1] as u32 +
+            dst[0] as u32 + 
+            dst[1] as u32 +
+            protocol.0 as u32 + 
+            packet_len as u32;
+        
+        while sum >> 16 != 0 {
+            sum = (sum >> 16) + (sum & 0xFFFF);
+        }
+
+        sum as u16
     }
 }
 

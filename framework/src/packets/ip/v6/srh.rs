@@ -151,7 +151,6 @@ impl<E: Ipv6Packet> SegmentRouting<E> {
         self.header().hdr_ext_len
     }
 
-    // internally used by `set_segments`
     #[inline]
     fn set_hdr_ext_len(&self, hdr_ext_len: u8) {
         self.header().hdr_ext_len = hdr_ext_len;
@@ -177,7 +176,6 @@ impl<E: Ipv6Packet> SegmentRouting<E> {
         self.header().last_entry
     }
 
-    // internally used by `set_segments`
     #[inline]
     fn set_last_entry(&self, last_entry: u8) {
         self.header().last_entry = last_entry;
@@ -326,16 +324,34 @@ impl<E: Ipv6Packet> Packet for SegmentRouting<E> {
 }
 
 impl<E: Ipv6Packet> IpPacket for SegmentRouting<E> {
+    #[inline]
     fn next_proto(&self) -> ProtocolNumber {
         self.next_header()
     }
 
+    #[inline]
     fn src(&self) -> IpAddr {
         self.envelope().src()
     }
 
+    #[inline]
+    fn set_src(&self, src: IpAddr) -> Result<()> {
+        self.envelope().set_src(src)
+    }
+
+    #[inline]
     fn dst(&self) -> IpAddr {
         self.envelope().dst()
+    }
+
+    #[inline]
+    fn set_dst(&self, dst: IpAddr) -> Result<()> {
+        self.envelope().set_dst(dst)
+    }
+
+    #[inline]
+    fn pseudo_header_sum(&self, packet_len: u16, protocol: ProtocolNumber) -> u16 {
+        self.envelope().pseudo_header_sum(packet_len, protocol)
     }
 }
 

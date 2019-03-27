@@ -1,7 +1,8 @@
 use common::Result;
 use native::zcsi::MBuf;
 use std::fmt;
-use packets::{buffer, Fixed, Header, Packet};
+use std::net::IpAddr;
+use packets::{buffer, checksum, Fixed, Header, Packet};
 use packets::ip::{Flow, IpPacket, ProtocolNumbers};
 
 /*  From (https://tools.ietf.org/html/rfc793#section-3.1)
@@ -346,7 +347,7 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_checksum(&self, checksum: u16) {
+    fn set_checksum(&self, checksum: u16) {
         self.header().checksum = u16::to_be(checksum);
     }
 
@@ -369,6 +370,26 @@ impl<E: IpPacket> Tcp<E> {
             self.dst_port(),
             ProtocolNumbers::Tcp
         )
+    }
+
+    /// Sets the layer-3 source address and recomputes the checksum
+    #[inline]
+    pub fn set_src_ip(&self, src_ip: IpAddr) -> Result<()> {
+        let old_ip = self.envelope().src();
+        let checksum = checksum::compute_with_ipaddr(self.checksum(), &old_ip, &src_ip)?;
+        self.envelope().set_src(src_ip)?;
+        self.set_checksum(checksum);
+        Ok(())
+    }
+
+    /// Sets the layer-3 destination address and recomputes the checksum
+    #[inline]
+    pub fn set_dst_ip(&self, dst_ip: IpAddr) -> Result<()> {
+        let old_ip = self.envelope().dst();
+        let checksum = checksum::compute_with_ipaddr(self.checksum(), &old_ip, &dst_ip)?;
+        self.envelope().set_dst(dst_ip)?;
+        self.set_checksum(checksum);
+        Ok(())
     }
 }
 
@@ -464,6 +485,7 @@ impl<E: IpPacket> Packet for Tcp<E> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use std::net::{Ipv4Addr, Ipv6Addr};
     use dpdk_test;
     use packets::{Ethernet, RawPacket};
     use packets::ip::v4::Ipv4;
@@ -569,6 +591,31 @@ pub mod tests {
             assert_eq!(3464, flow.src_port());
             assert_eq!(1024, flow.dst_port());
             assert_eq!(ProtocolNumbers::Tcp, flow.protocol());
+        }
+    }
+
+    #[test]
+    fn set_src_dst_ip() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+            let tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
+
+            let old_checksum = tcp.checksum();
+            let new_ip = Ipv4Addr::new(10, 0, 0, 0);
+            assert!(tcp.set_src_ip(new_ip.into()).is_ok());
+            assert!(tcp.checksum() != old_checksum);
+            assert_eq!(new_ip.to_string(), tcp.envelope().src().to_string());
+
+            let old_checksum = tcp.checksum();
+            let new_ip = Ipv4Addr::new(20, 0, 0, 0);
+            assert!(tcp.set_dst_ip(new_ip.into()).is_ok());
+            assert!(tcp.checksum() != old_checksum);
+            assert_eq!(new_ip.to_string(), tcp.envelope().dst().to_string());
+
+            // can't set v6 addr on a v4 packet
+            assert!(tcp.set_src_ip(Ipv6Addr::UNSPECIFIED.into()).is_err());
         }
     }
 

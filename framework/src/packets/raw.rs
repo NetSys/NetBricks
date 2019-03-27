@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn raw_packet_from_bytes() {
         use packets::udp::tests::UDP_PACKET;
-        
+
         dpdk_test! {
             assert!(RawPacket::from_bytes(&UDP_PACKET).is_ok());
         }
