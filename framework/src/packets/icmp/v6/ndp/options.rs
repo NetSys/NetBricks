@@ -1,7 +1,7 @@
+use packets::ethernet::MacAddr;
+use packets::Fixed;
 use std::fmt;
 use std::net::Ipv6Addr;
-use packets::Fixed;
-use packets::ethernet::MacAddr;
 
 const OPT_SOURCE_LINK_LAYER_ADDR: u8 = 1;
 const OPT_TARGET_LINK_LAYER_ADDR: u8 = 2;
@@ -47,7 +47,7 @@ pub trait NdpOption: Fixed {
 pub struct SourceLinkLayerAddress {
     option_type: u8,
     length: u8,
-    addr: MacAddr
+    addr: MacAddr,
 }
 
 impl SourceLinkLayerAddress {
@@ -72,7 +72,7 @@ impl Default for SourceLinkLayerAddress {
         SourceLinkLayerAddress {
             option_type: OPT_SOURCE_LINK_LAYER_ADDR,
             length: 1,
-            addr: Default::default()
+            addr: Default::default(),
         }
     }
 }
@@ -102,7 +102,7 @@ impl NdpOption for SourceLinkLayerAddress {
 pub struct TargetLinkLayerAddress {
     option_type: u8,
     length: u8,
-    addr: MacAddr
+    addr: MacAddr,
 }
 
 impl TargetLinkLayerAddress {
@@ -127,7 +127,7 @@ impl Default for TargetLinkLayerAddress {
         TargetLinkLayerAddress {
             option_type: OPT_TARGET_LINK_LAYER_ADDR,
             length: 1,
-            addr: Default::default()
+            addr: Default::default(),
         }
     }
 }
@@ -249,7 +249,7 @@ pub struct PrefixInformation {
     valid_lifetime: u32,
     preferred_lifetime: u32,
     reserved: u32,
-    prefix: Ipv6Addr
+    prefix: Ipv6Addr,
 }
 
 impl PrefixInformation {
@@ -339,7 +339,7 @@ impl Default for PrefixInformation {
             valid_lifetime: 0,
             preferred_lifetime: 0,
             reserved: 0,
-            prefix: Ipv6Addr::UNSPECIFIED
+            prefix: Ipv6Addr::UNSPECIFIED,
         }
     }
 }
@@ -397,7 +397,7 @@ pub struct Mtu {
     option_type: u8,
     length: u8,
     reserved: u16,
-    mtu: u32
+    mtu: u32,
 }
 
 impl Mtu {
@@ -420,7 +420,7 @@ impl Default for Mtu {
             option_type: OPT_MTU,
             length: 1,
             reserved: 0,
-            mtu: 0
+            mtu: 0,
         }
     }
 }

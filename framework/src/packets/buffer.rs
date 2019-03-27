@@ -1,8 +1,8 @@
 use common::Result;
 use failure::Fail;
-use std::slice;
 use native::zcsi::MBuf;
 use packets::Fixed;
+use std::slice;
 
 /// Errors related to DPDK message buffer access
 #[derive(Debug, Fail)]
@@ -103,7 +103,7 @@ pub fn realloc(mbuf: *mut MBuf, offset: usize, len: isize) -> Result<()> {
 pub fn write_item<T: Fixed>(mbuf: *mut MBuf, offset: usize, item: &T) -> Result<*mut T> {
     unsafe {
         if (*mbuf).data_len() >= offset + T::size() {
-            let src = item as (* const T);
+            let src = item as (*const T);
             let dst = (*mbuf).data_address(offset) as (*mut T);
             std::ptr::copy_nonoverlapping(src, dst, 1);
             read_item::<T>(mbuf, offset)

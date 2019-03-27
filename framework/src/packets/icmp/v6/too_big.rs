@@ -1,6 +1,6 @@
-use std::fmt;
-use packets::ip::v6::Ipv6Packet;
 use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, Icmpv6Type, Icmpv6Types};
+use packets::ip::v6::Ipv6Packet;
+use std::fmt;
 
 /*  From https://tools.ietf.org/html/rfc4443#section-3.2
     Packet Too Big Message
@@ -23,7 +23,7 @@ use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, Icmpv6Type, Icmpv6T
 #[derive(Default, Debug)]
 #[repr(C, packed)]
 pub struct PacketTooBig {
-    mtu: u32
+    mtu: u32,
 }
 
 impl Icmpv6Payload for PacketTooBig {

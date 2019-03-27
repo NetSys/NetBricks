@@ -17,7 +17,7 @@ pub mod tcp;
 pub mod udp;
 
 /// Type that has a fixed size
-/// 
+///
 /// Size of the structs are used for buffer bound check when parsing packets
 pub trait Fixed {
     /// Returns the size of the type
@@ -32,9 +32,9 @@ impl<T> Fixed for T {
 }
 
 /// Fixed packet header marker trait
-/// 
-/// Some packet headers are variable in length, such as the IPv6 
-/// segment routing header. The fixed portion can be statically 
+///
+/// Some packet headers are variable in length, such as the IPv6
+/// segment routing header. The fixed portion can be statically
 /// defined, but the variable portion has to be parsed separately.
 pub trait Header: Fixed {}
 
@@ -58,7 +58,7 @@ pub trait Packet {
     fn header(&self) -> &mut Self::Header;
 
     /// Returns the length of the packet header
-    /// 
+    ///
     /// Includes both the fixed and variable portion of the header
     fn header_len(&self) -> usize;
 
@@ -82,23 +82,33 @@ pub trait Packet {
 
     /// Parses the payload as packet of `T`
     #[inline]
-    fn parse<T: Packet<Envelope=Self>>(self) -> Result<T> where Self: Sized {
+    fn parse<T: Packet<Envelope = Self>>(self) -> Result<T>
+    where
+        Self: Sized,
+    {
         T::do_parse(self)
     }
 
     // the public `parse::<T>` delegates to this function
     #[doc(hidden)]
-    fn do_parse(envelope: Self::Envelope) -> Result<Self> where Self: Sized;
+    fn do_parse(envelope: Self::Envelope) -> Result<Self>
+    where
+        Self: Sized;
 
     /// Pushes a new packet `T` as the payload
     #[inline]
-    fn push<T: Packet<Envelope=Self>>(self) -> Result<T> where Self: Sized {
+    fn push<T: Packet<Envelope = Self>>(self) -> Result<T>
+    where
+        Self: Sized,
+    {
         T::do_push(self)
     }
 
     // the public `push::<T>` delegates to this function
     #[doc(hidden)]
-    fn do_push(envelope: Self::Envelope) -> Result<Self> where Self: Sized;
+    fn do_push(envelope: Self::Envelope) -> Result<Self>
+    where
+        Self: Sized;
 }
 
 /// Error when packet failed to parse

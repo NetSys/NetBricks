@@ -1,14 +1,14 @@
 use common::Result;
 use failure::Fail;
+use packets::Packet;
 use std::fmt;
 use std::net::IpAddr;
-use packets::Packet;
 
 pub mod v4;
 pub mod v6;
 
 /// Assigned internet protocol number
-/// 
+///
 /// From https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C, packed)]
@@ -49,7 +49,7 @@ impl fmt::Display for ProtocolNumber {
                 &ProtocolNumbers::Udp => "UDP".to_string(),
                 &ProtocolNumbers::Ipv6Route => "IPv6 Route".to_string(),
                 &ProtocolNumbers::Icmpv6 => "ICMPv6".to_string(),
-                _ => format!("0x{:02x}", self.0)
+                _ => format!("0x{:02x}", self.0),
             }
         )
     }
@@ -58,7 +58,7 @@ impl fmt::Display for ProtocolNumber {
 /// Common behaviors shared by IPv4 and IPv6 packets
 pub trait IpPacket: Packet {
     /// Returns the assigned protocol number of the header immediately follows
-    /// 
+    ///
     /// For IPv4 headers, this should be the `protocol` field.
     /// For IPv6 and extension headers, this should be the `next header` field.
     fn next_proto(&self) -> ProtocolNumber;
@@ -67,8 +67,8 @@ pub trait IpPacket: Packet {
     fn src(&self) -> IpAddr;
 
     /// Sets the source IP address
-    /// 
-    /// This lets an upper layer packet like TCP set the source IP address 
+    ///
+    /// This lets an upper layer packet like TCP set the source IP address
     /// on a lower layer packet.
     fn set_src(&self, src: IpAddr) -> Result<()>;
 
@@ -76,8 +76,8 @@ pub trait IpPacket: Packet {
     fn dst(&self) -> IpAddr;
 
     /// Sets the destination IP address
-    /// 
-    /// This lets an upper layer packet like TCP set the destination IP address 
+    ///
+    /// This lets an upper layer packet like TCP set the destination IP address
     /// on a lower layer packet.
     fn set_dst(&self, dst: IpAddr) -> Result<()>;
 
@@ -91,17 +91,23 @@ pub struct Flow {
     dst_ip: IpAddr,
     src_port: u16,
     dst_port: u16,
-    protocol: ProtocolNumber
+    protocol: ProtocolNumber,
 }
 
 impl Flow {
-    pub fn new(src_ip: IpAddr, dst_ip: IpAddr, src_port: u16, dst_port: u16, protocol: ProtocolNumber) -> Self {
+    pub fn new(
+        src_ip: IpAddr,
+        dst_ip: IpAddr,
+        src_port: u16,
+        dst_port: u16,
+        protocol: ProtocolNumber,
+    ) -> Self {
         Flow {
             src_ip,
             dst_ip,
             src_port,
             dst_port,
-            protocol
+            protocol,
         }
     }
 

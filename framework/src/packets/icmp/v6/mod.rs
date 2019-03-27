@@ -1,14 +1,14 @@
 use common::Result;
 use native::zcsi::MBuf;
-use std::fmt;
-use packets::{buffer, Fixed, Packet, Header, ParseError};
-use packets::ip::ProtocolNumbers;
 use packets::ip::v6::Ipv6Packet;
+use packets::ip::ProtocolNumbers;
+use packets::{buffer, Fixed, Header, Packet, ParseError};
+use std::fmt;
 
-pub use self::ndp::*;
 pub use self::ndp::options::*;
 pub use self::ndp::router_advert::*;
 pub use self::ndp::router_solicit::*;
+pub use self::ndp::*;
 pub use self::too_big::*;
 
 pub mod ndp;
@@ -75,7 +75,7 @@ impl fmt::Display for Icmpv6Type {
                 &Icmpv6Types::NeighborSolicitation => "Neighbor Solicitation".to_string(),
                 &Icmpv6Types::NeighborAdvertisement => "Neighbor Advertisement".to_string(),
                 &Icmpv6Types::Redirect => "Redirect".to_string(),
-                _ => format!("{}", self.0)
+                _ => format!("{}", self.0),
             }
         )
     }
@@ -87,17 +87,17 @@ impl fmt::Display for Icmpv6Type {
 pub struct Icmpv6Header {
     msg_type: u8,
     code: u8,
-    checksum: u16
+    checksum: u16,
 }
 
 impl Header for Icmpv6Header {}
 
 /// ICMPv6 packet payload
-/// 
-/// The ICMPv6 packet may contain a variable length payload. This 
-/// is only the fixed portion. The variable length portion has to 
+///
+/// The ICMPv6 packet may contain a variable length payload. This
+/// is only the fixed portion. The variable length portion has to
 /// be parsed separately.
-pub trait Icmpv6Payload : Fixed + Default {
+pub trait Icmpv6Payload: Fixed + Default {
     /// Returns the ICMPv6 message type that corresponds to the payload
     fn msg_type() -> Icmpv6Type;
 }
@@ -111,7 +111,7 @@ impl Icmpv6Payload for () {
 }
 
 /// Common behaviors shared by ICMPv6 packets
-pub trait Icmpv6Packet<P: Icmpv6Payload>: Packet<Header=Icmpv6Header> {
+pub trait Icmpv6Packet<P: Icmpv6Payload>: Packet<Header = Icmpv6Header> {
     /// Returns the fixed payload
     fn payload(&self) -> &mut P;
 
@@ -148,15 +148,15 @@ pub struct Icmpv6<E: Ipv6Packet, P: Icmpv6Payload> {
     mbuf: *mut MBuf,
     offset: usize,
     header: *mut Icmpv6Header,
-    payload: *mut P
+    payload: *mut P,
 }
 
 /// ICMPv6 packet with unit payload
-/// 
+///
 /// Use unit payload `()` when the payload type is not known yet.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```
 /// if ipv6.next_header() == NextHeaders::Icmpv6 {
 ///     let icmpv6 = ipv6.parse::<Icmpv6<()>>().unwrap();
@@ -164,9 +164,9 @@ pub struct Icmpv6<E: Ipv6Packet, P: Icmpv6Payload> {
 /// ```
 impl<E: Ipv6Packet> Icmpv6<E, ()> {
     /// Downcasts from unit payload to typed payload
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```
     /// if icmpv6.msg_type() == Icmpv6Types::RouterAdvertisement {
     ///     let advert = icmpv6.downcast::<RouterAdvertisement>().unwrap();
@@ -237,7 +237,7 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
             mbuf,
             offset,
             header,
-            payload
+            payload,
         })
     }
 
@@ -249,8 +249,9 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
 
         buffer::alloc(mbuf, offset, Self::Header::size() + P::size())?;
         let header = buffer::write_item::<Self::Header>(mbuf, offset, &Default::default())?;
-        let payload = buffer::write_item::<P>(mbuf, offset + Self::Header::size(), &Default::default())?;
-        
+        let payload =
+            buffer::write_item::<P>(mbuf, offset + Self::Header::size(), &Default::default())?;
+
         unsafe {
             (*header).msg_type = P::msg_type().0;
         }
@@ -260,7 +261,7 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
             mbuf,
             offset,
             header,
-            payload
+            payload,
         })
     }
 }
@@ -270,7 +271,7 @@ pub enum Icmpv6Message<E: Ipv6Packet> {
     RouterSolicitation(Icmpv6<E, RouterSolicitation>),
     RouterAdvertisement(Icmpv6<E, RouterAdvertisement>),
     /// an ICMPv6 message with undefined payload
-    Undefined(Icmpv6<E, ()>)
+    Undefined(Icmpv6<E, ()>),
 }
 
 /// ICMPv6 helper functions for IPv6 packets
@@ -278,9 +279,9 @@ pub trait Icmpv6Parse {
     type Envelope: Ipv6Packet;
 
     /// Parses the payload as an ICMPv6 packet
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```
     /// match ipv6.parse_icmpv6()? {
     ///     Icmpv6Message::RouterAdvertisement(advert) => {
@@ -304,12 +305,12 @@ impl<T: Ipv6Packet> Icmpv6Parse for T {
                 Icmpv6Types::RouterAdvertisement => {
                     let packet = icmpv6.downcast::<RouterAdvertisement>()?;
                     Ok(Icmpv6Message::RouterAdvertisement(packet))
-                },
+                }
                 Icmpv6Types::RouterSolicitation => {
                     let packet = icmpv6.downcast::<RouterSolicitation>()?;
                     Ok(Icmpv6Message::RouterSolicitation(packet))
-                },
-                _ => Ok(Icmpv6Message::Undefined(icmpv6))
+                }
+                _ => Ok(Icmpv6Message::Undefined(icmpv6)),
             }
         } else {
             Err(ParseError::new("Packet is not ICMPv6").into())
@@ -320,9 +321,9 @@ impl<T: Ipv6Packet> Icmpv6Parse for T {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use packets::{RawPacket, Ethernet};
-    use packets::ip::v6::Ipv6;
     use dpdk_test;
+    use packets::ip::v6::Ipv6;
+    use packets::{Ethernet, RawPacket};
 
     #[rustfmt::skip]
     const ICMPV6_PACKET: [u8; 62] = [
@@ -371,7 +372,7 @@ mod tests {
     #[test]
     fn downcast_icmpv6() {
         use packets::icmp::v6::ndp::router_advert::tests::ROUTER_ADVERT_PACKET;
-        
+
         dpdk_test! {
             let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();

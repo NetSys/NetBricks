@@ -1,7 +1,7 @@
 use common::Result;
 use native::zcsi::MBuf;
+use packets::{buffer, Fixed, Header, Packet, RawPacket};
 use std::fmt;
-use packets::{buffer, Fixed, Packet, Header, RawPacket};
 
 /* Ethernet Type II Frame
 
@@ -81,7 +81,7 @@ impl fmt::Display for EtherType {
             match self {
                 &EtherTypes::Ipv4 => "IPv4".to_string(),
                 &EtherTypes::Ipv6 => "IPv6".to_string(),
-                _ => format!("0x{:04x}", self.0)
+                _ => format!("0x{:04x}", self.0),
             }
         )
     }
@@ -93,7 +93,7 @@ impl fmt::Display for EtherType {
 pub struct EthernetHeader {
     dst: MacAddr,
     src: MacAddr,
-    ether_type: u16
+    ether_type: u16,
 }
 
 impl Header for EthernetHeader {}
@@ -103,7 +103,7 @@ pub struct Ethernet {
     envelope: RawPacket,
     mbuf: *mut MBuf,
     offset: usize,
-    header: *mut EthernetHeader
+    header: *mut EthernetHeader,
 }
 
 impl Ethernet {
@@ -140,7 +140,13 @@ impl Ethernet {
 
 impl fmt::Display for Ethernet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} > {}, ether_type: {}", self.src(), self.dst(), self.ether_type())
+        write!(
+            f,
+            "{} > {}, ether_type: {}",
+            self.src(),
+            self.dst(),
+            self.ether_type()
+        )
     }
 }
 
@@ -184,7 +190,7 @@ impl Packet for Ethernet {
             envelope,
             mbuf,
             offset,
-            header
+            header,
         })
     }
 
@@ -201,7 +207,7 @@ impl Packet for Ethernet {
             envelope,
             mbuf,
             offset,
-            header
+            header,
         })
     }
 }
@@ -218,9 +224,18 @@ mod tests {
 
     #[test]
     fn mac_addr_to_string() {
-        assert_eq!("00:00:00:00:00:00", MacAddr::new(0, 0, 0, 0, 0, 0).to_string());
-        assert_eq!("ff:ff:ff:ff:ff:ff", MacAddr::new(255, 255, 255, 255, 255, 255).to_string());
-        assert_eq!("12:34:56:ab:cd:ef", MacAddr::new(0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF).to_string());
+        assert_eq!(
+            "00:00:00:00:00:00",
+            MacAddr::new(0, 0, 0, 0, 0, 0).to_string()
+        );
+        assert_eq!(
+            "ff:ff:ff:ff:ff:ff",
+            MacAddr::new(255, 255, 255, 255, 255, 255).to_string()
+        );
+        assert_eq!(
+            "12:34:56:ab:cd:ef",
+            MacAddr::new(0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF).to_string()
+        );
     }
 
     #[test]

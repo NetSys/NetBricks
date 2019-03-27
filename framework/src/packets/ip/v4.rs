@@ -1,10 +1,10 @@
 use common::Result;
 use native::zcsi::MBuf;
+use packets::ip::{IpAddrMismatchError, IpPacket, ProtocolNumber};
+use packets::{buffer, Ethernet, Fixed, Header, Packet};
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr};
 use std::slice;
-use packets::{buffer, Ethernet, Fixed, Header, Packet};
-use packets::ip::{IpPacket, ProtocolNumber, IpAddrMismatchError};
 
 /*  From (https://tools.ietf.org/html/rfc791#section-3.1)
     Internet Datagram Header
@@ -33,19 +33,19 @@ use packets::ip::{IpPacket, ProtocolNumber, IpAddrMismatchError};
         Internet Header Length is the length of the internet header in 32
         bit words, and thus points to the beginning of the data.  Note that
         the minimum value for a correct header is 5.
-    
+
     Type of Service:  8 bits
         The Type of Service provides an indication of the abstract
         parameters of the quality of service desired.
-    
+
     Total Length:  16 bits
         Total Length is the length of the datagram, measured in octets,
         including internet header and data.
-    
+
     Identification:  16 bits
         An identifying value assigned by the sender to aid in assembling the
         fragments of a datagram.
-    
+
     Flags:  3 bits
         Various Control Flags.
 
@@ -58,7 +58,7 @@ use packets::ip::{IpPacket, ProtocolNumber, IpAddrMismatchError};
         |   | D | M |
         | 0 | F | F |
         +---+---+---+
-    
+
     Fragment Offset:  13 bits
         This field indicates where in the datagram this fragment belongs.
         The fragment offset is measured in units of 8 octets (64 bits).  The
@@ -80,18 +80,18 @@ use packets::ip::{IpPacket, ProtocolNumber, IpAddrMismatchError};
         This field indicates the next level protocol used in the data
         portion of the internet datagram.  The values for various protocols
         are specified in "Assigned Numbers".
-    
+
     Header Checksum:  16 bits
         A checksum on the header only.  Since some header fields change
         (e.g., time to live), this is recomputed and verified at each point
         that the internet header is processed.
-    
+
     Source Address:  32 bits
         The source address.
 
     Destination Address:  32 bits
         The destination address.
-    
+
     Options:  variable
         The options may appear or not in datagrams.  They must be
         implemented by all IP modules (host and gateways).  What is optional
@@ -100,8 +100,8 @@ use packets::ip::{IpPacket, ProtocolNumber, IpAddrMismatchError};
 */
 
 /// IPv4 header
-/// 
-/// The header only include the fixed portion of the IPv4 header. 
+///
+/// The header only include the fixed portion of the IPv4 header.
 /// Options are parsed separately.
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -115,7 +115,7 @@ pub struct Ipv4Header {
     protocol: u8,
     checksum: u16,
     src: Ipv4Addr,
-    dst: Ipv4Addr
+    dst: Ipv4Addr,
 }
 
 impl Default for Ipv4Header {
@@ -142,7 +142,7 @@ pub struct Ipv4 {
     envelope: Ethernet,
     mbuf: *mut MBuf,
     offset: usize,
-    header: *mut Ipv4Header
+    header: *mut Ipv4Header,
 }
 
 impl Ipv4 {
@@ -300,7 +300,7 @@ impl Packet for Ipv4 {
             envelope,
             mbuf,
             offset,
-            header
+            header,
         })
     }
 
@@ -317,7 +317,7 @@ impl Packet for Ipv4 {
             envelope,
             mbuf,
             offset,
-            header
+            header,
         })
     }
 }
@@ -339,8 +339,8 @@ impl IpPacket for Ipv4 {
             IpAddr::V4(addr) => {
                 self.set_src(addr);
                 Ok(())
-            },
-            _ => Err(IpAddrMismatchError.into())
+            }
+            _ => Err(IpAddrMismatchError.into()),
         }
     }
 
@@ -355,13 +355,13 @@ impl IpPacket for Ipv4 {
             IpAddr::V4(addr) => {
                 self.set_dst(addr);
                 Ok(())
-            },
-            _ => Err(IpAddrMismatchError.into())
+            }
+            _ => Err(IpAddrMismatchError.into()),
         }
     }
 
     /// Returns the IPv4 pseudo-header sum
-    /// 
+    ///
     ///  0      7 8     15 16    23 24    31
     /// +--------+--------+--------+--------+
     /// |          source address           |
@@ -373,16 +373,18 @@ impl IpPacket for Ipv4 {
     #[inline]
     fn pseudo_header_sum(&self, packet_len: u16, protocol: ProtocolNumber) -> u16 {
         // a bit of unsafe magic to cast [u8; 4] to [u16; 2]
-        let src = unsafe { slice::from_raw_parts((&self.src().octets()).as_ptr() as *const u16, 2) };
-        let dst = unsafe { slice::from_raw_parts((&self.dst().octets()).as_ptr() as *const u16, 2) };
+        let src =
+            unsafe { slice::from_raw_parts((&self.src().octets()).as_ptr() as *const u16, 2) };
+        let dst =
+            unsafe { slice::from_raw_parts((&self.dst().octets()).as_ptr() as *const u16, 2) };
 
-        let mut sum = src[0] as u32 + 
-            src[1] as u32 +
-            dst[0] as u32 + 
-            dst[1] as u32 +
-            protocol.0 as u32 + 
-            packet_len as u32;
-        
+        let mut sum = src[0] as u32
+            + src[1] as u32
+            + dst[0] as u32
+            + dst[1] as u32
+            + protocol.0 as u32
+            + packet_len as u32;
+
         while sum >> 16 != 0 {
             sum = (sum >> 16) + (sum & 0xFFFF);
         }
@@ -395,8 +397,8 @@ impl IpPacket for Ipv4 {
 mod tests {
     use super::*;
     use dpdk_test;
-    use packets::{Ethernet, RawPacket};
     use packets::ip::ProtocolNumbers;
+    use packets::{Ethernet, RawPacket};
 
     #[test]
     fn size_of_ipv4_header() {
@@ -406,7 +408,7 @@ mod tests {
     #[test]
     fn parse_ipv4_packet() {
         use packets::udp::tests::UDP_PACKET;
-        
+
         dpdk_test! {
             let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();

@@ -1,8 +1,8 @@
 use common::Result;
 use native::zcsi::MBuf;
-use std::fmt;
-use packets::{buffer, Fixed, Header, Packet};
 use packets::ip::{Flow, IpPacket, ProtocolNumbers};
+use packets::{buffer, Fixed, Header, Packet};
+use std::fmt;
 
 /*  From (https://tools.ietf.org/html/rfc768)
     User Datagram Header Format
@@ -63,7 +63,7 @@ pub struct UdpHeader {
     src_port: u16,
     dst_port: u16,
     length: u16,
-    checksum: u16
+    checksum: u16,
 }
 
 impl Header for UdpHeader {}
@@ -73,7 +73,7 @@ pub struct Udp<E: IpPacket> {
     envelope: E,
     mbuf: *mut MBuf,
     offset: usize,
-    header: *mut UdpHeader
+    header: *mut UdpHeader,
 }
 
 impl<E: IpPacket> Udp<E> {
@@ -124,7 +124,7 @@ impl<E: IpPacket> Udp<E> {
             self.envelope().dst(),
             self.src_port(),
             self.dst_port(),
-            ProtocolNumbers::Udp
+            ProtocolNumbers::Udp,
         )
     }
 }
@@ -182,7 +182,7 @@ impl<E: IpPacket> Packet for Udp<E> {
             envelope,
             mbuf,
             offset,
-            header
+            header,
         })
     }
 
@@ -199,7 +199,7 @@ impl<E: IpPacket> Packet for Udp<E> {
             envelope,
             mbuf,
             offset,
-            header
+            header,
         })
     }
 }
@@ -208,8 +208,8 @@ impl<E: IpPacket> Packet for Udp<E> {
 pub mod tests {
     use super::*;
     use dpdk_test;
-    use packets::{Ethernet, RawPacket};
     use packets::ip::v4::Ipv4;
+    use packets::{Ethernet, RawPacket};
 
     #[rustfmt::skip]
     pub const UDP_PACKET: [u8; 52] = [

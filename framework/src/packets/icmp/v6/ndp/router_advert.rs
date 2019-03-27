@@ -1,6 +1,6 @@
-use std::fmt;
-use packets::ip::v6::Ipv6Packet;
 use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, Icmpv6Type, Icmpv6Types, NdpPayload};
+use packets::ip::v6::Ipv6Packet;
+use std::fmt;
 
 /*  From (https://tools.ietf.org/html/rfc4861#section-4.2)
     Router Advertisement Message Format
@@ -110,7 +110,7 @@ pub struct RouterAdvertisement {
     flags: u8,
     router_lifetime: u16,
     reachable_time: u32,
-    retrans_timer: u32
+    retrans_timer: u32,
 }
 
 impl Icmpv6Payload for RouterAdvertisement {
@@ -224,10 +224,13 @@ impl<E: Ipv6Packet> Icmpv6Packet<RouterAdvertisement> for Icmpv6<E, RouterAdvert
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use packets::{Fixed, Packet, RawPacket, Ethernet};
-    use packets::ip::v6::Ipv6;
-    use packets::icmp::v6::{Icmpv6Types, Icmpv6Message, Icmpv6Parse, NdpPacket, SourceLinkLayerAddress, TargetLinkLayerAddress};
     use dpdk_test;
+    use packets::icmp::v6::{
+        Icmpv6Message, Icmpv6Parse, Icmpv6Types, NdpPacket, SourceLinkLayerAddress,
+        TargetLinkLayerAddress,
+    };
+    use packets::ip::v6::Ipv6;
+    use packets::{Ethernet, Fixed, Packet, RawPacket};
 
     #[rustfmt::skip]
     pub const ROUTER_ADVERT_PACKET: [u8; 142] = [
@@ -325,7 +328,7 @@ pub mod tests {
             let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            
+
             if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
                 assert!(advert.find_option::<TargetLinkLayerAddress>().is_none());
             } else {

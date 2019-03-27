@@ -1,6 +1,6 @@
 use packets::buffer;
-use packets::ip::v6::Ipv6Packet;
 use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, NdpOption};
+use packets::ip::v6::Ipv6Packet;
 
 pub mod options;
 pub mod router_advert;
@@ -10,7 +10,7 @@ pub mod router_solicit;
 pub trait NdpPayload: Icmpv6Payload {}
 
 /// Common behaviors shared by NDP packets
-/// 
+///
 /// NDP packets are also ICMPv6 packets.
 pub trait NdpPacket<P: NdpPayload>: Icmpv6Packet<P> {
     /// finds a NDP option in the payload by option type
@@ -28,9 +28,9 @@ pub trait NdpPacket<P: NdpPayload>: Icmpv6Packet<P> {
                 let [option_type, length] = *(buffer::read_item::<[u8; 2]>(mbuf, offset).unwrap());
 
                 if option_type == O::option_type() {
-                    return Some(&mut (*(buffer::read_item::<O>(mbuf, offset).unwrap())))
+                    return Some(&mut (*(buffer::read_item::<O>(mbuf, offset).unwrap())));
                 } else if length == 0 {
-                    return None    // TODO: should we error?
+                    return None; // TODO: should we error?
                 } else {
                     let length = (length * 8) as usize;
                     offset += length;

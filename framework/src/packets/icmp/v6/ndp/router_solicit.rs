@@ -1,6 +1,6 @@
-use std::fmt;
-use packets::ip::v6::Ipv6Packet;
 use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, Icmpv6Type, Icmpv6Types, NdpPayload};
+use packets::ip::v6::Ipv6Packet;
+use std::fmt;
 
 /*  From (https://tools.ietf.org/html/rfc4861#section-4.1)
     Router Solicitation Message Format
@@ -18,7 +18,7 @@ use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, Icmpv6Type, Icmpv6T
     Reserved       This field is unused.  It MUST be initialized to
                    zero by the sender and MUST be ignored by the
                    receiver.
-    
+
    Valid Options:
 
     Source link-layer address
@@ -32,7 +32,7 @@ use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, Icmpv6Type, Icmpv6T
 #[derive(Default, Debug)]
 #[repr(C, packed)]
 pub struct RouterSolicitation {
-    reserved: u32
+    reserved: u32,
 }
 
 impl Icmpv6Payload for RouterSolicitation {
@@ -72,10 +72,10 @@ impl<E: Ipv6Packet> Icmpv6Packet<RouterSolicitation> for Icmpv6<E, RouterSolicit
 #[cfg(test)]
 mod tests {
     use super::*;
-    use packets::{Fixed, Packet, RawPacket, Ethernet};
-    use packets::ip::v6::Ipv6;
-    use packets::icmp::v6::{Icmpv6Message, Icmpv6Parse, Icmpv6Types};
     use dpdk_test;
+    use packets::icmp::v6::{Icmpv6Message, Icmpv6Parse, Icmpv6Types};
+    use packets::ip::v6::Ipv6;
+    use packets::{Ethernet, Fixed, Packet, RawPacket};
 
     #[rustfmt::skip]
     const ROUTER_SOLICIT_PACKET: [u8; 70] = [
