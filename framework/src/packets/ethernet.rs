@@ -216,6 +216,16 @@ impl Packet for Ethernet {
         buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
         Ok(self.envelope)
     }
+
+    #[inline]
+    fn cascade(&self) {
+        self.envelope().cascade();
+    }
+
+    #[inline]
+    fn deparse(self) -> Self::Envelope {
+        self.envelope
+    }
 }
 
 #[cfg(test)]

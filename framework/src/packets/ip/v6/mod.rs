@@ -71,7 +71,7 @@ pub trait Ipv6Packet: IpPacket {}
 #[repr(C)]
 pub struct Ipv6Header {
     version_to_flow_label: u32,
-    payload_len: u16,
+    payload_length: u16,
     next_header: u8,
     hop_limit: u8,
     src: Ipv6Addr,
@@ -82,7 +82,7 @@ impl Default for Ipv6Header {
     fn default() -> Ipv6Header {
         Ipv6Header {
             version_to_flow_label: u32::to_be(6 << 28),
-            payload_len: 0,
+            payload_length: 0,
             next_header: 0,
             hop_limit: 0,
             src: Ipv6Addr::UNSPECIFIED,
@@ -136,13 +136,13 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn payload_len(&self) -> u16 {
-        u16::from_be(self.header().payload_len)
+    pub fn payload_length(&self) -> u16 {
+        u16::from_be(self.header().payload_length)
     }
 
     #[inline]
-    pub fn set_payload_len(&self, payload_len: u16) {
-        self.header().payload_len = u16::to_be(payload_len);
+    pub fn set_payload_length(&self, payload_length: u16) {
+        self.header().payload_length = u16::to_be(payload_length);
     }
 
     #[inline]
@@ -268,6 +268,17 @@ impl Packet for Ipv6 {
     fn remove(self) -> Result<Self::Envelope> {
         buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
         Ok(self.envelope)
+    }
+
+    #[inline]
+    fn cascade(&self) {
+        self.set_payload_length(self.payload_len() as u16);
+        self.envelope().cascade();
+    }
+
+    #[inline]
+    fn deparse(self) -> Self::Envelope {
+        self.envelope
     }
 }
 

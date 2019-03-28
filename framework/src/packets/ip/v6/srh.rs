@@ -279,31 +279,28 @@ impl<E: Ipv6Packet> Packet for SegmentRouting<E> {
     #[doc(hidden)]
     #[inline]
     fn do_parse(envelope: Self::Envelope) -> Result<Self> {
-        unsafe {
-            let mbuf = envelope.mbuf();
-            let offset = envelope.payload_offset();
-            let header = buffer::read_item::<Self::Header>(mbuf, offset)?;
+        let mbuf = envelope.mbuf();
+        let offset = envelope.payload_offset();
+        let header = buffer::read_item::<Self::Header>(mbuf, offset)?;
+        let hdr_ext_len = unsafe { (*header).hdr_ext_len };
+        let segments_len = unsafe { (*header).last_entry + 1 };
 
-            let hdr_ext_len = (*header).hdr_ext_len;
-            let segments_len = (*header).last_entry + 1;
+        if hdr_ext_len != 0 && (2 * segments_len == hdr_ext_len) {
+            let segments = buffer::read_slice::<Segment>(
+                mbuf,
+                offset + SegmentRoutingHeader::size(),
+                segments_len as usize,
+            )?;
 
-            if hdr_ext_len != 0 && (2 * segments_len == hdr_ext_len) {
-                let segments = buffer::read_slice::<Segment>(
-                    mbuf,
-                    offset + SegmentRoutingHeader::size(),
-                    segments_len as usize,
-                )?;
-
-                Ok(SegmentRouting {
-                    envelope,
-                    mbuf,
-                    offset,
-                    header,
-                    segments,
-                })
-            } else {
-                Err(ParseError::new("Packet has inconsistent segment list length").into())
-            }
+            Ok(SegmentRouting {
+                envelope,
+                mbuf,
+                offset,
+                header,
+                segments,
+            })
+        } else {
+            Err(ParseError::new("Packet has inconsistent segment list length").into())
         }
     }
 
@@ -335,6 +332,16 @@ impl<E: Ipv6Packet> Packet for SegmentRouting<E> {
     fn remove(self) -> Result<Self::Envelope> {
         buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
         Ok(self.envelope)
+    }
+
+    #[inline]
+    fn cascade(&self) {
+        self.envelope().cascade();
+    }
+
+    #[inline]
+    fn deparse(self) -> Self::Envelope {
+        self.envelope
     }
 }
 
@@ -509,17 +516,24 @@ pub mod tests {
             let packet = RawPacket::from_bytes(&IPV6_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            let ipv6_payload_len = ipv6.payload_len() as usize;
+            let ipv6_payload_len = ipv6.payload_len();
             let srh = ipv6.push::<SegmentRouting<Ipv6>>().unwrap();
 
             assert_eq!(2, srh.hdr_ext_len());
             assert_eq!(1, srh.segments().len());
             assert_eq!(4, srh.routing_type());
-            assert_eq!(SegmentRoutingHeader::size() + Segment::size() + ipv6_payload_len, srh.len());
 
+            // ipv6 payload is srh payload after push
+            assert_eq!(ipv6_payload_len, srh.payload_len());
             // make sure rest of the packet still valid
             let tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
             assert_eq!(36869, tcp.src_port());
+
+            let srh = tcp.deparse();
+            let srh_packet_len = srh.len();
+            srh.cascade();
+            let ipv6 = srh.deparse();
+            assert_eq!(srh_packet_len, ipv6.payload_length() as usize)
         }
     }
 

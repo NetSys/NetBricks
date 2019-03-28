@@ -45,7 +45,7 @@ pub trait Packet {
     /// The outer packet type that encapsulates the packet
     type Envelope: Packet;
 
-    /// Returns the packet that encapsulated this packet
+    /// Returns the packet that encapsulates this packet
     fn envelope(&self) -> &Self::Envelope;
 
     /// Returns a pointer to the DPDK message buffer
@@ -117,6 +117,16 @@ pub trait Packet {
     fn remove(self) -> Result<Self::Envelope>
     where
         Self: Sized;
+
+    /// Cascades the changes recursively through the layers
+    ///
+    /// Some upper layer changes have cascading effects on a lower layer
+    /// packet header. This call recursively ensures such changes are propogated
+    /// through all the layers
+    fn cascade(&self);
+
+    /// Deparses the packet and returns its envelope
+    fn deparse(self) -> Self::Envelope;
 }
 
 /// Error when packet failed to parse

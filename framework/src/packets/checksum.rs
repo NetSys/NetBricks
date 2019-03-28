@@ -30,10 +30,12 @@ pub fn compute(pseudo_header_sum: u16, payload: &[u8]) -> u16 {
         data = &payload[..(len - 1)];
     }
 
-    // a bit of unsafe magic to cast [u8] to [u16]
+    // a bit of unsafe magic to cast [u8] to [u16], and fix endianness later
     let data = unsafe { slice::from_raw_parts(data.as_ptr() as *const u16, len / 2) };
 
-    checksum = data.iter().fold(checksum, |acc, &x| acc + x as u32);
+    checksum = data
+        .iter()
+        .fold(checksum, |acc, &x| acc + u16::from_be(x) as u32);
 
     while checksum >> 16 != 0 {
         checksum = (checksum >> 16) + (checksum & 0xFFFF);
@@ -75,10 +77,11 @@ pub fn compute_with_ipaddr(
 ) -> Result<u16> {
     match (old_value, new_value) {
         (IpAddr::V4(old), IpAddr::V4(new)) => {
-            // a bit of unsafe magic to cast [u8; 4] to [u16; 2]
-            let old = unsafe { slice::from_raw_parts((&old.octets()).as_ptr() as *const u16, 2) };
-            let new = unsafe { slice::from_raw_parts((&new.octets()).as_ptr() as *const u16, 2) };
-            Ok(compute_inc(old_checksum, old, new))
+            let old: u32 = (*old).into();
+            let old = [(old >> 16) as u16, (old & 0xFFFF) as u16];
+            let new: u32 = (*new).into();
+            let new = [(new >> 16) as u16, (new & 0xFFFF) as u16];
+            Ok(compute_inc(old_checksum, &old, &new))
         }
         (IpAddr::V6(old), IpAddr::V6(new)) => {
             Ok(compute_inc(old_checksum, &old.segments(), &new.segments()))

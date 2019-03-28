@@ -4,7 +4,6 @@ use packets::ip::{IpAddrMismatchError, IpPacket, ProtocolNumber};
 use packets::{buffer, Ethernet, Fixed, Header, Packet};
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr};
-use std::slice;
 
 /*  From (https://tools.ietf.org/html/rfc791#section-3.1)
     Internet Datagram Header
@@ -387,6 +386,17 @@ impl Packet for Ipv4 {
         buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
         Ok(self.envelope)
     }
+
+    #[inline]
+    fn cascade(&self) {
+        // TODO: fix length and checksum
+        // self.envelope().cascade();
+    }
+
+    #[inline]
+    fn deparse(self) -> Self::Envelope {
+        self.envelope
+    }
 }
 
 impl IpPacket for Ipv4 {
@@ -440,16 +450,12 @@ impl IpPacket for Ipv4 {
     /// Returns the IPv4 pseudo-header sum
     #[inline]
     fn pseudo_header_sum(&self, packet_len: u16, protocol: ProtocolNumber) -> u16 {
-        // a bit of unsafe magic to cast [u8; 4] to [u16; 2]
-        let src =
-            unsafe { slice::from_raw_parts((&self.src().octets()).as_ptr() as *const u16, 2) };
-        let dst =
-            unsafe { slice::from_raw_parts((&self.dst().octets()).as_ptr() as *const u16, 2) };
-
-        let mut sum = src[0] as u32
-            + src[1] as u32
-            + dst[0] as u32
-            + dst[1] as u32
+        let src: u32 = self.src().into();
+        let dst: u32 = self.dst().into();
+        let mut sum = (src >> 16)
+            + (src & 0xFFFF)
+            + (dst >> 16)
+            + (dst & 0xFFFF)
             + protocol.0 as u32
             + packet_len as u32;
 

@@ -83,7 +83,7 @@ impl<E: IpPacket> Udp<E> {
     }
 
     #[inline]
-    pub fn set_src_port(&mut self, src_port: u16) {
+    pub fn set_src_port(&self, src_port: u16) {
         self.header().src_port = u16::to_be(src_port);
     }
 
@@ -93,7 +93,7 @@ impl<E: IpPacket> Udp<E> {
     }
 
     #[inline]
-    pub fn set_dst_port(&mut self, dst_port: u16) {
+    pub fn set_dst_port(&self, dst_port: u16) {
         self.header().dst_port = u16::to_be(dst_port);
     }
 
@@ -103,7 +103,7 @@ impl<E: IpPacket> Udp<E> {
     }
 
     #[inline]
-    pub fn set_length(&mut self, length: u16) {
+    pub fn set_length(&self, length: u16) {
         self.header().length = u16::to_be(length);
     }
 
@@ -113,7 +113,7 @@ impl<E: IpPacket> Udp<E> {
     }
 
     #[inline]
-    pub fn set_checksum(&mut self, checksum: u16) {
+    pub fn set_checksum(&self, checksum: u16) {
         self.header().checksum = u16::to_be(checksum);
     }
 
@@ -207,6 +207,17 @@ impl<E: IpPacket> Packet for Udp<E> {
     fn remove(self) -> Result<Self::Envelope> {
         buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
         Ok(self.envelope)
+    }
+
+    #[inline]
+    fn cascade(&self) {
+        self.set_length(self.len() as u16);
+        self.envelope().cascade();
+    }
+
+    #[inline]
+    fn deparse(self) -> Self::Envelope {
+        self.envelope
     }
 }
 

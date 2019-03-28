@@ -391,6 +391,23 @@ impl<E: IpPacket> Tcp<E> {
         self.set_checksum(checksum);
         Ok(())
     }
+
+    #[inline]
+    fn compute_checksum(&self) {
+        self.set_checksum(0); // blank out checksum before recompute
+
+        if let Ok(data) = buffer::read_slice(self.mbuf, self.offset, self.len()) {
+            let data = unsafe { &(*data) };
+            let pseudo_header_sum = self
+                .envelope()
+                .pseudo_header_sum(data.len() as u16, ProtocolNumbers::Tcp);
+            let checksum = checksum::compute(pseudo_header_sum, data);
+            self.set_checksum(checksum);
+        } else {
+            // we are reading till the end of buffer, should never run out
+            unreachable!()
+        }
+    }
 }
 
 impl<E: IpPacket> fmt::Display for Tcp<E> {
@@ -485,6 +502,17 @@ impl<E: IpPacket> Packet for Tcp<E> {
     fn remove(self) -> Result<Self::Envelope> {
         buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
         Ok(self.envelope)
+    }
+
+    #[inline]
+    fn cascade(&self) {
+        self.compute_checksum();
+        self.envelope().cascade();
+    }
+
+    #[inline]
+    fn deparse(self) -> Self::Envelope {
+        self.envelope
     }
 }
 
@@ -622,6 +650,20 @@ pub mod tests {
 
             // can't set v6 addr on a v4 packet
             assert!(tcp.set_src_ip(Ipv6Addr::UNSPECIFIED.into()).is_err());
+        }
+    }
+
+    #[test]
+    fn compute_checksum() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+            let tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
+
+            let expected = tcp.checksum();
+            tcp.compute_checksum();
+            assert_eq!(expected, tcp.checksum());
         }
     }
 

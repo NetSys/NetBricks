@@ -270,6 +270,17 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
         buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
         Ok(self.envelope)
     }
+
+    #[inline]
+    fn cascade(&self) {
+        // TODO: compute checksum
+        // self.envelope().cascade();
+    }
+
+    #[inline]
+    fn deparse(self) -> Self::Envelope {
+        self.envelope
+    }
 }
 
 /// An ICMPv6 message with parsed payload

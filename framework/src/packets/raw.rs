@@ -85,6 +85,16 @@ impl Packet for RawPacket {
     fn remove(self) -> Result<Self::Envelope> {
         Ok(self)
     }
+
+    #[inline]
+    fn cascade(&self) {
+        // noop
+    }
+
+    #[inline]
+    fn deparse(self) -> Self::Envelope {
+        self
+    }
 }
 
 #[cfg(test)]
