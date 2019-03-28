@@ -10,8 +10,7 @@ doctest = false
 [dependencies]
 byteorder = "*"
 clippy = { version = ">=0.0.197", optional = true }
-crossbeam = "~0.5"
-crossbeam-utils = "~0.6"
+crossbeam = "=0.4"
 enum_primitive = "0.1.1"
 failure = "0.1.5"
 fnv = "*"

@@ -109,6 +109,14 @@ pub trait Packet {
     fn do_push(envelope: Self::Envelope) -> Result<Self>
     where
         Self: Sized;
+
+    /// Removes this packet's header from the message buffer
+    ///
+    /// The packet's payload becomes the payload of its envelope. The
+    /// result of the removal is not guaranteed to be a valid packet.
+    fn remove(self) -> Result<Self::Envelope>
+    where
+        Self: Sized;
 }
 
 /// Error when packet failed to parse

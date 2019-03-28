@@ -330,6 +330,12 @@ impl<E: Ipv6Packet> Packet for SegmentRouting<E> {
             segments,
         })
     }
+
+    #[inline]
+    fn remove(self) -> Result<Self::Envelope> {
+        buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
+        Ok(self.envelope)
+    }
 }
 
 impl<E: Ipv6Packet> IpPacket for SegmentRouting<E> {
@@ -514,6 +520,21 @@ pub mod tests {
             // make sure rest of the packet still valid
             let tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
             assert_eq!(36869, tcp.src_port());
+        }
+    }
+
+    #[test]
+    fn remove_segment_routing_packet() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&SRH_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            let srh = ipv6.parse::<SegmentRouting<Ipv6>>().unwrap();
+            let ipv6 = srh.remove().unwrap();
+
+            // make sure rest of the packet still valid
+            let tcp = ipv6.parse::<Tcp<Ipv6>>().unwrap();
+            assert_eq!(3464, tcp.src_port());
         }
     }
 }

@@ -264,6 +264,12 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
             payload,
         })
     }
+
+    #[inline]
+    fn remove(self) -> Result<Self::Envelope> {
+        buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
+        Ok(self.envelope)
+    }
 }
 
 /// An ICMPv6 message with parsed payload

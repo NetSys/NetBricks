@@ -210,6 +210,12 @@ impl Packet for Ethernet {
             header,
         })
     }
+
+    #[inline]
+    fn remove(self) -> Result<Self::Envelope> {
+        buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
+        Ok(self.envelope)
+    }
 }
 
 #[cfg(test)]

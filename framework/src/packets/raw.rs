@@ -80,6 +80,11 @@ impl Packet for RawPacket {
     {
         Ok(envelope)
     }
+
+    #[inline]
+    fn remove(self) -> Result<Self::Envelope> {
+        Ok(self)
+    }
 }
 
 #[cfg(test)]

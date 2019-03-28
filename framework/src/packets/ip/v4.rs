@@ -381,6 +381,12 @@ impl Packet for Ipv4 {
             header,
         })
     }
+
+    #[inline]
+    fn remove(self) -> Result<Self::Envelope> {
+        buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
+        Ok(self.envelope)
+    }
 }
 
 impl IpPacket for Ipv4 {
@@ -421,16 +427,17 @@ impl IpPacket for Ipv4 {
         }
     }
 
+    /*   0      7 8     15 16    23 24    31
+        +--------+--------+--------+--------+
+        |          source address           |
+        +--------+--------+--------+--------+
+        |        destination address        |
+        +--------+--------+--------+--------+
+        |  zero  |protocol|  packet length  |
+        +--------+--------+--------+--------+
+    */
+
     /// Returns the IPv4 pseudo-header sum
-    ///
-    ///  0      7 8     15 16    23 24    31
-    /// +--------+--------+--------+--------+
-    /// |          source address           |
-    /// +--------+--------+--------+--------+
-    /// |        destination address        |
-    /// +--------+--------+--------+--------+
-    /// |  zero  |protocol|  packet length  |
-    /// +--------+--------+--------+--------+
     #[inline]
     fn pseudo_header_sum(&self, packet_len: u16, protocol: ProtocolNumber) -> u16 {
         // a bit of unsafe magic to cast [u8; 4] to [u16; 2]

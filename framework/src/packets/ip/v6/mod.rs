@@ -12,7 +12,7 @@ pub mod srh;
 /// Common behaviors shared by IPv6 and extension packets
 pub trait Ipv6Packet: IpPacket {}
 
-/*  (From RFC8200 https://tools.ietf.org/html/rfc8200#section-3)
+/*  From https://tools.ietf.org/html/rfc8200#section-3
     IPv6 Header Format
 
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -263,6 +263,12 @@ impl Packet for Ipv6 {
             header,
         })
     }
+
+    #[inline]
+    fn remove(self) -> Result<Self::Envelope> {
+        buffer::dealloc(self.mbuf, self.offset, self.header_len())?;
+        Ok(self.envelope)
+    }
 }
 
 impl IpPacket for Ipv6 {
@@ -303,30 +309,32 @@ impl IpPacket for Ipv6 {
         }
     }
 
+    /*  https://tools.ietf.org/html/rfc2460#section-8.1
+
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        |                                                               |
+        +                                                               +
+        |                                                               |
+        +                         Source Address                        +
+        |                                                               |
+        +                                                               +
+        |                                                               |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        |                                                               |
+        +                                                               +
+        |                                                               |
+        +                      Destination Address                      +
+        |                                                               |
+        +                                                               +
+        |                                                               |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        |                   Upper-Layer Packet Length                   |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        |                      zero                     |  Next Header  |
+        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    */
+
     /// Returns the IPv6 pseudo-header sum
-    /// https://tools.ietf.org/html/rfc2460#section-8.1
-    ///
-    /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    /// |                                                               |
-    /// +                                                               +
-    /// |                                                               |
-    /// +                         Source Address                        +
-    /// |                                                               |
-    /// +                                                               +
-    /// |                                                               |
-    /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    /// |                                                               |
-    /// +                                                               +
-    /// |                                                               |
-    /// +                      Destination Address                      +
-    /// |                                                               |
-    /// +                                                               +
-    /// |                                                               |
-    /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    /// |                   Upper-Layer Packet Length                   |
-    /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    /// |                      zero                     |  Next Header  |
-    /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     #[inline]
     fn pseudo_header_sum(&self, packet_len: u16, protocol: ProtocolNumber) -> u16 {
         let mut sum = self
