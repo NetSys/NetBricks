@@ -57,7 +57,7 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, PacketTooBig> {
     }
 }
 
-impl<E: Ipv6Packet> Icmpv6Packet<PacketTooBig> for Icmpv6<E, PacketTooBig> {
+impl<E: Ipv6Packet> Icmpv6Packet<E, PacketTooBig> for Icmpv6<E, PacketTooBig> {
     fn payload(&self) -> &mut PacketTooBig {
         unsafe { &mut (*self.payload) }
     }

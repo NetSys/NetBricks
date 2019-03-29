@@ -120,9 +120,9 @@ pub trait Packet {
 
     /// Cascades the changes recursively through the layers
     ///
-    /// Some upper layer changes have cascading effects on a lower layer
-    /// packet header. This call recursively ensures such changes are propogated
-    /// through all the layers
+    /// An upper layer change to message buffer size can have cascading
+    /// effects on a lower layer packet header. This call recursively ensures
+    /// such changes are propogated through all the layers.
     fn cascade(&self);
 
     /// Deparses the packet and returns its envelope

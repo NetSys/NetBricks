@@ -394,7 +394,7 @@ impl<E: IpPacket> Tcp<E> {
 
     #[inline]
     fn compute_checksum(&self) {
-        self.set_checksum(0); // blank out checksum before recompute
+        self.set_checksum(0);
 
         if let Ok(data) = buffer::read_slice(self.mbuf, self.offset, self.len()) {
             let data = unsafe { &(*data) };
@@ -662,7 +662,8 @@ pub mod tests {
             let tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
 
             let expected = tcp.checksum();
-            tcp.compute_checksum();
+            // no payload change but force a checksum recompute anyway
+            tcp.cascade();
             assert_eq!(expected, tcp.checksum());
         }
     }

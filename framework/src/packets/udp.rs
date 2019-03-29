@@ -1,8 +1,9 @@
 use common::Result;
 use native::zcsi::MBuf;
 use packets::ip::{Flow, IpPacket, ProtocolNumbers};
-use packets::{buffer, Fixed, Header, Packet};
+use packets::{buffer, checksum, Fixed, Header, Packet};
 use std::fmt;
+use std::net::IpAddr;
 
 /*  From (https://tools.ietf.org/html/rfc768)
     User Datagram Header Format
@@ -113,8 +114,20 @@ impl<E: IpPacket> Udp<E> {
     }
 
     #[inline]
-    pub fn set_checksum(&self, checksum: u16) {
-        self.header().checksum = u16::to_be(checksum);
+    fn set_checksum(&self, checksum: u16) {
+        // For UDP, if the computed checksum is zero, it is transmitted as
+        // all ones. An all zero transmitted checksum value means that the
+        // transmitter generated no checksum. To set the checksum value to
+        // `0`, use `no_checksum` instead of `set_checksum`.
+        self.header().checksum = match checksum {
+            0 => 0xFFFF,
+            _ => u16::to_be(checksum),
+        }
+    }
+
+    #[inline]
+    fn no_checksum(&self) {
+        self.header().checksum = 0;
     }
 
     #[inline]
@@ -126,6 +139,43 @@ impl<E: IpPacket> Udp<E> {
             self.dst_port(),
             ProtocolNumbers::Udp,
         )
+    }
+
+    /// Sets the layer-3 source address and recomputes the checksum
+    #[inline]
+    pub fn set_src_ip(&self, src_ip: IpAddr) -> Result<()> {
+        let old_ip = self.envelope().src();
+        let checksum = checksum::compute_with_ipaddr(self.checksum(), &old_ip, &src_ip)?;
+        self.envelope().set_src(src_ip)?;
+        self.set_checksum(checksum);
+        Ok(())
+    }
+
+    /// Sets the layer-3 destination address and recomputes the checksum
+    #[inline]
+    pub fn set_dst_ip(&self, dst_ip: IpAddr) -> Result<()> {
+        let old_ip = self.envelope().dst();
+        let checksum = checksum::compute_with_ipaddr(self.checksum(), &old_ip, &dst_ip)?;
+        self.envelope().set_dst(dst_ip)?;
+        self.set_checksum(checksum);
+        Ok(())
+    }
+
+    #[inline]
+    fn compute_checksum(&self) {
+        self.no_checksum();
+
+        if let Ok(data) = buffer::read_slice(self.mbuf, self.offset, self.len()) {
+            let data = unsafe { &(*data) };
+            let pseudo_header_sum = self
+                .envelope()
+                .pseudo_header_sum(data.len() as u16, ProtocolNumbers::Udp);
+            let checksum = checksum::compute(pseudo_header_sum, data);
+            self.set_checksum(checksum);
+        } else {
+            // we are reading till the end of buffer, should never run out
+            unreachable!()
+        }
     }
 }
 
@@ -212,6 +262,7 @@ impl<E: IpPacket> Packet for Udp<E> {
     #[inline]
     fn cascade(&self) {
         self.set_length(self.len() as u16);
+        self.compute_checksum();
         self.envelope().cascade();
     }
 
@@ -227,6 +278,7 @@ pub mod tests {
     use dpdk_test;
     use packets::ip::v4::Ipv4;
     use packets::{Ethernet, RawPacket};
+    use std::net::{Ipv4Addr, Ipv6Addr};
 
     #[rustfmt::skip]
     pub const UDP_PACKET: [u8; 52] = [
@@ -289,6 +341,46 @@ pub mod tests {
             assert_eq!(39376, flow.src_port());
             assert_eq!(1087, flow.dst_port());
             assert_eq!(ProtocolNumbers::Udp, flow.protocol());
+        }
+    }
+
+    #[test]
+    fn set_src_dst_ip() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+            let udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
+
+            let old_checksum = udp.checksum();
+            let new_ip = Ipv4Addr::new(10, 0, 0, 0);
+            assert!(udp.set_src_ip(new_ip.into()).is_ok());
+            assert!(udp.checksum() != old_checksum);
+            assert_eq!(new_ip.to_string(), udp.envelope().src().to_string());
+
+            let old_checksum = udp.checksum();
+            let new_ip = Ipv4Addr::new(20, 0, 0, 0);
+            assert!(udp.set_dst_ip(new_ip.into()).is_ok());
+            assert!(udp.checksum() != old_checksum);
+            assert_eq!(new_ip.to_string(), udp.envelope().dst().to_string());
+
+            // can't set v6 addr on a v4 packet
+            assert!(udp.set_src_ip(Ipv6Addr::UNSPECIFIED.into()).is_err());
+        }
+    }
+
+    #[test]
+    fn compute_checksum() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+            let udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
+
+            let expected = udp.checksum();
+            // no payload change but force a checksum recompute anyway
+            udp.cascade();
+            assert_eq!(expected, udp.checksum());
         }
     }
 

@@ -63,7 +63,7 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, RouterSolicitation> {
     }
 }
 
-impl<E: Ipv6Packet> Icmpv6Packet<RouterSolicitation> for Icmpv6<E, RouterSolicitation> {
+impl<E: Ipv6Packet> Icmpv6Packet<E, RouterSolicitation> for Icmpv6<E, RouterSolicitation> {
     fn payload(&self) -> &mut RouterSolicitation {
         unsafe { &mut (*self.payload) }
     }

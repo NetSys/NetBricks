@@ -2,7 +2,7 @@ use common::Result;
 use native::zcsi::MBuf;
 use packets::ip::v6::Ipv6Packet;
 use packets::ip::ProtocolNumbers;
-use packets::{buffer, Fixed, Header, Packet, ParseError};
+use packets::{buffer, checksum, Fixed, Header, Packet, ParseError};
 use std::fmt;
 
 pub use self::ndp::options::*;
@@ -111,7 +111,9 @@ impl Icmpv6Payload for () {
 }
 
 /// Common behaviors shared by ICMPv6 packets
-pub trait Icmpv6Packet<P: Icmpv6Payload>: Packet<Header = Icmpv6Header> {
+pub trait Icmpv6Packet<E: Ipv6Packet, P: Icmpv6Payload>:
+    Packet<Header = Icmpv6Header, Envelope = E>
+{
     /// Returns the fixed payload
     fn payload(&self) -> &mut P;
 
@@ -126,7 +128,7 @@ pub trait Icmpv6Packet<P: Icmpv6Payload>: Packet<Header = Icmpv6Header> {
     }
 
     #[inline]
-    fn set_code(&mut self, code: u8) {
+    fn set_code(&self, code: u8) {
         self.header().code = code
     }
 
@@ -136,9 +138,20 @@ pub trait Icmpv6Packet<P: Icmpv6Payload>: Packet<Header = Icmpv6Header> {
     }
 
     #[inline]
-    fn set_checksum(&mut self, checksum: u16) {
-        // TODO: replace this with checksum calculation
-        self.header().checksum = u16::to_be(checksum)
+    fn compute_checksum(&self) {
+        self.header().checksum = 0;
+
+        if let Ok(data) = buffer::read_slice(self.mbuf(), self.offset(), self.len()) {
+            let data = unsafe { &(*data) };
+            let pseudo_header_sum = self
+                .envelope()
+                .pseudo_header_sum(data.len() as u16, ProtocolNumbers::Icmpv6);
+            let checksum = checksum::compute(pseudo_header_sum, data);
+            self.header().checksum = u16::to_be(checksum);
+        } else {
+            // we are reading till the end of buffer, should never run out
+            unreachable!()
+        }
     }
 }
 
@@ -189,9 +202,10 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, ()> {
     }
 }
 
-impl<E: Ipv6Packet> Icmpv6Packet<()> for Icmpv6<E, ()> {
+impl<E: Ipv6Packet> Icmpv6Packet<E, ()> for Icmpv6<E, ()> {
     fn payload(&self) -> &mut () {
-        unsafe { &mut (*self.payload) }
+        // should access the unit payload
+        unreachable!();
     }
 }
 
@@ -273,8 +287,9 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
 
     #[inline]
     fn cascade(&self) {
-        // TODO: compute checksum
-        // self.envelope().cascade();
+        // TODO: make checksum callable from cascade
+        //self.compute_checksum();
+        self.envelope().cascade();
     }
 
     #[inline]
@@ -362,7 +377,7 @@ mod tests {
         // code
         0x00,
         // checksum
-        0xf5, 0x0c,
+        0x01, 0xf0,
         // ** echo request
         0x00, 0x00, 0x00, 0x00
     ];
@@ -382,7 +397,7 @@ mod tests {
 
             assert_eq!(Icmpv6Type::new(0x81), icmpv6.msg_type());
             assert_eq!(0, icmpv6.code());
-            assert_eq!(0xf50c, icmpv6.checksum());
+            assert_eq!(0x01f0, icmpv6.checksum());
         }
     }
 
@@ -399,6 +414,23 @@ mod tests {
 
             // check one accessor that belongs to `RouterAdvertisement`
             assert_eq!(64, advert.current_hop_limit());
+        }
+    }
+
+    #[test]
+    fn compute_checksum() {
+        use packets::icmp::v6::ndp::router_advert::tests::ROUTER_ADVERT_PACKET;
+
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
+
+            let expected = icmpv6.checksum();
+            // no payload change but force a checksum recompute anyway
+            icmpv6.compute_checksum();
+            assert_eq!(expected, icmpv6.checksum());
         }
     }
 

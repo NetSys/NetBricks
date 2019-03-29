@@ -215,7 +215,7 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, RouterAdvertisement> {
     }
 }
 
-impl<E: Ipv6Packet> Icmpv6Packet<RouterAdvertisement> for Icmpv6<E, RouterAdvertisement> {
+impl<E: Ipv6Packet> Icmpv6Packet<E, RouterAdvertisement> for Icmpv6<E, RouterAdvertisement> {
     fn payload(&self) -> &mut RouterAdvertisement {
         unsafe { &mut (*self.payload) }
     }

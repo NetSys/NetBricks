@@ -12,7 +12,7 @@ pub trait NdpPayload: Icmpv6Payload {}
 /// Common behaviors shared by NDP packets
 ///
 /// NDP packets are also ICMPv6 packets.
-pub trait NdpPacket<P: NdpPayload>: Icmpv6Packet<P> {
+pub trait NdpPacket<E: Ipv6Packet, P: NdpPayload>: Icmpv6Packet<E, P> {
     /// finds a NDP option in the payload by option type
     fn find_option<O: NdpOption>(&self) -> Option<&mut O> {
         let payload_size = std::mem::size_of::<P>();
@@ -43,4 +43,7 @@ pub trait NdpPacket<P: NdpPayload>: Icmpv6Packet<P> {
     }
 }
 
-impl<E: Ipv6Packet, P: NdpPayload> NdpPacket<P> for Icmpv6<E, P> where Icmpv6<E, P>: Icmpv6Packet<P> {}
+impl<E: Ipv6Packet, P: NdpPayload> NdpPacket<E, P> for Icmpv6<E, P> where
+    Icmpv6<E, P>: Icmpv6Packet<E, P>
+{
+}
