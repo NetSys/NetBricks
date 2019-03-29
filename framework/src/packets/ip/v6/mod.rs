@@ -13,10 +13,11 @@ pub mod srh;
 pub trait Ipv6Packet: IpPacket {}
 
 /*  From https://tools.ietf.org/html/rfc8200#section-3
+    and https://tools.ietf.org/html/rfc3168 (succeeding traffic class)
     IPv6 Header Format
 
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |Version| Traffic Class |           Flow Label                  |
+    |Version|    DSCP_ECN   |           Flow Label                  |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |         Payload Length        |  Next Header  |   Hop Limit   |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -39,7 +40,33 @@ pub trait Ipv6Packet: IpPacket {}
 
     Version             4-bit Internet Protocol version number = 6.
 
-    Traffic Class       8-bit traffic class field.
+    DSCP_ECN:           8-bit Differentiated services (via RFC 2474 ~
+                        https://tools.ietf.org/html/rfc2474) enhancements to the
+                        Internet protocol are intended to enable scalable
+                        service discrimination in the Internet without the need
+                        for per-flow state and signaling at every hop.  A
+                        variety of services may be built from a small,
+                        well-defined set of building blocks which are deployed
+                        in network nodes. The services may be either end-to-end
+                        or intra-domain; they include both those that can
+                        satisfy quantitative performance requirements (e.g.,
+                        peak bandwidth) and those based on relative performance
+                        (e.g., "class" differentiation).
+
+                        Taking the last two bits, is ECN, the addition of
+                        Explicit Congestion Notification to IP; RFC-3168
+                        (https://tools.ietf.org/html/rfc3168) covers this in
+                        detail. This uses an ECN field in the IP header with two
+                        bits, making four ECN codepoints, '00' to '11'.  The
+                        ECN-Capable Transport (ECT) codepoints '10' and '01' are
+                        set by the data sender to indicate that the end-points
+                        of the transport protocol are ECN-capable; we call them
+                        ECT(0) and ECT(1) respectively.  The phrase "the ECT
+                        codepoint" in this documents refers to either of the two
+                        ECT codepoints.  Routers treat the ECT(0) and ECT(1)
+                        codepoints as equivalent.  Senders are free to use
+                        either the ECT(0) or the ECT(1) codepoint to indicate
+                        ECT, on a packet-by-packet basis.
 
     Flow Label          20-bit flow label.
 
@@ -65,6 +92,11 @@ pub trait Ipv6Packet: IpPacket {}
                         packet (possibly not the ultimate recipient, if
                         a Routing header is present).
 */
+
+// Masks
+const DSCP: u32 = 0xfc00000;
+const ECN: u32 = 0x300000;
+const FLOW: u32 = 0xfffff;
 
 /// IPv6 header
 #[derive(Debug, Copy, Clone)]
@@ -109,29 +141,40 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn traffic_class(&self) -> u8 {
-        ((u32::from_be(self.header().version_to_flow_label) >> 20) as u8)
+    pub fn dscp(&self) -> u8 {
+        ((u32::from_be(self.header().version_to_flow_label) & DSCP) >> 22) as u8
     }
 
     #[inline]
-    pub fn set_traffic_class(&self, traffic_class: u8) {
+    pub fn set_dscp(&self, dscp: u8) {
         self.header().version_to_flow_label = u32::to_be(
-            (u32::from_be(self.header().version_to_flow_label) & 0xf00fffff)
-                | ((traffic_class as u32) << 20),
+            (u32::from_be(self.header().version_to_flow_label) & !DSCP)
+                | (((dscp as u32) << 22) & DSCP),
+        );
+    }
+
+    #[inline]
+    pub fn ecn(&self) -> u8 {
+        ((u32::from_be(self.header().version_to_flow_label) & ECN) >> 20) as u8
+    }
+
+    #[inline]
+    pub fn set_ecn(&self, ecn: u8) {
+        self.header().version_to_flow_label = u32::to_be(
+            (u32::from_be(self.header().version_to_flow_label) & !ECN)
+                | (((ecn as u32) << 20) & ECN),
         );
     }
 
     #[inline]
     pub fn flow_label(&self) -> u32 {
-        u32::from_be(self.header().version_to_flow_label) & 0x0fffff
+        u32::from_be(self.header().version_to_flow_label) & FLOW
     }
 
     #[inline]
     pub fn set_flow_label(&self, flow_label: u32) {
-        assert!(flow_label <= 0x0fffff);
         self.header().version_to_flow_label = u32::to_be(
-            (u32::from_be(self.header().version_to_flow_label) & 0xfff00000)
-                | (flow_label & 0x0fffff),
+            (u32::from_be(self.header().version_to_flow_label) & !FLOW) | (flow_label & FLOW),
         );
     }
 
@@ -190,11 +233,12 @@ impl fmt::Display for Ipv6 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} > {}, version: {}, traffic_class: {}, flow_label: {}, len: {}, next_header: {}, hop_limit: {}",
+            "{} > {}, version: {}, dscp: {}, ecn: {}, flow_label: {}, len: {}, next_header: {}, hop_limit: {}",
             self.src(),
             self.dst(),
             self.version(),
-            self.traffic_class(),
+            self.dscp(),
+            self.ecn(),
             self.flow_label(),
             self.payload_len(),
             self.next_header(),
@@ -385,7 +429,7 @@ pub mod tests {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
         0x86, 0xDD,
         // ** IPv6 header
-        // version, traffic class, flow label
+        // version, dscp, ecn, flow label
         0x60, 0x00, 0x00, 0x00,
         // payload length
         0x00, 0x18,
@@ -425,13 +469,34 @@ pub mod tests {
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
 
             assert_eq!(6, ipv6.version());
-            assert_eq!(0, ipv6.traffic_class());
+            assert_eq!(0, ipv6.dscp());
+            assert_eq!(0, ipv6.ecn());
             assert_eq!(0, ipv6.flow_label());
             assert_eq!(24, ipv6.payload_len());
             assert_eq!(ProtocolNumbers::Udp, ipv6.next_header());
             assert_eq!(2, ipv6.hop_limit());
             assert_eq!("2001:db8:85a3::1", ipv6.src().to_string());
             assert_eq!("2001:db8:85a3::8a2e:370:7334", ipv6.dst().to_string());
+        }
+    }
+
+    #[test]
+    fn parse_ipv6_setter_checks() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&IPV6_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+
+            assert_eq!(6, ipv6.version());
+            assert_eq!(0, ipv6.dscp());
+            assert_eq!(0, ipv6.ecn());
+            assert_eq!(0, ipv6.flow_label());
+            ipv6.set_dscp(10);
+            ipv6.set_ecn(3);
+            assert_eq!(6, ipv6.version());
+            assert_eq!(10, ipv6.dscp());
+            assert_eq!(3, ipv6.ecn());
+            assert_eq!(0, ipv6.flow_label());
         }
     }
 

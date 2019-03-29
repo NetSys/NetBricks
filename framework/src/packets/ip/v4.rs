@@ -11,7 +11,7 @@ use std::net::{IpAddr, Ipv4Addr};
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |Version|  IHL  |Type of Service|          Total Length         |
+    |Version|  IHL  |    DSCP_ECN   |          Total Length         |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |         Identification        |Flags|      Fragment Offset    |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -33,9 +33,29 @@ use std::net::{IpAddr, Ipv4Addr};
         bit words, and thus points to the beginning of the data.  Note that
         the minimum value for a correct header is 5.
 
-    Type of Service:  8 bits
-        The Type of Service provides an indication of the abstract
-        parameters of the quality of service desired.
+    DSCP_ECN:  8 bits
+        Differentiated services (via RFC 2474 ~ https://tools.ietf.org/html/rfc2474)
+        enhancements to the Internet protocol are intended to enable scalable
+        service discrimination in the Internet without the need for per-flow
+        state and signaling at every hop.  A variety of services may be built
+        from a small, well-defined set of building blocks which are deployed in
+        network nodes. The services may be either end-to-end or intra-domain;
+        they include both those that can satisfy quantitative performance
+        requirements (e.g., peak bandwidth) and those based on relative
+        performance (e.g., "class" differentiation).
+
+        Taking the last two bits, is ECN, the addition of Explicit
+        Congestion Notification to IP; RFC-3168
+        (https://tools.ietf.org/html/rfc3168) covers this in detail.
+        This uses an ECN field in the IP header with two bits, making four ECN
+        codepoints, '00' to '11'.  The ECN-Capable Transport (ECT) codepoints
+        '10' and '01' are set by the data sender to indicate that the end-points
+        of the transport protocol are ECN-capable; we call them ECT(0) and
+        ECT(1) respectively.  The phrase "the ECT codepoint" in this documents
+        refers to either of the two ECT codepoints.  Routers treat the ECT(0)
+        and ECT(1) codepoints as equivalent.  Senders are free to use either the
+        ECT(0) or the ECT(1) codepoint to indicate ECT, on a packet-by-packet
+        basis.
 
     Total Length:  16 bits
         Total Length is the length of the datagram, measured in octets,
@@ -98,9 +118,13 @@ use std::net::{IpAddr, Ipv4Addr};
         implementation.
 */
 
-// Bits and Flags
-const FLAGS_DF: u16 = 0x4000;
-const FLAGS_MF: u16 = 0x8000;
+// Masks
+const DSCP: u8 = 0b11111100;
+const ECN: u8 = !DSCP;
+
+// Flags
+const FLAGS_DF: u16 = 0b0100000000000000;
+const FLAGS_MF: u16 = 0b0010000000000000;
 
 /// IPv4 header
 ///
@@ -110,7 +134,7 @@ const FLAGS_MF: u16 = 0x8000;
 #[repr(C)]
 pub struct Ipv4Header {
     version_ihl: u8,
-    type_of_service: u8,
+    dscp_ecn: u8,
     total_length: u16,
     identification: u16,
     flags_to_frag_offset: u16,
@@ -125,7 +149,7 @@ impl Default for Ipv4Header {
     fn default() -> Ipv4Header {
         Ipv4Header {
             version_ihl: 4 << 4,
-            type_of_service: 0,
+            dscp_ecn: 0,
             total_length: 0,
             identification: 0,
             flags_to_frag_offset: 0,
@@ -166,13 +190,23 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn type_of_service(&self) -> u8 {
-        self.header().type_of_service
+    pub fn dscp(&self) -> u8 {
+        self.header().dscp_ecn >> 2
     }
 
     #[inline]
-    pub fn set_type_of_service(&self, type_of_service: u8) {
-        self.header().type_of_service = type_of_service;
+    pub fn set_dscp(&self, dscp: u8) {
+        self.header().dscp_ecn = (self.header().dscp_ecn & ECN) | (dscp << 2);
+    }
+
+    #[inline]
+    pub fn ecn(&self) -> u8 {
+        self.header().dscp_ecn & ECN
+    }
+
+    #[inline]
+    pub fn set_ecn(&self, ecn: u8) {
+        self.header().dscp_ecn = (self.header().dscp_ecn & DSCP) | (ecn & ECN);
     }
 
     #[inline]
@@ -203,13 +237,13 @@ impl Ipv4 {
     #[inline]
     pub fn set_dont_fragment(&self) {
         self.header().flags_to_frag_offset =
-            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) | FLAGS_DF)
+            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) | FLAGS_DF);
     }
 
     #[inline]
     pub fn unset_dont_fragment(&self) {
         self.header().flags_to_frag_offset =
-            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !FLAGS_DF)
+            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !FLAGS_DF);
     }
 
     #[inline]
@@ -220,19 +254,19 @@ impl Ipv4 {
     #[inline]
     pub fn set_more_fragments(&self) {
         self.header().flags_to_frag_offset =
-            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) | FLAGS_MF)
+            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) | FLAGS_MF);
     }
 
     #[inline]
     pub fn unset_more_fragments(&self) {
         self.header().flags_to_frag_offset =
-            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !FLAGS_MF)
+            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !FLAGS_MF);
     }
 
     #[inline]
     pub fn clear_flags(&self) {
         self.header().flags_to_frag_offset =
-            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !0xe000)
+            u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !0xe000);
     }
 
     #[inline]
@@ -249,7 +283,7 @@ impl Ipv4 {
     pub fn set_fragment_offset(&self, offset: u16) {
         self.header().flags_to_frag_offset = u16::to_be(
             (u16::from_be(self.header().flags_to_frag_offset) & 0xe000) | (offset & 0x1fff),
-        )
+        );
     }
 
     #[inline]
@@ -307,12 +341,17 @@ impl fmt::Display for Ipv4 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} > {} version: {}, ihl: {}, len: {}, ttl: {}, protocol: {}, checksum: {}",
+            "{} > {} version: {}, ihl: {}, dscp: {}, ecn: {}, len: {}, dont_fragment: {}, more_fragments: {}, fragment_offset: {}, ttl: {}, protocol: {}, checksum: {}",
             self.src(),
             self.dst(),
             self.version(),
             self.ihl(),
+            self.dscp(),
+            self.ecn(),
             self.total_length(),
+            self.dont_fragment(),
+            self.more_fragments(),
+            self.fragment_offset(),
             self.ttl(),
             self.protocol(),
             self.checksum()
@@ -493,7 +532,10 @@ mod tests {
             assert_eq!(38, ipv4.total_length());
             assert_eq!(43849, ipv4.identification());
             assert_eq!(true, ipv4.dont_fragment());
+            assert_eq!(false, ipv4.more_fragments());
             assert_eq!(0, ipv4.fragment_offset());
+            assert_eq!(0, ipv4.dscp());
+            assert_eq!(0, ipv4.ecn());
             assert_eq!(255, ipv4.ttl());
             assert_eq!(ProtocolNumbers::Udp, ipv4.protocol());
             assert_eq!(0xf700, ipv4.checksum());
@@ -503,7 +545,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_ipv4_set_flags() {
+    fn parse_ipv4_setter_checks() {
         use packets::udp::tests::UDP_PACKET;
 
         dpdk_test! {
@@ -511,6 +553,7 @@ mod tests {
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv4 = ethernet.parse::<Ipv4>().unwrap();
 
+            // Flags
             assert_eq!(2, ipv4.flags());
             assert_eq!(true, ipv4.dont_fragment());
             assert_eq!(false, ipv4.more_fragments());
@@ -523,6 +566,14 @@ mod tests {
             ipv4.clear_flags();
             assert_eq!(false, ipv4.dont_fragment());
             assert_eq!(false, ipv4.more_fragments());
+
+            // DSCP & ECN
+            assert_eq!(0, ipv4.dscp());
+            assert_eq!(0, ipv4.ecn());
+            ipv4.set_dscp(10);
+            ipv4.set_ecn(3);
+            assert_eq!(10, ipv4.dscp());
+            assert_eq!(3, ipv4.ecn());
         }
     }
 
