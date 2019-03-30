@@ -70,6 +70,8 @@ extern crate log;
 #[cfg(unix)]
 extern crate nix;
 
+extern crate fallible_iterator;
+
 // need these first so other modules in netbricks can use the macros
 #[macro_use]
 pub mod common;

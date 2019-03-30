@@ -2,7 +2,7 @@ use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, Icmpv6Type, Icmpv6T
 use packets::ip::v6::Ipv6Packet;
 use std::fmt;
 
-/*  From (https://tools.ietf.org/html/rfc4861#section-4.2)
+/*  From https://tools.ietf.org/html/rfc4861#section-4.2
     Router Advertisement Message Format
 
      0                   1                   2                   3
@@ -19,90 +19,90 @@ use std::fmt;
     |   Options ...
     +-+-+-+-+-+-+-+-+-+-+-+-
 
-    Cur Hop Limit  8-bit unsigned integer.  The default value that
-                   should be placed in the Hop Count field of the IP
-                   header for outgoing IP packets.  A value of zero
-                   means unspecified (by this router).
+    Cur Hop Limit   8-bit unsigned integer.  The default value that
+                    should be placed in the Hop Count field of the IP
+                    header for outgoing IP packets.  A value of zero
+                    means unspecified (by this router).
 
-    M              1-bit "Managed address configuration" flag.  When
-                   set, it indicates that addresses are available via
-                   Dynamic Host Configuration Protocol [DHCPv6].
+    M               1-bit "Managed address configuration" flag.  When
+                    set, it indicates that addresses are available via
+                    Dynamic Host Configuration Protocol [DHCPv6].
 
-                   If the M flag is set, the O flag is redundant and
-                   can be ignored because DHCPv6 will return all
-                   available configuration information.
+                    If the M flag is set, the O flag is redundant and
+                    can be ignored because DHCPv6 will return all
+                    available configuration information.
 
-    O              1-bit "Other configuration" flag.  When set, it
-                   indicates that other configuration information is
-                   available via DHCPv6.  Examples of such information
-                   are DNS-related information or information on other
-                   servers within the network.
+    O               1-bit "Other configuration" flag.  When set, it
+                    indicates that other configuration information is
+                    available via DHCPv6.  Examples of such information
+                    are DNS-related information or information on other
+                    servers within the network.
 
       Note: If neither M nor O flags are set, this indicates that no
       information is available via DHCPv6.
 
-    Reserved       A 6-bit unused field.  It MUST be initialized to
-                   zero by the sender and MUST be ignored by the
-                   receiver.
+    Reserved        A 6-bit unused field.  It MUST be initialized to
+                    zero by the sender and MUST be ignored by the
+                    receiver.
 
     Router Lifetime
-                   16-bit unsigned integer.  The lifetime associated
-                   with the default router in units of seconds.  The
-                   field can contain values up to 65535 and receivers
-                   should handle any value, while the sending rules in
-                   Section 6 limit the lifetime to 9000 seconds.  A
-                   Lifetime of 0 indicates that the router is not a
-                   default router and SHOULD NOT appear on the default
-                   router list.  The Router Lifetime applies only to
-                   the router's usefulness as a default router; it
-                   does not apply to information contained in other
-                   message fields or options.  Options that need time
-                   limits for their information include their own
-                   lifetime fields.
+                    16-bit unsigned integer.  The lifetime associated
+                    with the default router in units of seconds.  The
+                    field can contain values up to 65535 and receivers
+                    should handle any value, while the sending rules in
+                    Section 6 limit the lifetime to 9000 seconds.  A
+                    Lifetime of 0 indicates that the router is not a
+                    default router and SHOULD NOT appear on the default
+                    router list.  The Router Lifetime applies only to
+                    the router's usefulness as a default router; it
+                    does not apply to information contained in other
+                    message fields or options.  Options that need time
+                    limits for their information include their own
+                    lifetime fields.
 
-    Reachable Time 32-bit unsigned integer.  The time, in
-                   milliseconds, that a node assumes a neighbor is
-                   reachable after having received a reachability
-                   confirmation.  Used by the Neighbor Unreachability
-                   Detection algorithm (see Section 7.3).  A value of
-                   zero means unspecified (by this router).
+    Reachable Time  32-bit unsigned integer.  The time, in
+                    milliseconds, that a node assumes a neighbor is
+                    reachable after having received a reachability
+                    confirmation.  Used by the Neighbor Unreachability
+                    Detection algorithm (see Section 7.3).  A value of
+                    zero means unspecified (by this router).
 
-    Retrans Timer  32-bit unsigned integer.  The time, in
-                   milliseconds, between retransmitted Neighbor
-                   Solicitation messages.  Used by address resolution
-                   and the Neighbor Unreachability Detection algorithm
-                   (see Sections 7.2 and 7.3).  A value of zero means
-                   unspecified (by this router).
+    Retrans Timer   32-bit unsigned integer.  The time, in
+                    milliseconds, between retransmitted Neighbor
+                    Solicitation messages.  Used by address resolution
+                    and the Neighbor Unreachability Detection algorithm
+                    (see Sections 7.2 and 7.3).  A value of zero means
+                    unspecified (by this router).
 
    Possible options:
 
     Source link-layer address
-                   The link-layer address of the interface from which
-                   the Router Advertisement is sent.  Only used on
-                   link layers that have addresses.  A router MAY omit
-                   this option in order to enable inbound load sharing
-                   across multiple link-layer addresses.
+                    The link-layer address of the interface from which
+                    the Router Advertisement is sent.  Only used on
+                    link layers that have addresses.  A router MAY omit
+                    this option in order to enable inbound load sharing
+                    across multiple link-layer addresses.
 
-    MTU            SHOULD be sent on links that have a variable MTU
-                   (as specified in the document that describes how to
-                   run IP over the particular link type).  MAY be sent
-                   on other links.
+    MTU             SHOULD be sent on links that have a variable MTU
+                    (as specified in the document that describes how to
+                    run IP over the particular link type).  MAY be sent
+                    on other links.
 
     Prefix Information
-                   These options specify the prefixes that are on-link
-                   and/or are used for stateless address
-                   autoconfiguration.  A router SHOULD include all its
-                   on-link prefixes (except the link-local prefix) so
-                   that multihomed hosts have complete prefix
-                   information about on-link destinations for the
-                   links to which they attach.  If complete
-                   information is lacking, a host with multiple
-                   interfaces may not be able to choose the correct
-                   outgoing interface when sending traffic to its
-                   neighbors.
+                    These options specify the prefixes that are on-link
+                    and/or are used for stateless address
+                    autoconfiguration.  A router SHOULD include all its
+                    on-link prefixes (except the link-local prefix) so
+                    that multihomed hosts have complete prefix
+                    information about on-link destinations for the
+                    links to which they attach.  If complete
+                    information is lacking, a host with multiple
+                    interfaces may not be able to choose the correct
+                    outgoing interface when sending traffic to its
+                    neighbors.
 */
 
-/// Router advertisement packet
+/// NDP router advertisement message
 #[derive(Default, Debug)]
 #[repr(C, packed)]
 pub struct RouterAdvertisement {
@@ -114,6 +114,7 @@ pub struct RouterAdvertisement {
 }
 
 impl Icmpv6Payload for RouterAdvertisement {
+    #[inline]
     fn msg_type() -> Icmpv6Type {
         Icmpv6Types::RouterAdvertisement
     }
@@ -124,6 +125,7 @@ impl NdpPayload for RouterAdvertisement {}
 const M_FLAG: u8 = 0b1000_0000;
 const O_FLAG: u8 = 0b0100_0000;
 
+/// NDP router advertisement packet
 impl<E: Ipv6Packet> Icmpv6<E, RouterAdvertisement> {
     #[inline]
     pub fn current_hop_limit(&self) -> u8 {
@@ -216,6 +218,7 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, RouterAdvertisement> {
 }
 
 impl<E: Ipv6Packet> Icmpv6Packet<E, RouterAdvertisement> for Icmpv6<E, RouterAdvertisement> {
+    #[inline]
     fn payload(&self) -> &mut RouterAdvertisement {
         unsafe { &mut (*self.payload) }
     }
@@ -225,10 +228,8 @@ impl<E: Ipv6Packet> Icmpv6Packet<E, RouterAdvertisement> for Icmpv6<E, RouterAdv
 pub mod tests {
     use super::*;
     use dpdk_test;
-    use packets::icmp::v6::{
-        Icmpv6Message, Icmpv6Parse, Icmpv6Types, NdpPacket, SourceLinkLayerAddress,
-        TargetLinkLayerAddress,
-    };
+    use fallible_iterator::FallibleIterator;
+    use packets::icmp::v6::{Icmpv6Message, Icmpv6Parse, Icmpv6Types, NdpOption, NdpPacket};
     use packets::ip::v6::Ipv6;
     use packets::{Ethernet, Fixed, Packet, RawPacket};
 
@@ -312,25 +313,20 @@ pub mod tests {
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
 
             if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
-                let sll = advert.find_option::<SourceLinkLayerAddress>().unwrap();
+                let mut slla_found = false;
+                let mut iter = advert.options();
+                while let Ok(Some(option)) = iter.next() {
+                    match option {
+                        NdpOption::SourceLinkLayerAddress(addr) => {
+                            assert_eq!(1, addr.length());
+                            assert_eq!("70:3a:cb:1b:f9:7a", addr.addr().to_string());
+                            slla_found = true;
+                        },
+                        _ => (),
+                    }
+                }
 
-                assert_eq!(1, sll.length());
-                assert_eq!("70:3a:cb:1b:f9:7a", sll.addr().to_string());
-            } else {
-                panic!("bad packet");
-            }
-        }
-    }
-
-    #[test]
-    fn not_find_target_link_layer_address() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-
-            if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
-                assert!(advert.find_option::<TargetLinkLayerAddress>().is_none());
+                assert!(slla_found);
             } else {
                 panic!("bad packet");
             }

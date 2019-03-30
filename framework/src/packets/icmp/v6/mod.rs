@@ -5,6 +5,8 @@ use packets::ip::ProtocolNumbers;
 use packets::{buffer, checksum, Fixed, Header, Packet, ParseError};
 use std::fmt;
 
+pub use self::ndp::neighbor_advert::*;
+pub use self::ndp::neighbor_solicit::*;
 pub use self::ndp::options::*;
 pub use self::ndp::router_advert::*;
 pub use self::ndp::router_solicit::*;
@@ -300,8 +302,10 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
 
 /// An ICMPv6 message with parsed payload
 pub enum Icmpv6Message<E: Ipv6Packet> {
-    RouterSolicitation(Icmpv6<E, RouterSolicitation>),
+    NeighborAdvertisement(Icmpv6<E, NeighborAdvertisement>),
+    NeighborSolicitation(Icmpv6<E, NeighborSolicitation>),
     RouterAdvertisement(Icmpv6<E, RouterAdvertisement>),
+    RouterSolicitation(Icmpv6<E, RouterSolicitation>),
     /// an ICMPv6 message with undefined payload
     Undefined(Icmpv6<E, ()>),
 }
@@ -334,6 +338,14 @@ impl<T: Ipv6Packet> Icmpv6Parse for T {
         if self.next_proto() == ProtocolNumbers::Icmpv6 {
             let icmpv6 = self.parse::<Icmpv6<Self::Envelope, ()>>()?;
             match icmpv6.msg_type() {
+                Icmpv6Types::NeighborAdvertisement => {
+                    let packet = icmpv6.downcast::<NeighborAdvertisement>()?;
+                    Ok(Icmpv6Message::NeighborAdvertisement(packet))
+                }
+                Icmpv6Types::NeighborSolicitation => {
+                    let packet = icmpv6.downcast::<NeighborSolicitation>()?;
+                    Ok(Icmpv6Message::NeighborSolicitation(packet))
+                }
                 Icmpv6Types::RouterAdvertisement => {
                     let packet = icmpv6.downcast::<RouterAdvertisement>()?;
                     Ok(Icmpv6Message::RouterAdvertisement(packet))
