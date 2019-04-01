@@ -180,13 +180,6 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, NeighborAdvertisement> {
     }
 }
 
-impl<E: Ipv6Packet> Icmpv6Packet<E, NeighborAdvertisement> for Icmpv6<E, NeighborAdvertisement> {
-    #[inline]
-    fn payload(&self) -> &mut NeighborAdvertisement {
-        unsafe { &mut (*self.payload) }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

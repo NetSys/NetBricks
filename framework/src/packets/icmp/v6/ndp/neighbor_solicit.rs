@@ -100,13 +100,6 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, NeighborSolicitation> {
     }
 }
 
-impl<E: Ipv6Packet> Icmpv6Packet<E, NeighborSolicitation> for Icmpv6<E, NeighborSolicitation> {
-    #[inline]
-    fn payload(&self) -> &mut NeighborSolicitation {
-        unsafe { &mut (*self.payload) }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

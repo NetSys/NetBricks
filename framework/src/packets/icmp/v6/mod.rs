@@ -204,10 +204,9 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, ()> {
     }
 }
 
-impl<E: Ipv6Packet> Icmpv6Packet<E, ()> for Icmpv6<E, ()> {
-    fn payload(&self) -> &mut () {
-        // should access the unit payload
-        unreachable!();
+impl<E: Ipv6Packet, P: Icmpv6Payload> Icmpv6Packet<E, P> for Icmpv6<E, P> {
+    fn payload(&self) -> &mut P {
+        unsafe { &mut (*self.payload) }
     }
 }
 
@@ -289,8 +288,7 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
 
     #[inline]
     fn cascade(&self) {
-        // TODO: make checksum callable from cascade
-        //self.compute_checksum();
+        self.compute_checksum();
         self.envelope().cascade();
     }
 
@@ -441,13 +439,13 @@ mod tests {
 
             let expected = icmpv6.checksum();
             // no payload change but force a checksum recompute anyway
-            icmpv6.compute_checksum();
+            icmpv6.cascade();
             assert_eq!(expected, icmpv6.checksum());
         }
     }
 
     #[test]
-    fn matchable_imcpv6_packets() {
+    fn matchable_icmpv6_packets() {
         dpdk_test! {
             let packet = RawPacket::from_bytes(&ICMPV6_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
