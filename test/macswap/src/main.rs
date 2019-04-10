@@ -8,7 +8,7 @@ extern crate time;
 use self::nf::*;
 use netbricks::config::{basic_opts, read_matches};
 use netbricks::interface::*;
-use netbricks::operators::*;
+use netbricks::new_operators::*;
 use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
@@ -29,8 +29,13 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| macswap(ReceiveBatch::new(port.clone())).send(port.clone()))
+        .map(|port| {
+            ReceiveBatch::new(port.clone())
+                .map(macswap)
+                .send(port.clone())
+        })
         .collect();
+
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
         sched.add_task(pipeline).unwrap();

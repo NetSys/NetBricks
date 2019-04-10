@@ -32,6 +32,17 @@ impl RawPacket {
         buffer::write_slice(packet.mbuf, 0, data)?;
         Ok(packet)
     }
+
+    /// Creates a new packet from a MBuf
+    pub fn from_mbuf(mbuf: *mut MBuf) -> Self {
+        RawPacket { mbuf }
+    }
+
+    /// Returns the reference count of the underlying buffer
+    #[inline]
+    pub fn refcnt(&self) -> u16 {
+        unsafe { (*self.mbuf).refcnt() }
+    }
 }
 
 impl Packet for RawPacket {

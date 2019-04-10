@@ -136,6 +136,14 @@ impl Ethernet {
     pub fn set_ether_type(&mut self, ether_type: EtherType) {
         self.header().ether_type = u16::to_be(ether_type.0)
     }
+
+    #[inline]
+    pub fn swap_addresses(&mut self) {
+        let src = self.src();
+        let dst = self.dst();
+        self.set_src(dst);
+        self.set_dst(src);
+    }
 }
 
 impl fmt::Display for Ethernet {
@@ -272,6 +280,20 @@ mod tests {
             assert_eq!("00:00:00:00:00:01", ethernet.dst().to_string());
             assert_eq!("00:00:00:00:00:02", ethernet.src().to_string());
             assert_eq!(EtherTypes::Ipv4, ethernet.ether_type());
+        }
+    }
+
+    #[test]
+    fn swap_addresses() {
+        use packets::udp::tests::UDP_PACKET;
+
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+            let mut ethernet = packet.parse::<Ethernet>().unwrap();
+            ethernet.swap_addresses();
+
+            assert_eq!("00:00:00:00:00:02", ethernet.dst().to_string());
+            assert_eq!("00:00:00:00:00:01", ethernet.src().to_string());
         }
     }
 

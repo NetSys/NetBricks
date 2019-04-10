@@ -85,6 +85,7 @@ pub mod interface;
 #[allow(dead_code)]
 mod native;
 mod native_include;
+pub mod new_operators;
 pub mod operators;
 pub mod packets;
 pub mod queues;

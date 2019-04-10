@@ -1,12 +1,9 @@
-use netbricks::headers::*;
-use netbricks::operators::*;
+use netbricks::common::Result;
+use netbricks::packets::{Ethernet, Packet, RawPacket};
 
-pub fn macswap<T: 'static + Batch<Header = NullHeader>>(
-    parent: T,
-) -> TransformBatch<MacHeader, ParsedBatch<MacHeader, T>> {
-    parent.parse::<MacHeader>().transform(box move |pkt| {
-        assert!(pkt.refcnt() == 1);
-        let hdr = pkt.get_mut_header();
-        hdr.swap_addresses();
-    })
+pub fn macswap(packet: RawPacket) -> Result<Ethernet> {
+    assert!(packet.refcnt() == 1);
+    let mut ethernet = packet.parse::<Ethernet>()?;
+    ethernet.swap_addresses();
+    Ok(ethernet)
 }
