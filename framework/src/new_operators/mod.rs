@@ -6,16 +6,14 @@ use packets::Packet;
 pub use self::filter_batch::*;
 pub use self::foreach_batch::*;
 pub use self::map_batch::*;
-#[cfg(test)]
-pub use self::packet_batch::*;
+pub use self::queue_batch::*;
 pub use self::receive_batch::*;
 pub use self::send_batch::*;
 
 mod filter_batch;
 mod foreach_batch;
 mod map_batch;
-#[cfg(test)]
-mod packet_batch;
+mod queue_batch;
 mod receive_batch;
 mod send_batch;
 
@@ -29,7 +27,7 @@ pub enum PacketError {
 }
 
 /// Common behavior for a batch of packets
-pub trait Batch {
+pub trait Batch: Sized {
     /// The packet type
     type Item: Packet;
 
@@ -40,10 +38,7 @@ pub trait Batch {
     fn receive(&mut self);
 
     /// Appends a filter operator to the end of the pipeline
-    fn filter<P: FnMut(&Self::Item) -> bool>(self, predicate: P) -> FilterBatch<Self, P>
-    where
-        Self: Sized,
-    {
+    fn filter<P: FnMut(&Self::Item) -> bool>(self, predicate: P) -> FilterBatch<Self, P> {
         FilterBatch::new(self, predicate)
     }
 
@@ -51,10 +46,7 @@ pub trait Batch {
     fn map<T: Packet, M: FnMut(Self::Item) -> Result<T, Error>>(
         self,
         map: M,
-    ) -> MapBatch<Self, T, M>
-    where
-        Self: Sized,
-    {
+    ) -> MapBatch<Self, T, M> {
         MapBatch::new(self, map)
     }
 
@@ -62,10 +54,7 @@ pub trait Batch {
     ///
     /// Use for side-effects on packets, meaning the packets will not be
     /// transformed byte-wise.
-    fn for_each<F: FnMut(&Self::Item) -> Result<(), Error>>(self, fun: F) -> ForEachBatch<Self, F>
-    where
-        Self: Sized,
-    {
+    fn for_each<F: FnMut(&Self::Item) -> Result<(), Error>>(self, fun: F) -> ForEachBatch<Self, F> {
         ForEachBatch::new(self, fun)
     }
 
@@ -73,10 +62,7 @@ pub trait Batch {
     ///
     /// Send marks the end of the pipeline. No more operators can be
     /// appended after send.
-    fn send<Tx: PacketTx>(self, port: Tx) -> SendBatch<Self, Tx>
-    where
-        Self: Sized,
-    {
+    fn send<Tx: PacketTx>(self, port: Tx) -> SendBatch<Self, Tx> {
         SendBatch::new(self, port)
     }
 }
@@ -85,14 +71,17 @@ pub trait Batch {
 pub mod tests {
     use super::*;
     use dpdk_test;
-    use packets::{EtherTypes, Ethernet};
+    use packets::{EtherTypes, Ethernet, RawPacket};
 
     #[test]
     fn filter_operator() {
         use packets::udp::tests::UDP_PACKET;
 
         dpdk_test! {
-            let mut batch = PacketBatch::new(&UDP_PACKET).filter(|_| false);
+            let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+            let mut batch = batch.filter(|_| false);
+            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+
             assert!(batch.next().unwrap().is_err());
         }
     }
@@ -102,9 +91,11 @@ pub mod tests {
         use packets::udp::tests::UDP_PACKET;
 
         dpdk_test! {
-            let mut batch = PacketBatch::new(&UDP_PACKET).map(|p| p.parse::<Ethernet>());
-            let packet = batch.next().unwrap().unwrap();
+            let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+            let mut batch = batch.map(|p| p.parse::<Ethernet>());
+            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
 
+            let packet = batch.next().unwrap().unwrap();
             assert_eq!(EtherTypes::Ipv4, packet.ether_type())
         }
     }
@@ -114,21 +105,20 @@ pub mod tests {
         use packets::udp::tests::UDP_PACKET;
 
         dpdk_test! {
-            let mut batch = PacketBatch::new(&UDP_PACKET).map(|p| p.parse::<Ethernet>()).for_each(
-                |p| {
+            let mut invoked = 0;
 
-                    println!("I'm a Side Effect");
-                    let x = 1;
-                    let y = x;
-                    println!("{}", x+y);
-                    println!("Ethernet is a packet ~ {}", p);
+            {
+                let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+                let mut batch = batch.for_each(|_| {
+                    invoked += 1;
                     Ok(())
-                }
-            );
+                });
+                producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
 
-            let packet = batch.next().unwrap().unwrap();
-            assert_eq!(EtherTypes::Ipv4, packet.ether_type())
+                let _ = batch.next();
+            }
+
+            assert_eq!(1, invoked);
         }
     }
-
 }
