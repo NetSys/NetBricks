@@ -4,6 +4,7 @@ use native::zcsi::MBuf;
 use packets::Packet;
 
 pub use self::filter_batch::*;
+pub use self::foreach_batch::*;
 pub use self::map_batch::*;
 #[cfg(test)]
 pub use self::packet_batch::*;
@@ -11,6 +12,7 @@ pub use self::receive_batch::*;
 pub use self::send_batch::*;
 
 mod filter_batch;
+mod foreach_batch;
 mod map_batch;
 #[cfg(test)]
 mod packet_batch;
@@ -38,7 +40,7 @@ pub trait Batch {
     fn receive(&mut self);
 
     /// Appends a filter operator to the end of the pipeline
-    fn filter<P: Fn(&Self::Item) -> bool>(self, predicate: P) -> FilterBatch<Self, P>
+    fn filter<P: FnMut(&Self::Item) -> bool>(self, predicate: P) -> FilterBatch<Self, P>
     where
         Self: Sized,
     {
@@ -46,11 +48,25 @@ pub trait Batch {
     }
 
     /// Appends a map operator to the end of the pipeline
-    fn map<T: Packet, M: Fn(Self::Item) -> Result<T, Error>>(self, map: M) -> MapBatch<Self, T, M>
+    fn map<T: Packet, M: FnMut(Self::Item) -> Result<T, Error>>(
+        self,
+        map: M,
+    ) -> MapBatch<Self, T, M>
     where
         Self: Sized,
     {
         MapBatch::new(self, map)
+    }
+
+    /// Appends a for_each operator to the end of the pipeline
+    ///
+    /// Use for side-effects on packets, meaning the packets will not be
+    /// transformed byte-wise.
+    fn for_each<F: FnMut(&Self::Item) -> Result<(), Error>>(self, fun: F) -> ForEachBatch<Self, F>
+    where
+        Self: Sized,
+    {
+        ForEachBatch::new(self, fun)
     }
 
     /// Appends a send operator to the end of the pipeline
@@ -92,4 +108,27 @@ pub mod tests {
             assert_eq!(EtherTypes::Ipv4, packet.ether_type())
         }
     }
+
+    #[test]
+    fn for_each_operator() {
+        use packets::udp::tests::UDP_PACKET;
+
+        dpdk_test! {
+            let mut batch = PacketBatch::new(&UDP_PACKET).map(|p| p.parse::<Ethernet>()).for_each(
+                |p| {
+
+                    println!("I'm a Side Effect");
+                    let x = 1;
+                    let y = x;
+                    println!("{}", x+y);
+                    println!("Ethernet is a packet ~ {}", p);
+                    Ok(())
+                }
+            );
+
+            let packet = batch.next().unwrap().unwrap();
+            assert_eq!(EtherTypes::Ipv4, packet.ether_type())
+        }
+    }
+
 }
