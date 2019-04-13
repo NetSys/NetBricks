@@ -94,6 +94,20 @@ pub struct Flow {
     protocol: ProtocolNumber,
 }
 
+impl fmt::Display for Flow {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "src_ip: {}, src_port: {}, dst_ip: {}, dst_port: {}, proto: {}",
+            self.src_ip(),
+            self.src_port(),
+            self.dst_ip(),
+            self.dst_port(),
+            self.protocol()
+        )
+    }
+}
+
 impl Flow {
     pub fn new(
         src_ip: IpAddr,

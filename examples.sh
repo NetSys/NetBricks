@@ -7,7 +7,7 @@ export examples=(
         # test/packet-generation
         # test/tcp-payload
         test/macswap
-        # test/ipv4or6
+        test/ipv4or6
         # test/srv6-compose
         # test/srv6-sighup-flow
         # test/srv6-inject

@@ -1,11 +1,13 @@
 #![feature(box_syntax)]
 #![feature(asm)]
 extern crate colored;
+#[macro_use]
 extern crate netbricks;
 use self::nf::*;
 use netbricks::config::{basic_opts, read_matches};
 use netbricks::interface::*;
-use netbricks::operators::*;
+use netbricks::new_operators::*;
+use netbricks::packets::*;
 use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
@@ -24,7 +26,25 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| tcp_nf(ReceiveBatch::new(port.clone()), sched).send(port.clone()))
+        .map(|port| {
+            ReceiveBatch::new(port.clone())
+                .map(eth_nf)
+                .group_by(
+                    2,
+                    |ethernet| match ethernet.ether_type() {
+                        EtherTypes::Ipv4 => 0,
+                        EtherTypes::Ipv6 => 1,
+                        _ => 2, // dropped
+                    },
+                    |mut groups| {
+                        merge![
+                            groups.remove(&0).unwrap().map(ipv4_nf),
+                            groups.remove(&1).unwrap().map(ipv6_nf),
+                        ]
+                    },
+                )
+                .send(port.clone())
+        })
         .collect();
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
