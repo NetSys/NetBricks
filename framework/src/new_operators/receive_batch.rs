@@ -15,6 +15,7 @@ pub struct ReceiveBatch<Rx: PacketRx> {
 }
 
 impl<Rx: PacketRx> ReceiveBatch<Rx> {
+    #[inline]
     pub fn new(port: Rx) -> Self {
         ReceiveBatch {
             port,
@@ -27,6 +28,7 @@ impl<Rx: PacketRx> ReceiveBatch<Rx> {
 impl<Rx: PacketRx> Batch for ReceiveBatch<Rx> {
     type Item = RawPacket;
 
+    #[inline]
     fn next(&mut self) -> Option<Result<Self::Item, PacketError>> {
         // TODO: better if this is a queue
         if self.buffers.len() > self.index {
@@ -40,6 +42,7 @@ impl<Rx: PacketRx> Batch for ReceiveBatch<Rx> {
         }
     }
 
+    #[inline]
     fn receive(&mut self) {
         unsafe {
             let capacity = self.buffers.capacity();

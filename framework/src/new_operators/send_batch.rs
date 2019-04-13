@@ -15,6 +15,7 @@ pub struct SendBatch<B: Batch, Tx: PacketTx> {
 }
 
 impl<B: Batch, Tx: PacketTx> SendBatch<B, Tx> {
+    #[inline]
     pub fn new(source: B, port: Tx) -> Self {
         SendBatch {
             source,
