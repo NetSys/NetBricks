@@ -51,7 +51,7 @@ impl fmt::Display for MacAddr {
 }
 
 /// The protocol type in the ethernet packet payload
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(C, packed)]
 pub struct EtherType(pub u16);
 

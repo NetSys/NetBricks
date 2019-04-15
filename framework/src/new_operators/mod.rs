@@ -75,22 +75,40 @@ pub trait Batch {
 
     /// Appends a group_by operator to the end of the pipeline
     ///
-    /// * `size` - number of groups to partition the source batch into.
     /// * `selector` - a function that receives a reference to `B::Item` and
-    /// evaluates to an ordinal index. The index determines which group the
-    /// item belongs to.
-    /// * `composer` - a function that composes the sub pipelines for the
-    /// partitioned groups.
+    /// evaluates to a discriminator value. The source batch will be split
+    /// into subgroups based on this value.
+    ///
+    /// * `composer` - a function that composes the pipelines for the subgroups
+    /// based on the discriminator values.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let batch = batch.group_by(
+    ///     |packet| packet.protocol(),
+    ///     |groups| {
+    ///         compose!(
+    ///             groups,
+    ///             ProtocolNumbers::Tcp => |group| {
+    ///                 group.map(handle_tcp)
+    ///             },
+    ///             ProtocolNumbers::Udp => |group| {
+    ///                 group.map(handle_udp)
+    ///             }
+    ///         )
+    ///     }
+    /// );
+    /// ```
     #[inline]
-    fn group_by<S, C>(self, size: usize, selector: S, composer: C) -> GroupByBatch<Self, S>
+    fn group_by<K, S, C>(self, selector: S, composer: C) -> GroupByBatch<Self, K, S>
     where
-        S: FnMut(&Self::Item) -> usize,
-        C: FnOnce(
-            HashMap<usize, QueueBatch<SingleThreadedQueue<Self::Item>>>,
-        ) -> Vec<Box<Batch<Item = Self::Item>>>,
+        K: Eq + Clone + std::hash::Hash,
+        S: FnMut(&Self::Item) -> K,
+        C: FnOnce(&mut HashMap<K, Box<PipelineBuilder<Self::Item>>>) -> (),
         Self: Sized,
     {
-        GroupByBatch::new(self, size, selector, composer)
+        GroupByBatch::new(self, selector, composer)
     }
 
     /// Appends a send operator to the end of the pipeline
@@ -109,8 +127,8 @@ pub trait Batch {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use compose;
     use dpdk_test;
-    use merge;
     use packets::ip::v4::Ipv4;
     use packets::ip::ProtocolNumbers;
     use packets::{EtherTypes, Ethernet, RawPacket};
@@ -175,27 +193,23 @@ pub mod tests {
             let mut batch = batch
                 .map(|p| p.parse::<Ethernet>()?.parse::<Ipv4>())
                 .group_by(
-                    2,
-                    |p| match p.protocol() {
-                        ProtocolNumbers::Tcp => 0,
-                        ProtocolNumbers::Udp => 1,
-                        _ => 2
-                    },
-                    |mut groups| {
-                        merge![
-                            groups.remove(&0)
-                                .unwrap()
-                                .map(|p| {
+                    |p| p.protocol(),
+                    |groups| {
+                        compose!(
+                            groups,
+                            ProtocolNumbers::Tcp => |group| {
+                                group.map(|p| {
                                     p.set_ttl(1);
                                     Ok(p)
-                                }),
-                            groups.remove(&1)
-                                .unwrap()
-                                .map(|p| {
+                                })
+                            },
+                            ProtocolNumbers::Udp => |group| {
+                                group.map(|p| {
                                     p.set_ttl(2);
                                     Ok(p)
-                                }),
-                        ]
+                                })
+                            }
+                        );
                     }
                 );
 

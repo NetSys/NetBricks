@@ -10,7 +10,7 @@ pub mod v6;
 /// Assigned internet protocol number
 ///
 /// From https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(C, packed)]
 pub struct ProtocolNumber(pub u8);
 
@@ -94,20 +94,6 @@ pub struct Flow {
     protocol: ProtocolNumber,
 }
 
-impl fmt::Display for Flow {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "src_ip: {}, src_port: {}, dst_ip: {}, dst_port: {}, proto: {}",
-            self.src_ip(),
-            self.src_port(),
-            self.dst_ip(),
-            self.dst_port(),
-            self.protocol()
-        )
-    }
-}
-
 impl Flow {
     pub fn new(
         src_ip: IpAddr,
@@ -143,6 +129,20 @@ impl Flow {
 
     pub fn protocol(&self) -> ProtocolNumber {
         self.protocol
+    }
+}
+
+impl fmt::Display for Flow {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "src_ip: {}, src_port: {}, dst_ip: {}, dst_port: {}, proto: {}",
+            self.src_ip(),
+            self.src_port(),
+            self.dst_ip(),
+            self.dst_port(),
+            self.protocol()
+        )
     }
 }
 

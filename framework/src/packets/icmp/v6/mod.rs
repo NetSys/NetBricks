@@ -39,7 +39,7 @@ pub mod too_big;
 */
 
 /// Type of ICMPv6 message
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(C, packed)]
 pub struct Icmpv6Type(pub u8);
 

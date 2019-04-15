@@ -12,8 +12,8 @@ members=["framework",
         # "test/tcp-checksum",
         # "test/icmpv6",
         # "test/mtu-too-big",
-        # "test/transform-error"
-        # "test/ndp-router-advertisement"
+        # "test/transform-error",
+        # "test/ndp-router-advertisement",
         # "test/delay-test",
         # "test/chain-test",
         # "test/shutdown-test",

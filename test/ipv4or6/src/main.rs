@@ -3,11 +3,15 @@
 extern crate colored;
 #[macro_use]
 extern crate netbricks;
-use self::nf::*;
+use colored::*;
+use netbricks::common::Result;
 use netbricks::config::{basic_opts, read_matches};
 use netbricks::interface::*;
-use netbricks::new_operators::*;
-use netbricks::packets::*;
+use netbricks::new_operators::{Batch, ReceiveBatch};
+use netbricks::packets::ip::v4::Ipv4;
+use netbricks::packets::ip::v6::Ipv6;
+use netbricks::packets::ip::IpPacket;
+use netbricks::packets::{EtherTypes, Ethernet, Packet, RawPacket, Tcp};
 use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
@@ -15,7 +19,6 @@ use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-mod nf;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
 where
@@ -30,26 +33,71 @@ where
             ReceiveBatch::new(port.clone())
                 .map(eth_nf)
                 .group_by(
-                    2,
-                    |ethernet| match ethernet.ether_type() {
-                        EtherTypes::Ipv4 => 0,
-                        EtherTypes::Ipv6 => 1,
-                        _ => 2, // dropped
-                    },
-                    |mut groups| {
-                        merge![
-                            groups.remove(&0).unwrap().map(ipv4_nf),
-                            groups.remove(&1).unwrap().map(ipv6_nf),
-                        ]
+                    |ethernet| ethernet.ether_type(),
+                    |groups| {
+                        compose!(
+                            groups,
+                            EtherTypes::Ipv4 => |group| {
+                                group.map(ipv4_nf)
+                            },
+                            EtherTypes::Ipv6 => |group| {
+                                group.map(ipv6_nf)
+                            }
+                        );
                     },
                 )
                 .send(port.clone())
         })
         .collect();
+
     println!("Running {} pipelines", pipelines.len());
+
     for pipeline in pipelines {
         sched.add_task(pipeline).unwrap();
     }
+}
+
+#[inline]
+pub fn eth_nf(packet: RawPacket) -> Result<Ethernet> {
+    let ethernet = packet.parse::<Ethernet>()?;
+
+    let info_fmt = format!("[eth] {}", ethernet).magenta().bold();
+    println!("{}", info_fmt);
+
+    Ok(ethernet)
+}
+
+#[inline]
+pub fn ipv4_nf(ethernet: Ethernet) -> Result<Ethernet> {
+    let ipv4 = ethernet.parse::<Ipv4>()?;
+    let info_fmt = format!("[ipv4] {}, [offset] {}", ipv4, ipv4.offset()).yellow();
+    println!("{}", info_fmt);
+
+    let tcp = ipv4.parse::<Tcp<Ipv4>>()?;
+    print_tcp(&tcp);
+
+    Ok(tcp.deparse().deparse())
+}
+
+#[inline]
+pub fn ipv6_nf(ethernet: Ethernet) -> Result<Ethernet> {
+    let ipv6 = ethernet.parse::<Ipv6>()?;
+    let info_fmt = format!("[ipv6] {}, [offset] {}", ipv6, ipv6.offset()).cyan();
+    println!("{}", info_fmt);
+
+    let tcp = ipv6.parse::<Tcp<Ipv6>>()?;
+    print_tcp(&tcp);
+
+    Ok(tcp.deparse().deparse())
+}
+
+#[inline]
+fn print_tcp<T: IpPacket>(tcp: &Tcp<T>) {
+    let tcp_fmt = format!("[tcp] {}", tcp).green();
+    println!("{}", tcp_fmt);
+
+    let flow_fmt = format!("[flow] {}", tcp.flow()).bright_blue();
+    println!("{}", flow_fmt);
 }
 
 fn main() {

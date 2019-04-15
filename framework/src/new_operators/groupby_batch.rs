@@ -2,39 +2,48 @@ use super::{Batch, Enqueue, PacketError, QueueBatch, SingleThreadedQueue};
 use packets::Packet;
 use std::collections::HashMap;
 
-/// Lazily-evaluate groupby operator
+pub type PipelineBuilder<T> = FnMut(QueueBatch<SingleThreadedQueue<T>>) -> Box<Batch<Item = T>>;
+
+/// Lazily-evaluate group_by operator
 ///
 /// When unmatched, the packet is marked as dropped and will short-circuit
 /// the remainder of the pipeline.
 ///
 /// On error, the packet is marked as aborted and will short-circuit the
 /// remainder of the pipeline.
-pub struct GroupByBatch<B: Batch, S>
+pub struct GroupByBatch<B: Batch, K, S>
 where
-    S: FnMut(&B::Item) -> usize,
+    K: Eq + Clone + std::hash::Hash,
+    S: FnMut(&B::Item) -> K,
 {
     source: B,
     selector: S,
     producer: SingleThreadedQueue<B::Item>,
-    groups: Vec<Box<Batch<Item = B::Item>>>,
+    groups: HashMap<K, Box<Batch<Item = B::Item>>>,
 }
 
-impl<B: Batch, S> GroupByBatch<B, S>
+impl<B: Batch, K, S> GroupByBatch<B, K, S>
 where
-    S: FnMut(&B::Item) -> usize,
+    K: Eq + Clone + std::hash::Hash,
+    S: FnMut(&B::Item) -> K,
 {
     #[inline]
-    pub fn new<C>(source: B, size: usize, selector: S, composer: C) -> Self
+    pub fn new<C>(source: B, selector: S, composer: C) -> Self
     where
-        C: FnOnce(
-            HashMap<usize, QueueBatch<SingleThreadedQueue<B::Item>>>,
-        ) -> Vec<Box<Batch<Item = B::Item>>>,
+        C: FnOnce(&mut HashMap<K, Box<PipelineBuilder<B::Item>>>) -> (),
     {
         let queue = SingleThreadedQueue::<B::Item>::new(1);
-        let groups = (0..size)
-            .map(|idx| (idx, QueueBatch::new(queue.clone())))
+        let mut groups = HashMap::<K, Box<PipelineBuilder<B::Item>>>::new();
+        composer(&mut groups);
+
+        let groups = groups
+            .iter_mut()
+            .map(|(key, build)| {
+                let key = key.clone();
+                let group = build(QueueBatch::new(queue.clone()));
+                (key, group)
+            })
             .collect::<HashMap<_, _>>();
-        let groups = composer(groups);
 
         GroupByBatch {
             source,
@@ -45,9 +54,10 @@ where
     }
 }
 
-impl<B: Batch, S> Batch for GroupByBatch<B, S>
+impl<B: Batch, K, S> Batch for GroupByBatch<B, K, S>
 where
-    S: FnMut(&B::Item) -> usize,
+    K: Eq + Clone + std::hash::Hash,
+    S: FnMut(&B::Item) -> K,
 {
     type Item = B::Item;
 
@@ -56,13 +66,14 @@ where
         self.source.next().map(|item| {
             match item {
                 Ok(packet) => {
-                    let group = (self.selector)(&packet);
-                    if group < self.groups.len() {
-                        self.producer.enqueue(packet);
-                        self.groups[group].next().unwrap()
-                    } else {
+                    let key = (self.selector)(&packet);
+                    match self.groups.get_mut(&key) {
+                        Some(group) => {
+                            self.producer.enqueue(packet);
+                            group.next().unwrap()
+                        }
                         // can't find the group, drop the packet
-                        Err(PacketError::Drop(packet.mbuf()))
+                        None => Err(PacketError::Drop(packet.mbuf())),
                     }
                 }
                 Err(e) => Err(e),
@@ -76,8 +87,12 @@ where
     }
 }
 
-/// Merges a list of `Batch` into a `Vec<Box<Batch>>`
+/// Composes the pipelines for the group_by operator
 #[macro_export]
-macro_rules! merge {
-    ($($x:expr,)*) => (vec![$(Box::new($x)),*])
+macro_rules! compose {
+    ($map:ident, $($key:expr => |$arg:tt| $body:block),*) => {{
+        $(
+            $map.insert($key, Box::new(|$arg| Box::new($body)));
+        )*
+    }}
 }
