@@ -108,6 +108,11 @@ impl Packet for RawPacket {
     }
 }
 
+// because packet holds a raw pointer, by default, rust will deem
+// the struct to be not sendable. explicitly implement the `Send`
+// trait to ensure raw packets can go across thread boundaries.
+unsafe impl Send for RawPacket {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
