@@ -5,10 +5,11 @@ extern crate getopts;
 extern crate netbricks;
 extern crate rand;
 extern crate time;
-use self::nf::*;
+use netbricks::common::Result;
 use netbricks::config::{basic_opts, read_matches};
 use netbricks::interface::*;
-use netbricks::new_operators::*;
+use netbricks::new_operators::{Batch, ReceiveBatch};
+use netbricks::packets::{Ethernet, Packet, RawPacket};
 use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
@@ -16,7 +17,6 @@ use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-mod nf;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
 where
@@ -40,6 +40,13 @@ where
     for pipeline in pipelines {
         sched.add_task(pipeline).unwrap();
     }
+}
+
+fn macswap(packet: RawPacket) -> Result<Ethernet> {
+    assert!(packet.refcnt() == 1);
+    let mut ethernet = packet.parse::<Ethernet>()?;
+    ethernet.swap_addresses();
+    Ok(ethernet)
 }
 
 fn main() {

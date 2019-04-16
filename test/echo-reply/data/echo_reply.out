@@ -1,0 +1,5 @@
+c2:01:51:fa:00:00 > c2:00:51:fa:00:00, ethertype IPv6 (0x86dd), length 114: 2001:db8:0:12::2 > 2001:db8:0:12::1: ICMP6, echo reply, seq 0, length 60
+c2:01:51:fa:00:00 > c2:00:51:fa:00:00, ethertype IPv6 (0x86dd), length 114: 2001:db8:0:12::2 > 2001:db8:0:12::1: ICMP6, echo reply, seq 1, length 60
+c2:01:51:fa:00:00 > c2:00:51:fa:00:00, ethertype IPv6 (0x86dd), length 114: 2001:db8:0:12::2 > 2001:db8:0:12::1: ICMP6, echo reply, seq 2, length 60
+c2:01:51:fa:00:00 > c2:00:51:fa:00:00, ethertype IPv6 (0x86dd), length 114: 2001:db8:0:12::2 > 2001:db8:0:12::1: ICMP6, echo reply, seq 3, length 60
+c2:01:51:fa:00:00 > c2:00:51:fa:00:00, ethertype IPv6 (0x86dd), length 114: 2001:db8:0:12::2 > 2001:db8:0:12::1: ICMP6, echo reply, seq 4, length 60

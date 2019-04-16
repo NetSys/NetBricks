@@ -4,10 +4,11 @@ extern crate netbricks;
 use netbricks::common::Result;
 use netbricks::config::{basic_opts, read_matches};
 use netbricks::interface::*;
-use netbricks::new_operators::{Batch, ReceiveBatch};
-use netbricks::packets::icmp::v6::{EchoRequest, Icmpv6};
+use netbricks::new_operators::{mpsc_batch, Batch, Enqueue, MpscProducer, ReceiveBatch};
+use netbricks::packets::icmp::v6::{EchoReply, EchoRequest, Icmpv6};
 use netbricks::packets::ip::v6::Ipv6;
-use netbricks::packets::{Ethernet, Packet, RawPacket};
+use netbricks::packets::ip::ProtocolNumbers;
+use netbricks::packets::{EtherTypes, Ethernet, Packet, RawPacket};
 use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
@@ -21,31 +22,56 @@ where
     T: PacketRx + PacketTx + Display + Clone + 'static,
     S: Scheduler + Sized,
 {
+    println!("Echo reply pipeline");
+
+    let (producer, outbound) = mpsc_batch();
+    let outbound = outbound.send(ports[0].clone());
+    sched.add_task(outbound).unwrap();
+
     println!("Receiving started");
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| {
+        .map(move |port| {
+            let producer = producer.clone();
             ReceiveBatch::new(port.clone())
-                .map(echo_request)
+                .map(move |p| reply_echo(p, &producer))
+                .filter(|_| false)
                 .send(port.clone())
         })
         .collect();
 
-    println!("Running {} pipelines", pipelines.len());
+    println!("Running {} pipelines", pipelines.len() + 1);
 
     for pipeline in pipelines {
         sched.add_task(pipeline).unwrap();
     }
 }
 
-fn echo_request(packet: RawPacket) -> Result<Icmpv6<Ipv6, EchoRequest>> {
-    let ethernet = packet.parse::<Ethernet>()?;
-    let ipv6 = ethernet.parse::<Ipv6>()?;
-    let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
-    let echo = icmpv6.downcast::<EchoRequest>().unwrap();
+fn reply_echo(packet: RawPacket, producer: &MpscProducer) -> Result<Icmpv6<Ipv6, EchoRequest>> {
+    let reply = RawPacket::new()?;
 
-    println!("[echo] {}, data_len: {}", echo, echo.data().len());
+    let ethernet = packet.parse::<Ethernet>()?;
+    let mut reply = reply.push::<Ethernet>()?;
+    reply.set_src(ethernet.dst());
+    reply.set_dst(ethernet.src());
+    reply.set_ether_type(EtherTypes::Ipv6);
+
+    let ipv6 = ethernet.parse::<Ipv6>()?;
+    let reply = reply.push::<Ipv6>()?;
+    reply.set_src(ipv6.dst());
+    reply.set_dst(ipv6.src());
+    reply.set_next_header(ProtocolNumbers::Icmpv6);
+
+    let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>()?;
+    let echo = icmpv6.downcast::<EchoRequest>()?;
+    let mut reply = reply.push::<Icmpv6<Ipv6, EchoReply>>()?;
+    reply.set_identifier(echo.identifier());
+    reply.set_seq_no(echo.seq_no());
+    reply.set_data(echo.data())?;
+    reply.cascade();
+
+    producer.enqueue(reply.reset());
 
     Ok(echo)
 }

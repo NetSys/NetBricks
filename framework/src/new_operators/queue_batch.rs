@@ -23,10 +23,10 @@ pub trait Dequeue {
 ///
 /// Obtains the packets by dequeuing from an internal queue. Different
 /// queue implementations enable various use cases.
-/// 
-/// * single threaded queue enables testing of the operators by making 
+///
+/// * single threaded queue enables testing of the operators by making
 /// packet ingest controllable through code.
-/// * mpsc queue enables enqueuing packets from threads different from 
+/// * mpsc queue enables enqueuing packets from threads different from
 /// the thread that sends them out.
 pub struct QueueBatch<Q: Dequeue> {
     queue: Q,
