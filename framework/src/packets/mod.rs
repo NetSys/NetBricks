@@ -127,6 +127,13 @@ pub trait Packet {
 
     /// Deparses the packet and returns its envelope
     fn deparse(self) -> Self::Envelope;
+
+    fn reset(self) -> RawPacket
+    where
+        Self: Sized,
+    {
+        RawPacket::from_mbuf(self.mbuf())
+    }
 }
 
 /// Error when packet failed to parse

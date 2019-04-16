@@ -284,6 +284,22 @@ mod tests {
     }
 
     #[test]
+    fn reset_reparse_ethernet_packet() {
+        use packets::udp::tests::UDP_PACKET;
+
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let reset = ethernet.reset();
+            let reset_ethernet = reset.parse::<Ethernet>().unwrap();
+
+            assert_eq!("00:00:00:00:00:01", reset_ethernet.dst().to_string());
+            assert_eq!("00:00:00:00:00:02", reset_ethernet.src().to_string());
+            assert_eq!(EtherTypes::Ipv4, reset_ethernet.ether_type());
+        }
+    }
+
+    #[test]
     fn swap_addresses() {
         use packets::udp::tests::UDP_PACKET;
 
