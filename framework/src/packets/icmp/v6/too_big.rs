@@ -39,7 +39,7 @@ impl<E: Ipv6Packet> Icmpv6<E, PacketTooBig> {
     }
 
     #[inline]
-    pub fn set_mtu(&self, mtu: u32) {
+    pub fn set_mtu(&mut self, mtu: u32) {
         self.payload().mtu = u32::to_be(mtu);
     }
 }
@@ -48,7 +48,7 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, PacketTooBig> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "type: {} code: {} checksum: 0x{:04x} mtu: {}",
+            "type: {}, code: {}, checksum: 0x{:04x}, mtu: {}",
             self.msg_type(),
             self.code(),
             self.checksum(),
@@ -61,7 +61,6 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, PacketTooBig> {
 mod tests {
     use super::*;
     use packets::Fixed;
-    //use dpdk_test;
 
     #[test]
     fn size_of_packet_too_big() {

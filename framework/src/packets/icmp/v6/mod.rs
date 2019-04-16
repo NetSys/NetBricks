@@ -5,6 +5,8 @@ use packets::ip::ProtocolNumbers;
 use packets::{buffer, checksum, Fixed, Header, Packet, ParseError};
 use std::fmt;
 
+pub use self::echo_reply::*;
+pub use self::echo_request::*;
 pub use self::ndp::neighbor_advert::*;
 pub use self::ndp::neighbor_solicit::*;
 pub use self::ndp::options::*;
@@ -13,6 +15,8 @@ pub use self::ndp::router_solicit::*;
 pub use self::ndp::*;
 pub use self::too_big::*;
 
+pub mod echo_reply;
+pub mod echo_request;
 pub mod ndp;
 pub mod too_big;
 
@@ -56,6 +60,8 @@ pub mod Icmpv6Types {
     use super::Icmpv6Type;
 
     pub const PacketTooBig: Icmpv6Type = Icmpv6Type(2);
+    pub const EchoRequest: Icmpv6Type = Icmpv6Type(128);
+    pub const EchoReply: Icmpv6Type = Icmpv6Type(129);
 
     // NDP types
     pub const RouterSolicitation: Icmpv6Type = Icmpv6Type(133);
@@ -72,6 +78,8 @@ impl fmt::Display for Icmpv6Type {
             "{}",
             match self {
                 &Icmpv6Types::PacketTooBig => "Packet Too Big".to_string(),
+                &Icmpv6Types::EchoRequest => "Echo Request".to_string(),
+                &Icmpv6Types::EchoReply => "Echo Reply".to_string(),
                 &Icmpv6Types::RouterSolicitation => "Router Solicitation".to_string(),
                 &Icmpv6Types::RouterAdvertisement => "Router Advertisement".to_string(),
                 &Icmpv6Types::NeighborSolicitation => "Neighbor Solicitation".to_string(),
@@ -300,6 +308,8 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
 
 /// An ICMPv6 message with parsed payload
 pub enum Icmpv6Message<E: Ipv6Packet> {
+    EchoRequest(Icmpv6<E, EchoRequest>),
+    EchoReply(Icmpv6<E, EchoReply>),
     NeighborAdvertisement(Icmpv6<E, NeighborAdvertisement>),
     NeighborSolicitation(Icmpv6<E, NeighborSolicitation>),
     RouterAdvertisement(Icmpv6<E, RouterAdvertisement>),
@@ -336,6 +346,14 @@ impl<T: Ipv6Packet> Icmpv6Parse for T {
         if self.next_proto() == ProtocolNumbers::Icmpv6 {
             let icmpv6 = self.parse::<Icmpv6<Self::Envelope, ()>>()?;
             match icmpv6.msg_type() {
+                Icmpv6Types::EchoRequest => {
+                    let packet = icmpv6.downcast::<EchoRequest>()?;
+                    Ok(Icmpv6Message::EchoRequest(packet))
+                }
+                Icmpv6Types::EchoReply => {
+                    let packet = icmpv6.downcast::<EchoReply>()?;
+                    Ok(Icmpv6Message::EchoReply(packet))
+                }
                 Icmpv6Types::NeighborAdvertisement => {
                     let packet = icmpv6.downcast::<NeighborAdvertisement>()?;
                     Ok(Icmpv6Message::NeighborAdvertisement(packet))
@@ -382,13 +400,13 @@ mod tests {
         0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b,
         0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
         // ** ICMPv6 header
-        // type
-        0x81,
+        // unknown type
+        0xFF,
         // code
         0x00,
         // checksum
         0x01, 0xf0,
-        // ** echo request
+        // data
         0x00, 0x00, 0x00, 0x00
     ];
 
@@ -405,7 +423,7 @@ mod tests {
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
             let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
 
-            assert_eq!(Icmpv6Type::new(0x81), icmpv6.msg_type());
+            assert_eq!(Icmpv6Type::new(0xFF), icmpv6.msg_type());
             assert_eq!(0, icmpv6.code());
             assert_eq!(0x01f0, icmpv6.checksum());
         }
@@ -451,7 +469,7 @@ mod tests {
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
             if let Ok(Icmpv6Message::Undefined(icmpv6)) = ipv6.parse_icmpv6() {
-                assert_eq!(Icmpv6Type::new(0x81), icmpv6.msg_type());
+                assert_eq!(Icmpv6Type::new(0xFF), icmpv6.msg_type());
             } else {
                 panic!("bad packet");
             }

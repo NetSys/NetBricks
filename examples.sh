@@ -2,12 +2,13 @@
 # Lists all the examples that are runnable and/or testable.
 # This is used by the build script.
 export examples=(
+        test/echo-reply
+        test/ipv4or6
+        test/macswap
         # test/framework-test
         # test/packet-test
         # test/packet-generation
         # test/tcp-payload
-        test/macswap
-        test/ipv4or6
         # test/srv6-compose
         # test/srv6-sighup-flow
         # test/srv6-inject
