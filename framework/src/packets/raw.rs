@@ -1,4 +1,4 @@
-use common::{NetBricksError, Result};
+use common::Result;
 use native::zcsi::{mbuf_alloc, MBuf};
 use packets::{buffer, Header, Packet};
 
@@ -18,7 +18,7 @@ impl RawPacket {
         unsafe {
             let mbuf = mbuf_alloc();
             if mbuf.is_null() {
-                Err(NetBricksError::FailedAllocation.into())
+                Err(buffer::BufferError::FailAlloc.into())
             } else {
                 Ok(RawPacket { mbuf })
             }
@@ -51,9 +51,15 @@ impl Packet for RawPacket {
 
     #[inline]
     fn envelope(&self) -> &Self::Envelope {
-        &self
+        self
     }
 
+    #[inline]
+    fn envelope_mut(&mut self) -> &mut Self::Envelope {
+        self
+    }
+
+    #[doc(hidden)]
     #[inline]
     fn mbuf(&self) -> *mut MBuf {
         self.mbuf
@@ -64,8 +70,15 @@ impl Packet for RawPacket {
         0
     }
 
+    #[doc(hidden)]
     #[inline]
-    fn header(&self) -> &mut Self::Header {
+    fn header(&self) -> &Self::Header {
+        unreachable!("raw packet has no defined header!");
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    fn header_mut(&mut self) -> &mut Self::Header {
         unreachable!("raw packet has no defined header!");
     }
 
@@ -98,7 +111,7 @@ impl Packet for RawPacket {
     }
 
     #[inline]
-    fn cascade(&self) {
+    fn cascade(&mut self) {
         // noop
     }
 

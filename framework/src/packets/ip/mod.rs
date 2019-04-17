@@ -70,7 +70,7 @@ pub trait IpPacket: Packet {
     ///
     /// This lets an upper layer packet like TCP set the source IP address
     /// on a lower layer packet.
-    fn set_src(&self, src: IpAddr) -> Result<()>;
+    fn set_src(&mut self, src: IpAddr) -> Result<()>;
 
     /// Returns the destination IP address
     fn dst(&self) -> IpAddr;
@@ -79,7 +79,7 @@ pub trait IpPacket: Packet {
     ///
     /// This lets an upper layer packet like TCP set the destination IP address
     /// on a lower layer packet.
-    fn set_dst(&self, dst: IpAddr) -> Result<()>;
+    fn set_dst(&mut self, dst: IpAddr) -> Result<()>;
 
     /// Returns the pseudo-header sum for layer 4 checksum computation
     fn pseudo_header_sum(&self, packet_len: u16, protocol: ProtocolNumber) -> u16;

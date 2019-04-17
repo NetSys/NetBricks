@@ -198,13 +198,13 @@ pub mod tests {
                         compose!(
                             groups,
                             ProtocolNumbers::Tcp => |group| {
-                                group.map(|p| {
+                                group.map(|mut p| {
                                     p.set_ttl(1);
                                     Ok(p)
                                 })
                             },
                             ProtocolNumbers::Udp => |group| {
-                                group.map(|p| {
+                                group.map(|mut p| {
                                     p.set_ttl(2);
                                     Ok(p)
                                 })

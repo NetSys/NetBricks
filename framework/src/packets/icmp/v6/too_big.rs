@@ -40,7 +40,7 @@ impl<E: Ipv6Packet> Icmpv6<E, PacketTooBig> {
 
     #[inline]
     pub fn set_mtu(&mut self, mtu: u32) {
-        self.payload().mtu = u32::to_be(mtu);
+        self.payload_mut().mtu = u32::to_be(mtu);
     }
 }
 

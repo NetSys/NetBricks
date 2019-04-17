@@ -124,8 +124,11 @@ impl Icmpv6Payload for () {
 pub trait Icmpv6Packet<E: Ipv6Packet, P: Icmpv6Payload>:
     Packet<Header = Icmpv6Header, Envelope = E>
 {
-    /// Returns the fixed payload
-    fn payload(&self) -> &mut P;
+    /// Returns a reference to the fixed payload
+    fn payload(&self) -> &P;
+
+    /// Returns a mutable reference to the fixed payload
+    fn payload_mut(&mut self) -> &mut P;
 
     #[inline]
     fn msg_type(&self) -> Icmpv6Type {
@@ -138,8 +141,8 @@ pub trait Icmpv6Packet<E: Ipv6Packet, P: Icmpv6Payload>:
     }
 
     #[inline]
-    fn set_code(&self, code: u8) {
-        self.header().code = code
+    fn set_code(&mut self, code: u8) {
+        self.header_mut().code = code
     }
 
     #[inline]
@@ -148,8 +151,8 @@ pub trait Icmpv6Packet<E: Ipv6Packet, P: Icmpv6Payload>:
     }
 
     #[inline]
-    fn compute_checksum(&self) {
-        self.header().checksum = 0;
+    fn compute_checksum(&mut self) {
+        self.header_mut().checksum = 0;
 
         if let Ok(data) = buffer::read_slice(self.mbuf(), self.offset(), self.len()) {
             let data = unsafe { &(*data) };
@@ -157,7 +160,7 @@ pub trait Icmpv6Packet<E: Ipv6Packet, P: Icmpv6Payload>:
                 .envelope()
                 .pseudo_header_sum(data.len() as u16, ProtocolNumbers::Icmpv6);
             let checksum = checksum::compute(pseudo_header_sum, data);
-            self.header().checksum = u16::to_be(checksum);
+            self.header_mut().checksum = u16::to_be(checksum);
         } else {
             // we are reading till the end of buffer, should never run out
             unreachable!()
@@ -213,7 +216,11 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, ()> {
 }
 
 impl<E: Ipv6Packet, P: Icmpv6Payload> Icmpv6Packet<E, P> for Icmpv6<E, P> {
-    fn payload(&self) -> &mut P {
+    fn payload(&self) -> &P {
+        unsafe { &(*self.payload) }
+    }
+
+    fn payload_mut(&mut self) -> &mut P {
         unsafe { &mut (*self.payload) }
     }
 }
@@ -228,6 +235,12 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
     }
 
     #[inline]
+    fn envelope_mut(&mut self) -> &mut Self::Envelope {
+        &mut self.envelope
+    }
+
+    #[doc(hidden)]
+    #[inline]
     fn mbuf(&self) -> *mut MBuf {
         self.mbuf
     }
@@ -237,8 +250,15 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
         self.offset
     }
 
+    #[doc(hidden)]
     #[inline]
-    fn header(&self) -> &mut Self::Header {
+    fn header(&self) -> &Self::Header {
+        unsafe { &(*self.header) }
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    fn header_mut(&mut self) -> &mut Self::Header {
         unsafe { &mut (*self.header) }
     }
 
@@ -295,9 +315,9 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
     }
 
     #[inline]
-    fn cascade(&self) {
+    fn cascade(&mut self) {
         self.compute_checksum();
-        self.envelope().cascade();
+        self.envelope_mut().cascade();
     }
 
     #[inline]
@@ -453,7 +473,7 @@ mod tests {
             let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
+            let mut icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
 
             let expected = icmpv6.checksum();
             // no payload change but force a checksum recompute anyway

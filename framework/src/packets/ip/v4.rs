@@ -5,7 +5,7 @@ use packets::{buffer, Ethernet, Fixed, Header, Packet};
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr};
 
-/*  From (https://tools.ietf.org/html/rfc791#section-3.1)
+/*  From https://tools.ietf.org/html/rfc791#section-3.1
     Internet Datagram Header
 
      0                   1                   2                   3
@@ -185,8 +185,8 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_ihl(&self, ihl: u8) {
-        self.header().version_ihl = (self.header().version_ihl & 0x0f) | (ihl & 0x0f);
+    pub fn set_ihl(&mut self, ihl: u8) {
+        self.header_mut().version_ihl = (self.header().version_ihl & 0x0f) | (ihl & 0x0f);
     }
 
     #[inline]
@@ -195,8 +195,8 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_dscp(&self, dscp: u8) {
-        self.header().dscp_ecn = (self.header().dscp_ecn & ECN) | (dscp << 2);
+    pub fn set_dscp(&mut self, dscp: u8) {
+        self.header_mut().dscp_ecn = (self.header().dscp_ecn & ECN) | (dscp << 2);
     }
 
     #[inline]
@@ -205,8 +205,8 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_ecn(&self, ecn: u8) {
-        self.header().dscp_ecn = (self.header().dscp_ecn & DSCP) | (ecn & ECN);
+    pub fn set_ecn(&mut self, ecn: u8) {
+        self.header_mut().dscp_ecn = (self.header().dscp_ecn & DSCP) | (ecn & ECN);
     }
 
     #[inline]
@@ -215,8 +215,8 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_total_length(&self, total_length: u16) {
-        self.header().total_length = u16::to_be(total_length);
+    fn set_total_length(&mut self, total_length: u16) {
+        self.header_mut().total_length = u16::to_be(total_length);
     }
 
     #[inline]
@@ -225,8 +225,8 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_identification(&self, identification: u16) {
-        self.header().identification = u16::to_be(identification);
+    pub fn set_identification(&mut self, identification: u16) {
+        self.header_mut().identification = u16::to_be(identification);
     }
 
     #[inline]
@@ -235,14 +235,14 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_dont_fragment(&self) {
-        self.header().flags_to_frag_offset =
+    pub fn set_dont_fragment(&mut self) {
+        self.header_mut().flags_to_frag_offset =
             u16::to_be(u16::from_be(self.header().flags_to_frag_offset) | FLAGS_DF);
     }
 
     #[inline]
-    pub fn unset_dont_fragment(&self) {
-        self.header().flags_to_frag_offset =
+    pub fn unset_dont_fragment(&mut self) {
+        self.header_mut().flags_to_frag_offset =
             u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !FLAGS_DF);
     }
 
@@ -252,26 +252,21 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_more_fragments(&self) {
-        self.header().flags_to_frag_offset =
+    pub fn set_more_fragments(&mut self) {
+        self.header_mut().flags_to_frag_offset =
             u16::to_be(u16::from_be(self.header().flags_to_frag_offset) | FLAGS_MF);
     }
 
     #[inline]
-    pub fn unset_more_fragments(&self) {
-        self.header().flags_to_frag_offset =
+    pub fn unset_more_fragments(&mut self) {
+        self.header_mut().flags_to_frag_offset =
             u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !FLAGS_MF);
     }
 
     #[inline]
-    pub fn clear_flags(&self) {
-        self.header().flags_to_frag_offset =
+    pub fn clear_flags(&mut self) {
+        self.header_mut().flags_to_frag_offset =
             u16::to_be(u16::from_be(self.header().flags_to_frag_offset) & !0xe000);
-    }
-
-    #[inline]
-    pub fn flags(&self) -> u8 {
-        (u16::from_be(self.header().flags_to_frag_offset) >> 13) as u8
     }
 
     #[inline]
@@ -280,8 +275,8 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_fragment_offset(&self, offset: u16) {
-        self.header().flags_to_frag_offset = u16::to_be(
+    pub fn set_fragment_offset(&mut self, offset: u16) {
+        self.header_mut().flags_to_frag_offset = u16::to_be(
             (u16::from_be(self.header().flags_to_frag_offset) & 0xe000) | (offset & 0x1fff),
         );
     }
@@ -292,8 +287,8 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_ttl(&self, ttl: u8) {
-        self.header().ttl = ttl;
+    pub fn set_ttl(&mut self, ttl: u8) {
+        self.header_mut().ttl = ttl;
     }
 
     #[inline]
@@ -302,8 +297,8 @@ impl Ipv4 {
     }
 
     #[inline]
-    pub fn set_protocol(&self, protocol: ProtocolNumber) {
-        self.header().protocol = protocol.0;
+    pub fn set_protocol(&mut self, protocol: ProtocolNumber) {
+        self.header_mut().protocol = protocol.0;
     }
 
     #[inline]
@@ -311,9 +306,10 @@ impl Ipv4 {
         u16::from_be(self.header().checksum)
     }
 
+    #[allow(dead_code)]
     #[inline]
-    pub fn set_checksum(&self, checksum: u16) {
-        self.header().checksum = u16::to_be(checksum);
+    fn set_checksum(&mut self, checksum: u16) {
+        self.header_mut().checksum = u16::to_be(checksum);
     }
 
     #[inline]
@@ -322,8 +318,8 @@ impl Ipv4 {
     }
 
     #[inline]
-    fn set_src(&self, src: Ipv4Addr) {
-        self.header().src = src;
+    pub fn set_src(&mut self, src: Ipv4Addr) {
+        self.header_mut().src = src;
     }
 
     #[inline]
@@ -332,8 +328,8 @@ impl Ipv4 {
     }
 
     #[inline]
-    fn set_dst(&self, dst: Ipv4Addr) {
-        self.header().dst = dst;
+    pub fn set_dst(&mut self, dst: Ipv4Addr) {
+        self.header_mut().dst = dst;
     }
 }
 
@@ -369,6 +365,12 @@ impl Packet for Ipv4 {
     }
 
     #[inline]
+    fn envelope_mut(&mut self) -> &mut Self::Envelope {
+        &mut self.envelope
+    }
+
+    #[doc(hidden)]
+    #[inline]
     fn mbuf(&self) -> *mut MBuf {
         self.mbuf
     }
@@ -378,8 +380,15 @@ impl Packet for Ipv4 {
         self.offset
     }
 
+    #[doc(hidden)]
     #[inline]
-    fn header(&self) -> &mut Self::Header {
+    fn header(&self) -> &Self::Header {
+        unsafe { &(*self.header) }
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    fn header_mut(&mut self) -> &mut Self::Header {
         unsafe { &mut (*self.header) }
     }
 
@@ -427,9 +436,11 @@ impl Packet for Ipv4 {
     }
 
     #[inline]
-    fn cascade(&self) {
-        // TODO: fix length and checksum
-        // self.envelope().cascade();
+    fn cascade(&mut self) {
+        // TODO: fix header checksum
+        let len = self.len() as u16;
+        self.set_total_length(len);
+        self.envelope_mut().cascade();
     }
 
     #[inline]
@@ -450,7 +461,7 @@ impl IpPacket for Ipv4 {
     }
 
     #[inline]
-    fn set_src(&self, src: IpAddr) -> Result<()> {
+    fn set_src(&mut self, src: IpAddr) -> Result<()> {
         match src {
             IpAddr::V4(addr) => {
                 self.set_src(addr);
@@ -466,7 +477,7 @@ impl IpPacket for Ipv4 {
     }
 
     #[inline]
-    fn set_dst(&self, dst: IpAddr) -> Result<()> {
+    fn set_dst(&mut self, dst: IpAddr) -> Result<()> {
         match dst {
             IpAddr::V4(addr) => {
                 self.set_dst(addr);
@@ -551,10 +562,9 @@ mod tests {
         dpdk_test! {
             let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+            let mut ipv4 = ethernet.parse::<Ipv4>().unwrap();
 
             // Flags
-            assert_eq!(2, ipv4.flags());
             assert_eq!(true, ipv4.dont_fragment());
             assert_eq!(false, ipv4.more_fragments());
             ipv4.unset_dont_fragment();

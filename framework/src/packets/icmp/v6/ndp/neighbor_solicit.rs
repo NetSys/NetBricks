@@ -81,8 +81,8 @@ impl<E: Ipv6Packet> Icmpv6<E, NeighborSolicitation> {
     }
 
     #[inline]
-    pub fn set_target_addr(&self, target_addr: Ipv6Addr) {
-        self.payload().target_addr = target_addr
+    pub fn set_target_addr(&mut self, target_addr: Ipv6Addr) {
+        self.payload_mut().target_addr = target_addr
     }
 }
 

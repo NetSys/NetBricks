@@ -5,7 +5,7 @@ use packets::{buffer, checksum, Fixed, Header, Packet};
 use std::fmt;
 use std::net::IpAddr;
 
-/*  From (https://tools.ietf.org/html/rfc793#section-3.1)
+/*  From https://tools.ietf.org/html/rfc793#section-3.1
     TCP Header Format
 
      0                   1                   2                   3
@@ -112,7 +112,7 @@ use std::net::IpAddr;
 ///
 /// The header only include the fixed portion of the TCP header.
 /// Options are parsed separately.
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 #[repr(C, packed)]
 pub struct TcpHeader {
     src_port: u16,
@@ -124,6 +124,22 @@ pub struct TcpHeader {
     window: u16,
     checksum: u16,
     urgent_pointer: u16,
+}
+
+impl Default for TcpHeader {
+    fn default() -> TcpHeader {
+        TcpHeader {
+            src_port: 0,
+            dst_port: 0,
+            seq_no: 0,
+            ack_no: 0,
+            offset_to_ns: 5 << 4,
+            flags: 0,
+            window: 0,
+            checksum: 0,
+            urgent_pointer: 0,
+        }
+    }
 }
 
 impl Header for TcpHeader {}
@@ -152,8 +168,8 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_src_port(&self, src_port: u16) {
-        self.header().src_port = u16::to_be(src_port);
+    pub fn set_src_port(&mut self, src_port: u16) {
+        self.header_mut().src_port = u16::to_be(src_port);
     }
 
     #[inline]
@@ -162,8 +178,8 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_dst_port(&self, dst_port: u16) {
-        self.header().dst_port = u16::to_be(dst_port);
+    pub fn set_dst_port(&mut self, dst_port: u16) {
+        self.header_mut().dst_port = u16::to_be(dst_port);
     }
 
     #[inline]
@@ -172,8 +188,8 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_seq_no(&self, seq_no: u32) {
-        self.header().seq_no = u32::to_be(seq_no);
+    pub fn set_seq_no(&mut self, seq_no: u32) {
+        self.header_mut().seq_no = u32::to_be(seq_no);
     }
 
     #[inline]
@@ -182,8 +198,8 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_ack_no(&self, ack_no: u32) {
-        self.header().ack_no = u32::to_be(ack_no);
+    pub fn set_ack_no(&mut self, ack_no: u32) {
+        self.header_mut().ack_no = u32::to_be(ack_no);
     }
 
     #[inline]
@@ -191,9 +207,11 @@ impl<E: IpPacket> Tcp<E> {
         (self.header().offset_to_ns & 0xf0) >> 4
     }
 
+    // TODO: support tcp header options
+    #[allow(dead_code)]
     #[inline]
-    pub fn set_data_offset(&self, data_offset: u8) {
-        self.header().offset_to_ns = (self.header().offset_to_ns & 0x0f) | (data_offset << 4);
+    fn set_data_offset(&mut self, data_offset: u8) {
+        self.header_mut().offset_to_ns = (self.header().offset_to_ns & 0x0f) | (data_offset << 4);
     }
 
     #[inline]
@@ -202,13 +220,13 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_ns(&self) {
-        self.header().offset_to_ns |= 0x01;
+    pub fn set_ns(&mut self) {
+        self.header_mut().offset_to_ns |= 0x01;
     }
 
     #[inline]
-    pub fn unset_ns(&self) {
-        self.header().offset_to_ns &= !0x1;
+    pub fn unset_ns(&mut self) {
+        self.header_mut().offset_to_ns &= !0x1;
     }
 
     #[inline]
@@ -217,13 +235,13 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_cwr(&self) {
-        self.header().flags |= CWR;
+    pub fn set_cwr(&mut self) {
+        self.header_mut().flags |= CWR;
     }
 
     #[inline]
-    pub fn unset_cwr(&self) {
-        self.header().flags &= !CWR;
+    pub fn unset_cwr(&mut self) {
+        self.header_mut().flags &= !CWR;
     }
 
     #[inline]
@@ -232,13 +250,13 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_ece(&self) {
-        self.header().flags |= ECE;
+    pub fn set_ece(&mut self) {
+        self.header_mut().flags |= ECE;
     }
 
     #[inline]
-    pub fn unset_ece(&self) {
-        self.header().flags &= !ECE;
+    pub fn unset_ece(&mut self) {
+        self.header_mut().flags &= !ECE;
     }
 
     #[inline]
@@ -247,13 +265,13 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_urg(&self) {
-        self.header().flags |= URG;
+    pub fn set_urg(&mut self) {
+        self.header_mut().flags |= URG;
     }
 
     #[inline]
-    pub fn unset_urg(&self) {
-        self.header().flags &= !URG;
+    pub fn unset_urg(&mut self) {
+        self.header_mut().flags &= !URG;
     }
 
     #[inline]
@@ -262,13 +280,13 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_ack(&self) {
-        self.header().flags |= ACK;
+    pub fn set_ack(&mut self) {
+        self.header_mut().flags |= ACK;
     }
 
     #[inline]
-    pub fn unset_ack(&self) {
-        self.header().flags &= !ACK;
+    pub fn unset_ack(&mut self) {
+        self.header_mut().flags &= !ACK;
     }
 
     #[inline]
@@ -277,13 +295,13 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_psh(&self) {
-        self.header().flags |= PSH;
+    pub fn set_psh(&mut self) {
+        self.header_mut().flags |= PSH;
     }
 
     #[inline]
-    pub fn unset_psh(&self) {
-        self.header().flags &= !PSH;
+    pub fn unset_psh(&mut self) {
+        self.header_mut().flags &= !PSH;
     }
 
     #[inline]
@@ -292,13 +310,13 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_rst(&self) {
-        self.header().flags |= RST;
+    pub fn set_rst(&mut self) {
+        self.header_mut().flags |= RST;
     }
 
     #[inline]
-    pub fn unset_rst(&self) {
-        self.header().flags &= !RST;
+    pub fn unset_rst(&mut self) {
+        self.header_mut().flags &= !RST;
     }
 
     #[inline]
@@ -307,13 +325,13 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_syn(&self) {
-        self.header().flags |= SYN;
+    pub fn set_syn(&mut self) {
+        self.header_mut().flags |= SYN;
     }
 
     #[inline]
-    pub fn unset_syn(&self) {
-        self.header().flags &= !SYN;
+    pub fn unset_syn(&mut self) {
+        self.header_mut().flags &= !SYN;
     }
 
     #[inline]
@@ -322,13 +340,13 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_fin(&self) {
-        self.header().flags |= FIN;
+    pub fn set_fin(&mut self) {
+        self.header_mut().flags |= FIN;
     }
 
     #[inline]
     pub fn unset_fin(&mut self) {
-        self.header().flags &= !FIN;
+        self.header_mut().flags &= !FIN;
     }
 
     #[inline]
@@ -337,8 +355,8 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_window(&self, window: u16) {
-        self.header().window = u16::to_be(window);
+    pub fn set_window(&mut self, window: u16) {
+        self.header_mut().window = u16::to_be(window);
     }
 
     #[inline]
@@ -347,8 +365,8 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    fn set_checksum(&self, checksum: u16) {
-        self.header().checksum = u16::to_be(checksum);
+    fn set_checksum(&mut self, checksum: u16) {
+        self.header_mut().checksum = u16::to_be(checksum);
     }
 
     #[inline]
@@ -357,8 +375,8 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
-    pub fn set_urgent_pointer(&self, urgent_pointer: u16) {
-        self.header().urgent_pointer = u16::to_be(urgent_pointer);
+    pub fn set_urgent_pointer(&mut self, urgent_pointer: u16) {
+        self.header_mut().urgent_pointer = u16::to_be(urgent_pointer);
     }
 
     #[inline]
@@ -374,26 +392,26 @@ impl<E: IpPacket> Tcp<E> {
 
     /// Sets the layer-3 source address and recomputes the checksum
     #[inline]
-    pub fn set_src_ip(&self, src_ip: IpAddr) -> Result<()> {
+    pub fn set_src_ip(&mut self, src_ip: IpAddr) -> Result<()> {
         let old_ip = self.envelope().src();
         let checksum = checksum::compute_with_ipaddr(self.checksum(), &old_ip, &src_ip)?;
-        self.envelope().set_src(src_ip)?;
+        self.envelope_mut().set_src(src_ip)?;
         self.set_checksum(checksum);
         Ok(())
     }
 
     /// Sets the layer-3 destination address and recomputes the checksum
     #[inline]
-    pub fn set_dst_ip(&self, dst_ip: IpAddr) -> Result<()> {
+    pub fn set_dst_ip(&mut self, dst_ip: IpAddr) -> Result<()> {
         let old_ip = self.envelope().dst();
         let checksum = checksum::compute_with_ipaddr(self.checksum(), &old_ip, &dst_ip)?;
-        self.envelope().set_dst(dst_ip)?;
+        self.envelope_mut().set_dst(dst_ip)?;
         self.set_checksum(checksum);
         Ok(())
     }
 
     #[inline]
-    fn compute_checksum(&self) {
+    fn compute_checksum(&mut self) {
         self.set_checksum(0);
 
         if let Ok(data) = buffer::read_slice(self.mbuf, self.offset, self.len()) {
@@ -447,6 +465,12 @@ impl<E: IpPacket> Packet for Tcp<E> {
     }
 
     #[inline]
+    fn envelope_mut(&mut self) -> &mut Self::Envelope {
+        &mut self.envelope
+    }
+
+    #[doc(hidden)]
+    #[inline]
     fn mbuf(&self) -> *mut MBuf {
         self.mbuf
     }
@@ -456,8 +480,15 @@ impl<E: IpPacket> Packet for Tcp<E> {
         self.offset
     }
 
+    #[doc(hidden)]
     #[inline]
-    fn header(&self) -> &mut Self::Header {
+    fn header(&self) -> &Self::Header {
+        unsafe { &(*self.header) }
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    fn header_mut(&mut self) -> &mut Self::Header {
         unsafe { &mut (*self.header) }
     }
 
@@ -505,9 +536,9 @@ impl<E: IpPacket> Packet for Tcp<E> {
     }
 
     #[inline]
-    fn cascade(&self) {
+    fn cascade(&mut self) {
         self.compute_checksum();
-        self.envelope().cascade();
+        self.envelope_mut().cascade();
     }
 
     #[inline]
@@ -550,7 +581,7 @@ pub mod tests {
         0x72, 0x14, 0xf1, 0x14,
         // ack_no = 0
         0x00, 0x00, 0x00, 0x00,
-        // data_offset = 24, flags = 0x02
+        // data_offset = 6, flags = 0x02
         0x60, 0x02,
         // window = 8760, checksum = 0xa92c, urgent = 0
         0x22, 0x38, 0xa9, 0x2c, 0x00, 0x00,
@@ -634,7 +665,7 @@ pub mod tests {
             let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
+            let mut tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
 
             let old_checksum = tcp.checksum();
             let new_ip = Ipv4Addr::new(10, 0, 0, 0);
@@ -659,7 +690,7 @@ pub mod tests {
             let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
+            let mut tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
 
             let expected = tcp.checksum();
             // no payload change but force a checksum recompute anyway
@@ -677,6 +708,7 @@ pub mod tests {
             let tcp = ipv4.push::<Tcp<Ipv4>>().unwrap();
 
             assert_eq!(TcpHeader::size(), tcp.len());
+            assert_eq!(5, tcp.data_offset());
         }
     }
 }

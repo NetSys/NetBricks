@@ -48,7 +48,7 @@ impl<E: Ipv6Packet> Icmpv6<E, EchoReply> {
 
     #[inline]
     pub fn set_identifier(&mut self, identifier: u16) {
-        self.payload().identifier = u16::to_be(identifier);
+        self.payload_mut().identifier = u16::to_be(identifier);
     }
 
     #[inline]
@@ -58,7 +58,7 @@ impl<E: Ipv6Packet> Icmpv6<E, EchoReply> {
 
     #[inline]
     pub fn set_seq_no(&mut self, seq_no: u16) {
-        self.payload().seq_no = u16::to_be(seq_no);
+        self.payload_mut().seq_no = u16::to_be(seq_no);
     }
 
     /// Returns the offset where the data field in the message body starts

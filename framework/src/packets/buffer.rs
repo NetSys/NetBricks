@@ -7,6 +7,10 @@ use std::slice;
 /// Errors related to DPDK message buffer access
 #[derive(Debug, Fail)]
 pub enum BufferError {
+    /// Failed to allocate a new buffer
+    #[fail(display = "Failed to allocate a new buffer")]
+    FailAlloc,
+
     /// The offset is larger than the buffer length
     #[fail(display = "Attempt to access bad packet offset {}", _0)]
     BadOffset(usize),

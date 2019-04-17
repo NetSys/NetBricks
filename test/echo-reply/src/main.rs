@@ -58,7 +58,7 @@ fn reply_echo(packet: RawPacket, producer: &MpscProducer) -> Result<Icmpv6<Ipv6,
     reply.set_ether_type(EtherTypes::Ipv6);
 
     let ipv6 = ethernet.parse::<Ipv6>()?;
-    let reply = reply.push::<Ipv6>()?;
+    let mut reply = reply.push::<Ipv6>()?;
     reply.set_src(ipv6.dst());
     reply.set_dst(ipv6.src());
     reply.set_next_header(ProtocolNumbers::Icmpv6);

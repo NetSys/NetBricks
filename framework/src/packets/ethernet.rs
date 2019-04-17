@@ -114,7 +114,7 @@ impl Ethernet {
 
     #[inline]
     pub fn set_src(&mut self, src: MacAddr) {
-        self.header().src = src
+        self.header_mut().src = src
     }
 
     #[inline]
@@ -124,7 +124,7 @@ impl Ethernet {
 
     #[inline]
     pub fn set_dst(&mut self, dst: MacAddr) {
-        self.header().dst = dst
+        self.header_mut().dst = dst
     }
 
     #[inline]
@@ -134,7 +134,7 @@ impl Ethernet {
 
     #[inline]
     pub fn set_ether_type(&mut self, ether_type: EtherType) {
-        self.header().ether_type = u16::to_be(ether_type.0)
+        self.header_mut().ether_type = u16::to_be(ether_type.0)
     }
 
     #[inline]
@@ -168,6 +168,12 @@ impl Packet for Ethernet {
     }
 
     #[inline]
+    fn envelope_mut(&mut self) -> &mut Self::Envelope {
+        &mut self.envelope
+    }
+
+    #[doc(hidden)]
+    #[inline]
     fn mbuf(&self) -> *mut MBuf {
         self.mbuf
     }
@@ -177,8 +183,15 @@ impl Packet for Ethernet {
         self.offset
     }
 
+    #[doc(hidden)]
     #[inline]
-    fn header(&self) -> &mut Self::Header {
+    fn header(&self) -> &Self::Header {
+        unsafe { &(*self.header) }
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    fn header_mut(&mut self) -> &mut Self::Header {
         unsafe { &mut (*self.header) }
     }
 
@@ -226,8 +239,8 @@ impl Packet for Ethernet {
     }
 
     #[inline]
-    fn cascade(&self) {
-        self.envelope().cascade();
+    fn cascade(&mut self) {
+        self.envelope_mut().cascade();
     }
 
     #[inline]

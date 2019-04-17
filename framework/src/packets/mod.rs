@@ -45,17 +45,26 @@ pub trait Packet {
     /// The outer packet type that encapsulates the packet
     type Envelope: Packet;
 
-    /// Returns the packet that encapsulates this packet
+    /// Returns a reference to the encapsulating packet
     fn envelope(&self) -> &Self::Envelope;
 
+    /// Returns a mutable reference to the encapsulating packet
+    fn envelope_mut(&mut self) -> &mut Self::Envelope;
+
     /// Returns a pointer to the DPDK message buffer
+    #[doc(hidden)]
     fn mbuf(&self) -> *mut MBuf;
 
     /// Returns the buffer offset where the packet header begins
     fn offset(&self) -> usize;
 
+    /// Returns a reference to the packet header
+    #[doc(hidden)]
+    fn header(&self) -> &Self::Header;
+
     /// Returns a mutable reference to the packet header
-    fn header(&self) -> &mut Self::Header;
+    #[doc(hidden)]
+    fn header_mut(&mut self) -> &mut Self::Header;
 
     /// Returns the length of the packet header
     ///
@@ -123,11 +132,12 @@ pub trait Packet {
     /// An upper layer change to message buffer size can have cascading
     /// effects on a lower layer packet header. This call recursively ensures
     /// such changes are propogated through all the layers.
-    fn cascade(&self);
+    fn cascade(&mut self);
 
     /// Deparses the packet and returns its envelope
     fn deparse(self) -> Self::Envelope;
 
+    /// Resets the parsed packet back to raw packet
     fn reset(self) -> RawPacket
     where
         Self: Sized,

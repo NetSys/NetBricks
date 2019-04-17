@@ -146,8 +146,8 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn set_dscp(&self, dscp: u8) {
-        self.header().version_to_flow_label = u32::to_be(
+    pub fn set_dscp(&mut self, dscp: u8) {
+        self.header_mut().version_to_flow_label = u32::to_be(
             (u32::from_be(self.header().version_to_flow_label) & !DSCP)
                 | (((dscp as u32) << 22) & DSCP),
         );
@@ -159,8 +159,8 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn set_ecn(&self, ecn: u8) {
-        self.header().version_to_flow_label = u32::to_be(
+    pub fn set_ecn(&mut self, ecn: u8) {
+        self.header_mut().version_to_flow_label = u32::to_be(
             (u32::from_be(self.header().version_to_flow_label) & !ECN)
                 | (((ecn as u32) << 20) & ECN),
         );
@@ -172,8 +172,8 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn set_flow_label(&self, flow_label: u32) {
-        self.header().version_to_flow_label = u32::to_be(
+    pub fn set_flow_label(&mut self, flow_label: u32) {
+        self.header_mut().version_to_flow_label = u32::to_be(
             (u32::from_be(self.header().version_to_flow_label) & !FLOW) | (flow_label & FLOW),
         );
     }
@@ -184,8 +184,8 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn set_payload_length(&self, payload_length: u16) {
-        self.header().payload_length = u16::to_be(payload_length);
+    fn set_payload_length(&mut self, payload_length: u16) {
+        self.header_mut().payload_length = u16::to_be(payload_length);
     }
 
     #[inline]
@@ -194,8 +194,8 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn set_next_header(&self, next_header: ProtocolNumber) {
-        self.header().next_header = next_header.0;
+    pub fn set_next_header(&mut self, next_header: ProtocolNumber) {
+        self.header_mut().next_header = next_header.0;
     }
 
     #[inline]
@@ -204,8 +204,8 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn set_hop_limit(&self, hop_limit: u8) {
-        self.header().hop_limit = hop_limit;
+    pub fn set_hop_limit(&mut self, hop_limit: u8) {
+        self.header_mut().hop_limit = hop_limit;
     }
 
     #[inline]
@@ -214,8 +214,8 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn set_src(&self, src: Ipv6Addr) {
-        self.header().src = src;
+    pub fn set_src(&mut self, src: Ipv6Addr) {
+        self.header_mut().src = src;
     }
 
     #[inline]
@@ -224,8 +224,8 @@ impl Ipv6 {
     }
 
     #[inline]
-    pub fn set_dst(&self, dst: Ipv6Addr) {
-        self.header().dst = dst;
+    pub fn set_dst(&mut self, dst: Ipv6Addr) {
+        self.header_mut().dst = dst;
     }
 }
 
@@ -257,6 +257,12 @@ impl Packet for Ipv6 {
     }
 
     #[inline]
+    fn envelope_mut(&mut self) -> &mut Self::Envelope {
+        &mut self.envelope
+    }
+
+    #[doc(hidden)]
+    #[inline]
     fn mbuf(&self) -> *mut MBuf {
         self.mbuf
     }
@@ -266,8 +272,15 @@ impl Packet for Ipv6 {
         self.offset
     }
 
+    #[doc(hidden)]
     #[inline]
-    fn header(&self) -> &mut Self::Header {
+    fn header(&self) -> &Self::Header {
+        unsafe { &(*self.header) }
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    fn header_mut(&mut self) -> &mut Self::Header {
         unsafe { &mut (*self.header) }
     }
 
@@ -315,9 +328,10 @@ impl Packet for Ipv6 {
     }
 
     #[inline]
-    fn cascade(&self) {
-        self.set_payload_length(self.payload_len() as u16);
-        self.envelope().cascade();
+    fn cascade(&mut self) {
+        let len = self.payload_len() as u16;
+        self.set_payload_length(len);
+        self.envelope_mut().cascade();
     }
 
     #[inline]
@@ -338,7 +352,7 @@ impl IpPacket for Ipv6 {
     }
 
     #[inline]
-    fn set_src(&self, src: IpAddr) -> Result<()> {
+    fn set_src(&mut self, src: IpAddr) -> Result<()> {
         match src {
             IpAddr::V6(addr) => {
                 self.set_src(addr);
@@ -354,7 +368,7 @@ impl IpPacket for Ipv6 {
     }
 
     #[inline]
-    fn set_dst(&self, dst: IpAddr) -> Result<()> {
+    fn set_dst(&mut self, dst: IpAddr) -> Result<()> {
         match dst {
             IpAddr::V6(addr) => {
                 self.set_dst(addr);
@@ -485,7 +499,7 @@ pub mod tests {
         dpdk_test! {
             let packet = RawPacket::from_bytes(&IPV6_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            let mut ipv6 = ethernet.parse::<Ipv6>().unwrap();
 
             assert_eq!(6, ipv6.version());
             assert_eq!(0, ipv6.dscp());

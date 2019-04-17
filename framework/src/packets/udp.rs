@@ -5,7 +5,7 @@ use packets::{buffer, checksum, Fixed, Header, Packet};
 use std::fmt;
 use std::net::IpAddr;
 
-/*  From (https://tools.ietf.org/html/rfc768)
+/*  From https://tools.ietf.org/html/rfc768
     User Datagram Header Format
 
      0      7 8     15 16    23 24    31
@@ -84,8 +84,8 @@ impl<E: IpPacket> Udp<E> {
     }
 
     #[inline]
-    pub fn set_src_port(&self, src_port: u16) {
-        self.header().src_port = u16::to_be(src_port);
+    pub fn set_src_port(&mut self, src_port: u16) {
+        self.header_mut().src_port = u16::to_be(src_port);
     }
 
     #[inline]
@@ -94,8 +94,8 @@ impl<E: IpPacket> Udp<E> {
     }
 
     #[inline]
-    pub fn set_dst_port(&self, dst_port: u16) {
-        self.header().dst_port = u16::to_be(dst_port);
+    pub fn set_dst_port(&mut self, dst_port: u16) {
+        self.header_mut().dst_port = u16::to_be(dst_port);
     }
 
     #[inline]
@@ -104,8 +104,8 @@ impl<E: IpPacket> Udp<E> {
     }
 
     #[inline]
-    pub fn set_length(&self, length: u16) {
-        self.header().length = u16::to_be(length);
+    fn set_length(&mut self, length: u16) {
+        self.header_mut().length = u16::to_be(length);
     }
 
     #[inline]
@@ -114,20 +114,21 @@ impl<E: IpPacket> Udp<E> {
     }
 
     #[inline]
-    fn set_checksum(&self, checksum: u16) {
+    fn set_checksum(&mut self, checksum: u16) {
         // For UDP, if the computed checksum is zero, it is transmitted as
         // all ones. An all zero transmitted checksum value means that the
         // transmitter generated no checksum. To set the checksum value to
         // `0`, use `no_checksum` instead of `set_checksum`.
-        self.header().checksum = match checksum {
+        self.header_mut().checksum = match checksum {
             0 => 0xFFFF,
             _ => u16::to_be(checksum),
         }
     }
 
+    /// Sets checksum to 0 indicating no checksum generated
     #[inline]
-    fn no_checksum(&self) {
-        self.header().checksum = 0;
+    pub fn no_checksum(&mut self) {
+        self.header_mut().checksum = 0;
     }
 
     #[inline]
@@ -143,26 +144,26 @@ impl<E: IpPacket> Udp<E> {
 
     /// Sets the layer-3 source address and recomputes the checksum
     #[inline]
-    pub fn set_src_ip(&self, src_ip: IpAddr) -> Result<()> {
+    pub fn set_src_ip(&mut self, src_ip: IpAddr) -> Result<()> {
         let old_ip = self.envelope().src();
         let checksum = checksum::compute_with_ipaddr(self.checksum(), &old_ip, &src_ip)?;
-        self.envelope().set_src(src_ip)?;
+        self.envelope_mut().set_src(src_ip)?;
         self.set_checksum(checksum);
         Ok(())
     }
 
     /// Sets the layer-3 destination address and recomputes the checksum
     #[inline]
-    pub fn set_dst_ip(&self, dst_ip: IpAddr) -> Result<()> {
+    pub fn set_dst_ip(&mut self, dst_ip: IpAddr) -> Result<()> {
         let old_ip = self.envelope().dst();
         let checksum = checksum::compute_with_ipaddr(self.checksum(), &old_ip, &dst_ip)?;
-        self.envelope().set_dst(dst_ip)?;
+        self.envelope_mut().set_dst(dst_ip)?;
         self.set_checksum(checksum);
         Ok(())
     }
 
     #[inline]
-    fn compute_checksum(&self) {
+    fn compute_checksum(&mut self) {
         self.no_checksum();
 
         if let Ok(data) = buffer::read_slice(self.mbuf, self.offset, self.len()) {
@@ -202,6 +203,12 @@ impl<E: IpPacket> Packet for Udp<E> {
     }
 
     #[inline]
+    fn envelope_mut(&mut self) -> &mut Self::Envelope {
+        &mut self.envelope
+    }
+
+    #[doc(hidden)]
+    #[inline]
     fn mbuf(&self) -> *mut MBuf {
         self.mbuf
     }
@@ -211,8 +218,15 @@ impl<E: IpPacket> Packet for Udp<E> {
         self.offset
     }
 
+    #[doc(hidden)]
     #[inline]
-    fn header(&self) -> &mut Self::Header {
+    fn header(&self) -> &Self::Header {
+        unsafe { &(*self.header) }
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    fn header_mut(&mut self) -> &mut Self::Header {
         unsafe { &mut (*self.header) }
     }
 
@@ -260,10 +274,11 @@ impl<E: IpPacket> Packet for Udp<E> {
     }
 
     #[inline]
-    fn cascade(&self) {
-        self.set_length(self.len() as u16);
+    fn cascade(&mut self) {
+        let len = self.len() as u16;
+        self.set_length(len);
         self.compute_checksum();
-        self.envelope().cascade();
+        self.envelope_mut().cascade();
     }
 
     #[inline]
@@ -350,7 +365,7 @@ pub mod tests {
             let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
+            let mut udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
 
             let old_checksum = udp.checksum();
             let new_ip = Ipv4Addr::new(10, 0, 0, 0);
@@ -375,7 +390,7 @@ pub mod tests {
             let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
             let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
+            let mut udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
 
             let expected = udp.checksum();
             // no payload change but force a checksum recompute anyway
