@@ -61,7 +61,7 @@ VM settings within the `Vagrantfile` once it has been symlinked.
 8. After step 6, you'll be in the container and then can compile and test NetBricks via
    ```shell
    docker$ cd netbricks
-   docker$ make compile
+   docker$ make build
    ...
    docker$ make test
    ...
@@ -97,7 +97,7 @@ and
 
 ```shell
 docker$ cd netbricks
-docker$ make compile
+docker$ make build
 ...
 docker$ make test
 ...
@@ -106,9 +106,10 @@ docker$ make test
 And you can run an example via:
 
 ```shell
-docker$ make -e TEST=mtu-too-big run
-```
-Though be aware some of the examples contain `asserts` for testing NFs.
+docker$ make -e EXAMPLE=mtu-too-big run
+`****
+
+**Note**: Though be aware some of the examples contain `asserts` for testing NFs.
 
 From within the container, you can also use [cargo-watch](https://github.com/passcod/cargo-watch) to handle compilation changes as you are developing:
 

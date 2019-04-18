@@ -1,1 +1,0 @@
-00:00:00:00:00:00 > 00:00:00:00:00:01, ethertype IPv6 (0x86dd), length 172: fe80::9 > fe80::3: srcrt (len=10, type=4, segleft=1[|srcrt]

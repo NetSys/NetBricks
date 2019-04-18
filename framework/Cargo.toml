@@ -9,13 +9,10 @@ doctest = false
 
 [dependencies]
 byteorder = "*"
-clippy = { version = ">=0.0.197", optional = true }
 crossbeam = "=0.4"
-enum_primitive = "0.1.1"
 failure = "0.1.5"
 fallible-iterator = "0.2.0"
 fnv = "*"
-generic-array = ">=0.11.0"
 getopts = "*"
 hex = "0.3.2"
 lazy_static = "*"
@@ -24,9 +21,6 @@ log = { version = "0.4", features = ["std", "serde"]}
 net2 = "*"
 # NIX restricts us to just unix for now, we can fix this if someone cares at a later point.
 nix = "*"
-num = "0.1"
-num-derive="0.2"
-num-traits = "0.2"
 rayon = "1.0.3"
 regex = "*"
 rust-sctp = { git="https://github.com/netsys/rust-sctp", optional = true}
@@ -35,14 +29,14 @@ serde_derive = "1.0"
 time = ">=0.1.0"
 toml = "*"
 twox-hash = "*"
-uuid = { version = "*", features = ["v4"] }
 
 [features]
 default = []
 performance = []
-dev = ["clippy"]
-packet_offset = []
 sctp = ["rust-sctp"]
+
+[dev-dependencies]
+proptest = "0.8.3"
 
 [build-dependencies]
 # Use Bindgen to generate DPDK structures.

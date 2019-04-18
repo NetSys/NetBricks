@@ -1,0 +1,15 @@
+[package]
+name = "macswap"
+version = "0.1.0"
+authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+
+[dependencies]
+netbricks = { path = "../../framework"}
+time = ">=0.1.0"
+getopts = "*"
+rand = "0.3"
+fnv = "*"
+
+[features]
+default = []
+print = []

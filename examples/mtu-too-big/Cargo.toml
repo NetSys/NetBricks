@@ -1,0 +1,12 @@
+[package]
+name = "mtu-too-big"
+version = "0.1.0"
+authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+
+[dependencies]
+netbricks = { path = "../../framework"}
+time = ">=0.1.0"
+
+[features]
+default = []
+print = []
