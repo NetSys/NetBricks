@@ -1,6 +1,12 @@
 use common::*;
+use failure::Fail;
 use std::cmp::min;
 use std::io::{Read, Write};
+
+/// Error related to the RingBuffer
+#[derive(Debug, Fail)]
+#[fail(display = "Bad ring size {}, must be a power of 2", _0)]
+struct InvalidRingSize(usize);
 
 /// A ring buffer which can be used to insert and read ordered data.
 pub struct RingBuffer {
@@ -25,7 +31,7 @@ impl RingBuffer {
     pub fn new(bytes: usize) -> Result<RingBuffer> {
         if bytes & (bytes - 1) != 0 {
             // We need pages to be a power of 2.
-            return Err(NetBricksError::InvalidRingSize(bytes).into());
+            return Err(InvalidRingSize(bytes).into());
         }
 
         Ok(RingBuffer {

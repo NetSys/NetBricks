@@ -1,14 +1,27 @@
-/// All projects involve building a thread pool. This is the task equivalent for the threadpool in `NetBricks`.
-/// Anything that implements Runnable can be polled by the scheduler. This thing can be a `Batch` (e.g., `SendBatch`) or
-/// something else (e.g., the `GroupBy` operator). Eventually this trait will have more stuff.
+/// All projects involve building a thread pool. This is the task equivalent for
+/// the threadpool in `NetBricks`.
+///
+/// Anything that implements Runnable can be polled by the scheduler. This thing
+/// can be a `Batch` (e.g., `SendBatch`) or something else (e.g., the `GroupBy`
+/// operator).
+use common::*;
+use failure::Fail;
+
 pub use self::context::*;
 pub use self::standalone_scheduler::*;
-use common::*;
 
+mod context;
 pub mod embedded_scheduler;
 mod standalone_scheduler;
 
-mod context;
+/// Errors related to schedulers/scheduling
+// TODO: extend this, as we probably want more error handling over
+//       scheduling
+#[derive(Debug, Fail)]
+pub enum SchedulerError {
+    #[fail(display = "No scheduler running on core {}", _0)]
+    NoRunningSchedulerOnCore(i32),
+}
 
 pub trait Executable {
     fn execute(&mut self);

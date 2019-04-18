@@ -3,8 +3,9 @@ use super::PortStats;
 use allocators::*;
 use common::*;
 use config::{PortConfiguration, NUM_RXD, NUM_TXD};
-use headers::MacAddress;
+use failure::Fail;
 use native::zcsi::*;
+use packets::ethernet::MacAddr;
 use regex::Regex;
 use std::cmp::min;
 use std::ffi::CString;
@@ -12,8 +13,27 @@ use std::fmt;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-/// A DPDK based PMD port. Send and receive should not be called directly on this structure but on the port queue
-/// structure instead.
+/// Errors related to DPDK based PMD port transmission/receive queues.
+#[derive(Debug, Fail)]
+pub enum PmdPortError {
+    #[fail(display = "Failed to initialize port: {}", _0)]
+    FailedToInitializePort(i32),
+
+    #[fail(display = "Cannot find device: {}", _0)]
+    BadDevice(String),
+
+    #[fail(display = "Bad virtual device specification: {}", _0)]
+    BadVirtualDevice(String),
+
+    #[fail(display = "Bad TX queue {} for port {}", _0, _1)]
+    BadTxQueue(i32, i32),
+
+    #[fail(display = "Bad RX queue {} for port {}", _0, _1)]
+    BadRxQueue(i32, i32),
+}
+
+/// A DPDK based PMD port. Send and receive should not be called directly on
+/// this structure but on the port queue structure instead.
 pub struct PmdPort {
     connected: bool,
     should_close: bool,
@@ -93,8 +113,8 @@ impl PortQueue {
 }
 
 impl PacketTx for PortQueue {
-    /// Send a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
-    /// called).
+    /// Send a batch of packets out this PortQueue. Note this method is internal
+    /// to NetBricks (should not be directly called).
     #[inline]
     fn send(&self, pkts: &mut [*mut MBuf]) -> Result<u32> {
         let txq = self.txq;
@@ -104,8 +124,8 @@ impl PacketTx for PortQueue {
 }
 
 impl PacketRx for PortQueue {
-    /// Receive a batch of packets out this PortQueue. Note this method is internal to NetBricks (should not be directly
-    /// called).
+    /// Receive a batch of packets out this PortQueue. Note this method is
+    /// internal to NetBricks (should not be directly called).
     #[inline]
     fn recv(&self, pkts: &mut [*mut MBuf]) -> Result<u32> {
         let rxq = self.rxq;
@@ -152,9 +172,9 @@ impl PmdPort {
         txq: i32,
     ) -> Result<CacheAligned<PortQueue>> {
         if rxq > port.rxqs || rxq < 0 {
-            Err(NetBricksError::BadRxQueue(port.port, rxq).into())
+            Err(PmdPortError::BadRxQueue(port.port, rxq).into())
         } else if txq > port.txqs || txq < 0 {
-            Err(NetBricksError::BadTxQueue(port.port, txq).into())
+            Err(PmdPortError::BadTxQueue(port.port, txq).into())
         } else {
             Ok(CacheAligned::allocate(PortQueue {
                 port: port.clone(),
@@ -230,10 +250,10 @@ impl PmdPort {
                     stats_tx: (0..txqs).map(|_| Arc::new(PortStats::new())).collect(),
                 }))
             } else {
-                Err(NetBricksError::FailedToInitializePort(port).into())
+                Err(PmdPortError::FailedToInitializePort(port).into())
             }
         } else {
-            Err(NetBricksError::FailedToInitializePort(port).into())
+            Err(PmdPortError::FailedToInitializePort(port).into())
         }
     }
 
@@ -257,7 +277,7 @@ impl PmdPort {
                 stats_tx: vec![Arc::new(PortStats::new())],
             }))
         } else {
-            Err(NetBricksError::FailedToInitializePort(port).into())
+            Err(PmdPortError::FailedToInitializePort(port).into())
         }
     }
 
@@ -277,10 +297,10 @@ impl PmdPort {
                         stats_tx: vec![Arc::new(PortStats::new())],
                     }))
                 } else {
-                    Err(NetBricksError::FailedToInitializePort(port).into())
+                    Err(PmdPortError::FailedToInitializePort(port).into())
                 }
             }
-            _ => Err(NetBricksError::BadVdev(String::from(name)).into()),
+            _ => Err(PmdPortError::BadVirtualDevice(String::from(name)).into()),
         }
     }
 
@@ -312,9 +332,9 @@ impl PmdPort {
                 tso,
                 csumoffload,
             )
-            .map_err(|_| NetBricksError::BadDev(String::from(spec)).into())
+            .map_err(|_| PmdPortError::BadDevice(String::from(spec)).into())
         } else {
-            Err(NetBricksError::BadDev(String::from(spec)).into())
+            Err(PmdPortError::BadDevice(String::from(spec)).into())
         }
     }
 
@@ -349,7 +369,8 @@ impl PmdPort {
     /// Create a new port.
     ///
     /// Description
-    /// -   `name`: The name for a port. NetBricks currently supports Bess native vports, OVS shared memory ports and
+    /// -   `name`: The name for a port. NetBricks currently supports Bess
+    ///             native vports, OVS shared memory ports and
     ///     `dpdk` PMDs. DPDK PMDs can be used to input pcap (e.g., `dpdk:eth_pcap0,rx_pcap=<pcap_name>`), etc.
     /// -   `rxqs`, `txqs`: Number of RX and TX queues.
     /// -   `tx_cores`, `rx_cores`: Core affinity of where the queues will be used.
@@ -432,10 +453,10 @@ impl PmdPort {
     }
 
     #[inline]
-    pub fn mac_address(&self) -> MacAddress {
-        let mut address = MacAddress { addr: [0; 6] };
+    pub fn mac_address(&self) -> MacAddr {
+        let mut address = MacAddr::new_from_slice(&[0; 8]);
         unsafe {
-            rte_eth_macaddr_get(self.port, &mut address as *mut MacAddress);
+            rte_eth_macaddr_get(self.port, &mut address as *mut MacAddr);
             address
         }
     }
