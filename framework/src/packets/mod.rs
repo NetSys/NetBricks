@@ -147,7 +147,7 @@ pub trait Packet {
 }
 
 /// Error when packet failed to parse
-#[derive(Fail, Debug)]
+#[derive(Debug, Fail)]
 #[fail(display = "{}", _0)]
 pub struct ParseError(String);
 

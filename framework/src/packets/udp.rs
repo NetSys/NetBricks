@@ -142,6 +142,15 @@ impl<E: IpPacket> Udp<E> {
         )
     }
 
+    #[inline]
+    pub fn stamp_flow(&mut self, flow: Flow) -> Result<()> {
+        self.envelope_mut().set_src(flow.src_ip())?;
+        self.envelope_mut().set_dst(flow.dst_ip())?;
+        self.set_src_port(flow.src_port());
+        self.set_dst_port(flow.dst_port());
+        Ok(())
+    }
+
     /// Sets the layer-3 source address and recomputes the checksum
     #[inline]
     pub fn set_src_ip(&mut self, src_ip: IpAddr) -> Result<()> {

@@ -1,18 +1,10 @@
 pub use self::asm::*;
 pub use self::atom::*;
-pub use self::flow::*;
-use headers::EndOffset;
-use std::ptr;
 mod asm;
 mod atom;
-mod flow;
+pub mod cidr;
 
 pub const PAGE_SIZE: usize = 4096; // Page size in bytes, not using huge pages here.
-
-/// cast rest of payload to a header or anything or implementing EndOffset
-pub fn cast_payload<T: EndOffset>(payload: &[u8]) -> T {
-    unsafe { ptr::read(payload.as_ptr() as *const T) }
-}
 
 /// Round a given buffer to page size units.
 #[inline]
