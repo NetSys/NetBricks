@@ -1,5 +1,6 @@
 use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, Icmpv6Type, Icmpv6Types};
-use packets::ip::v6::Ipv6Packet;
+use packets::ip::v6::{Ipv6Header, Ipv6Packet};
+use packets::{Fixed, Packet};
 use std::fmt;
 
 /*  From https://tools.ietf.org/html/rfc4443#section-3.2
@@ -57,10 +58,23 @@ impl<E: Ipv6Packet> fmt::Display for Icmpv6<E, PacketTooBig> {
     }
 }
 
+impl<E: Ipv6Packet> Packet for Icmpv6<E, PacketTooBig> {
+    #[inline]
+    fn cascade(&mut self) {
+        let max_len = self.mtu() as usize - Ipv6Header::size();
+        if self.len() > max_len {
+            unsafe {
+                (*self.mbuf()).remove_data_end(self.len() - max_len);
+            }
+        }
+        self.compute_checksum();
+        self.envelope_mut().cascade();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use packets::Fixed;
 
     #[test]
     fn size_of_packet_too_big() {

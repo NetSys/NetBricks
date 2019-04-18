@@ -315,7 +315,7 @@ impl<E: Ipv6Packet, P: Icmpv6Payload> Packet for Icmpv6<E, P> {
     }
 
     #[inline]
-    fn cascade(&mut self) {
+    default fn cascade(&mut self) {
         self.compute_checksum();
         self.envelope_mut().cascade();
     }

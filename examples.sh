@@ -5,6 +5,7 @@ export examples=(
         test/echo-reply
         test/ipv4or6
         test/macswap
+        test/mtu-too-big
         # test/framework-test
         # test/packet-test
         # test/packet-generation
@@ -14,7 +15,6 @@ export examples=(
         # test/srv6-inject
         # test/tcp-checksum
         # test/icmpv6
-        # test/mtu-too-big
         # test/transform-error
         # test/ndp-router-advertisement
         # test/delay-test

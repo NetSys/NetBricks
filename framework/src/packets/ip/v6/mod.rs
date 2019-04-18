@@ -12,6 +12,11 @@ pub mod srh;
 /// Common behaviors shared by IPv6 and extension packets
 pub trait Ipv6Packet: IpPacket {}
 
+/// The minimum IPv6 MTU
+///
+/// https://tools.ietf.org/html/rfc2460#section-5
+pub const IPV6_MIN_MTU: usize = 1280;
+
 /*  From https://tools.ietf.org/html/rfc8200#section-3
     and https://tools.ietf.org/html/rfc3168 (succeeding traffic class)
     IPv6 Header Format

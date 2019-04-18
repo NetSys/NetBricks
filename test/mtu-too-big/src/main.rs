@@ -1,10 +1,15 @@
 #![feature(box_syntax)]
 #![feature(asm)]
+#[macro_use]
 extern crate netbricks;
-use self::nf::*;
+use netbricks::common::Result;
 use netbricks::config::{basic_opts, read_matches};
 use netbricks::interface::*;
-use netbricks::operators::*;
+use netbricks::new_operators::{Batch, ReceiveBatch};
+use netbricks::packets::icmp::v6::{Icmpv6, PacketTooBig};
+use netbricks::packets::ip::v6::{Ipv6, IPV6_MIN_MTU};
+use netbricks::packets::ip::ProtocolNumbers;
+use netbricks::packets::{Ethernet, Packet};
 use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
@@ -12,7 +17,6 @@ use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-mod nf;
 
 fn test<T, S>(ports: Vec<T>, sched: &mut S)
 where
@@ -23,12 +27,49 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| nf(ReceiveBatch::new(port.clone()), sched).send(port.clone()))
+        .map(|port| {
+            ReceiveBatch::new(port.clone())
+                .map(|p| p.parse::<Ethernet>())
+                .group_by(
+                    |eth| eth.len() > IPV6_MIN_MTU + 14,
+                    |groups| {
+                        compose! {
+                            groups,
+                            true => |group| {
+                                group.map(reject_too_big)
+                            },
+                            false => |group| {
+                                group
+                            }
+                        }
+                    },
+                )
+                .send(port.clone())
+        })
         .collect();
+
     println!("Running {} pipelines", pipelines.len());
+
     for pipeline in pipelines {
         sched.add_task(pipeline).unwrap();
     }
+}
+
+fn reject_too_big(mut ethernet: Ethernet) -> Result<Ethernet> {
+    ethernet.swap_addresses();
+
+    let mut ipv6 = ethernet.parse::<Ipv6>()?;
+    let src = ipv6.src();
+    let dst = ipv6.dst();
+    ipv6.set_src(dst);
+    ipv6.set_dst(src);
+    ipv6.set_next_header(ProtocolNumbers::Icmpv6);
+
+    let mut too_big = ipv6.push::<Icmpv6<Ipv6, PacketTooBig>>()?;
+    too_big.set_mtu(IPV6_MIN_MTU as u32);
+    too_big.cascade();
+
+    Ok(too_big.deparse().deparse())
 }
 
 fn main() {
