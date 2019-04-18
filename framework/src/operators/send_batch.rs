@@ -1,128 +1,87 @@
-use super::act::Act;
-use super::iterator::*;
-use super::packet_batch::PacketBatch;
-use super::Batch;
-use common::*;
-use headers::NullHeader;
+use super::{Batch, PacketError, BATCH_SIZE};
 use interface::PacketTx;
+use native::zcsi::{mbuf_free_bulk, MBuf};
+use packets::Packet;
 use scheduler::Executable;
 
-pub struct SendBatch<Port, V>
-where
-    Port: PacketTx,
-    V: Batch + BatchIterator + Act,
-{
-    port: Port,
-    parent: V,
-    pub sent: u64,
+/// Send operator
+///
+/// Marks the end of a pipeline.
+pub struct SendBatch<B: Batch, Tx: PacketTx> {
+    source: B,
+    port: Tx,
+    transmit_q: Vec<*mut MBuf>,
+    drop_q: Vec<*mut MBuf>,
 }
 
-impl<Port, V> SendBatch<Port, V>
-where
-    Port: PacketTx,
-    V: Batch + BatchIterator + Act,
-{
-    pub fn new(parent: V, port: Port) -> SendBatch<Port, V> {
+impl<B: Batch, Tx: PacketTx> SendBatch<B, Tx> {
+    #[inline]
+    pub fn new(source: B, port: Tx) -> Self {
         SendBatch {
-            port: port,
-            sent: 0,
-            parent: parent,
+            source,
+            port,
+            transmit_q: Vec::with_capacity(BATCH_SIZE),
+            drop_q: Vec::with_capacity(BATCH_SIZE),
         }
     }
 }
 
-impl<Port, V> Batch for SendBatch<Port, V>
-where
-    Port: PacketTx,
-    V: Batch + BatchIterator + Act,
-{
-}
-
-impl<Port, V> BatchIterator for SendBatch<Port, V>
-where
-    Port: PacketTx,
-    V: Batch + BatchIterator + Act,
-{
-    type Header = NullHeader;
-    type Metadata = EmptyMetadata;
-    #[inline]
-    fn start(&mut self) -> usize {
-        panic!("Cannot iterate send batch")
-    }
-
-    #[inline]
-    unsafe fn next_payload(
-        &mut self,
-        _: usize,
-    ) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
-        panic!("Cannot iterate send batch")
-    }
-}
-
-/// Internal interface for packets.
-impl<Port, V> Act for SendBatch<Port, V>
-where
-    Port: PacketTx,
-    V: Batch + BatchIterator + Act,
-{
-    #[inline]
-    fn act(&mut self) {
-        // First everything is applied
-        self.parent.act();
-        self.parent
-            .get_packet_batch()
-            .send_q(&self.port)
-            .and_then(|x| {
-                self.sent += x as u64;
-                Ok(x)
-            })
-            .expect("Send failed");
-        self.parent.done();
-    }
-
-    fn done(&mut self) {}
-
-    fn send_q(&mut self, _: &PacketTx) -> Result<u32> {
-        panic!("Cannot send a sent packet batch")
-    }
-
-    fn capacity(&self) -> i32 {
-        self.parent.capacity()
-    }
-
-    #[inline]
-    fn drop_packets(&mut self, _: &[usize]) -> Result<usize> {
-        panic!("Cannot drop packets from a sent batch")
-    }
-
-    #[inline]
-    fn clear_packets(&mut self) {
-        panic!("Cannot clear packets from a sent batch")
-    }
-
-    #[inline]
-    fn get_packet_batch(&mut self) -> &mut PacketBatch {
-        self.parent.get_packet_batch()
-    }
-
-    #[inline]
-    fn get_task_dependencies(&self) -> Vec<usize> {
-        self.parent.get_task_dependencies()
-    }
-}
-
-impl<Port, V> Executable for SendBatch<Port, V>
-where
-    Port: PacketTx,
-    V: Batch + BatchIterator + Act,
-{
-    #[inline]
+impl<B: Batch, Tx: PacketTx> Executable for SendBatch<B, Tx> {
     fn execute(&mut self) {
-        self.act()
+        self.source.receive();
+
+        let transmit_q = &mut self.transmit_q;
+        let drop_q = &mut self.drop_q;
+
+        while let Some(item) = self.source.next() {
+            match item {
+                Ok(packet) => {
+                    transmit_q.push(packet.mbuf());
+                }
+                Err(PacketError::Drop(mbuf)) => {
+                    drop_q.push(mbuf);
+                }
+                Err(PacketError::Abort(mbuf, err)) => {
+                    error_chain!(&err);
+                    drop_q.push(mbuf);
+                }
+            }
+        }
+
+        if transmit_q.len() > 0 {
+            let mut to_send = transmit_q.len();
+            while to_send > 0 {
+                match self.port.send(transmit_q.as_mut_slice()) {
+                    Ok(sent) => {
+                        let sent = sent as usize;
+                        to_send -= sent;
+                        if to_send > 0 {
+                            transmit_q.drain(..sent);
+                        }
+                    }
+                    // the underlying DPDK method `rte_eth_tx_burst` will
+                    // never return an error. The error arm is unreachable
+                    _ => unreachable!(),
+                }
+            }
+            unsafe {
+                transmit_q.set_len(0);
+            }
+        }
+
+        if drop_q.len() > 0 {
+            let len = drop_q.len();
+            let ptr = drop_q.as_mut_ptr();
+            unsafe {
+                // never have a non-zero return
+                mbuf_free_bulk(ptr, len as i32);
+                drop_q.set_len(0);
+            }
+        }
     }
 
     #[inline]
     fn dependencies(&mut self) -> Vec<usize> {
-        self.get_task_dependencies()
+        vec![]
     }
 }

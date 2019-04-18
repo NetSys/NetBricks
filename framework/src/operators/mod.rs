@@ -1,194 +1,225 @@
-use self::act::Act;
-pub use self::add_metadata::AddMetadataBatch;
-use self::add_metadata::MetadataFn;
-pub use self::add_metadata_mut::MutableAddMetadataBatch;
-use self::add_metadata_mut::MutableMetadataFn;
-pub use self::composition_batch::CompositionBatch;
-pub use self::deparsed_batch::DeparsedBatch;
-pub use self::filter_batch::FilterBatch;
-use self::filter_batch::FilterFn;
-pub use self::group_by::*;
-use self::iterator::BatchIterator;
-pub use self::map_batch::MapBatch;
-use self::map_batch::MapFn;
-use self::map_results::MapFnResult;
-pub use self::map_results::MapResults;
-pub use self::merge_batch::MergeBatch;
-pub use self::parsed_batch::ParsedBatch;
-pub use self::receive_batch::ReceiveBatch;
-pub use self::reset_parse::ResetParsingBatch;
-pub use self::restore_header::*;
-pub use self::send_batch::SendBatch;
-pub use self::transform_batch::TransformBatch;
-use self::transform_batch::TransformFn;
-use self::transform_results::TransformFnResult;
-pub use self::transform_results::TransformResults;
-use headers::*;
-use interface::*;
-use scheduler::Scheduler;
+use failure::Error;
+use interface::PacketTx;
+use native::zcsi::MBuf;
+use packets::Packet;
+use std::collections::HashMap;
 
-#[macro_use]
-mod macros;
+pub use self::filter_batch::*;
+pub use self::foreach_batch::*;
+pub use self::groupby_batch::*;
+pub use self::map_batch::*;
+pub use self::queue_batch::*;
+pub use self::receive_batch::*;
+pub use self::send_batch::*;
 
-mod act;
-mod add_metadata;
-mod add_metadata_mut;
-mod composition_batch;
-mod deparsed_batch;
 mod filter_batch;
-mod group_by;
-mod iterator;
+mod foreach_batch;
+mod groupby_batch;
 mod map_batch;
-mod map_results;
-mod merge_batch;
-mod packet_batch;
-mod parsed_batch;
+mod queue_batch;
 mod receive_batch;
-mod reset_parse;
-mod restore_header;
 mod send_batch;
-mod transform_batch;
-mod transform_results;
 
-/// Merge a vector of batches into one batch. Currently this just round-robins between merged batches, but in the future
-/// the precise batch being processed will be determined by the scheduling policy used.
-#[inline]
-pub fn merge<T: Batch>(batches: Vec<T>) -> MergeBatch<T> {
-    MergeBatch::new(batches)
+/// Error when processing packets
+#[derive(Debug)]
+pub enum PacketError {
+    /// The packet is intentionally dropped
+    Drop(*mut MBuf),
+    /// The packet is aborted due to an error
+    Abort(*mut MBuf, Error),
 }
 
-/// Public trait implemented by every packet batch type. This trait should be used as a constraint for any functions or
-/// places where a Batch type is required. We declare batches as sendable, they cannot be copied but we allow it to be
-/// sent to another thread.
-pub trait Batch: BatchIterator + Act + Send {
-    /// Parse the payload as header of type.
-    fn parse<T: EndOffset<PreviousHeader = Self::Header>>(self) -> ParsedBatch<T, Self>
+/// Common behavior for a batch of packets
+pub trait Batch {
+    /// The packet type
+    type Item: Packet;
+
+    /// Returns the next packet in the batch
+    fn next(&mut self) -> Option<Result<Self::Item, PacketError>>;
+
+    /// Receives a new batch
+    fn receive(&mut self);
+
+    /// Appends a filter operator to the end of the pipeline
+    #[inline]
+    fn filter<P>(self, predicate: P) -> FilterBatch<Self, P>
     where
+        P: FnMut(&Self::Item) -> bool,
         Self: Sized,
     {
-        ParsedBatch::<T, Self>::new(self)
+        FilterBatch::new(self, predicate)
     }
 
-    fn metadata<M: Sized + Send>(
-        self,
-        generator: MetadataFn<Self::Header, Self::Metadata, M>,
-    ) -> AddMetadataBatch<M, Self>
+    /// Appends a map operator to the end of the pipeline
+    #[inline]
+    fn map<T: Packet, M>(self, map: M) -> MapBatch<Self, T, M>
     where
+        M: FnMut(Self::Item) -> Result<T, Error>,
         Self: Sized,
     {
-        AddMetadataBatch::new(self, generator)
+        MapBatch::new(self, map)
     }
 
-    fn metadata_mut<M: Sized + Send>(
-        self,
-        generator: MutableMetadataFn<Self::Header, Self::Metadata, M>,
-    ) -> MutableAddMetadataBatch<M, Self>
-    where
-        Self: Sized,
-    {
-        MutableAddMetadataBatch::new(self, generator)
-    }
-
-    /// Send this batch out a particular port and queue.
-    fn send<Port: PacketTx>(self, port: Port) -> SendBatch<Port, Self>
-    where
-        Self: Sized,
-    {
-        SendBatch::<Port, Self>::new(self, port)
-    }
-
-    /// Erase type information. This is essential to allow different kinds of types to be collected together, as done
-    /// for example when merging batches or composing different NFs together.
+    /// Appends a for_each operator to the end of the pipeline
     ///
-    /// # Warning
-    /// This causes some performance degradation: operations called through composition batches rely on indirect calls
-    /// which affect throughput.
-    fn compose(self) -> CompositionBatch
+    /// Use for side-effects on packets, meaning the packets will not be
+    /// transformed byte-wise.
+    #[inline]
+    fn for_each<F>(self, fun: F) -> ForEachBatch<Self, F>
     where
-        Self: Sized + 'static,
+        F: FnMut(&Self::Item) -> Result<(), Error>,
+        Self: Sized,
     {
-        CompositionBatch::new(self)
+        ForEachBatch::new(self, fun)
     }
 
-    /// Transform header fields.
-    fn transform(
-        self,
-        transformer: TransformFn<Self::Header, Self::Metadata>,
-    ) -> TransformBatch<Self::Header, Self>
+    /// Appends a group_by operator to the end of the pipeline
+    ///
+    /// * `selector` - a function that receives a reference to `B::Item` and
+    /// evaluates to a discriminator value. The source batch will be split
+    /// into subgroups based on this value.
+    ///
+    /// * `composer` - a function that composes the pipelines for the subgroups
+    /// based on the discriminator values.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let batch = batch.group_by(
+    ///     |packet| packet.protocol(),
+    ///     |groups| {
+    ///         compose!(
+    ///             groups,
+    ///             ProtocolNumbers::Tcp => |group| {
+    ///                 group.map(handle_tcp)
+    ///             },
+    ///             ProtocolNumbers::Udp => |group| {
+    ///                 group.map(handle_udp)
+    ///             }
+    ///         )
+    ///     }
+    /// );
+    /// ```
+    #[inline]
+    fn group_by<K, S, C>(self, selector: S, composer: C) -> GroupByBatch<Self, K, S>
+    where
+        K: Eq + Clone + std::hash::Hash,
+        S: FnMut(&Self::Item) -> K,
+        C: FnOnce(&mut HashMap<K, Box<PipelineBuilder<Self::Item>>>) -> (),
+        Self: Sized,
+    {
+        GroupByBatch::new(self, selector, composer)
+    }
+
+    /// Appends a send operator to the end of the pipeline
+    ///
+    /// Send marks the end of the pipeline. No more operators can be
+    /// appended after send.
+    #[inline]
+    fn send<Tx: PacketTx>(self, port: Tx) -> SendBatch<Self, Tx>
     where
         Self: Sized,
     {
-        TransformBatch::<Self::Header, Self>::new(self, transformer)
+        SendBatch::new(self, port)
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use compose;
+    use dpdk_test;
+    use packets::ip::v4::Ipv4;
+    use packets::ip::ProtocolNumbers;
+    use packets::{EtherTypes, Ethernet, RawPacket};
+
+    #[test]
+    fn filter_operator() {
+        use packets::udp::tests::UDP_PACKET;
+
+        dpdk_test! {
+            let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+            let mut batch = batch.filter(|_| false);
+            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+
+            assert!(batch.next().unwrap().is_err());
+        }
     }
 
-    /// Transform header fields while returning results.
-    fn transform_ok(
-        self,
-        transformer: TransformFnResult<Self::Header, Self::Metadata>,
-    ) -> TransformResults<Self::Header, Self>
-    where
-        Self: Sized,
-    {
-        TransformResults::<Self::Header, Self>::new(self, transformer)
+    #[test]
+    fn map_operator() {
+        use packets::udp::tests::UDP_PACKET;
+
+        dpdk_test! {
+            let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+            let mut batch = batch.map(|p| p.parse::<Ethernet>());
+            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+
+            let packet = batch.next().unwrap().unwrap();
+            assert_eq!(EtherTypes::Ipv4, packet.ether_type())
+        }
     }
 
-    /// Map over a set of header fields. Map and transform primarily differ in map being immutable. Immutability
-    /// provides some optimization opportunities not otherwise available.
-    fn map(self, transformer: MapFn<Self::Header, Self::Metadata>) -> MapBatch<Self::Header, Self>
-    where
-        Self: Sized,
-    {
-        MapBatch::<Self::Header, Self>::new(self, transformer)
+    #[test]
+    fn for_each_operator() {
+        use packets::udp::tests::UDP_PACKET;
+
+        dpdk_test! {
+            let mut invoked = 0;
+
+            {
+                let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+                let mut batch = batch.for_each(|_| {
+                    invoked += 1;
+                    Ok(())
+                });
+                producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+
+                let _ = batch.next();
+            }
+
+            assert_eq!(1, invoked);
+        }
     }
 
-    /// Map over a set of header fields while returning results.
-    fn map_ok(
-        self,
-        transformer: MapFnResult<Self::Header, Self::Metadata>,
-    ) -> MapResults<Self::Header, Self>
-    where
-        Self: Sized,
-    {
-        MapResults::<Self::Header, Self>::new(self, transformer)
-    }
+    #[test]
+    fn group_by_operator() {
+        use packets::tcp::tests::TCP_PACKET;
+        use packets::udp::tests::UDP_PACKET;
 
-    /// Filter out packets, any packets for which `filter_f` returns false are dropped from the batch.
-    fn filter(
-        self,
-        filter_f: FilterFn<Self::Header, Self::Metadata>,
-    ) -> FilterBatch<Self::Header, Self>
-    where
-        Self: Sized,
-    {
-        FilterBatch::<Self::Header, Self>::new(self, filter_f)
-    }
+        dpdk_test! {
+            let (producer, batch) = single_threaded_batch::<RawPacket>(2);
 
-    /// Reset the packet pointer to 0. This is identical to composition except for using static dispatch.
-    fn reset(self) -> ResetParsingBatch<Self>
-    where
-        Self: Sized,
-    {
-        ResetParsingBatch::<Self>::new(self)
-    }
+            let mut batch = batch
+                .map(|p| p.parse::<Ethernet>()?.parse::<Ipv4>())
+                .group_by(
+                    |p| p.protocol(),
+                    |groups| {
+                        compose!(
+                            groups,
+                            ProtocolNumbers::Tcp => |group| {
+                                group.map(|mut p| {
+                                    p.set_ttl(1);
+                                    Ok(p)
+                                })
+                            },
+                            ProtocolNumbers::Udp => |group| {
+                                group.map(|mut p| {
+                                    p.set_ttl(2);
+                                    Ok(p)
+                                })
+                            }
+                        );
+                    }
+                );
 
-    /// Deparse, i.e., remove the last parsed header. Note the assumption here is that T = the last header parsed
-    /// (which we cannot statically enforce since we loose reference to that header).
-    fn deparse(self) -> DeparsedBatch<Self>
-    where
-        Self: Sized,
-    {
-        DeparsedBatch::<Self>::new(self)
-    }
+            producer.enqueue(RawPacket::from_bytes(&TCP_PACKET).unwrap());
+            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
 
-    fn group_by<S: Scheduler + Sized>(
-        self,
-        groups: usize,
-        group_f: GroupFn<Self::Header, Self::Metadata>,
-        sched: &mut S,
-    ) -> GroupBy<Self::Header, Self>
-    where
-        Self: Sized,
-    {
-        GroupBy::<Self::Header, Self>::new(self, groups, group_f, sched)
+            let p1 = batch.next().unwrap().unwrap();
+            assert_eq!(1, p1.ttl());
+            let p2 = batch.next().unwrap().unwrap();
+            assert_eq!(2, p2.ttl());
+        }
     }
 }
