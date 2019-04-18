@@ -57,11 +57,15 @@ pub fn read_slice<T: Fixed>(mbuf: *mut MBuf, offset: usize, len: usize) -> Resul
 #[inline]
 pub fn alloc(mbuf: *mut MBuf, offset: usize, len: usize) -> Result<()> {
     unsafe {
-        if len > 0 {
+        let data_len = (*mbuf).data_len();
+        if len > 0 && offset <= data_len {
+            let copy_len = data_len - offset;
             if (*mbuf).add_data_end(len) > 0 {
-                let src = (*mbuf).data_address(offset);
-                let dst = (*mbuf).data_address(offset + len);
-                std::ptr::copy(src, dst, len);
+                if copy_len > 0 {
+                    let src = (*mbuf).data_address(offset);
+                    let dst = (*mbuf).data_address(offset + len);
+                    std::ptr::copy(src, dst, copy_len);
+                }
             } else {
                 return Err(BufferError::NotResized.into());
             }
@@ -76,10 +80,14 @@ pub fn alloc(mbuf: *mut MBuf, offset: usize, len: usize) -> Result<()> {
 pub fn dealloc(mbuf: *mut MBuf, offset: usize, len: usize) -> Result<()> {
     unsafe {
         if len > 0 {
-            if offset + len <= (*mbuf).data_len() {
+            let data_len = (*mbuf).data_len();
+            let src_offset = offset + len;
+            if src_offset < data_len {
                 let src = (*mbuf).data_address(offset + len);
                 let dst = (*mbuf).data_address(offset);
-                std::ptr::copy(src, dst, len);
+                std::ptr::copy(src, dst, data_len - src_offset);
+                (*mbuf).remove_data_end(len);
+            } else if src_offset == data_len {
                 (*mbuf).remove_data_end(len);
             } else {
                 return Err(BufferError::NotResized.into());
@@ -99,6 +107,20 @@ pub fn realloc(mbuf: *mut MBuf, offset: usize, len: isize) -> Result<()> {
         dealloc(mbuf, offset, -len as usize)
     } else {
         Ok(())
+    }
+}
+
+/// Trims the buffer to the length specified
+#[inline]
+pub fn trim(mbuf: *mut MBuf, to_len: usize) -> Result<()> {
+    unsafe {
+        let data_len = (*mbuf).data_len();
+        if data_len > to_len {
+            (*mbuf).remove_data_end(data_len - to_len);
+            Ok(())
+        } else {
+            return Err(BufferError::NotResized.into());
+        }
     }
 }
 
@@ -138,13 +160,47 @@ mod tests {
     use dpdk_test;
     use native::zcsi::mbuf_alloc;
 
+    pub const BUFFER: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
     #[test]
-    fn alloc_buffer() {
+    fn alloc_buffer_tail() {
         dpdk_test! {
             unsafe {
                 let mbuf = mbuf_alloc();
-                assert!(alloc(mbuf, 0, 200).is_ok());
-                assert_eq!(200, (*mbuf).data_len());
+                assert!(alloc(mbuf, 0, 16).is_ok());
+                assert_eq!(16, (*mbuf).data_len());
+
+                let _ = write_slice(mbuf, 0, &BUFFER);
+
+                assert!(alloc(mbuf, 16, 8).is_ok());
+                assert_eq!(24, (*mbuf).data_len());
+                let slice = &(*read_slice(mbuf, 0, 24).unwrap());
+
+                // data untouched
+                assert_eq!(BUFFER, slice[..16]);
+            }
+        }
+    }
+
+    #[test]
+    fn alloc_buffer_middle() {
+        dpdk_test! {
+            unsafe {
+                let mbuf = mbuf_alloc();
+                let _ = alloc(mbuf, 0, 16);
+                let _ = write_slice(mbuf, 0, &BUFFER);
+
+                // alloc in the middle
+                assert!(alloc(mbuf, 4, 8).is_ok());
+                assert_eq!(24, (*mbuf).data_len());
+                let slice = &(*read_slice(mbuf, 0, 24).unwrap());
+
+                // [0..4] untouched
+                assert_eq!(BUFFER[..4], slice[..4]);
+                // [4..12] untouched, this is the 'new' memory
+                assert_eq!(BUFFER[4..12], slice[4..12]);
+                // copied [4..16] to [12..24]
+                assert_eq!(BUFFER[4..], slice[12..24]);
             }
         }
     }
@@ -160,13 +216,37 @@ mod tests {
     }
 
     #[test]
-    fn dealloc_buffer() {
+    fn dealloc_buffer_tail() {
         dpdk_test! {
             unsafe {
                 let mbuf = mbuf_alloc();
-                assert!(alloc(mbuf, 0, 200).is_ok());
-                assert!(dealloc(mbuf, 50, 100).is_ok());
-                assert_eq!(100, (*mbuf).data_len());
+                let _ = alloc(mbuf, 0, 16);
+                let _ = write_slice(mbuf, 0, &BUFFER);
+
+                assert!(dealloc(mbuf, 8, 8).is_ok());
+                assert_eq!(8, (*mbuf).data_len());
+                let slice = &(*read_slice(mbuf, 0, 8).unwrap());
+
+                assert_eq!(BUFFER[..8], slice[..8]);
+            }
+        }
+    }
+
+    #[test]
+    fn dealloc_buffer_middle() {
+        dpdk_test! {
+            unsafe {
+                let mbuf = mbuf_alloc();
+                let _ = alloc(mbuf, 0, 16);
+                let _ = write_slice(mbuf, 0, &BUFFER);
+
+                assert!(dealloc(mbuf, 4, 8).is_ok());
+                assert_eq!(8, (*mbuf).data_len());
+                let slice = &(*read_slice(mbuf, 0, 8).unwrap());
+
+                // removed [4..12]
+                assert_eq!(BUFFER[..4], slice[..4]);
+                assert_eq!(BUFFER[12..], slice[4..]);
             }
         }
     }
@@ -178,6 +258,63 @@ mod tests {
                 let mbuf = mbuf_alloc();
                 assert!(alloc(mbuf, 0, 200).is_ok());
                 assert!(dealloc(mbuf, 150, 100).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn trim_buffer() {
+        dpdk_test! {
+            unsafe {
+                let mbuf = mbuf_alloc();
+                let _ = alloc(mbuf, 0, 16);
+                let _ = write_slice(mbuf, 0, &BUFFER);
+
+                assert!(trim(mbuf, 8).is_ok());
+                assert_eq!(8, (*mbuf).data_len());
+                let slice = &(*read_slice(mbuf, 0, 8).unwrap());
+
+                assert_eq!(BUFFER[..8], slice[..8]);
+            }
+        }
+    }
+
+    #[test]
+    fn read_write_item() {
+        dpdk_test! {
+            unsafe {
+                let mbuf = mbuf_alloc();
+                let _ = alloc(mbuf, 0, 20);
+                let _ = write_item::<[u8;16]>(mbuf, 0, &BUFFER);
+                let item = read_item::<[u8;16]>(mbuf, 0).unwrap();
+                assert_eq!(&BUFFER, &(*item));
+
+                // read from the wrong offset should return junk
+                let item = read_item::<[u8;16]>(mbuf, 2).unwrap();
+                assert!(&BUFFER != &(*item));
+
+                // read exceeds buffer should err
+                assert!(read_item::<[u8;16]>(mbuf, 10).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn read_write_slice() {
+        dpdk_test! {
+            unsafe {
+                let mbuf = mbuf_alloc();
+                let _ = alloc(mbuf, 0, 20);
+                let _ = write_slice(mbuf, 0, &BUFFER);
+                let slice = read_slice(mbuf, 0, 16).unwrap();
+                assert_eq!(&BUFFER, &(*slice));
+
+                // read from the wrong offset should return junk
+                let slice = read_slice(mbuf, 2, 16).unwrap();
+                assert!(&BUFFER != &(*slice));
+
+                // read exceeds buffer should err
+                assert!(read_slice::<u8>(mbuf, 10, 16).is_err());
             }
         }
     }
