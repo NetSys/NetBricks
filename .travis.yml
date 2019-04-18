@@ -7,10 +7,6 @@ branches:
 
 language: generic
 
-env:
-  global:
-    - SANDBOX=williamofockham/sandbox:nightly-2018-12-01
-
 notifications:
   email: false
   slack:
@@ -21,7 +17,6 @@ services:
 
 before_script:
   - sudo ./scripts/travis-setup.sh
-  - docker pull $SANDBOX
 
 jobs:
   include:

@@ -2,7 +2,7 @@
 # ==============================================
 
 BASE_DIR = $(shell pwd)
-SANDBOX = williamofockham/sandbox:nightly-2018-12-01
+SANDBOX ?= williamofockham/sandbox:nightly-2019-02-01
 
 MOUNTS = -v /lib/modules:/lib/modules \
          -v /usr/src:/usr/src \
