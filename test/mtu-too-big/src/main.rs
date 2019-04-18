@@ -9,7 +9,7 @@ use netbricks::new_operators::{Batch, ReceiveBatch};
 use netbricks::packets::icmp::v6::{Icmpv6, PacketTooBig};
 use netbricks::packets::ip::v6::{Ipv6, IPV6_MIN_MTU};
 use netbricks::packets::ip::ProtocolNumbers;
-use netbricks::packets::{Ethernet, Packet};
+use netbricks::packets::{Ethernet, EthernetHeader, Fixed, Packet};
 use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
@@ -31,7 +31,7 @@ where
             ReceiveBatch::new(port.clone())
                 .map(|p| p.parse::<Ethernet>())
                 .group_by(
-                    |eth| eth.len() > IPV6_MIN_MTU + 14,
+                    |eth| eth.len() > IPV6_MIN_MTU + EthernetHeader::size(),
                     |groups| {
                         compose! {
                             groups,
