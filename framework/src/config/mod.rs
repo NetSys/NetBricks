@@ -1,8 +1,24 @@
+// TODO: Upgrade Configuration(s) to use `config-rs` configuration system, and
+//       `clap` library for cli-parsing
+
+use failure::Fail;
+use std::fmt;
+
 pub use self::config_reader::*;
 pub use self::flag_reader::*;
-use std::fmt;
+
 mod config_reader;
 mod flag_reader;
+
+/// Errors related to configuration issues
+#[derive(Debug, Fail)]
+pub enum ConfigurationError {
+    #[fail(display = "NetBricks configuration error: {}", _0)]
+    NetBricksConfig(String),
+
+    #[fail(display = "Port configuration error: {}", _0)]
+    PortConfig(String),
+}
 
 /// `NetBricks` control configuration. In theory all applications create one of these, either through the use of
 /// `read_configuration` or manually using args.

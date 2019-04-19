@@ -44,9 +44,9 @@ popd () {
 
 toggle_symbols () {
     if [ ! -z ${NETBRICKS_SYMBOLS} ]; then
-        find ${BASE_DIR}/test -name Cargo.toml -exec sed -i 's/debug = false/debug = true/g' {} \;
+        find ${BASE_DIR}/examples -name Cargo.toml -exec sed -i 's/debug = false/debug = true/g' {} \;
     else
-        find ${BASE_DIR}/test -name Cargo.toml -exec sed -i 's/debug = true/debug = false/g' {} \;
+        find ${BASE_DIR}/examples -name Cargo.toml -exec sed -i 's/debug = true/debug = false/g' {} \;
     fi
 }
 
@@ -92,6 +92,15 @@ clean () {
     rm -rf ${BASE_DIR}/target
 }
 
+build_fmwk () {
+    find_sctp
+    native
+
+    pushd $BASE_DIR/framework
+    ${CARGO} build
+    popd
+}
+
 if [ $# -ge 1 ]; then
     TASK=$1
 else
@@ -113,57 +122,58 @@ case $TASK in
     build_native)
         native
         ;;
-    build_test)
+    build_example)
         shift
         if [ $# -lt 1 ]; then
-            echo "Can build one of the following tests:"
+            echo "Can build one of the following examples:"
             for example in ${examples[@]}; do
                 base_eg=$( basename ${example} )
                 printf "\t %s\n" ${base_eg}
             done
-            exit 1
+            exit 0
         fi
         build_dir=$1
-        if [ ! -e ${BASE_DIR}/test/${build_dir}/Cargo.toml ]; then
+        if [ ! -e ${BASE_DIR}/examples/${build_dir}/Cargo.toml ]; then
             echo "No Cargo.toml, not valid"
         fi
-        pushd ${BASE_DIR}/test/${build_dir}
+        pushd ${BASE_DIR}/examples/${build_dir}
         ${CARGO} build
         popd
         ;;
-    build_test_rel)
+    build_example_rel)
         shift
         if [ $# -lt 1 ]; then
-            echo "Can build a release for one of the following tests:"
+            echo "Can build a release for one of the following examples:"
             for example in ${examples[@]}; do
                 base_eg=$( basename ${example} )
                 printf "\t %s\n" ${base_eg}
             done
-            exit 1
+            exit 0
         fi
         build_dir=$1
-        if [ ! -e ${BASE_DIR}/test/${build_dir}/Cargo.toml ]; then
+        if [ ! -e ${BASE_DIR}/examples/${build_dir}/Cargo.toml ]; then
             echo "No Cargo.toml, not valid"
         fi
-        pushd ${BASE_DIR}/test/${build_dir}
+        pushd ${BASE_DIR}/examples/${build_dir}
         ${CARGO} build --release
         popd
         ;;
     build_fmwk)
-        find_sctp
-        native
-
-        pushd $BASE_DIR/framework
-        ${CARGO} build
-        popd
+        build_fmwk
         ;;
     build)
-        find_sctp
-        native
+        build_fmwk
 
-        pushd $BASE_DIR/framework
-        ${CARGO} build
-        popd
+        for example in ${examples[@]}; do
+            if [ -f $BASE_DIR/$example/check.sh ]; then
+                pushd ${BASE_DIR}/${example}
+                ${CARGO} build
+                popd
+            fi
+        done
+        ;;
+    build_all)
+        build_fmwk
 
         for example in ${examples[@]}; do
             pushd ${BASE_DIR}/${example}
@@ -210,7 +220,7 @@ case $TASK in
         else
             test=$2
             echo "Running ${test}"
-            pushd $BASE_DIR/test/$test
+            pushd $BASE_DIR/examples/$test
             ./check.sh
             popd
         fi
@@ -291,13 +301,6 @@ case $TASK in
                 "unindent-comments"
         popd
         ;;
-    lint)
-        pushd $BASE_DIR/framework
-        ${CARGO} clean
-        ${CARGO} update
-        ${CARGO} build --features dev
-        popd
-        ;;
     clean)
         clean
         ;;
@@ -321,20 +324,20 @@ case $TASK in
 ./build.sh <Command>
       Where command is one of
           sctp: Check if sctp library is present.
-          build: Build the project (this includes framework and all tests).
+          build: Build the project (this includes framework and testable examples).
+          build_all: Build the project (this includes framework and all examples).
           build_native: Build the DPDK C API.
-          build_rel: Build a release of the project (this includes framework and all tests).
-          build_fmwk: Just build framework.
-          build_test: Build a particular test.
-          build_test_rel: Build a particular test in release mode.
-          test: Run unit tests.
+          build_rel: Build a release of the project (this includes framework and all examples).
+          build_fmwk: Just build NetBricks framework.
+          build_example: Build a particular example.
+          build_example_rel: Build a particular example in release mode.
+          test: Run a specific test or all tests.
           run: Run one of the examples (Must specify example name and arguments).
           run_rel: Run one of the examples in release mode (Must specify example name and arguments).
           debug: Debug one of the examples (Must specify example name and examples).
           doc: Run rustdoc and produce documentation
-          lint: Run clippy to lint the project
           clean: Remove all built files
           env: Environment variables, run as eval \`./build.sh env\`.
 endhelp
-        ;;
+
 esac

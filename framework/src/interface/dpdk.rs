@@ -1,9 +1,12 @@
-use super::METADATA_SLOTS;
 use config::{NetBricksConfiguration, DEFAULT_CACHE_SIZE, DEFAULT_POOL_SIZE};
 use native::libnuma;
 use native::zcsi;
 use std::cell::Cell;
 use std::ffi::CString;
+
+// Not used currently, but we may want to re-use the concept of MetaData or
+// just remove completely.
+pub const METADATA_SLOTS: u16 = 16;
 
 /// Initialize the system, whitelisting some set of NICs and allocating mempool of given size.
 pub fn init_system_wl_with_mempool(

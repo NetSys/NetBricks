@@ -1,0 +1,16 @@
+[package]
+name = "nat-tcp-v4"
+version = "0.1.0"
+authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <williamofockham@gmail.com>"]
+
+[dependencies]
+netbricks = { path = "../../framework"}
+time = ">=0.1.0"
+getopts = "*"
+rand = "0.3"
+fnv = "*"
+lazy_static = "*"
+
+[features]
+default = []
+print = []

@@ -86,6 +86,7 @@ pub trait IpPacket: Packet {
 }
 
 /// 5-tuple IP connection identifier
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Flow {
     src_ip: IpAddr,
     dst_ip: IpAddr,
@@ -115,20 +116,50 @@ impl Flow {
         self.src_ip
     }
 
+    pub fn set_src_ip(&mut self, src_ip: IpAddr) {
+        self.src_ip = src_ip
+    }
+
     pub fn dst_ip(&self) -> IpAddr {
         self.dst_ip
+    }
+
+    pub fn set_dst_ip(&mut self, dst_ip: IpAddr) {
+        self.dst_ip = dst_ip
     }
 
     pub fn src_port(&self) -> u16 {
         self.src_port
     }
 
+    pub fn set_src_port(&mut self, src_port: u16) {
+        self.src_port = src_port
+    }
+
     pub fn dst_port(&self) -> u16 {
         self.dst_port
     }
 
+    pub fn set_dst_port(&mut self, dst_port: u16) {
+        self.dst_port = dst_port
+    }
+
     pub fn protocol(&self) -> ProtocolNumber {
         self.protocol
+    }
+
+    pub fn set_protocol(&mut self, protocol: ProtocolNumber) {
+        self.protocol = protocol
+    }
+
+    pub fn reverse(&self) -> Self {
+        Flow {
+            src_ip: self.dst_ip,
+            dst_ip: self.src_ip,
+            src_port: self.dst_port,
+            dst_port: self.src_port,
+            protocol: self.protocol,
+        }
     }
 }
 
@@ -146,7 +177,7 @@ impl fmt::Display for Flow {
     }
 }
 
-#[derive(Fail, Debug)]
+#[derive(Debug, Fail)]
 #[fail(display = "Cannot mix IPv4 and IPv6 addresses")]
 pub struct IpAddrMismatchError;
 

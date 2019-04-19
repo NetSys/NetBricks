@@ -1,101 +1,58 @@
-use super::act::Act;
-use super::iterator::*;
-use super::packet_batch::PacketBatch;
-use super::Batch;
-use common::*;
-use headers::NullHeader;
-use interface::{PacketRx, PacketTx};
+use super::{Batch, PacketError};
+use interface::PacketRx;
+use native::zcsi::MBuf;
+use packets::RawPacket;
 
-pub struct ReceiveBatch<T: PacketRx> {
-    parent: PacketBatch,
-    queue: T,
-    pub received: u64,
+pub const BATCH_SIZE: usize = 32;
+
+/// Receive operator
+///
+/// Marks the start of a pipeline.
+pub struct ReceiveBatch<Rx: PacketRx> {
+    port: Rx,
+    buffers: Vec<*mut MBuf>,
+    index: usize,
 }
 
-impl<T: PacketRx> ReceiveBatch<T> {
-    pub fn new_with_parent(parent: PacketBatch, queue: T) -> ReceiveBatch<T> {
+impl<Rx: PacketRx> ReceiveBatch<Rx> {
+    #[inline]
+    pub fn new(port: Rx) -> Self {
         ReceiveBatch {
-            parent: parent,
-            queue: queue,
-            received: 0,
-        }
-    }
-
-    pub fn new(queue: T) -> ReceiveBatch<T> {
-        ReceiveBatch {
-            parent: PacketBatch::new(32),
-            queue: queue,
-            received: 0,
+            port,
+            buffers: Vec::<*mut MBuf>::with_capacity(BATCH_SIZE),
+            index: 0,
         }
     }
 }
 
-impl<T: PacketRx> Batch for ReceiveBatch<T> {}
+impl<Rx: PacketRx> Batch for ReceiveBatch<Rx> {
+    type Item = RawPacket;
 
-impl<T: PacketRx> BatchIterator for ReceiveBatch<T> {
-    type Header = NullHeader;
-    type Metadata = EmptyMetadata;
     #[inline]
-    fn start(&mut self) -> usize {
-        self.parent.start()
+    fn next(&mut self) -> Option<Result<Self::Item, PacketError>> {
+        // TODO: better if this is a queue
+        if self.buffers.len() > self.index {
+            let mbuf = self.buffers[self.index];
+            self.index += 1;
+            Some(Ok(RawPacket::from_mbuf(mbuf)))
+        } else {
+            self.buffers.clear();
+            self.index = 0;
+            None
+        }
     }
 
     #[inline]
-    unsafe fn next_payload(
-        &mut self,
-        idx: usize,
-    ) -> Option<PacketDescriptor<NullHeader, EmptyMetadata>> {
-        self.parent.next_payload(idx)
-    }
-}
-
-/// Internal interface for packets.
-impl<T: PacketRx> Act for ReceiveBatch<T> {
-    #[inline]
-    fn act(&mut self) {
-        self.parent.act();
-        self.parent
-            .recv(&self.queue)
-            .and_then(|x| {
-                self.received += x as u64;
-                Ok(x)
-            })
-            .expect("Receive failure");
-    }
-
-    #[inline]
-    fn done(&mut self) {
-        // Free up memory
-        self.parent.deallocate_batch().expect("Deallocation failed");
-    }
-
-    #[inline]
-    fn send_q(&mut self, port: &PacketTx) -> Result<u32> {
-        self.parent.send_q(port)
-    }
-
-    #[inline]
-    fn capacity(&self) -> i32 {
-        self.parent.capacity()
-    }
-
-    #[inline]
-    fn drop_packets(&mut self, idxes: &[usize]) -> Result<usize> {
-        self.parent.drop_packets(idxes)
-    }
-
-    #[inline]
-    fn clear_packets(&mut self) {
-        self.parent.clear_packets()
-    }
-
-    #[inline]
-    fn get_packet_batch(&mut self) -> &mut PacketBatch {
-        &mut self.parent
-    }
-
-    #[inline]
-    fn get_task_dependencies(&self) -> Vec<usize> {
-        self.parent.get_task_dependencies()
+    fn receive(&mut self) {
+        unsafe {
+            let capacity = self.buffers.capacity();
+            self.buffers.set_len(capacity);
+            match self.port.recv(self.buffers.as_mut_slice()) {
+                Ok(received) => self.buffers.set_len(received as usize),
+                // the underlying DPDK method `rte_eth_rx_burst` will
+                // never return an error. The error arm is unreachable
+                _ => unreachable!(),
+            }
+        }
     }
 }

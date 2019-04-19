@@ -4,8 +4,8 @@ BASE_DIR = $(shell git rev-parse --show-toplevel)
 POOL_SIZE ?= 512
 GH=git@github.com:williamofockham
 
-.PHONY: init compile compile-nb compile-test native build-rel build-rel-test \
-        fmt clean lint run run-rel test
+.PHONY: init build build-all build-nb build-ex native build-rel build-rel-ex \
+        fmt clean run run-rel test
 
 init:
 	@mkdir -p $(BASE_DIR)/.git/hooks && ln -s -f $(BASE_DIR)/.hooks/pre-commit $(BASE_DIR)/.git/hooks/pre-commit
@@ -13,17 +13,20 @@ init:
 	-ln -s utils/Vagrantfile
 	-git clone --recurse-submodules $(GH)/moongen.git
 
-compile:
+build:
 	@./build.sh build
 
-compile-nb:
+build-all:
+	@./build.sh build_all
+
+build-nb:
 	@./build.sh build_fmwk
 
-compile-test:
-ifdef TEST
-	@./build.sh build_test $(TEST)
+build-ex:
+ifdef EXAMPLE
+	@./build.sh build_example $(EXAMPLE)
 else
-	@./build.sh build_test
+	@./build.sh build_example
 endif
 
 native:
@@ -32,11 +35,11 @@ native:
 build-rel:
 	@./build.sh build_rel
 
-build-rel-test:
-ifdef TEST
-	@./build.sh build_test_rel $(TEST)
+build-rel-ex:
+ifdef EXAMPLE
+	@./build.sh build_example_rel $(EXAMPLE)
 else
-	@./build.sh build_test
+	@./build.sh build_example
 endif
 
 fmt:
@@ -45,26 +48,23 @@ fmt:
 clean:
 	@./build.sh clean
 
-lint:
-	@./build.sh lint
-
 run:
-ifdef TEST
-	@./build.sh run $(TEST) -p $(PORT) -c $(CORE) --pool_size=$(POOL_SIZE)
+ifdef EXAMPLE
+	@./build.sh run $(EXAMPLE) -p $(PORT) -c $(CORE) --pool_size=$(POOL_SIZE)
 else
 	@./build.sh run
 endif
 
 run-rel:
-ifdef TEST
-	@./build.sh run_rel $(TEST) -p $(PORT) -c $(CORE) --pool_size=$(POOL_SIZE)
+ifdef EXAMPLE
+	@./build.sh run_rel $(EXAMPLE) -p $(PORT) -c $(CORE) --pool_size=$(POOL_SIZE)
 else
 	@./build.sh run_rel
 endif
 
 test:
 ifdef TEST
-	@./build.sh build_test $(TEST)
+	@./build.sh build_example $(TEST)
 	@./build.sh test $(TEST)
 else
 	@./build.sh build

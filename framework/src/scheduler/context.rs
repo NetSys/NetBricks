@@ -1,6 +1,6 @@
 use allocators::CacheAligned;
 use common::*;
-use config::NetBricksConfiguration;
+use config::{ConfigurationError, NetBricksConfiguration};
 use interface::dpdk::{init_system, init_thread};
 use interface::{PmdPort, PortQueue, VirtualPort, VirtualQueue};
 use scheduler::*;
@@ -125,7 +125,7 @@ impl NetBricksContext {
                 .unwrap();
             Ok(())
         } else {
-            Err(NetBricksError::NoRunningSchedulerOnCore(core).into())
+            Err(SchedulerError::NoRunningSchedulerOnCore(core).into())
         }
     }
 
@@ -147,7 +147,7 @@ impl NetBricksContext {
                 .unwrap();
             Ok(())
         } else {
-            Err(NetBricksError::NoRunningSchedulerOnCore(core).into())
+            Err(SchedulerError::NoRunningSchedulerOnCore(core).into())
         }
     }
 
@@ -222,7 +222,7 @@ pub fn initialize_system(configuration: &NetBricksConfiguration) -> Result<NetBr
     let mut cores: HashSet<_> = configuration.cores.iter().cloned().collect();
     for port in &configuration.ports {
         if ctx.ports.contains_key(&port.name) {
-            return Err(NetBricksError::ConfigurationError(format!(
+            return Err(ConfigurationError::PortConfig(format!(
                 "Port {} appears twice in specification",
                 port.name
             ))
@@ -233,7 +233,7 @@ pub fn initialize_system(configuration: &NetBricksConfiguration) -> Result<NetBr
                     ctx.ports.insert(port.name.clone(), p);
                 }
                 Err(e) => {
-                    return Err(NetBricksError::ConfigurationError(format!(
+                    return Err(ConfigurationError::PortConfig(format!(
                         "Port {} could not be initialized {:?}",
                         port.name, e
                     ))
@@ -250,7 +250,7 @@ pub fn initialize_system(configuration: &NetBricksConfiguration) -> Result<NetBr
                         ctx.rx_queues.entry(*core).or_insert_with(|| vec![]).push(q);
                     }
                     Err(e) => {
-                        return Err(NetBricksError::ConfigurationError(format!(
+                        return Err(ConfigurationError::PortConfig(format!(
                             "Queue {} on port {} could not be \
                              initialized {:?}",
                             rx_q, port.name, e
@@ -269,7 +269,7 @@ pub fn initialize_system(configuration: &NetBricksConfiguration) -> Result<NetBr
             .collect();
         if !core_diff.is_empty() {
             let missing_str = core_diff.join(", ");
-            return Err(NetBricksError::ConfigurationError(format!(
+            return Err(ConfigurationError::PortConfig(format!(
                 "Strict configuration selected but core(s) {} appear \
                  in port configuration but not in cores",
                 missing_str

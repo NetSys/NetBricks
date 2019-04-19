@@ -13,14 +13,9 @@ Cargo.lock
 target/
 .make.dep
 *.tar.gz
-3rdparty/dpdk
 /native/test/test
 /native/*.o
 /native/*.so
-3rdparty/tools
-3rdparty/rust
-3rdparty/llvm
-3rdparty/musl
 
 # Remove rustfmt backups
 *.rs.bk
@@ -52,6 +47,7 @@ out.pcap
 # logs
 *.log
 *.out
+!examples/*/data/*.out
 
 # wireedit
 *.lnk
@@ -62,3 +58,4 @@ out.pcap
 moongen
 netbricks
 utils
+!framework/src/utils
