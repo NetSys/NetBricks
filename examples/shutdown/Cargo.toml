@@ -1,5 +1,5 @@
 [package]
-name = "config-test"
+name = "shutdown"
 version = "0.1.0"
 authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <williamofockham@gmail.com>"]
 
