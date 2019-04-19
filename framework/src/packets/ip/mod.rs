@@ -152,7 +152,7 @@ impl Flow {
         self.protocol = protocol
     }
 
-    pub fn reverse_flow(&self) -> Self {
+    pub fn reverse(&self) -> Self {
         Flow {
             src_ip: self.dst_ip,
             dst_ip: self.src_ip,

@@ -15,16 +15,19 @@ use netbricks::operators::{Batch, ReceiveBatch};
 use netbricks::packets::ip::v6::Ipv6;
 use netbricks::packets::{EtherTypes, Ethernet, Packet};
 use netbricks::scheduler::*;
+use netbricks::utils::cidr::v6::Ipv6Cidr;
+use netbricks::utils::cidr::Cidr;
 use simplelog::{Config as SimpleConfig, LevelFilter, WriteLogger};
 use std::env;
 use std::fmt::Display;
 use std::fs::File as StdFile;
-use std::net::Ipv6Addr;
 use std::process;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+
+static BAD_PREFIX: &str = "da75::0/16";
 
 fn start_logger() {
     WriteLogger::init(
@@ -53,10 +56,7 @@ where
         .map(|port| {
             ReceiveBatch::new(port.clone())
                 .map(|p| p.parse::<Ethernet>())
-                .filter(|p| match p.ether_type() {
-                    EtherTypes::Ipv6 => true,
-                    _ => false,
-                })
+                .filter(|p| p.ether_type() == EtherTypes::Ipv6)
                 .map(|p| {
                     let v6 = p.parse::<Ipv6>()?;
                     throw_mama_from_the_train(v6)
@@ -75,9 +75,9 @@ where
 }
 
 fn throw_mama_from_the_train(packet: Ipv6) -> Result<Ipv6> {
-    let hextets = packet.src().segments();
-    let prefix = Ipv6Addr::new(hextets[0], hextets[1], hextets[2], hextets[3], 0, 0, 0, 0);
-    if prefix == Ipv6Addr::from_str("da75::").unwrap() {
+    let cidr = Ipv6Cidr::from_str(BAD_PREFIX).unwrap();
+
+    if cidr.contains(packet.src()) {
         bail!("directed by danny devito")
     } else {
         Ok(packet)

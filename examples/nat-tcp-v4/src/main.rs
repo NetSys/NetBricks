@@ -12,17 +12,17 @@ use netbricks::config::{basic_opts, read_matches};
 use netbricks::interface::*;
 use netbricks::operators::{Batch, ReceiveBatch};
 use netbricks::packets::ip::v4::Ipv4;
-use netbricks::packets::ip::Flow;
 use netbricks::packets::ip::ProtocolNumbers;
+use netbricks::packets::ip::{Flow, IpPacket};
 use netbricks::packets::{Ethernet, Packet, RawPacket, Tcp};
 use netbricks::scheduler::*;
-use netbricks::utils::Atom;
 use std::collections::HashMap;
 use std::env;
 use std::fmt::Display;
 use std::hash::BuildHasherDefault;
 use std::net::{IpAddr, Ipv4Addr};
 use std::process;
+use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::thread;
@@ -50,7 +50,7 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref NEXT_PORT: Atom<u16> = { Atom::new(1024) };
+    static ref NEXT_PORT: AtomicU16 = { AtomicU16::new(1024) };
 }
 
 #[derive(Clone, Default)]
@@ -61,6 +61,21 @@ struct FlowUsed {
     pub flow: Flow,
     pub time: u64,
     pub used: bool,
+}
+
+trait Stamper {
+    #[inline]
+    fn stamp_flow(&mut self, flow: Flow) -> Result<()>;
+}
+
+impl<E: IpPacket> Stamper for Tcp<E> {
+    fn stamp_flow(&mut self, flow: Flow) -> Result<()> {
+        self.envelope_mut().set_src(flow.src_ip())?;
+        self.envelope_mut().set_dst(flow.dst_ip())?;
+        self.set_src_port(flow.src_port());
+        self.set_dst_port(flow.dst_port());
+        Ok(())
+    }
 }
 
 impl Default for FlowUsed {
@@ -113,10 +128,8 @@ fn nat(packet: RawPacket, nat_ip: Ipv4Addr) -> Result<Tcp<Ipv4>> {
             tcp.cascade();
         }
         None => {
-            if *NEXT_PORT.get() < MAX_PORT {
-                let assigned_port = *NEXT_PORT.get();
-                NEXT_PORT.set(*NEXT_PORT.get() + 1);
-
+            if NEXT_PORT.load(Ordering::Relaxed) < MAX_PORT {
+                let assigned_port = NEXT_PORT.fetch_add(1, Ordering::Relaxed);
                 let mut flow_vec = FLOW_VEC.write().unwrap();
 
                 flow_vec[assigned_port as usize].flow = flow;
@@ -125,11 +138,11 @@ fn nat(packet: RawPacket, nat_ip: Ipv4Addr) -> Result<Tcp<Ipv4>> {
                 let mut outgoing_flow = flow.clone();
                 outgoing_flow.set_src_ip(IpAddr::V4(nat_ip));
                 outgoing_flow.set_src_port(assigned_port);
-                let rev_flow = outgoing_flow.reverse_flow();
+                let rev_flow = outgoing_flow.reverse();
 
                 let mut port_map = PORT_MAP.write().unwrap();
                 port_map.insert(flow, outgoing_flow);
-                port_map.insert(rev_flow, flow.reverse_flow());
+                port_map.insert(rev_flow, flow.reverse());
 
                 let _ = tcp.stamp_flow(outgoing_flow);
                 tcp.cascade()
