@@ -105,7 +105,7 @@ pub trait Batch {
     where
         K: Eq + Clone + std::hash::Hash,
         S: FnMut(&Self::Item) -> K,
-        C: FnOnce(&mut HashMap<K, Box<PipelineBuilder<Self::Item>>>) -> (),
+        C: FnOnce(&mut HashMap<Option<K>, Box<PipelineBuilder<Self::Item>>>) -> (),
         Self: Sized,
     {
         GroupByBatch::new(self, selector, composer)
@@ -184,6 +184,7 @@ pub mod tests {
 
     #[test]
     fn group_by_operator() {
+        use packets::icmp::v4::tests::ICMPV4_PACKET;
         use packets::tcp::tests::TCP_PACKET;
         use packets::udp::tests::UDP_PACKET;
 
@@ -208,6 +209,11 @@ pub mod tests {
                                     p.set_ttl(2);
                                     Ok(p)
                                 })
+                            },
+                            _ => |group| {
+                                group.filter(|_| {
+                                    false
+                                })
                             }
                         );
                     }
@@ -215,11 +221,13 @@ pub mod tests {
 
             producer.enqueue(RawPacket::from_bytes(&TCP_PACKET).unwrap());
             producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+            producer.enqueue(RawPacket::from_bytes(&ICMPV4_PACKET).unwrap());
 
             let p1 = batch.next().unwrap().unwrap();
             assert_eq!(1, p1.ttl());
             let p2 = batch.next().unwrap().unwrap();
             assert_eq!(2, p2.ttl());
+            assert!(batch.next().unwrap().is_err());
         }
     }
 }

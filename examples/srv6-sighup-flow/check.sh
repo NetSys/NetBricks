@@ -1,13 +1,14 @@
 #!/bin/bash
 TEST_NAME=srv6-sighup-flow
-PORT_OPTIONS1="dpdk:eth_pcap0,rx_pcap=data/srv6_tcp.pcap,tx_pcap=/tmp/out.pcap"
 
 C='\033[1;34m'
 NC='\033[0m'
 
 echo -e "${C}RUNNING: $TEST_NAME${NC}"
 
-nohup ../../build.sh run $TEST_NAME -p $PORT_OPTIONS1 -c 1 --dur 5 &
+PORT_OPTIONS="dpdk:eth_pcap0,rx_pcap=data/srv6_tcp.pcap,tx_pcap=/tmp/out.pcap"
+
+nohup ../../build.sh run $TEST_NAME -p $PORT_OPTIONS -c 1 --dur 5 &
 # Extra time to load the signaler
 sleep 3
 PID=`pidof srv6-sighup-flow`
@@ -21,7 +22,7 @@ kill -9 "$PID"
 
 echo ----
 if [[ $TEST_ON_OFF != 0 ]]; then
-    echo "FAIL: TEST_SIGHUP - $TEST_ON_OFF"
+    echo "FAIL: SIGHUP Test - $TEST_ON_OFF"
     exit 1
 else
     echo "PASS"

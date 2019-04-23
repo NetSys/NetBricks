@@ -7,7 +7,7 @@ export examples=(
         examples/macswap
         examples/op-errors
         examples/mtu-too-big
-        # examples/srv6-sighup-flow
+        examples/srv6-sighup-flow
         # examples/chain-test
         # examples/maglev
         # examples/sctp-test

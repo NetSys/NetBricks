@@ -9,15 +9,19 @@ extern crate lazy_static;
 extern crate serde_derive;
 extern crate config;
 extern crate futures;
+#[macro_use]
 extern crate netbricks;
 extern crate tokio;
 extern crate tokio_signal;
-use self::nf::*;
 use config::{Config, ConfigError, File, FileFormat};
 use log::Level;
 use netbricks::config::{basic_opts, read_matches};
 use netbricks::interface::*;
-use netbricks::operators::*;
+use netbricks::operators::{Batch, ReceiveBatch};
+use netbricks::packets::ip::v6::srh::SegmentRouting;
+use netbricks::packets::ip::v6::Ipv6;
+use netbricks::packets::ip::ProtocolNumbers;
+use netbricks::packets::{Ethernet, Packet};
 use netbricks::scheduler::*;
 use netbricks::utils::Atom;
 use simplelog::{Config as SimpleConfig, LevelFilter, WriteLogger};
@@ -30,7 +34,6 @@ use std::thread;
 use std::time::Duration;
 use tokio::prelude::{Future, Stream};
 use tokio_signal::unix::{Signal, SIGHUP, SIGUSR1};
-mod nf;
 
 #[derive(Debug, Deserialize)]
 pub struct Foo {
@@ -115,8 +118,41 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| nf(ReceiveBatch::new(port.clone()), sched).send(port.clone()))
+        .map(|port| {
+            ReceiveBatch::new(port.clone())
+                .map(|p| {
+                    let eth = p.parse::<Ethernet>()?;
+                    let v6 = eth.parse::<Ipv6>()?;
+                    Ok(v6)
+                })
+                .for_each(|_p| {
+                    warn!(
+                        "Settings/Configuration Static State Val: {:?}",
+                        ATOM_CONF.get()
+                    );
+                    Ok(())
+                })
+                .group_by(
+                    |p| p.next_header(),
+                    |groups| {
+                        compose!(groups,
+                                 ProtocolNumbers::Ipv6Route => |group| {
+                                     group.map(|p| {
+                                         let srh = p.parse::<SegmentRouting<Ipv6>>()?;
+                                         warn!("SR {}", srh);
+                                         Ok(srh.deparse())
+                                     })
+                                 },
+                                 _ => |group| {
+                                     group.for_each(|_p| Ok(()))
+                                 }
+                        );
+                    },
+                )
+                .send(port.clone())
+        })
         .collect();
+
     println!("Running {} pipelines", pipelines.len());
     for pipeline in pipelines {
         sched.add_task(pipeline).unwrap();

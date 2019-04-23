@@ -1,7 +1,6 @@
-use failure::Fail;
-
 pub use self::v4::Ipv4Cidr;
 pub use self::v6::Ipv6Cidr;
+use failure::Fail;
 
 pub mod v4;
 pub mod v6;

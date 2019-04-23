@@ -37,6 +37,9 @@ pub mod ProtocolNumbers {
 
     // Internet Control Message Protocol for IPv6
     pub const Icmpv6: ProtocolNumber = ProtocolNumber(0x3A);
+
+    // Internet Control Message Protocol for IPv4
+    pub const Icmpv4: ProtocolNumber = ProtocolNumber(0x01);
 }
 
 impl fmt::Display for ProtocolNumber {
@@ -112,46 +115,57 @@ impl Flow {
         }
     }
 
+    #[inline]
     pub fn src_ip(&self) -> IpAddr {
         self.src_ip
     }
 
+    #[inline]
     pub fn set_src_ip(&mut self, src_ip: IpAddr) {
         self.src_ip = src_ip
     }
 
+    #[inline]
     pub fn dst_ip(&self) -> IpAddr {
         self.dst_ip
     }
 
+    #[inline]
     pub fn set_dst_ip(&mut self, dst_ip: IpAddr) {
         self.dst_ip = dst_ip
     }
 
+    #[inline]
     pub fn src_port(&self) -> u16 {
         self.src_port
     }
 
+    #[inline]
     pub fn set_src_port(&mut self, src_port: u16) {
         self.src_port = src_port
     }
 
+    #[inline]
     pub fn dst_port(&self) -> u16 {
         self.dst_port
     }
 
+    #[inline]
     pub fn set_dst_port(&mut self, dst_port: u16) {
         self.dst_port = dst_port
     }
 
+    #[inline]
     pub fn protocol(&self) -> ProtocolNumber {
         self.protocol
     }
 
+    #[inline]
     pub fn set_protocol(&mut self, protocol: ProtocolNumber) {
         self.protocol = protocol
     }
 
+    #[inline]
     pub fn reverse(&self) -> Self {
         Flow {
             src_ip: self.dst_ip,

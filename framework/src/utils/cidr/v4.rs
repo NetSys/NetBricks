@@ -6,7 +6,7 @@ use utils::cidr::{Cidr, CidrParseError};
 
 const IPV4ADDR_BITS: usize = 32;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ipv4Cidr {
     address: Ipv4Addr,
     length: usize,
@@ -28,7 +28,7 @@ impl Cidr for Ipv4Cidr {
     }
 
     #[inline]
-    fn new(address: Ipv4Addr, length: usize) -> Result<Self, CidrParseError> {
+    fn new(address: Self::Addr, length: usize) -> Result<Self, CidrParseError> {
         let mask = match length {
             0 => u32::max_value(),
             1..=IPV4ADDR_BITS => u32::max_value() << (IPV4ADDR_BITS - length),
@@ -46,7 +46,7 @@ impl Cidr for Ipv4Cidr {
     }
 
     #[inline]
-    fn contains(&self, address: Ipv4Addr) -> bool {
+    fn contains(&self, address: Self::Addr) -> bool {
         self.prefix == (self.mask & u32::from_be_bytes(address.octets()))
     }
 }
