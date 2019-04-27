@@ -1,23 +1,24 @@
 [workspace]
-members=["framework",
-        "examples/echo-reply",
-        "examples/ipv4or6",
-        "examples/macswap",
-        "examples/mtu-too-big",
-        "examples/op-errors",
-        "examples/srv6-sighup-flow",
-        # "examples/maglev",
-        # "examples/sctp-test",
-        # "examples/tcp-reconstruction",
-        "examples/chain",
-        "examples/acl-fw",
-        "examples/config",
-        "examples/shutdown",
-        "examples/embedded-scheduler",
-        "examples/embedded-scheduler-dependency",
-        "examples/nat-tcp-v4",
-        "examples/lpm"
-    ]
+members = [
+    "framework",
+    "examples/acl-fw",
+    "examples/chain",
+    "examples/config",
+    "examples/echo-reply",
+    "examples/embedded-scheduler",
+    "examples/embedded-scheduler-dependency",
+    "examples/ipv4or6",
+    "examples/lpm",
+    "examples/macswap",
+    # "examples/maglev",
+    "examples/mtu-too-big",
+    "examples/nat-tcp-v4",
+    "examples/op-errors",
+    # "examples/sctp-test",
+    "examples/shutdown",
+    "examples/srv6-sighup-flow",
+    # "examples/tcp-reconstruction",
+]
 
 [profile.release]
 opt-level = 3

@@ -13,8 +13,8 @@ export examples=(
         # examples/tcp-reconstruction
         ### Runnable examples | No Tests associated
         ### =======================================
-        examples/chain
         examples/acl-fw
+        examples/chain
         examples/config
         examples/shutdown
         examples/embedded-scheduler
