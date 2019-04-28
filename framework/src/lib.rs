@@ -13,12 +13,14 @@
 
 // For cache aware allocation
 extern crate alloc;
+#[macro_use]
+extern crate clap;
+extern crate config as config_rs;
 extern crate crossbeam;
 #[cfg_attr(test, macro_use)]
 extern crate failure;
 extern crate fallible_iterator;
 extern crate fnv;
-extern crate getopts;
 #[macro_use]
 extern crate lazy_static;
 extern crate libc;
@@ -34,7 +36,6 @@ extern crate sctp;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate toml;
 extern crate twox_hash;
 
 #[cfg(test)]

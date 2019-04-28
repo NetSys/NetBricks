@@ -1,17 +1,10 @@
-#![feature(box_syntax)]
-#![feature(asm)]
-extern crate fnv;
-extern crate getopts;
 extern crate netbricks;
-extern crate rand;
-extern crate time;
 use netbricks::common::Result;
-use netbricks::config::{basic_opts, read_matches};
+use netbricks::config::get_config;
 use netbricks::interface::*;
 use netbricks::operators::{Batch, ReceiveBatch};
 use netbricks::packets::{Ethernet, Packet, RawPacket};
 use netbricks::scheduler::*;
-use std::env;
 use std::fmt::Display;
 use std::process;
 use std::sync::Arc;
@@ -50,28 +43,10 @@ fn macswap(packet: RawPacket) -> Result<Ethernet> {
 }
 
 fn main() {
-    let mut opts = basic_opts();
-    opts.optopt(
-        "",
-        "dur",
-        "Test duration",
-        "If this option is set to a nonzero value, then the \
-         test will exit after X seconds.",
-    );
+    let configuration = get_config().unwrap();
+    println!("{}", configuration);
 
-    let args: Vec<String> = env::args().collect();
-    let matches = match opts.parse(&args[1..]) {
-        Ok(m) => m,
-        Err(f) => panic!(f.to_string()),
-    };
-    let mut configuration = read_matches(&matches, &opts);
-    configuration.pool_size = 255;
-
-    let test_duration: u64 = matches
-        .opt_str("dur")
-        .unwrap_or_else(|| String::from("0"))
-        .parse()
-        .expect("Could not parse test duration");
+    let test_duration: u64 = 5;
 
     match initialize_system(&configuration) {
         Ok(mut context) => {
