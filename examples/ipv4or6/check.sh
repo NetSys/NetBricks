@@ -9,11 +9,11 @@ echo -e "${C}RUNNING: $TEST_NAME${NC}"
 PORT_OPTIONS1="dpdk:eth_pcap0,rx_pcap=data/ipv4_tcp.pcap,tx_pcap=/tmp/out.pcap"
 PORT_OPTIONS2="dpdk:eth_pcap0,rx_pcap=data/ipv6_tcp.pcap,tx_pcap=/tmp/out.pcap"
 
-../../build.sh run $TEST_NAME -p $PORT_OPTIONS1 -c 1 --dur 1
+../../build.sh run $TEST_NAME -p $PORT_OPTIONS1 -c 1 -d 1
 tcpdump -tner /tmp/out.pcap | tee /dev/tty | diff - data/expect_ipv4.out
 TEST_IPv4=$?
 
-../../build.sh run $TEST_NAME -p $PORT_OPTIONS2 -c 1 --dur 1
+../../build.sh run $TEST_NAME -p $PORT_OPTIONS2 -c 1 -d 1
 tcpdump -tner /tmp/out.pcap | tee /dev/tty | diff - data/expect_ipv6.out
 TEST_IPv6=$?
 

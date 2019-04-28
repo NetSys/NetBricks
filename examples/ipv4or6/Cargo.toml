@@ -5,7 +5,6 @@ authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
 
 [dependencies]
 netbricks = { path = "../../framework"}
-time = ">=0.1.0"
 colored = ">=1.6"
 
 [features]

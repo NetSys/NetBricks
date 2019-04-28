@@ -5,10 +5,6 @@ authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <william
 
 [dependencies]
 netbricks = { path = "../../framework"}
-time = ">=0.1.0"
-getopts = "*"
-rand = "0.3"
-fnv = "*"
 
 [features]
 default = []

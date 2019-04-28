@@ -104,7 +104,7 @@ impl fmt::Display for PortConfiguration {
 }
 
 lazy_static! {
-    static ref CLI_ARGS: ArgMatches<'static> = clap_app!(app =>
+    pub(crate) static ref CLI_ARGS: ArgMatches<'static> = clap_app!(app =>
         (version: "0.3.0")
         (@arg file: -f --file +takes_value "custom configuration file")
         (@arg name: -n --name +takes_value "DPDK process name")
@@ -118,6 +118,7 @@ lazy_static! {
         (@arg pool_size: --("pool-size") +takes_value "memory pool size")
         (@arg cache_size: --("cache-size") +takes_value "per core cache size")
         (@arg dpdk_args: --("dpdk-args") ... +takes_value "custom DPDK arguments")
+        (@arg duration: -d --duration +takes_value "test duration")
     )
     .get_matches();
 }
@@ -207,7 +208,12 @@ static DEFAULT_TOML: &'static str = r#"
     duration = 0
 "#;
 
-pub fn get_config() -> Result<NetBricksConfiguration, ConfigError> {
+/// Loads the configuration
+///
+/// Configuration can be specified through either a file or command
+/// line. Command line arguments will have precedence over settings
+/// from the configuration file.
+pub fn load_config() -> Result<NetBricksConfiguration, ConfigError> {
     let mut config = Config::new();
     config.merge(File::from_str(DEFAULT_TOML, FileFormat::Toml))?;
 

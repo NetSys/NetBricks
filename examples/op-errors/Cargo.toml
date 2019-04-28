@@ -5,7 +5,6 @@ authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
 
 [dependencies]
 netbricks = { path = "../../framework"}
-time = ">=0.1.0"
 failure = "0.1.5"
 log = "*"
 simplelog = "*"

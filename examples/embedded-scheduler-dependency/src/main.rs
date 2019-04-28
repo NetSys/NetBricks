@@ -1,9 +1,4 @@
-#![feature(box_syntax)]
-#![feature(asm)]
-extern crate fnv;
 extern crate netbricks;
-extern crate rand;
-extern crate time;
 use netbricks::scheduler::*;
 
 pub struct DepTask {

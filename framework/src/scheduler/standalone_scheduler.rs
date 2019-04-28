@@ -120,7 +120,7 @@ impl StandaloneScheduler {
         } {
             self.handle_request(cmd)
         }
-        warn!(
+        info!(
             "Scheduler exiting {}",
             thread::current().name().unwrap_or_else(|| "unknown-name")
         );

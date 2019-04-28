@@ -36,6 +36,7 @@ extern crate sctp;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate tokio;
 extern crate twox_hash;
 
 #[cfg(test)]
@@ -54,6 +55,7 @@ mod native;
 mod native_include;
 pub mod operators;
 pub mod packets;
+pub mod runtime;
 pub mod scheduler;
 pub mod shared_state;
 pub mod state;
