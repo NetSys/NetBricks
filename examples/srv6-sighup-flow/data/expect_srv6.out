@@ -1,3 +1,0 @@
-[WARN] Settings/Configuration Static State Val: Bar { baz: false }
-[WARN] SR next_header: TCP, hdr_ext_len: 8, routing_type: 4, segments_left: 1, last_entry: 3, flags: 0, tag: 0, segments: [fe80::3, fe80::6, fe80::9, fe80::c]
-[WARN] So long, and thanks for all the fish: Bar { baz: true }

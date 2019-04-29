@@ -37,6 +37,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate tokio;
+extern crate tokio_signal;
 extern crate twox_hash;
 
 #[cfg(test)]

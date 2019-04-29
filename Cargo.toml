@@ -3,7 +3,6 @@ members = [
     "framework",
 #    "examples/acl-fw",
 #    "examples/chain",
-    "examples/config",
     "examples/echo-reply",
     "examples/embedded-scheduler",
     "examples/embedded-scheduler-dependency",
@@ -15,8 +14,7 @@ members = [
 #    "examples/nat-tcp-v4",
     "examples/op-errors",
     # "examples/sctp-test",
-#    "examples/shutdown",
-#    "examples/srv6-sighup-flow",
+    "examples/signals",
     # "examples/tcp-reconstruction",
 ]
 

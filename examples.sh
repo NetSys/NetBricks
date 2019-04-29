@@ -5,20 +5,18 @@ export examples=(
         examples/echo-reply
         examples/ipv4or6
         examples/macswap
-        examples/op-errors
         examples/mtu-too-big
-        examples/srv6-sighup-flow
-        # examples/maglev
-        # examples/sctp-test
-        # examples/tcp-reconstruction
+        examples/op-errors
+        examples/signals
         ### Runnable examples | No Tests associated
         ### =======================================
         examples/acl-fw
         examples/chain
-        examples/config
-        examples/shutdown
         examples/embedded-scheduler
         examples/embedded-scheduler-dependency
-        examples/nat-tcp-v4
         examples/lpm
+        # examples/maglev
+        examples/nat-tcp-v4
+        # examples/sctp-test
+        # examples/tcp-reconstruction
 )
