@@ -1,13 +1,14 @@
-#![feature(box_syntax)]
 extern crate fnv;
 extern crate getopts;
 extern crate netbricks;
 extern crate rand;
 extern crate time;
-use self::nf::*;
+use netbricks::common::Result;
 use netbricks::config::{basic_opts, read_matches};
 use netbricks::interface::*;
-use netbricks::operators::*;
+use netbricks::operators::{Batch, ReceiveBatch};
+use netbricks::packets::ip::v4::Ipv4;
+use netbricks::packets::{Ethernet, Packet, RawPacket};
 use netbricks::scheduler::*;
 use std::env;
 use std::fmt::Display;
@@ -15,7 +16,6 @@ use std::process;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-mod nf;
 
 const CONVERSION_FACTOR: f64 = 1000000000.;
 
@@ -25,6 +25,7 @@ where
     S: Scheduler + Sized,
 {
     println!("Receiving started");
+
     for port in &ports {
         println!(
             "Receiving port {} on chain len {} pos {}",
@@ -34,11 +35,52 @@ where
 
     let pipelines: Vec<_> = ports
         .iter()
-        .map(|port| chain(ReceiveBatch::new(port.clone()), chain_len, chain_pos).send(port.clone()))
+        .map(|port| {
+            ReceiveBatch::new(port.clone())
+                .filter_map(move |p| chain(p, chain_len, chain_pos))
+                .send(port.clone())
+        })
         .collect();
+
     println!("Running {} pipelines", pipelines.len());
+
     for pipeline in pipelines {
         sched.add_task(pipeline).unwrap();
+    }
+}
+
+#[inline]
+pub fn chain_nf(packet: RawPacket) -> Result<RawPacket> {
+    let mut ethernet = packet.parse::<Ethernet>()?;
+    ethernet.swap_addresses();
+    let mut ipv4 = ethernet.parse::<Ipv4>()?;
+    let ttl = ipv4.ttl();
+    ipv4.set_ttl(ttl - 1);
+    Ok(ipv4.deparse().deparse())
+}
+
+#[inline]
+pub fn chain(packet: RawPacket, len: u32, pos: u32) -> Result<Option<Ethernet>> {
+    let mut chained = chain_nf(packet)?;
+
+    for _ in 1..len {
+        chained = chain_nf(chained)?;
+    }
+
+    let chained_eth = chained.parse::<Ethernet>()?;
+    let chained_ipv4 = chained_eth.parse::<Ipv4>()?;
+
+    if chained_ipv4.ttl() != 0 {
+        Ok(None)
+    } else {
+        let mut chained_eth = chained_ipv4.deparse();
+
+        if len % 2 == 0 || pos % 2 == 1 {
+            chained_eth.swap_addresses();
+            Ok(Some(chained_eth))
+        } else {
+            Ok(Some(chained_eth))
+        }
     }
 }
 

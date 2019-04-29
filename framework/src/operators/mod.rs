@@ -5,6 +5,7 @@ use packets::Packet;
 use std::collections::HashMap;
 
 pub use self::filter_batch::*;
+pub use self::filtermap_batch::*;
 pub use self::foreach_batch::*;
 pub use self::groupby_batch::*;
 pub use self::map_batch::*;
@@ -13,6 +14,7 @@ pub use self::receive_batch::*;
 pub use self::send_batch::*;
 
 mod filter_batch;
+mod filtermap_batch;
 mod foreach_batch;
 mod groupby_batch;
 mod map_batch;
@@ -48,6 +50,16 @@ pub trait Batch {
         Self: Sized,
     {
         FilterBatch::new(self, predicate)
+    }
+
+    ///
+    #[inline]
+    fn filter_map<T: Packet, F>(self, f: F) -> FilterMapBatch<Self, T, F>
+    where
+        F: FnMut(Self::Item) -> Result<Option<T>, Error>,
+        Self: Sized,
+    {
+        FilterMapBatch::new(self, f)
     }
 
     /// Appends a map operator to the end of the pipeline
@@ -157,6 +169,40 @@ pub mod tests {
 
             let packet = batch.next().unwrap().unwrap();
             assert_eq!(EtherTypes::Ipv4, packet.ether_type())
+        }
+    }
+
+    #[test]
+    fn filter_map_operator() {
+        use packets::icmp::v4::tests::ICMPV4_PACKET;
+        use packets::udp::tests::UDP_PACKET;
+
+        dpdk_test! {
+            let (producer, batch) = single_threaded_batch::<RawPacket>(2);
+            let mut batch = batch.filter_map(|p| {
+                let v4 = p.parse::<Ethernet>()?.parse::<Ipv4>()?;
+                if v4.protocol() == ProtocolNumbers::Udp {
+                    let mut eth  = v4.deparse();
+                    eth.swap_addresses();
+                    Ok(Some(eth.parse::<Ipv4>()?))
+                } else {
+                    Ok(None)
+                }
+            });
+
+
+            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+            producer.enqueue(RawPacket::from_bytes(&ICMPV4_PACKET).unwrap());
+
+            let udp_packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+            let ethernet = udp_packet.parse::<Ethernet>().unwrap();
+            let p1 = batch.next().unwrap().unwrap();
+            assert_eq!(ProtocolNumbers::Udp, p1.protocol());
+            let p1v4 = p1.deparse();
+            assert_eq!(ethernet.dst(), p1v4.src());
+            assert_eq!(ethernet.src(), p1v4.dst());
+
+            assert!(batch.next().unwrap().is_err());
         }
     }
 

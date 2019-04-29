@@ -11,10 +11,10 @@ export examples=(
         # examples/maglev
         # examples/sctp-test
         # examples/tcp-reconstruction
-        # examples/chain-test
         ### Runnable examples | No Tests associated
         ### =======================================
-	examples/acl-fw
+        examples/chain
+        examples/acl-fw
         examples/config
         examples/shutdown
         examples/embedded-scheduler
