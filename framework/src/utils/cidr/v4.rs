@@ -1,6 +1,6 @@
 use serde::{de, Deserialize, Deserializer};
 use std::fmt;
-use std::net::Ipv4Addr;
+use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 use utils::cidr::{Cidr, CidrParseError};
 
@@ -48,6 +48,14 @@ impl Cidr for Ipv4Cidr {
     #[inline]
     fn contains(&self, address: Self::Addr) -> bool {
         self.prefix == (self.mask & u32::from_be_bytes(address.octets()))
+    }
+
+    #[inline]
+    fn contains_ip(&self, ip: IpAddr) -> bool {
+        match ip {
+            IpAddr::V4(ip) => self.contains(ip),
+            _ => false,
+        }
     }
 }
 

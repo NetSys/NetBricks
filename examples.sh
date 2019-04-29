@@ -8,13 +8,13 @@ export examples=(
         examples/op-errors
         examples/mtu-too-big
         examples/srv6-sighup-flow
-        # examples/chain-test
         # examples/maglev
         # examples/sctp-test
         # examples/tcp-reconstruction
-        # examples/acl-fw
+        # examples/chain-test
         ### Runnable examples | No Tests associated
         ### =======================================
+	examples/acl-fw
         examples/config
         examples/shutdown
         examples/embedded-scheduler

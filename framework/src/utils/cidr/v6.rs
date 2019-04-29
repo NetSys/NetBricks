@@ -1,6 +1,6 @@
 use serde::{de, Deserialize, Deserializer};
 use std::fmt;
-use std::net::Ipv6Addr;
+use std::net::{IpAddr, Ipv6Addr};
 use std::str::FromStr;
 use utils::cidr::{Cidr, CidrParseError};
 
@@ -48,6 +48,14 @@ impl Cidr for Ipv6Cidr {
     #[inline]
     fn contains(&self, address: Self::Addr) -> bool {
         self.prefix == (self.mask & u128::from_be_bytes(address.octets()))
+    }
+
+    #[inline]
+    fn contains_ip(&self, ip: IpAddr) -> bool {
+        match ip {
+            IpAddr::V6(ip) => self.contains(ip),
+            _ => false,
+        }
     }
 }
 

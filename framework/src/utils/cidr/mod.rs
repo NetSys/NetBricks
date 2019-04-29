@@ -1,3 +1,5 @@
+use std::net::IpAddr;
+
 pub use self::v4::Ipv4Cidr;
 pub use self::v6::Ipv6Cidr;
 use failure::Fail;
@@ -16,4 +18,5 @@ pub trait Cidr: Sized {
     fn length(&self) -> usize;
     fn new(address: Self::Addr, length: usize) -> Result<Self, CidrParseError>;
     fn contains(&self, address: Self::Addr) -> bool;
+    fn contains_ip(&self, ip: IpAddr) -> bool;
 }
