@@ -211,7 +211,7 @@ impl<E: Ipv6Packet> SegmentRouting<E> {
             buffer::realloc(
                 self.mbuf,
                 segments_offset,
-                new_len as isize - old_len as isize,
+                (new_len as isize - old_len as isize) * Segment::size() as isize,
             )?;
             self.segments = buffer::write_slice(self.mbuf, segments_offset, segments)?;
             self.set_hdr_ext_len(new_len * 2);
@@ -518,6 +518,10 @@ pub mod tests {
             assert_eq!(segment4, srh.segments()[3]);
 
             assert!(srh.set_segments(&vec![]).is_err());
+
+            // make sure rest of the packet still valid
+            let tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
+            assert_eq!(3464, tcp.src_port());
         }
     }
 
