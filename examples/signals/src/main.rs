@@ -24,23 +24,28 @@ fn start_logger() -> Result<()> {
     .map_err(|e| e.into())
 }
 
-fn main() -> Result<()> {
-    start_logger()?;
-    let configuration = load_config()?;
-    println!("{}", configuration);
-    let mut runtime = Runtime::init(&configuration)?;
-    runtime.execute(|signal| match signal {
+fn on_signal(signal: i32) -> std::result::Result<(), i32> {
+    match signal {
         SIGHUP => {
             warn!("SIGHUP.");
             Ok(())
         }
         SIGTERM => {
             warn!("SIGTERM.");
-            Ok(())
+            Err(0)
         }
         _ => {
             warn!("unknown signal.");
-            Ok(())
+            Err(1)
         }
-    })
+    }
+}
+
+fn main() -> Result<()> {
+    start_logger()?;
+    let configuration = load_config()?;
+    println!("{}", configuration);
+    let mut runtime = Runtime::init(&configuration)?;
+    runtime.set_on_signal(on_signal);
+    runtime.execute()
 }

@@ -123,10 +123,12 @@ lazy_static! {
     .get_matches();
 }
 
+// this struct is used to indirectly implement `Source` for `ArgMatches` and
+// allow for command line args integrated with file based configuration
 #[derive(Clone, Debug)]
 struct CommandLine();
 
-impl<'a> Source for CommandLine {
+impl Source for CommandLine {
     fn clone_into_box(&self) -> Box<Source + Send + Sync> {
         Box::new((*self).clone())
     }

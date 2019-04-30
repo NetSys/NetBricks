@@ -71,5 +71,5 @@ fn main() -> Result<()> {
     println!("{}", configuration);
     let mut runtime = Runtime::init(&configuration)?;
     runtime.add_pipeline_to_run(install);
-    runtime.execute_test()
+    runtime.execute()
 }
