@@ -1,16 +1,14 @@
 [package]
 name = "lpm"
 version = "0.1.0"
-authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
+authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <Occam_Engineering@comcast.com>"]
 
 [dependencies]
-netbricks = { path = "../../framework", features = ["performance"] }
-time = ">=0.1.0"
-getopts = "*"
-rand = "0.6"
-fnv = "*"
 colored = ">=1.6"
+fnv = "*"
 lazy_static = "*"
+netbricks = { path = "../../framework", features = ["performance"] }
+rand = "0.6"
 
 [features]
 default = []

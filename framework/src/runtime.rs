@@ -53,7 +53,7 @@ impl Runtime {
     }
 
     fn wait_for_timeout(&mut self) -> Result<()> {
-        let duration = value_t!(CLI_ARGS, "duration", u64).unwrap_or(1);
+        let duration = value_t!(CLI_ARGS, "duration", u64)?;
         let when = Instant::now() + Duration::from_secs(duration);
 
         let main_loop = Delay::new(when).and_then(|_| {

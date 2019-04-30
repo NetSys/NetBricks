@@ -1,25 +1,18 @@
-extern crate fnv;
 extern crate getopts;
 extern crate netbricks;
-extern crate rand;
-extern crate time;
+use getopts::Options;
 use netbricks::common::Result;
-use netbricks::config::{basic_opts, read_matches};
-use netbricks::interface::*;
+use netbricks::config::load_config;
+use netbricks::interface::{PacketRx, PacketTx};
 use netbricks::operators::{Batch, ReceiveBatch};
 use netbricks::packets::ip::v4::Ipv4;
 use netbricks::packets::{Ethernet, Packet, RawPacket};
-use netbricks::scheduler::*;
+use netbricks::runtime::Runtime;
+use netbricks::scheduler::Scheduler;
 use std::env;
 use std::fmt::Display;
-use std::process;
-use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 
-const CONVERSION_FACTOR: f64 = 1000000000.;
-
-fn test<T, S>(ports: Vec<T>, sched: &mut S, chain_len: u32, chain_pos: u32)
+fn install<T, S>(ports: Vec<T>, sched: &mut S, chain_len: u32, chain_pos: u32)
 where
     T: PacketRx + PacketTx + Display + Clone + 'static,
     S: Scheduler + Sized,
@@ -84,8 +77,8 @@ pub fn chain(packet: RawPacket, len: u32, pos: u32) -> Result<Option<Ethernet>> 
     }
 }
 
-fn main() {
-    let mut opts = basic_opts();
+fn extra_opts() -> (u32, u32) {
+    let mut opts = Options::new();
     opts.optopt("l", "chain", "Chain length", "length");
     opts.optopt(
         "j",
@@ -98,7 +91,6 @@ fn main() {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
     };
-    let configuration = read_matches(&matches, &opts);
 
     let chain_len = matches
         .opt_str("l")
@@ -112,54 +104,14 @@ fn main() {
         .parse()
         .expect("Could not parse chain position");
 
-    match initialize_system(&configuration) {
-        Ok(mut context) => {
-            context.start_schedulers();
-            context.add_pipeline_to_run(Arc::new(move |p, s: &mut StandaloneScheduler| {
-                test(p, s, chain_len, chain_pos)
-            }));
-            context.execute();
+    (chain_len, chain_pos)
+}
 
-            let mut pkts_so_far = (0, 0);
-            let mut last_printed = 0.;
-            const MAX_PRINT_INTERVAL: f64 = 60.;
-            const PRINT_DELAY: f64 = 30.;
-            let sleep_delay = (PRINT_DELAY / 2.) as u64;
-            let mut start = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-            let sleep_time = Duration::from_millis(sleep_delay);
-            println!("0 OVERALL RX 0.00 TX 0.00 CYCLE_PER_DELAY 0 0 0");
-            loop {
-                thread::sleep(sleep_time); // Sleep for a bit
-                let now = time::precise_time_ns() as f64 / CONVERSION_FACTOR;
-                if now - start > PRINT_DELAY {
-                    let mut rx = 0;
-                    let mut tx = 0;
-                    for port in context.ports.values() {
-                        for q in 0..port.rxqs() {
-                            let (rp, tp) = port.stats(q);
-                            rx += rp;
-                            tx += tp;
-                        }
-                    }
-                    let pkts = (rx, tx);
-                    let rx_pkts = pkts.0 - pkts_so_far.0;
-                    if rx_pkts > 0 || now - last_printed > MAX_PRINT_INTERVAL {
-                        println!(
-                            "{:.2} OVERALL RX {:.2} TX {:.2}",
-                            now - start,
-                            rx_pkts as f64 / (now - start),
-                            (pkts.1 - pkts_so_far.1) as f64 / (now - start)
-                        );
-                        last_printed = now;
-                        start = now;
-                        pkts_so_far = pkts;
-                    }
-                }
-            }
-        }
-        Err(ref e) => {
-            println!("Error: {:?}", e);
-            process::exit(1);
-        }
-    }
+fn main() -> Result<()> {
+    let (chain_len, chain_pos) = extra_opts();
+    let configuration = load_config()?;
+    println!("{}", configuration);
+    let mut runtime = Runtime::init(&configuration)?;
+    runtime.add_pipeline_to_run(move |p, s| install(p, s, chain_len, chain_pos));
+    runtime.execute()
 }

@@ -6,7 +6,7 @@ NC='\033[0m'
 
 echo -e "${C}RUNNING: $TEST_NAME${NC}"
 
-PORT_OPTIONS="dpdk:eth_pcap0,rx_pcap=data/srv6_tcp.pcap,tx_pcap=/tmp/out.pcap"
+PORT_OPTIONS="dpdk:eth_af_packet,iface=lo"
 
 nohup ../../build.sh run $TEST_NAME -p $PORT_OPTIONS -c 1 &
 # Extra time to load the signaler
