@@ -3,6 +3,7 @@ members = [
     "framework",
     "examples/acl-fw",
     "examples/chain",
+    "examples/collect-metrics",
     "examples/echo-reply",
     "examples/embedded-scheduler",
     "examples/embedded-scheduler-dependency",

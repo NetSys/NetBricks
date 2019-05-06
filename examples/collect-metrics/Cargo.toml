@@ -1,0 +1,12 @@
+[package]
+name = "collect-metrics"
+version = "0.1.0"
+authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+
+[dependencies]
+lazy_static = "*"
+netbricks = { path = "../../framework"}
+
+[features]
+default = []
+print = []

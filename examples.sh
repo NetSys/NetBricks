@@ -12,6 +12,7 @@ export examples=(
         ### =======================================
         examples/acl-fw
         examples/chain
+        examples/collect-metrics
         examples/embedded-scheduler
         examples/embedded-scheduler-dependency
         examples/lpm
