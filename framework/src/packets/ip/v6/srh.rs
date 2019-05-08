@@ -127,6 +127,7 @@ pub type Segment = Ipv6Addr;
 #[fail(display = "Segment list length must be greater than 0")]
 pub struct BadSegmentsError;
 
+#[derive(Debug)]
 pub struct SegmentRouting<E: Ipv6Packet> {
     envelope: E,
     mbuf: *mut MBuf,

@@ -169,6 +169,7 @@ pub trait Icmpv6Packet<E: Ipv6Packet, P: Icmpv6Payload>:
 }
 
 /// ICMPv6 packet
+#[derive(Debug)]
 pub struct Icmpv6<E: Ipv6Packet, P: Icmpv6Payload> {
     envelope: E,
     mbuf: *mut MBuf,

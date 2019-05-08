@@ -154,6 +154,7 @@ const SYN: u8 = 0b0000_0010;
 const FIN: u8 = 0b0000_0001;
 
 /// TCP packet
+#[derive(Debug)]
 pub struct Tcp<E: IpPacket> {
     envelope: E,
     mbuf: *mut MBuf,

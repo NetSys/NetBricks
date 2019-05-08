@@ -165,6 +165,7 @@ impl Default for Ipv4Header {
 impl Header for Ipv4Header {}
 
 /// IPv4 packet
+#[derive(Debug)]
 pub struct Ipv4 {
     envelope: Ethernet,
     mbuf: *mut MBuf,
