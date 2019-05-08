@@ -12,6 +12,7 @@ pub use self::map_batch::*;
 pub use self::queue_batch::*;
 pub use self::receive_batch::*;
 pub use self::send_batch::*;
+pub use self::emit_batch::*;
 
 mod filter_batch;
 mod filtermap_batch;
@@ -21,10 +22,13 @@ mod map_batch;
 mod queue_batch;
 mod receive_batch;
 mod send_batch;
+mod emit_batch;
 
 /// Error when processing packets
 #[derive(Debug)]
 pub enum PacketError {
+    /// Processing is complete; emit the packet
+    Emit(*mut MBuf),
     /// The packet is intentionally dropped
     Drop(*mut MBuf),
     /// The packet is aborted due to an error
@@ -121,6 +125,18 @@ pub trait Batch {
         Self: Sized,
     {
         GroupByBatch::new(self, selector, composer)
+    }
+
+    /// Appends a emit operator to the end of the pipeline
+    ///
+    /// Use when processing is complete and no further modifications are necessary.
+    /// Any further operators will have no effect on packets that have been through
+    /// the emit operator. Emit the packet as-is.
+    fn emit(self) -> EmitBatch<Self>
+    where
+        Self: Sized,
+    {
+        EmitBatch::new(self)
     }
 
     /// Appends a send operator to the end of the pipeline
@@ -274,6 +290,36 @@ pub mod tests {
             let p2 = batch.next().unwrap().unwrap();
             assert_eq!(2, p2.ttl());
             assert!(batch.next().unwrap().is_err());
+        }
+    }
+
+    #[test]
+    fn emit_operator() {
+        use packets::tcp::tests::TCP_PACKET;
+        use packets::ethernet::MacAddr;
+
+        dpdk_test! {
+            let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+            let mut batch = batch
+                .map(|p| p.parse::<Ethernet>())
+                .map(|mut e| {
+                    // ff:ff:ff:ff:ff:ff
+                    e.set_src(MacAddr::new(255, 255, 255, 255, 255, 255));
+                    Ok(e)
+                })
+                .emit()
+                .map(|mut e| {
+                    e.set_src(MacAddr::new(0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF));
+                    Ok(e)
+                });
+            producer.enqueue(RawPacket::from_bytes(&TCP_PACKET).unwrap());
+
+            if let Err(PacketError::Emit(mbuf)) = batch.next().unwrap() {
+                let eth = RawPacket::from_mbuf(mbuf).parse::<Ethernet>().unwrap();
+                assert_eq!("ff:ff:ff:ff:ff:ff", eth.src().to_string());
+            } else {
+                assert!(false, "Unexpected packet result :(");
+            }
         }
     }
 }
