@@ -1,6 +1,7 @@
 use common::Result;
 use native::zcsi::{mbuf_alloc, MBuf};
 use packets::{buffer, Header, Packet};
+use packets::buffer::read_slice;
 
 /// Unit header
 impl Header for () {}
@@ -8,8 +9,25 @@ impl Header for () {}
 /// The raw network packet
 ///
 /// Simply a wrapper around the underlying buffer with packet semantic
+#[derive(Debug)]
 pub struct RawPacket {
     mbuf: *mut MBuf,
+}
+
+// Compare RawPackets. This probably isn't something you want to be doing a lot of at runtime.
+impl PartialEq for RawPacket {
+    fn eq(&self, other: &RawPacket) -> bool {
+        unsafe {
+            if (*self.mbuf).data_len() != (*other.mbuf).data_len() {
+                false
+            } else {
+                let len = (*self.mbuf).data_len();
+                let lhs_slice = &(*read_slice::<u8>(self.mbuf, 0, len).unwrap());
+                let rhs_slice = &(*read_slice::<u8>(other.mbuf, 0, len).unwrap());
+                lhs_slice == rhs_slice
+            }
+        }
+    }
 }
 
 impl RawPacket {

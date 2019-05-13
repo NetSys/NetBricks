@@ -99,6 +99,7 @@ pub struct EthernetHeader {
 impl Header for EthernetHeader {}
 
 /// Ethernet packet
+#[derive(Debug)]
 pub struct Ethernet {
     envelope: RawPacket,
     mbuf: *mut MBuf,
