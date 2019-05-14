@@ -38,6 +38,9 @@ impl<B: Batch, Tx: PacketTx> Executable for SendBatch<B, Tx> {
                 Ok(packet) => {
                     transmit_q.push(packet.mbuf());
                 }
+                Err(PacketError::Emit(mbuf)) => {
+                    transmit_q.push(mbuf);
+                }
                 Err(PacketError::Drop(mbuf)) => {
                     drop_q.push(mbuf);
                 }
