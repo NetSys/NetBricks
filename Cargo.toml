@@ -14,7 +14,7 @@ members = [
     "examples/mtu-too-big",
     "examples/nat-tcp-v4",
     "examples/op-errors",
-    # "examples/sctp-test",
+    "examples/sctp",
     "examples/signals",
     # "examples/tcp-reconstruction",
 ]

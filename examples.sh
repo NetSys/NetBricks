@@ -16,8 +16,8 @@ export examples=(
         examples/embedded-scheduler
         examples/embedded-scheduler-dependency
         examples/lpm
-        # examples/maglev
         examples/nat-tcp-v4
-        # examples/sctp-test
+        examples/sctp
+        # examples/maglev
         # examples/tcp-reconstruction
 )

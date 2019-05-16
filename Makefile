@@ -50,14 +50,14 @@ clean:
 
 run:
 ifdef EXAMPLE
-	@./build.sh run $(EXAMPLE) -p $(PORT) -c $(CORE) --pool_size=$(POOL_SIZE)
+	@./build.sh run $(EXAMPLE) -p $(PORT) -c $(CORE) --pool-size=$(POOL_SIZE)
 else
 	@./build.sh run
 endif
 
 run-rel:
 ifdef EXAMPLE
-	@./build.sh run_rel $(EXAMPLE) -p $(PORT) -c $(CORE) --pool_size=$(POOL_SIZE)
+	@./build.sh run_rel $(EXAMPLE) -p $(PORT) -c $(CORE) --pool-size=$(POOL_SIZE)
 else
 	@./build.sh run_rel
 endif

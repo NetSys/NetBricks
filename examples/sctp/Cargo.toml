@@ -1,0 +1,13 @@
+[package]
+name = "sctp"
+version = "0.1.0"
+authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <Occam_Engineering@comcast.com>"]
+
+[dependencies]
+netbricks = { path = "../../framework", features = ["sctp"] }
+nix = "*"
+rust-sctp = { git="https://github.com/netsys/rust-sctp" }
+
+[features]
+default = []
+print = []
