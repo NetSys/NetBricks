@@ -1,5 +1,6 @@
 use common::Result;
 use native::zcsi::MBuf;
+use packets::checksum::PseudoHeader;
 use packets::ip::{IpAddrMismatchError, IpPacket, ProtocolNumber};
 use packets::{buffer, Ethernet, Fixed, Header, Packet};
 use std::fmt;
@@ -487,34 +488,14 @@ impl IpPacket for Ipv4 {
             _ => Err(IpAddrMismatchError.into()),
         }
     }
-
-    /*   0      7 8     15 16    23 24    31
-        +--------+--------+--------+--------+
-        |          source address           |
-        +--------+--------+--------+--------+
-        |        destination address        |
-        +--------+--------+--------+--------+
-        |  zero  |protocol|  packet length  |
-        +--------+--------+--------+--------+
-    */
-
-    /// Returns the IPv4 pseudo-header sum
     #[inline]
-    fn pseudo_header_sum(&self, packet_len: u16, protocol: ProtocolNumber) -> u16 {
-        let src: u32 = self.src().into();
-        let dst: u32 = self.dst().into();
-        let mut sum = (src >> 16)
-            + (src & 0xFFFF)
-            + (dst >> 16)
-            + (dst & 0xFFFF)
-            + protocol.0 as u32
-            + packet_len as u32;
-
-        while sum >> 16 != 0 {
-            sum = (sum >> 16) + (sum & 0xFFFF);
+    fn pseudo_header(&self, packet_len: u16, protocol: ProtocolNumber) -> PseudoHeader {
+        PseudoHeader::V4 {
+            src: self.src(),
+            dst: self.dst(),
+            packet_len: packet_len,
+            protocol: protocol,
         }
-
-        sum as u16
     }
 }
 

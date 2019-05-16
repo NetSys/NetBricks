@@ -1,5 +1,6 @@
 use common::Result;
 use failure::Fail;
+use packets::checksum::PseudoHeader;
 use packets::Packet;
 use std::fmt;
 use std::net::IpAddr;
@@ -85,7 +86,7 @@ pub trait IpPacket: Packet {
     fn set_dst(&mut self, dst: IpAddr) -> Result<()>;
 
     /// Returns the pseudo-header sum for layer 4 checksum computation
-    fn pseudo_header_sum(&self, packet_len: u16, protocol: ProtocolNumber) -> u16;
+    fn pseudo_header(&self, packet_len: u16, protocol: ProtocolNumber) -> PseudoHeader;
 }
 
 /// 5-tuple IP connection identifier

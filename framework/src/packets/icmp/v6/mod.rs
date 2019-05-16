@@ -158,7 +158,8 @@ pub trait Icmpv6Packet<E: Ipv6Packet, P: Icmpv6Payload>:
             let data = unsafe { &(*data) };
             let pseudo_header_sum = self
                 .envelope()
-                .pseudo_header_sum(data.len() as u16, ProtocolNumbers::Icmpv6);
+                .pseudo_header(data.len() as u16, ProtocolNumbers::Icmpv6)
+                .sum();
             let checksum = checksum::compute(pseudo_header_sum, data);
             self.header_mut().checksum = u16::to_be(checksum);
         } else {

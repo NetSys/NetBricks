@@ -1,7 +1,114 @@
 use common::Result;
-use packets::ip::IpAddrMismatchError;
-use std::net::IpAddr;
+use packets::ip::{IpAddrMismatchError, ProtocolNumber};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::slice;
+
+/// Generic Pseudo Header used for checksumming purposes.
+pub enum PseudoHeader {
+    V4 {
+        src: Ipv4Addr,
+        dst: Ipv4Addr,
+        packet_len: u16,
+        protocol: ProtocolNumber,
+    },
+    V6 {
+        src: Ipv6Addr,
+        dst: Ipv6Addr,
+        packet_len: u16,
+        protocol: ProtocolNumber,
+    },
+}
+
+impl PseudoHeader {
+    pub fn sum(&self) -> u16 {
+        let mut sum = match *self {
+            PseudoHeader::V4 {
+                src,
+                dst,
+                packet_len,
+                protocol,
+            } => self.v4_sum(src, dst, packet_len, protocol),
+            PseudoHeader::V6 {
+                src,
+                dst,
+                packet_len,
+                protocol,
+            } => self.v6_sum(src, dst, packet_len, protocol),
+        };
+
+        while sum >> 16 != 0 {
+            sum = (sum >> 16) + (sum & 0xFFFF);
+        }
+
+        sum as u16
+    }
+
+    /*   0      7 8     15 16    23 24    31
+       +--------+--------+--------+--------+
+       |          source address           |
+       +--------+--------+--------+--------+
+       |        destination address        |
+       +--------+--------+--------+--------+
+       |  zero  |protocol|  packet length  |
+       +--------+--------+--------+--------+
+    */
+
+    fn v4_sum(
+        &self,
+        src: Ipv4Addr,
+        dst: Ipv4Addr,
+        packet_len: u16,
+        protocol: ProtocolNumber,
+    ) -> u32 {
+        let src: u32 = src.into();
+        let dst: u32 = dst.into();
+
+        (src >> 16)
+            + (src & 0xFFFF)
+            + (dst >> 16)
+            + (dst & 0xFFFF)
+            + protocol.0 as u32
+            + packet_len as u32
+    }
+
+    /*  https://tools.ietf.org/html/rfc2460#section-8.1
+
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                                                               |
+       +                                                               +
+       |                                                               |
+       +                         Source Address                        +
+       |                                                               |
+       +                                                               +
+       |                                                               |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                                                               |
+       +                                                               +
+       |                                                               |
+       +                      Destination Address                      +
+       |                                                               |
+       +                                                               +
+       |                                                               |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                   Upper-Layer Packet Length                   |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                      zero                     |  Next Header  |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    */
+
+    fn v6_sum(
+        &self,
+        src: Ipv6Addr,
+        dst: Ipv6Addr,
+        packet_len: u16,
+        protocol: ProtocolNumber,
+    ) -> u32 {
+        src.segments().iter().fold(0, |acc, &x| acc + x as u32)
+            + dst.segments().iter().fold(0, |acc, &x| acc + x as u32)
+            + packet_len as u32
+            + protocol.0 as u32
+    }
+}
 
 /// Computes the internet checksum
 /// https://tools.ietf.org/html/rfc1071

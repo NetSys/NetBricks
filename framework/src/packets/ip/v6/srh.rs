@@ -1,6 +1,7 @@
 use common::Result;
 use failure::Fail;
 use native::zcsi::MBuf;
+use packets::checksum::PseudoHeader;
 use packets::ip::v6::Ipv6Packet;
 use packets::ip::{IpPacket, ProtocolNumber};
 use packets::{buffer, Fixed, Header, Packet, ParseError};
@@ -202,6 +203,19 @@ impl<E: Ipv6Packet> SegmentRouting<E> {
         unsafe { &mut (*self.segments) }
     }
 
+    /// Sets the segment list
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// srh.set_segments(&vec![segment1, segment2, segment3, segment4])
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// Be aware that when you call this function, it can affect Tcp and Udp
+    /// checksum calculations, as the last segment is used as part of the pseudo
+    /// header.
     #[inline]
     pub fn set_segments(&mut self, segments: &[Segment]) -> Result<()> {
         if segments.len() > 0 {
@@ -385,9 +399,36 @@ impl<E: Ipv6Packet> IpPacket for SegmentRouting<E> {
         self.envelope_mut().set_dst(dst)
     }
 
+    // From https://tools.ietf.org/html/rfc8200#section-8.1
+    //
+    // If the IPv6 packet contains a Routing header, the Destination Address
+    // used in the pseudo-header is that of the final destination.  At the
+    // originating node, that address will be in the last element of the Routing
+    // header; at the recipient(s), that address will be in the Destination
+    // Address field of the IPv6 header.
     #[inline]
-    fn pseudo_header_sum(&self, packet_len: u16, protocol: ProtocolNumber) -> u16 {
-        self.envelope().pseudo_header_sum(packet_len, protocol)
+    fn pseudo_header(&self, packet_len: u16, protocol: ProtocolNumber) -> PseudoHeader {
+        let dst = if self.segments_left() > 0 {
+            let segments = self.segments();
+            segments[segments.len() - 1]
+        } else {
+            match self.dst() {
+                IpAddr::V6(dst) => dst,
+                _ => unreachable!(),
+            }
+        };
+
+        let src = match self.src() {
+            IpAddr::V6(src) => src,
+            _ => unreachable!(),
+        };
+
+        PseudoHeader::V6 {
+            src: src,
+            dst: dst,
+            packet_len: packet_len,
+            protocol: protocol,
+        }
     }
 }
 
@@ -517,12 +558,62 @@ pub mod tests {
             assert_eq!(segment2, srh.segments()[1]);
             assert_eq!(segment3, srh.segments()[2]);
             assert_eq!(segment4, srh.segments()[3]);
-
             assert!(srh.set_segments(&vec![]).is_err());
 
             // make sure rest of the packet still valid
             let tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
-            assert_eq!(3464, tcp.src_port());
+            assert_eq!(3464, tcp.src_port())
+        }
+    }
+
+    #[test]
+    fn check_checksum() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&SRH_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            let mut srh = ipv6.parse::<SegmentRouting<Ipv6>>().unwrap();
+
+            let segment1: Segment = "::1".parse().unwrap();
+            let segment2: Segment = "::2".parse().unwrap();
+            let segment3: Segment = "::3".parse().unwrap();
+            let segment4: Segment = "::4".parse().unwrap();
+
+            assert!(srh.set_segments(&vec![segment1, segment2, segment3, segment4]).is_ok());
+            assert_eq!(4, srh.segments().len());
+            srh.set_segments_left(3);
+
+            let mut tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
+
+            // Should pass as we're using the hard-coded (and wrong) initial
+            // checksum, as it's 0 given above.
+            assert_eq!(0, tcp.checksum());
+
+            tcp.cascade();
+            let expected = tcp.checksum();
+
+            // our checksum should now be calculated correctly & no longer be 0
+            assert_ne!(expected, 0);
+
+            // Let's update the segments list to make sure the last checksum
+            // computed matches what happens when it's the last (and only)
+            // segment in the list.
+            let mut srh_ret = tcp.deparse();
+            assert!(srh_ret.set_segments(&vec![segment4]).is_ok());
+            assert_eq!(1, srh_ret.segments().len());
+            srh_ret.set_segments_left(1);
+
+            let mut tcp_ret = srh_ret.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
+            tcp_ret.cascade();
+            assert_eq!(expected, tcp_ret.checksum());
+
+            // Let's make sure that if segments left is 0, then our checksum
+            // is not calculated from the last segment.
+            let mut srh_fin = tcp_ret.deparse();
+            srh_fin.set_segments_left(0);
+            let mut tcp_fin = srh_fin.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
+            tcp_fin.cascade();
+            assert_ne!(expected, tcp_fin.checksum());
         }
     }
 
