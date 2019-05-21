@@ -1,5 +1,6 @@
 #!/bin/bash
 # Stop on any errors
+
 set -e
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 BUILD_SCRIPT=$( basename "$0" )
@@ -17,6 +18,7 @@ echo "Current Rust Backtrace Setting: ${RUST_BACKTRACE}"
 
 CARGO_LOC=`which cargo || true`
 export CARGO=${CARGO_PATH-"${CARGO_LOC}"}
+CLIPPY_ARGS="--all-targets --all-features -- -D clippy::wildcard_dependencies -D clippy::cargo_common_metadata -D warnings"
 
 DPDK_VER=17.08
 DPDK_HOME="/opt/dpdk/dpdk-stable-${DPDK_VER}"
@@ -42,13 +44,6 @@ popd () {
     command popd "$@" > /dev/null
 }
 
-toggle_symbols () {
-    if [ ! -z ${NETBRICKS_SYMBOLS} ]; then
-        find ${BASE_DIR}/examples -name Cargo.toml -exec sed -i 's/debug = false/debug = true/g' {} \;
-    else
-        find ${BASE_DIR}/examples -name Cargo.toml -exec sed -i 's/debug = true/debug = false/g' {} \;
-    fi
-}
 
 find_sctp () {
     set +o errexit
@@ -108,19 +103,31 @@ else
 fi
 
 case $TASK in
-    enable_symbols)
-        export NETBRICKS_SYMBOLS=1
-        toggle_symbols
-        ;;
-    disable_symbols)
-        unset NETBRICKS_SYMBOLS || true
-        toggle_symbols
-        ;;
-    sctp)
-        find_sctp
-        ;;
     build_native)
         native
+        ;;
+    build)
+        build_fmwk
+
+        for example in ${examples[@]}; do
+            if [ -f $BASE_DIR/$example/check.sh ]; then
+                pushd ${BASE_DIR}/${example}
+                ${CARGO} build
+                popd
+            fi
+        done
+        ;;
+    build_all)
+        build_fmwk
+
+        for example in ${examples[@]}; do
+            pushd ${BASE_DIR}/${example}
+            ${CARGO} build
+            popd
+        done
+        ;;
+    build_fmwk)
+        build_fmwk
         ;;
     build_example)
         shift
@@ -158,29 +165,6 @@ case $TASK in
         ${CARGO} build --release
         popd
         ;;
-    build_fmwk)
-        build_fmwk
-        ;;
-    build)
-        build_fmwk
-
-        for example in ${examples[@]}; do
-            if [ -f $BASE_DIR/$example/check.sh ]; then
-                pushd ${BASE_DIR}/${example}
-                ${CARGO} build
-                popd
-            fi
-        done
-        ;;
-    build_all)
-        build_fmwk
-
-        for example in ${examples[@]}; do
-            pushd ${BASE_DIR}/${example}
-            ${CARGO} build
-            popd
-        done
-        ;;
     build_rel)
         find_sctp
         native
@@ -195,35 +179,69 @@ case $TASK in
             popd
         done
         ;;
-    test)
-        if [ $# -lt 2 ]; then
-            echo "We will build & run these tests:"
-            for testname in ${examples[@]}; do
-                if [ -f $BASE_DIR/$testname/check.sh ]; then
-                    echo $testname
-                fi
-            done
-            echo "...and all unit and property-based tests"
+    check_examples)
+        python scripts/check-examples.py "${examples[@]}"
+        ;;
+    check_manifest)
+        pushd ${BASE_DIR}
+        ${CARGO} verify-project --verbose
+        popd
 
-            pushd $BASE_DIR/framework
-            export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${LD_LIBRARY_PATH}"
-            ${CARGO} test
-            popd
+        pushd ${BASE_DIR}/framework
+        ${CARGO} verify-project | grep true
+        popd
 
-            for testname in ${examples[@]}; do
-                if [ -f $BASE_DIR/$testname/check.sh ]; then
-                    pushd $BASE_DIR/$testname
-                    ./check.sh
-                    popd
-                fi
-            done
-        else
-            test=$2
-            echo "Running ${test}"
-            pushd $BASE_DIR/examples/$test
-            ./check.sh
+        for example in ${examples[@]}; do
+            pushd ${BASE_DIR}/${example}
+            ${CARGO} verify-project | grep true
             popd
+        done
+        ;;
+    clean)
+        clean
+        ;;
+    debug)
+        shift
+        if [ $# -le 0 ]; then
+            print_examples
         fi
+        cmd=$1
+        shift
+        executable=${BASE_DIR}/target/debug/$cmd
+        if [ ! -e ${executable} ]; then
+            echo "${executable} not found, building"
+            ${BASE_DIR}/${BUILD_SCRIPT} build
+        fi
+        export PATH="${BIN_DIR}:${PATH}"
+        export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${LD_LIBRARY_PATH}"
+        sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
+             rust-gdb --args $executable "$@"
+        ;;
+    doc)
+        pushd $BASE_DIR/framework
+        ${CARGO} rustdoc -- \
+                 --no-defaults --passes "collapse-docs" --passes \
+                 "unindent-comments"
+        popd
+        ;;
+    env)
+        echo "export PATH=\"${BIN_DIR}:${PATH}\""
+        echo "export LD_LIBRARY_PATH=\"${NATIVE_LIB_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}\""
+        ;;
+    fmt)
+        pushd $BASE_DIR/framework
+        ${CARGO} fmt
+        popd
+
+        for example in ${examples[@]}; do
+            pushd ${BASE_DIR}/${example}
+            ${CARGO} fmt
+            popd
+        done
+        ;;
+    lint)
+        echo "Linting w/: $CLIPPY_ARGS"
+        ${CARGO} clippy $CLIPPY_ARGS
         ;;
     run)
         shift
@@ -259,85 +277,60 @@ case $TASK in
         sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
              $executable "$@"
         ;;
-    debug)
-        shift
-        if [ $# -le 0 ]; then
-            print_examples
-        fi
-        cmd=$1
-        shift
-        executable=${BASE_DIR}/target/debug/$cmd
-        if [ ! -e ${executable} ]; then
-            echo "${executable} not found, building"
-            ${BASE_DIR}/${BUILD_SCRIPT} build
-        fi
-        export PATH="${BIN_DIR}:${PATH}"
-        export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${LD_LIBRARY_PATH}"
-        sudo env PATH="$PATH" LD_LIBRARY_PATH="$LD_LIBRARY_PATH" LD_PRELOAD="$LD_PRELOAD" \
-            rust-gdb --args $executable "$@"
+    sctp)
+        find_sctp
         ;;
-    check_manifest)
-        pushd ${BASE_DIR}
-        ${CARGO} verify-project --verbose
-        popd
+    test)
+        if [ $# -lt 2 ]; then
+            echo "We will build & run these tests:"
+            for testname in ${examples[@]}; do
+                if [ -f $BASE_DIR/$testname/check.sh ]; then
+                    echo $testname
+                fi
+            done
+            echo "...and all unit and property-based tests"
 
-        pushd ${BASE_DIR}/framework
-        ${CARGO} verify-project | grep true
-        popd
-
-        for example in ${examples[@]}; do
-            pushd ${BASE_DIR}/${example}
-            ${CARGO} verify-project | grep true
+            pushd $BASE_DIR/framework
+            export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${LD_LIBRARY_PATH}"
+            ${CARGO} test
             popd
-        done
-        ;;
-    check_examples)
-        python scripts/check-examples.py "${examples[@]}"
-        ;;
-    doc)
-        pushd $BASE_DIR/framework
-        ${CARGO} rustdoc -- \
-            --no-defaults --passes "collapse-docs" --passes \
-                "unindent-comments"
-        popd
-        ;;
-    clean)
-        clean
-        ;;
-    fmt)
-        pushd $BASE_DIR/framework
-        cargo fmt
-        popd
 
-        for example in ${examples[@]}; do
-            pushd ${BASE_DIR}/${example}
-            cargo fmt
+            for testname in ${examples[@]}; do
+                if [ -f $BASE_DIR/$testname/check.sh ]; then
+                    pushd $BASE_DIR/$testname
+                    ./check.sh
+                    popd
+                fi
+            done
+        else
+            test=$2
+            echo "Running ${test}"
+            pushd $BASE_DIR/examples/$test
+            ./check.sh
             popd
-        done
-        ;;
-    env)
-        echo "export PATH=\"${BIN_DIR}:${PATH}\""
-        echo "export LD_LIBRARY_PATH=\"${NATIVE_LIB_PATH}:${TOOLS_BASE}:${LD_LIBRARY_PATH}\""
+        fi
         ;;
     *)
         cat <<endhelp
 ./build.sh <Command>
       Where command is one of
-          sctp: Check if sctp library is present.
           build: Build the project (this includes framework and testable examples).
           build_all: Build the project (this includes framework and all examples).
-          build_native: Build the DPDK C API.
-          build_rel: Build a release of the project (this includes framework and all examples).
-          build_fmwk: Just build NetBricks framework.
           build_example: Build a particular example.
           build_example_rel: Build a particular example in release mode.
-          test: Run a specific test or all tests.
-          run: Run one of the examples (Must specify example name and arguments).
-          run_rel: Run one of the examples in release mode (Must specify example name and arguments).
+          build_fmwk: Just build NetBricks framework.
+          build_native: Build the DPDK C API.
+          build_rel: Build a release of the project (this includes framework and all examples).
+          clean: Remove all built files
           debug: Debug one of the examples (Must specify example name and examples).
           doc: Run rustdoc and produce documentation
-          clean: Remove all built files
           env: Environment variables, run as eval \`./build.sh env\`.
+          fmt: Format all files via rustfmt. 
+          lint: Run clippy to lint all files.
+          run: Run one of the examples (Must specify example name and arguments).
+          run_rel: Run one of the examples in release mode (Must specify example name and arguments).
+          sctp: Check if sctp library is present.
+          test: Run a specific test or all tests.
 endhelp
 
 esac

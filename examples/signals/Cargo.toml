@@ -2,11 +2,17 @@
 name = "signals"
 version = "0.1.0"
 authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+description = "Example: signal handling"
+license = "..."
+repository = "https://github.com/williamofockham/NetBricks/tree/master/examples/signals"
+readme = "..."
+keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
+categories = ["network-functions", "framework"]
 
 [dependencies]
-netbricks = { path = "../../framework", features = ["performance"] }
-log = "*"
-simplelog = "*"
+log = ">= 0.4"
+simplelog = ">= 0.5"
+netbricks = { path = "../../framework" }
 
 [features]
 default = []

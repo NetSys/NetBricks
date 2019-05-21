@@ -2,6 +2,12 @@
 name = "embedded-scheduler-dependency"
 version = "0.1.0"
 authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <williamofockham@gmail.com>"]
+description = "Example: embedded-scheduler as dep works"
+license = "..."
+repository = "https://github.com/williamofockham/NetBricks/tree/master/examples/embedded-scheduler-dependency"
+readme = "..."
+keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
+categories = ["network-functions", "framework"]
 
 [dependencies]
 netbricks = { path = "../../framework"}

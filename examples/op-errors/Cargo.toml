@@ -2,12 +2,18 @@
 name = "op-errors"
 version = "0.1.0"
 authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+description = "Example: handling errors w/ operators"
+license = "..."
+repository = "https://github.com/williamofockham/NetBricks/tree/master/examples/op-errors"
+readme = "..."
+keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
+categories = ["network-functions", "framework"]
 
 [dependencies]
+failure = "0.1"
+log = ">= 0.4"
+simplelog = ">= 0.5"
 netbricks = { path = "../../framework"}
-failure = "0.1.5"
-log = "*"
-simplelog = "*"
 
 [features]
 default = []

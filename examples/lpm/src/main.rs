@@ -31,7 +31,7 @@ lazy_static! {
             let b: u8 = rng.sample(Uniform::new_inclusive(0, 255));
             let c: u8 = rng.sample(Uniform::new_inclusive(0, 255));
             let d: u8 = rng.sample(Uniform::new_inclusive(0, 255));
-            lpm_table.insert_ipv4(&Ipv4Addr::new(a, b, c, d), 32, 1);
+            lpm_table.insert_ipv4(Ipv4Addr::new(a, b, c, d), 32, 1);
         }
 
         lpm_table.construct_table();
@@ -53,7 +53,7 @@ where
         .iter()
         .map(|port| {
             ReceiveBatch::new(port.clone())
-                .map(|p| lpm(p))
+                .map(lpm)
                 .group_by(
                     |v4| LOOKUP_TABLE.read().unwrap().lookup_entry(v4.src()) as usize,
                     |groups| {

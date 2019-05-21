@@ -1,6 +1,6 @@
 pub use self::port::*;
 use common::*;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 
 pub mod dpdk;
 mod port;

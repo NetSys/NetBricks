@@ -20,7 +20,7 @@ pub fn rdtsc_unsafe() -> u64 {
              :
              : "rdx rax"
              : "volatile");
-        ((high as u64) << 32) | (low as u64)
+        (u64::from(high) << 32) | u64::from(low)
     }
 }
 
@@ -34,7 +34,7 @@ pub fn rdtscp_unsafe() -> u64 {
              :
              : "ecx"
              : "volatile");
-        ((high as u64) << 32) | (low as u64)
+        (u64::from(high) << 32) | u64::from(low)
     }
 }
 

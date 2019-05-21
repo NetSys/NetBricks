@@ -28,6 +28,7 @@ const CACHE_SIZE: usize = 1 << 10;
 const MAX_CACHE_SIZE: usize = 1 << 20;
 const CHAN_SIZE: usize = 128;
 
+#[derive(Default)]
 pub struct MergeableStoreCP<T: AddAssign<T> + Default + Clone> {
     flow_counters: HashMap<Flow, T, FnvHash>,
     hashmaps: Vec<Arc<RwLock<HashMap<Flow, T, FnvHash>>>>,

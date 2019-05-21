@@ -44,13 +44,7 @@ impl<T: AddAssign<T> + Default + Clone> CpMergeableStoreDataPath<T> {
         self.updates += 1;
         if self.updates >= self.delay {
             self.updates = 0;
-            if self
-                .channel
-                .try_send(self.cache.drain(0..).collect())
-                .is_ok()
-            {
-                ()
-            }
+            let _ = self.channel.try_send(self.cache.drain(0..).collect());
         }
     }
 }
@@ -115,7 +109,7 @@ pub fn new_cp_mergeable_store<T: AddAssign<T> + Default + Clone>(
         CpMergeableStoreDataPath {
             cache: Vec::with_capacity(delay),
             updates: 0,
-            delay: delay,
+            delay,
             channel: sender,
         },
         box CpMergeableStoreControlPlane {

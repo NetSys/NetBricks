@@ -32,7 +32,7 @@ impl Cidr for Ipv4Cidr {
         let mask = match length {
             0 => u32::max_value(),
             1..=IPV4ADDR_BITS => u32::max_value() << (IPV4ADDR_BITS - length),
-            _ => return Err(CidrParseError("Not a valid length".to_string()).into()),
+            _ => return Err(CidrParseError("Not a valid length".to_string())),
         };
 
         let prefix = u32::from_be_bytes(address.octets()) & mask;
@@ -72,7 +72,7 @@ impl FromStr for Ipv4Cidr {
 
                 Ipv4Cidr::new(address, length)
             }
-            _ => Err(CidrParseError("No `/` found".to_string()).into()),
+            _ => Err(CidrParseError("No `/` found".to_string())),
         }
     }
 }
@@ -109,15 +109,10 @@ mod tests {
     fn get_cidr_parse_error() {
         let bad = Ipv4Cidr::new(Ipv4Addr::from_str("10.0.0.0").unwrap(), 99);
         assert!(bad.is_err());
-        match bad {
-            Err(e) => {
-                let err = format_err!("Failed to parse CIDR: {}", "Not a valid length");
-
-                assert_eq!(e.to_string(), err.to_string());
-                assert_eq!(e.name(), Some("netbricks::utils::cidr::CidrParseError"))
-            }
-            _ => assert!(false),
-        }
+        let e = bad.unwrap_err();
+        let err = format_err!("Failed to parse CIDR: {}", "Not a valid length");
+        assert_eq!(e.to_string(), err.to_string());
+        assert_eq!(e.name(), Some("netbricks::utils::cidr::CidrParseError"))
     }
 
     proptest! {
@@ -137,5 +132,4 @@ mod tests {
         assert!(cidr.contains(Ipv4Addr::from_str("10.0.0.127").unwrap()));
         assert!(!cidr.contains(Ipv4Addr::from_str("10.0.0.128").unwrap()));
     }
-
 }

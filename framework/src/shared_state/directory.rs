@@ -46,7 +46,7 @@ impl Directory {
             (*head).entries.store(0, Ordering::Release);
             (*head).committed_version.store(1, Ordering::SeqCst);
             Directory {
-                head: head,
+                head,
                 data: entry,
                 _shared_memory: shared,
                 entry: 0,
@@ -61,7 +61,7 @@ impl Directory {
             None
         } else {
             unsafe {
-                let entry_ptr = self.data.offset(entry as isize);
+                let entry_ptr = self.data.add(entry);
                 (*entry_ptr).name.copy_from_slice(name.as_bytes());
                 (*self.head).entries.store(entry, Ordering::Release);
             }

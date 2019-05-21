@@ -3,10 +3,11 @@ pub use self::virt_port::*;
 use allocators::*;
 use common::*;
 use interface::{PacketRx, PacketTx};
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use std::sync::atomic::AtomicUsize;
-mod phy_port;
+
 mod virt_port;
+mod phy_port;
 
 /// Statistics for PMD port.
 struct PortStats {

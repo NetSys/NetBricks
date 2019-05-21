@@ -2,13 +2,19 @@
 name = "lpm"
 version = "0.1.0"
 authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <Occam_Engineering@comcast.com>"]
+description = "Example: lpm"
+license = "..."
+repository = "https://github.com/williamofockham/NetBricks/tree/master/examples/lpm"
+readme = "..."
+keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
+categories = ["network-functions", "framework"]
 
 [dependencies]
-colored = ">=1.6"
-fnv = "*"
-lazy_static = "*"
-netbricks = { path = "../../framework", features = ["performance"] }
+colored = ">= 1.6"
+fnv = ">= 1.0"
+lazy_static = ">= 1.3"
 rand = "0.6"
+netbricks = { path = "../../framework" }
 
 [features]
 default = []

@@ -31,11 +31,11 @@ struct Segment {
 impl Segment {
     pub fn new(idx: isize, seq: u32, length: u16) -> Segment {
         Segment {
-            idx: idx,
+            idx,
             prev: -1,
             next: -1,
-            seq: seq,
-            length: length,
+            seq,
+            length,
         }
     }
 }
@@ -142,7 +142,7 @@ impl SegmentList {
         while next != -1 {
             let end = self.storage[idx as usize]
                 .seq
-                .wrapping_add(self.storage[idx as usize].length as u32);
+                .wrapping_add(u32::from(self.storage[idx as usize].length));
             if end >= self.storage[next as usize].seq {
                 // We have at least some overlap, and should merge.
                 let merge_len = self.storage[next as usize].length as usize
@@ -164,8 +164,9 @@ impl SegmentList {
                     // Remove from next.
                     self.storage[next as usize].length -= max_len;
                     // Update seq
-                    self.storage[next as usize].seq =
-                        self.storage[next as usize].seq.wrapping_add(max_len as u32);
+                    self.storage[next as usize].seq = self.storage[next as usize]
+                        .seq
+                        .wrapping_add(u32::from(max_len));
                     // No more merges are possible so exit this loop.
                     break;
                 }
@@ -184,11 +185,11 @@ impl SegmentList {
             self.tail = idx;
             Some(idx)
         } else {
-            let end = seq.wrapping_add(len as u32);
+            let end = seq.wrapping_add(u32::from(len));
             while idx != -1 {
                 let seg_seq = self.storage[idx as usize].seq;
                 let seg_len = self.storage[idx as usize].length;
-                let seg_end = seg_seq.wrapping_add(seg_len as u32);
+                let seg_end = seg_seq.wrapping_add(u32::from(seg_len));
                 if seg_end == seq {
                     // println!("Adjusting segment");
                     // We can just add to the current segment.
@@ -206,7 +207,7 @@ impl SegmentList {
                         let max_len = u16::MAX - self.storage[idx as usize].length;
                         // Add this much to the old segment.
                         self.storage[idx as usize].length += max_len;
-                        let seq_new = seq.wrapping_add(max_len as u32);
+                        let seq_new = seq.wrapping_add(u32::from(max_len));
                         let len_new = len - max_len;
                         self.insert_after_node(idx, seq_new, len_new);
                     }
@@ -261,7 +262,7 @@ impl SegmentList {
         } else {
             // No loops are necessary since we always
             let consume = min(consumed, self.storage[idx].length);
-            self.storage[idx].seq = self.storage[idx].seq.wrapping_add(consume as u32);
+            self.storage[idx].seq = self.storage[idx].seq.wrapping_add(u32::from(consume));
             self.storage[idx].length -= consume;
             if self.storage[idx].length == 0 {
                 self.remove_head();
@@ -408,12 +409,12 @@ impl ReorderedBuffer {
         self.tail_seq = self.tail_seq.wrapping_add(written as u32);
         if written == data.len() {
             InsertionResult::Inserted {
-                written: written,
+                written,
                 available: self.available(),
             }
         } else {
             InsertionResult::OutOfMemory {
-                written: written,
+                written,
                 available: self.available(),
             }
         }
@@ -426,7 +427,7 @@ impl ReorderedBuffer {
         while to_insert > 0 {
             let insert = min(u16::MAX as usize, to_insert) as u16;
             self.segment_list.insert_segment(seq, insert);
-            seq = seq.wrapping_add(insert as u32);
+            seq = seq.wrapping_add(u32::from(insert));
             to_insert -= insert as usize;
         }
     }
@@ -473,7 +474,7 @@ impl ReorderedBuffer {
                 assert!(self.segment_list.is_head(segment));
                 // Compute the end of the segment, this might in fact be larger than size
                 let seg = self.segment_list.get_segment(segment);
-                let seg_end = seg.seq.wrapping_add(seg.length as u32);
+                let seg_end = seg.seq.wrapping_add(u32::from(seg.length));
                 // We need to know the increment.
                 let incr = seg_end.wrapping_sub(self.tail_seq);
 
@@ -493,7 +494,7 @@ impl ReorderedBuffer {
             }
 
             InsertionResult::Inserted {
-                written: written,
+                written,
                 available: self.available(),
             }
         } else if self.tail_seq >= seq {
@@ -517,12 +518,12 @@ impl ReorderedBuffer {
             self.segment_list.insert_segment(seq, written as u16);
             if written == data.len() {
                 InsertionResult::Inserted {
-                    written: written,
+                    written,
                     available: self.available(),
                 }
             } else {
                 InsertionResult::OutOfMemory {
-                    written: written,
+                    written,
                     available: self.available(),
                 }
             }

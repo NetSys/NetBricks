@@ -1,5 +1,5 @@
 use common::Result;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::checksum::PseudoHeader;
 use packets::ip::{IpAddrMismatchError, IpPacket, ProtocolNumber};
 use packets::{buffer, Ethernet, Fixed, Header, Packet};
@@ -120,12 +120,12 @@ use std::net::{IpAddr, Ipv4Addr};
 */
 
 // Masks
-const DSCP: u8 = 0b11111100;
+const DSCP: u8 = 0b1111_1100;
 const ECN: u8 = !DSCP;
 
 // Flags
-const FLAGS_DF: u16 = 0b0100000000000000;
-const FLAGS_MF: u16 = 0b0010000000000000;
+const FLAGS_DF: u16 = 0b0100_0000_0000_0000;
+const FLAGS_MF: u16 = 0b0010_0000_0000_0000;
 
 /// IPv4 header
 ///
@@ -488,13 +488,14 @@ impl IpPacket for Ipv4 {
             _ => Err(IpAddrMismatchError.into()),
         }
     }
+
     #[inline]
     fn pseudo_header(&self, packet_len: u16, protocol: ProtocolNumber) -> PseudoHeader {
         PseudoHeader::V4 {
             src: self.src(),
             dst: self.dst(),
-            packet_len: packet_len,
-            protocol: protocol,
+            packet_len,
+            protocol,
         }
     }
 }

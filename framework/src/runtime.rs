@@ -83,7 +83,10 @@ impl Runtime {
         T: Fn() -> () + 'static,
     {
         let task = Interval::new_interval(interval)
-            .for_each(move |_| Ok(task()))
+            .for_each(move |_| {
+                task();
+                Ok(())
+            })
             .map_err(|e| warn_chain!(&e.into()));
         self.tokio_rt.spawn(task);
     }

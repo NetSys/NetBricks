@@ -2,6 +2,12 @@
 name = "mtu-too-big"
 version = "0.1.0"
 authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+description = "Example: when > mtu---packet-to-big"
+license = "..."
+repository = "https://github.com/williamofockham/NetBricks/tree/master/examples/mtu-too-big"
+readme = "..."
+keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
+categories = ["network-functions", "framework"]
 
 [dependencies]
 netbricks = { path = "../../framework"}

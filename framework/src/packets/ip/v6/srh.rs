@@ -1,6 +1,8 @@
+#![allow(clippy::mut_from_ref)]
+
 use common::Result;
 use failure::Fail;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::checksum::PseudoHeader;
 use packets::ip::v6::Ipv6Packet;
 use packets::ip::{IpPacket, ProtocolNumber};
@@ -218,7 +220,7 @@ impl<E: Ipv6Packet> SegmentRouting<E> {
     /// header.
     #[inline]
     pub fn set_segments(&mut self, segments: &[Segment]) -> Result<()> {
-        if segments.len() > 0 {
+        if !segments.is_empty() {
             let old_len = self.last_entry() + 1;
             let new_len = segments.len() as u8;
             let segments_offset = self.offset + SegmentRoutingHeader::size();
@@ -341,11 +343,8 @@ impl<E: Ipv6Packet> Packet for SegmentRouting<E> {
         // also add a default segment list of one element
         buffer::alloc(mbuf, offset, Self::Header::size() + Segment::size())?;
         let header = buffer::write_item::<Self::Header>(mbuf, offset, &Default::default())?;
-        let segments = buffer::write_slice(
-            mbuf,
-            offset + Self::Header::size(),
-            &vec![Segment::UNSPECIFIED],
-        )?;
+        let segments =
+            buffer::write_slice(mbuf, offset + Self::Header::size(), &[Segment::UNSPECIFIED])?;
 
         Ok(SegmentRouting {
             envelope,
@@ -424,10 +423,10 @@ impl<E: Ipv6Packet> IpPacket for SegmentRouting<E> {
         };
 
         PseudoHeader::V6 {
-            src: src,
-            dst: dst,
-            packet_len: packet_len,
-            protocol: protocol,
+            src,
+            dst,
+            packet_len,
+            protocol,
         }
     }
 }
@@ -540,7 +539,7 @@ pub mod tests {
 
             let segment1: Segment = "::1".parse().unwrap();
 
-            assert!(srh.set_segments(&vec![segment1]).is_ok());
+            assert!(srh.set_segments(&[segment1]).is_ok());
             assert_eq!(2, srh.hdr_ext_len());
             assert_eq!(0, srh.last_entry());
             assert_eq!(1, srh.segments().len());
@@ -550,7 +549,7 @@ pub mod tests {
             let segment3: Segment = "::3".parse().unwrap();
             let segment4: Segment = "::4".parse().unwrap();
 
-            assert!(srh.set_segments(&vec![segment1, segment2, segment3, segment4]).is_ok());
+            assert!(srh.set_segments(&[segment1, segment2, segment3, segment4]).is_ok());
             assert_eq!(8, srh.hdr_ext_len());
             assert_eq!(3, srh.last_entry());
             assert_eq!(4, srh.segments().len());
@@ -558,7 +557,7 @@ pub mod tests {
             assert_eq!(segment2, srh.segments()[1]);
             assert_eq!(segment3, srh.segments()[2]);
             assert_eq!(segment4, srh.segments()[3]);
-            assert!(srh.set_segments(&vec![]).is_err());
+            assert!(srh.set_segments(&[]).is_err());
 
             // make sure rest of the packet still valid
             let tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
@@ -579,7 +578,7 @@ pub mod tests {
             let segment3: Segment = "::3".parse().unwrap();
             let segment4: Segment = "::4".parse().unwrap();
 
-            assert!(srh.set_segments(&vec![segment1, segment2, segment3, segment4]).is_ok());
+            assert!(srh.set_segments(&[segment1, segment2, segment3, segment4]).is_ok());
             assert_eq!(4, srh.segments().len());
             srh.set_segments_left(3);
 
@@ -599,7 +598,7 @@ pub mod tests {
             // computed matches what happens when it's the last (and only)
             // segment in the list.
             let mut srh_ret = tcp.deparse();
-            assert!(srh_ret.set_segments(&vec![segment4]).is_ok());
+            assert!(srh_ret.set_segments(&[segment4]).is_ok());
             assert_eq!(1, srh_ret.segments().len());
             srh_ret.set_segments_left(1);
 

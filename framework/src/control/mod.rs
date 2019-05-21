@@ -27,9 +27,9 @@ impl IOScheduler {
     pub fn new(scheduler: PollHandle, fd: RawFd, token: Token) -> IOScheduler {
         scheduler.new_io_fd(fd, token);
         IOScheduler {
-            fd: fd,
-            scheduler: scheduler,
-            token: token,
+            fd,
+            scheduler,
+            token,
         }
     }
 

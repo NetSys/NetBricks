@@ -5,7 +5,7 @@ use packets::Packet;
 ///
 /// Interrupts processing with a short-circuit error that simply emits the packet
 pub struct EmitBatch<B: Batch> {
-    source: B
+    source: B,
 }
 
 impl<B: Batch> EmitBatch<B> {
@@ -25,7 +25,6 @@ impl<B: Batch> Batch for EmitBatch<B> {
             e @ Err(_) => e,
         })
     }
-
 
     #[inline]
     fn receive(&mut self) {

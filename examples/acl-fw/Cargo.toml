@@ -2,10 +2,16 @@
 name = "acl-fw"
 version = "0.1.0"
 authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <williamofockham@gmail.com>"]
+description = "Example: acl forwarding table"
+license = "..."
+repository = "https://github.com/williamofockham/NetBricks/tree/master/examples/acl-fw"
+readme = "..."
+keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
+categories = ["network-functions", "framework"]
 
 [dependencies]
-fnv = "*"
-lazy_static = "*"
+fnv = ">= 1.0"
+lazy_static = ">= 1.3"
 netbricks = { path = "../../framework"}
 
 [features]

@@ -309,13 +309,10 @@ pub mod tests {
                 let mut slla_found = false;
                 let mut iter = advert.options();
                 while let Ok(Some(option)) = iter.next() {
-                    match option {
-                        NdpOption::SourceLinkLayerAddress(addr) => {
-                            assert_eq!(1, addr.length());
-                            assert_eq!("70:3a:cb:1b:f9:7a", addr.addr().to_string());
-                            slla_found = true;
-                        },
-                        _ => (),
+                    if let NdpOption::SourceLinkLayerAddress(addr) = option {
+                        assert_eq!(1, addr.length());
+                        assert_eq!("70:3a:cb:1b:f9:7a", addr.addr().to_string());
+                        slla_found = true;
                     }
                 }
 

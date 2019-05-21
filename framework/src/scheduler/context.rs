@@ -29,7 +29,7 @@ impl<'a> BarrierHandle<'a> {
 
     /// Allocate a new BarrierHandle with threads.
     pub fn with_threads(threads: Vec<&'a Thread>) -> BarrierHandle {
-        BarrierHandle { threads: threads }
+        BarrierHandle { threads }
     }
 }
 
@@ -63,7 +63,7 @@ impl NetBricksContext {
         let (sender, receiver) = sync_channel(0);
         self.scheduler_channels.insert(core, sender);
         let join_handle = builder
-            .name(format!("sched-{}", core).into())
+            .name(format!("sched-{}", core))
             .spawn(move || {
                 init_thread(core, core);
                 // Other init?
@@ -101,7 +101,7 @@ impl NetBricksContext {
             let port = self
                 .virtual_ports
                 .entry(*core)
-                .or_insert(VirtualPort::new(1).unwrap());
+                .or_insert_with(|| VirtualPort::new(1).unwrap());
             let boxed_run = run.clone();
             let queue = port.new_virtual_queue(1).unwrap();
             channel
@@ -142,7 +142,7 @@ impl NetBricksContext {
             let port = self
                 .virtual_ports
                 .entry(core)
-                .or_insert(VirtualPort::new(1).unwrap());
+                .or_insert_with(|| VirtualPort::new(1).unwrap());
             let boxed_run = run.clone();
             let queue = port.new_virtual_queue(1).unwrap();
             channel

@@ -18,7 +18,7 @@ use std::ops::AddAssign;
 /// Garbage collection.
 type FnvHash = BuildHasherDefault<FnvHasher>;
 const VEC_SIZE: usize = 1 << 24;
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct DpMergeableStore<T: AddAssign<T> + Default> {
     /// Contains the counts on the data path.
     state: HashMap<Flow, T, FnvHash>,

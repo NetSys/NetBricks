@@ -38,8 +38,8 @@ impl IPLookup {
         Default::default()
     }
 
-    pub fn insert_ipv4(&mut self, ip: &Ipv4Addr, len: usize, gate: u16) {
-        let ip_u32 = u32::from(*ip);
+    pub fn insert_ipv4(&mut self, ip: Ipv4Addr, len: usize, gate: u16) {
+        let ip_u32 = u32::from(ip);
         self.insert(ip_u32, len, gate);
     }
 

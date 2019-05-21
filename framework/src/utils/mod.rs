@@ -73,10 +73,10 @@ mod tests {
     // test flipping a bit at a known position
     #[test]
     fn flippin_bits() {
-        let original: u8 = 0b01101000;
+        let original: u8 = 0b0110_1000;
 
         // we will clear the 3rd bit (2nd position)
-        let cleared: u8 = 0b01001000;
+        let cleared: u8 = 0b0100_1000;
 
         // lets turn off the bit, and check that it is cleared
         let mut result = flip_bit(original, 2, false);

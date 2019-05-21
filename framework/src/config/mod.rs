@@ -151,25 +151,34 @@ impl Source for CommandLine {
         if CLI_ARGS.is_present("primary_core") {
             let core = value_t!(CLI_ARGS, "primary_core", i32)
                 .map_err(|err| ConfigError::Foreign(Box::new(err)))?;
-            map.insert("primary_core".to_string(), Value::new(uri, core as i64));
+            map.insert("primary_core".to_string(), Value::new(uri, i64::from(core)));
         }
 
         if CLI_ARGS.is_present("pool_size") {
             let pool_size = value_t!(CLI_ARGS, "pool_size", u32)
                 .map_err(|err| ConfigError::Foreign(Box::new(err)))?;
-            map.insert("pool_size".to_string(), Value::new(uri, pool_size as i64));
+            map.insert(
+                "pool_size".to_string(),
+                Value::new(uri, i64::from(pool_size)),
+            );
         }
 
         if CLI_ARGS.is_present("cache_size") {
             let cache_size = value_t!(CLI_ARGS, "cache_size", u32)
                 .map_err(|err| ConfigError::Foreign(Box::new(err)))?;
-            map.insert("cache_size".to_string(), Value::new(uri, cache_size as i64));
+            map.insert(
+                "cache_size".to_string(),
+                Value::new(uri, i64::from(cache_size)),
+            );
         }
 
         if let Some(ports) = CLI_ARGS.values_of("ports") {
             let cores = values_t!(CLI_ARGS, "cores", i32)
                 .map_err(|err| ConfigError::Foreign(Box::new(err)))?;
-            let cores = cores.iter().map(|&core| core as i64).collect::<Vec<_>>();
+            let cores = cores
+                .iter()
+                .map(|&core| i64::from(core))
+                .collect::<Vec<_>>();
 
             let ports = ports
                 .zip(cores.iter())
@@ -178,8 +187,8 @@ impl Source for CommandLine {
                         ("name".to_string(), Value::new(uri, port)),
                         ("rx_queues".to_string(), Value::new(uri, vec![core])),
                         ("tx_queues".to_string(), Value::new(uri, vec![core])),
-                        ("rxd".to_string(), Value::new(uri, NUM_RXD as i64)),
-                        ("txd".to_string(), Value::new(uri, NUM_TXD as i64)),
+                        ("rxd".to_string(), Value::new(uri, i64::from(NUM_RXD))),
+                        ("txd".to_string(), Value::new(uri, i64::from(NUM_TXD))),
                         ("loopback".to_string(), Value::new(uri, false)),
                         ("tso".to_string(), Value::new(uri, false)),
                         ("csum".to_string(), Value::new(uri, false)),

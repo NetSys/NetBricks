@@ -66,7 +66,7 @@ unsafe fn open_shared<T>(name: &str, size: usize) -> SharedMemory<T> {
     close(fd);
     SharedMemory {
         mem: address as *mut T,
-        name: name,
-        size: size,
+        name,
+        size,
     }
 }

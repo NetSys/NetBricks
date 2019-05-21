@@ -1,9 +1,10 @@
 use failure::Error;
 use interface::PacketTx;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::Packet;
 use std::collections::HashMap;
 
+pub use self::emit_batch::*;
 pub use self::filter_batch::*;
 pub use self::filtermap_batch::*;
 pub use self::foreach_batch::*;
@@ -12,8 +13,8 @@ pub use self::map_batch::*;
 pub use self::queue_batch::*;
 pub use self::receive_batch::*;
 pub use self::send_batch::*;
-pub use self::emit_batch::*;
 
+mod emit_batch;
 mod filter_batch;
 mod filtermap_batch;
 mod foreach_batch;
@@ -22,7 +23,6 @@ mod map_batch;
 mod queue_batch;
 mod receive_batch;
 mod send_batch;
-mod emit_batch;
 
 /// Error when processing packets
 #[derive(Debug)]
@@ -184,7 +184,7 @@ pub mod tests {
             producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
 
             let packet = batch.next().unwrap().unwrap();
-            assert_eq!(EtherTypes::Ipv4, packet.ether_type())
+            assert_eq!(EtherTypes::Ipv4, packet.ether_type());
         }
     }
 
@@ -295,8 +295,8 @@ pub mod tests {
 
     #[test]
     fn emit_operator() {
-        use packets::tcp::tests::TCP_PACKET;
         use packets::ethernet::MacAddr;
+        use packets::tcp::tests::TCP_PACKET;
 
         dpdk_test! {
             let (producer, batch) = single_threaded_batch::<RawPacket>(1);
@@ -312,13 +312,14 @@ pub mod tests {
                     e.set_src(MacAddr::new(0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF));
                     Ok(e)
                 });
+
             producer.enqueue(RawPacket::from_bytes(&TCP_PACKET).unwrap());
 
-            if let Err(PacketError::Emit(mbuf)) = batch.next().unwrap() {
+            let next = batch.next().unwrap();
+            assert!(next.is_err());
+            if let Err(PacketError::Emit(mbuf)) = next {
                 let eth = RawPacket::from_mbuf(mbuf).parse::<Ethernet>().unwrap();
                 assert_eq!("ff:ff:ff:ff:ff:ff", eth.src().to_string());
-            } else {
-                assert!(false, "Unexpected packet result :(");
             }
         }
     }

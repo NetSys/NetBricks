@@ -1,13 +1,11 @@
-use super::super::super::native_include as ldpdk;
+use super::super::native_include as ldpdk;
 pub type MBuf = ldpdk::rte_mbuf;
 
-// FIXME: Remove this once we start using these functions correctly
-#[allow(dead_code)]
 impl MBuf {
     #[inline]
     pub fn read_metadata_slot(mbuf: *mut MBuf, slot: usize) -> usize {
         unsafe {
-            let ptr = (mbuf.offset(1) as *mut usize).offset(slot as isize);
+            let ptr = (mbuf.offset(1) as *mut usize).add(slot);
             *ptr
         }
     }
@@ -15,19 +13,19 @@ impl MBuf {
     #[inline]
     pub fn write_metadata_slot(mbuf: *mut MBuf, slot: usize, value: usize) {
         unsafe {
-            let ptr = (mbuf.offset(1) as *mut usize).offset(slot as isize);
+            let ptr = (mbuf.offset(1) as *mut usize).add(slot);
             *ptr = value;
         }
     }
 
     #[inline]
     pub unsafe fn metadata_as<T: Sized>(mbuf: *const MBuf, slot: usize) -> *const T {
-        (mbuf.offset(1) as *const usize).offset(slot as isize) as *const T
+        (mbuf.offset(1) as *const usize).add(slot) as *const T
     }
 
     #[inline]
     pub unsafe fn mut_metadata_as<T: Sized>(mbuf: *mut MBuf, slot: usize) -> *mut T {
-        (mbuf.offset(1) as *mut usize).offset(slot as isize) as *mut T
+        (mbuf.offset(1) as *mut usize).add(slot) as *mut T
     }
 
     #[inline]

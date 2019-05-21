@@ -2,14 +2,20 @@
 name = "maglev"
 version = "0.1.0"
 authors = ["Aurojit Panda <apanda@cs.berkeley.edu>"]
+description = "Example: maglev"
+license = "..."
+repository = "https://github.com/williamofockham/NetBricks/tree/master/examples/maglev"
+readme = "..."
+keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
+categories = ["network-functions", "framework"]
 
 [dependencies]
-netbricks = { path = "../../framework", features = ["performance"] }
-time = ">=0.1.0"
-getopts = "*"
-rand = "0.3"
-fnv = "*"
-twox-hash = "*"
+netbricks = { path = "../../framework" }
+time = ">= 0.1"
+getopts = ">= 0.2"
+rand = "0.6"
+fnv = ">= 1.0"
+twox-hash = ">= 1.2"
 
 [features]
 default = []

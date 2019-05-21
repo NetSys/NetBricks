@@ -1,6 +1,8 @@
+#![allow(clippy::mut_from_ref)]
+
 use super::MTU;
 use common::Result;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::{buffer, Fixed, ParseError};
 use std::fmt;
 

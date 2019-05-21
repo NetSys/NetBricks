@@ -32,12 +32,14 @@ fn main() {
     let handle0 = sched.add_task(|| test_func("task-0")).unwrap();
     let other_handles = {
         let mut prev_handle = handle0;
-        let mut nhandles: Vec<_> = (0..10).map(|_| 0).collect();
-        for i in 0..nhandles.capacity() {
-            nhandles[i] = sched
+        let mut nhandles = vec![];
+
+        for i in 0..10 {
+            let task = sched
                 .add_task(DepTask::new(prev_handle, format!("id-{}", i).as_str()))
                 .unwrap();
-            prev_handle = nhandles[i];
+            nhandles.push(task);
+            prev_handle = task;
         }
         nhandles
     };

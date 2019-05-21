@@ -32,8 +32,8 @@ impl Metrics {
         }
     }
 
-    fn increment(&self, bucket: &ProtocolNumber) {
-        let counter = match *bucket {
+    fn increment(&self, bucket: ProtocolNumber) {
+        let counter = match bucket {
             ProtocolNumbers::Tcp => &self.tcp,
             ProtocolNumbers::Udp => &self.udp,
             ProtocolNumbers::Icmpv4 | ProtocolNumbers::Icmpv6 => &self.icmp,
@@ -83,12 +83,12 @@ fn count_packets(packet: RawPacket) -> Result<RawPacket> {
     match ethernet.ether_type() {
         EtherTypes::Ipv4 => {
             let ipv4 = ethernet.parse::<Ipv4>()?;
-            METRICS.increment(&ipv4.protocol());
+            METRICS.increment(ipv4.protocol());
             Ok(ipv4.reset())
         }
         EtherTypes::Ipv6 => {
             let ipv6 = ethernet.parse::<Ipv6>()?;
-            METRICS.increment(&ipv6.next_header());
+            METRICS.increment(ipv6.next_header());
             Ok(ipv6.reset())
         }
         _ => Ok(ethernet.reset()),

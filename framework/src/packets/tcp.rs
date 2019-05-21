@@ -1,5 +1,5 @@
 use common::Result;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::ip::{Flow, IpPacket, ProtocolNumbers};
 use packets::{buffer, checksum, Fixed, Header, Packet};
 use std::fmt;
@@ -606,7 +606,7 @@ pub mod tests {
 
             assert_eq!(36869, tcp.src_port());
             assert_eq!(23, tcp.dst_port());
-            assert_eq!(1913975060, tcp.seq_no());
+            assert_eq!(1_913_975_060, tcp.seq_no());
             assert_eq!(0, tcp.ack_no());
             assert_eq!(6, tcp.data_offset());
             assert_eq!(8760, tcp.window());

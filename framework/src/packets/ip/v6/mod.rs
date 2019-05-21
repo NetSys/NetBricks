@@ -1,5 +1,5 @@
 use common::Result;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::checksum::PseudoHeader;
 use packets::ip::{IpAddrMismatchError, IpPacket, ProtocolNumber};
 use packets::{buffer, Ethernet, Fixed, Header, Packet};
@@ -7,7 +7,6 @@ use std::fmt;
 use std::net::{IpAddr, Ipv6Addr};
 
 pub use self::srh::*;
-
 pub mod srh;
 
 /// Common behaviors shared by IPv6 and extension packets
@@ -100,8 +99,8 @@ pub const IPV6_MIN_MTU: usize = 1280;
 */
 
 // Masks
-const DSCP: u32 = 0xfc00000;
-const ECN: u32 = 0x300000;
+const DSCP: u32 = 0x0fc0_0000;
+const ECN: u32 = 0x0030_0000;
 const FLOW: u32 = 0xfffff;
 
 /// IPv6 header
@@ -144,7 +143,7 @@ impl Ipv6 {
     #[inline]
     pub fn version(&self) -> u8 {
         // Protocol Version, should always be `6`
-        ((u32::from_be(self.header().version_to_flow_label) & 0xf0000000) >> 28) as u8
+        ((u32::from_be(self.header().version_to_flow_label) & 0xf000_0000) >> 28) as u8
     }
 
     #[inline]
@@ -156,7 +155,7 @@ impl Ipv6 {
     pub fn set_dscp(&mut self, dscp: u8) {
         self.header_mut().version_to_flow_label = u32::to_be(
             (u32::from_be(self.header().version_to_flow_label) & !DSCP)
-                | (((dscp as u32) << 22) & DSCP),
+                | ((u32::from(dscp) << 22) & DSCP),
         );
     }
 
@@ -169,7 +168,7 @@ impl Ipv6 {
     pub fn set_ecn(&mut self, ecn: u8) {
         self.header_mut().version_to_flow_label = u32::to_be(
             (u32::from_be(self.header().version_to_flow_label) & !ECN)
-                | (((ecn as u32) << 20) & ECN),
+                | ((u32::from(ecn) << 20) & ECN),
         );
     }
 
@@ -390,8 +389,8 @@ impl IpPacket for Ipv6 {
         PseudoHeader::V6 {
             src: self.src(),
             dst: self.dst(),
-            packet_len: packet_len,
-            protocol: protocol,
+            packet_len,
+            protocol,
         }
     }
 }

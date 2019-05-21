@@ -1,10 +1,13 @@
+#![allow(clippy::too_many_arguments)]
+
 use super::super::{PacketRx, PacketTx};
 use super::PortStats;
 use allocators::*;
 use common::*;
 use config::{PortConfiguration, NUM_RXD, NUM_TXD};
 use failure::Fail;
-use native::zcsi::*;
+use native::mbuf::MBuf;
+use native::zcsi;
 use packets::ethernet::MacAddr;
 use regex::Regex;
 use std::cmp::min;
@@ -61,7 +64,7 @@ impl Drop for PmdPort {
     fn drop(&mut self) {
         if self.connected && self.should_close {
             unsafe {
-                free_pmd_port(self.port);
+                zcsi::free_pmd_port(self.port);
             }
         }
     }
@@ -86,7 +89,7 @@ impl PortQueue {
     #[inline]
     fn send_queue(&self, queue: i32, pkts: *mut *mut MBuf, to_send: i32) -> Result<u32> {
         unsafe {
-            let sent = send_pkts(self.port_id, queue, pkts, to_send);
+            let sent = zcsi::send_pkts(self.port_id, queue, pkts, to_send);
             let update = self.stats_tx.stats.load(Ordering::Relaxed) + sent as usize;
             self.stats_tx.stats.store(update, Ordering::Relaxed);
             Ok(sent as u32)
@@ -96,7 +99,7 @@ impl PortQueue {
     #[inline]
     fn recv_queue(&self, queue: i32, pkts: *mut *mut MBuf, to_recv: i32) -> Result<u32> {
         unsafe {
-            let recv = recv_pkts(self.port_id, queue, pkts, to_recv);
+            let recv = zcsi::recv_pkts(self.port_id, queue, pkts, to_recv);
             let update = self.stats_rx.stats.load(Ordering::Relaxed) + recv as usize;
             self.stats_rx.stats.store(update, Ordering::Relaxed);
             Ok(recv as u32)
@@ -138,22 +141,23 @@ impl PacketRx for PortQueue {
 #[cfg_attr(feature = "dev", allow(match_bool))]
 #[inline]
 fn i32_from_bool(x: bool) -> i32 {
-    match x {
-        true => 1,
-        false => 0,
+    if x {
+        1
+    } else {
+        0
     }
 }
 
 impl PmdPort {
     /// Determine the number of ports in a system.
     pub fn num_pmd_ports() -> i32 {
-        unsafe { num_pmd_ports() }
+        unsafe { zcsi::num_pmd_ports() }
     }
 
     /// Find a port ID given a PCI-E string.
     pub fn find_port_id(pcie: &str) -> i32 {
         let pcie_cstr = CString::new(pcie).unwrap();
-        unsafe { find_port_with_pci_address(pcie_cstr.as_ptr()) }
+        unsafe { zcsi::find_port_with_pci_address(pcie_cstr.as_ptr()) }
     }
 
     /// Number of configured RXQs.
@@ -179,8 +183,8 @@ impl PmdPort {
             Ok(CacheAligned::allocate(PortQueue {
                 port: port.clone(),
                 port_id: port.port,
-                txq: txq,
-                rxq: rxq,
+                txq,
+                rxq,
                 stats_rx: port.stats_rx[rxq as usize].clone(),
                 stats_tx: port.stats_tx[txq as usize].clone(),
             }))
@@ -218,15 +222,15 @@ impl PmdPort {
         let loopbackv = i32_from_bool(loopback);
         let tsov = i32_from_bool(tso);
         let csumoffloadv = i32_from_bool(csumoffload);
-        let max_txqs = unsafe { max_txqs(port) };
-        let max_rxqs = unsafe { max_rxqs(port) };
+        let max_txqs = unsafe { zcsi::max_txqs(port) };
+        let max_rxqs = unsafe { zcsi::max_rxqs(port) };
         let actual_rxqs = min(max_rxqs, rxqs);
         let actual_txqs = min(max_txqs, txqs);
 
         if ((actual_txqs as usize) <= tx_cores.len()) && ((actual_rxqs as usize) <= rx_cores.len())
         {
             let ret = unsafe {
-                init_pmd_port(
+                zcsi::init_pmd_port(
                     port,
                     actual_rxqs,
                     actual_txqs,
@@ -242,7 +246,7 @@ impl PmdPort {
             if ret == 0 {
                 Ok(Arc::new(PmdPort {
                     connected: true,
-                    port: port,
+                    port,
                     rxqs: actual_rxqs,
                     txqs: actual_txqs,
                     should_close: true,
@@ -263,13 +267,13 @@ impl PmdPort {
         // This call returns the port number
         let port = unsafe {
             // This bit should not be required, but is an unfortunate problem with DPDK today.
-            init_bess_eth_ring(ifname.as_ptr(), core)
+            zcsi::init_bess_eth_ring(ifname.as_ptr(), core)
         };
         // FIXME: Can we really not close?
         if port >= 0 {
             Ok(Arc::new(PmdPort {
                 connected: true,
-                port: port,
+                port,
                 rxqs: 1,
                 txqs: 1,
                 should_close: false,
@@ -285,11 +289,11 @@ impl PmdPort {
         match name.parse() {
             Ok(iface) => {
                 // This call returns the port number
-                let port = unsafe { init_ovs_eth_ring(iface, core) };
+                let port = unsafe { zcsi::init_ovs_eth_ring(iface, core) };
                 if port >= 0 {
                     Ok(Arc::new(PmdPort {
                         connected: true,
-                        port: port,
+                        port,
                         rxqs: 1,
                         txqs: 1,
                         should_close: false,
@@ -317,7 +321,7 @@ impl PmdPort {
         csumoffload: bool,
     ) -> Result<Arc<PmdPort>> {
         let cannonical_spec = PmdPort::cannonicalize_pci(spec);
-        let port = unsafe { attach_pmd_device((cannonical_spec[..]).as_ptr()) };
+        let port = unsafe { zcsi::attach_pmd_device((cannonical_spec[..]).as_ptr()) };
         if port >= 0 {
             info!("Going to try and use port {}", port);
             PmdPort::init_dpdk_port(
@@ -456,7 +460,7 @@ impl PmdPort {
     pub fn mac_address(&self) -> MacAddr {
         let mut address = MacAddr::new_from_slice(&[0; 8]);
         unsafe {
-            rte_eth_macaddr_get(self.port, &mut address as *mut MacAddr);
+            zcsi::rte_eth_macaddr_get(self.port, &mut address as *mut MacAddr);
             address
         }
     }

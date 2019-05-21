@@ -55,11 +55,11 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
         handle.new_io_port(&listener, listener_token);
         handle.schedule_read(&listener, listener_token);
         TcpControlServer {
-            listener: listener,
-            scheduler: scheduler,
-            handle: handle,
+            listener,
+            scheduler,
+            handle,
             next_token: listener_token + 1,
-            listener_token: listener_token,
+            listener_token,
             phantom_t: PhantomData,
             connections: HashMap::with_capacity_and_hasher(32, Default::default()),
         }
@@ -81,25 +81,22 @@ impl<T: TcpControlAgent> TcpControlServer<T> {
     fn accept_connection(&mut self, available: Available) {
         if available & READ != 0 {
             // Make sure we have something to accept
-            match self.listener.accept() {
-                Ok((stream, addr)) => {
-                    let token = self.next_token;
-                    self.next_token += 1;
-                    stream.set_nonblocking(true).unwrap();
-                    let stream_fd = stream.as_raw_fd();
-                    self.connections.insert(
-                        token,
-                        T::new(
-                            addr,
-                            stream,
-                            IOScheduler::new(self.scheduler.new_poll_handle(), stream_fd, token),
-                        ),
-                    );
-                    // Add to some sort of hashmap.
-                }
-                Err(_) => {
-                    // FIXME: Record
-                }
+            if let Ok((stream, addr)) = self.listener.accept() {
+                let token = self.next_token;
+                self.next_token += 1;
+                stream.set_nonblocking(true).unwrap();
+                let stream_fd = stream.as_raw_fd();
+                self.connections.insert(
+                    token,
+                    T::new(
+                        addr,
+                        stream,
+                        IOScheduler::new(self.scheduler.new_poll_handle(), stream_fd, token),
+                    ),
+                );
+            // Add to some sort of hashmap.
+            } else {
+
             }
         } else {
             // FIXME: Report something.

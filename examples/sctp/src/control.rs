@@ -14,8 +14,8 @@ impl SctpControlAgent for ControlListener {
         println!("New connection from {}", address);
         scheduler.schedule_read();
         ControlListener {
-            scheduler: scheduler,
-            stream: stream,
+            scheduler,
+            stream,
             buffer: (0..1024).map(|_| 0).collect(),
         }
     }

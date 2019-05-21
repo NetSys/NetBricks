@@ -32,7 +32,7 @@ impl Cidr for Ipv6Cidr {
         let mask = match length {
             0 => u128::max_value(),
             1..=IPV6ADDR_BITS => u128::max_value() << (IPV6ADDR_BITS - length),
-            _ => return Err(CidrParseError("Not a valid length".to_string()).into()),
+            _ => return Err(CidrParseError("Not a valid length".to_string())),
         };
 
         let prefix = u128::from_be_bytes(address.octets()) & mask;
@@ -72,7 +72,7 @@ impl FromStr for Ipv6Cidr {
 
                 Ipv6Cidr::new(address, length)
             }
-            _ => Err(CidrParseError("No `/` found".to_string()).into()),
+            _ => Err(CidrParseError("No `/` found".to_string())),
         }
     }
 }
@@ -109,15 +109,10 @@ mod tests {
     fn get_cidr_parse_error() {
         let bad = Ipv6Cidr::new(Ipv6Addr::from_str("acdc::1").unwrap(), 129);
         assert!(bad.is_err());
-        match bad {
-            Err(e) => {
-                let err = format_err!("Failed to parse CIDR: {}", "Not a valid length");
-
-                assert_eq!(e.to_string(), err.to_string());
-                assert_eq!(e.name(), Some("netbricks::utils::cidr::CidrParseError"))
-            }
-            _ => assert!(false),
-        }
+        let e = bad.unwrap_err();
+        let err = format_err!("Failed to parse CIDR: {}", "Not a valid length");
+        assert_eq!(e.to_string(), err.to_string());
+        assert_eq!(e.name(), Some("netbricks::utils::cidr::CidrParseError"))
     }
 
     proptest! {

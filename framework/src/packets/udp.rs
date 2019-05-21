@@ -1,5 +1,5 @@
 use common::Result;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::ip::{Flow, IpPacket, ProtocolNumbers};
 use packets::{buffer, checksum, Fixed, Header, Packet};
 use std::fmt;

@@ -75,7 +75,7 @@ impl PollScheduler {
     }
 
     #[inline]
-    fn epoll_kind_to_available(&self, kind: &EpollFlags) -> Available {
+    fn epoll_kind_to_available(&self, kind: EpollFlags) -> Available {
         let mut available = NONE;
         if kind.contains(EpollFlags::EPOLLIN) {
             available |= READ
@@ -104,6 +104,6 @@ impl PollScheduler {
             unsafe { self.ready_tokens.set_len(self.events) };
             self.ready_tokens.pop()
         }
-        .map(|t| (t.data(), self.epoll_kind_to_available(&t.events())))
+        .map(|t| (t.data(), self.epoll_kind_to_available(t.events())))
     }
 }

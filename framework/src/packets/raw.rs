@@ -1,7 +1,7 @@
 use common::Result;
-use native::zcsi::{mbuf_alloc, MBuf};
+use native::mbuf::MBuf;
+use native::zcsi;
 use packets::{buffer, Header, Packet};
-use packets::buffer::read_slice;
 
 /// Unit header
 impl Header for () {}
@@ -22,8 +22,8 @@ impl PartialEq for RawPacket {
                 false
             } else {
                 let len = (*self.mbuf).data_len();
-                let lhs_slice = &(*read_slice::<u8>(self.mbuf, 0, len).unwrap());
-                let rhs_slice = &(*read_slice::<u8>(other.mbuf, 0, len).unwrap());
+                let lhs_slice = &(*buffer::read_slice::<u8>(self.mbuf, 0, len).unwrap());
+                let rhs_slice = &(*buffer::read_slice::<u8>(other.mbuf, 0, len).unwrap());
                 lhs_slice == rhs_slice
             }
         }
@@ -34,7 +34,7 @@ impl RawPacket {
     /// Creates a new packet by allocating a new buffer
     pub fn new() -> Result<Self> {
         unsafe {
-            let mbuf = mbuf_alloc();
+            let mbuf = zcsi::mbuf_alloc();
             if mbuf.is_null() {
                 Err(buffer::BufferError::FailAlloc.into())
             } else {

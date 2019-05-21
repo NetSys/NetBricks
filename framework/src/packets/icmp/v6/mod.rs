@@ -1,5 +1,5 @@
 use common::Result;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::ip::v6::Ipv6Packet;
 use packets::ip::ProtocolNumbers;
 use packets::{buffer, checksum, Fixed, Header, Packet, ParseError};
@@ -76,15 +76,15 @@ impl fmt::Display for Icmpv6Type {
         write!(
             f,
             "{}",
-            match self {
-                &Icmpv6Types::PacketTooBig => "Packet Too Big".to_string(),
-                &Icmpv6Types::EchoRequest => "Echo Request".to_string(),
-                &Icmpv6Types::EchoReply => "Echo Reply".to_string(),
-                &Icmpv6Types::RouterSolicitation => "Router Solicitation".to_string(),
-                &Icmpv6Types::RouterAdvertisement => "Router Advertisement".to_string(),
-                &Icmpv6Types::NeighborSolicitation => "Neighbor Solicitation".to_string(),
-                &Icmpv6Types::NeighborAdvertisement => "Neighbor Advertisement".to_string(),
-                &Icmpv6Types::Redirect => "Redirect".to_string(),
+            match *self {
+                Icmpv6Types::PacketTooBig => "Packet Too Big".to_string(),
+                Icmpv6Types::EchoRequest => "Echo Request".to_string(),
+                Icmpv6Types::EchoReply => "Echo Reply".to_string(),
+                Icmpv6Types::RouterSolicitation => "Router Solicitation".to_string(),
+                Icmpv6Types::RouterAdvertisement => "Router Advertisement".to_string(),
+                Icmpv6Types::NeighborSolicitation => "Neighbor Solicitation".to_string(),
+                Icmpv6Types::NeighborAdvertisement => "Neighbor Advertisement".to_string(),
+                Icmpv6Types::Redirect => "Redirect".to_string(),
                 _ => format!("{}", self.0),
             }
         )

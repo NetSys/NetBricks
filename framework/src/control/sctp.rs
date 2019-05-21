@@ -42,18 +42,18 @@ impl<T: SctpControlAgent> Executable for SctpControlServer<T> {
 impl<T: SctpControlAgent> SctpControlServer<T> {
     pub fn new_streaming<A: ToSocketAddrs>(address: A) -> SctpControlServer<T> {
         let listener = SctpListener::bind(address).unwrap();
-        let _ = listener.set_nonblocking(true).unwrap();
+        listener.set_nonblocking(true).unwrap();
         let scheduler = PollScheduler::new();
         let listener_token = 0;
         let handle = scheduler.new_poll_handle();
         handle.new_io_port(&listener, listener_token);
         handle.schedule_read(&listener, listener_token);
         SctpControlServer {
-            listener: listener,
-            scheduler: scheduler,
-            handle: handle,
+            listener,
+            scheduler,
+            handle,
             next_token: listener_token + 1,
-            listener_token: listener_token,
+            listener_token,
             phantom_t: PhantomData,
             connections: HashMap::with_capacity_and_hasher(32, Default::default()),
         }
@@ -79,28 +79,21 @@ impl<T: SctpControlAgent> SctpControlServer<T> {
     fn accept_connection(&mut self, available: Available) {
         if available & READ != 0 {
             // Make sure we have something to accept
-            match self.listener.accept() {
-                Ok((stream, addr)) => {
-                    let token = self.next_token;
-                    self.next_token += 1;
-                    let _ = stream.set_nonblocking(true).unwrap();
-                    let stream_fd = stream.as_raw_fd();
-                    self.connections.insert(
-                        token,
-                        T::new(
-                            addr,
-                            stream,
-                            IOScheduler::new(self.scheduler.new_poll_handle(), stream_fd, token),
-                        ),
-                    );
-                    // Add to some sort of hashmap.
-                }
-                Err(_) => {
-                    // FIXME: Record
-                }
+            if let Ok((stream, addr)) = self.listener.accept() {
+                let token = self.next_token;
+                self.next_token += 1;
+                stream.set_nonblocking(true).unwrap();
+                let stream_fd = stream.as_raw_fd();
+                self.connections.insert(
+                    token,
+                    T::new(
+                        addr,
+                        stream,
+                        IOScheduler::new(self.scheduler.new_poll_handle(), stream_fd, token),
+                    ),
+                );
+                // Add to some sort of hashmap.
             }
-        } else {
-            // FIXME: Report something.
         }
         self.listen();
     }

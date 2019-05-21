@@ -1,6 +1,7 @@
 use super::{Batch, PacketError, BATCH_SIZE};
 use interface::PacketTx;
-use native::zcsi::{mbuf_free_bulk, MBuf};
+use native::mbuf::MBuf;
+use native::zcsi::mbuf_free_bulk;
 use packets::Packet;
 use scheduler::Executable;
 
@@ -51,7 +52,7 @@ impl<B: Batch, Tx: PacketTx> Executable for SendBatch<B, Tx> {
             }
         }
 
-        if transmit_q.len() > 0 {
+        if !transmit_q.is_empty() {
             let mut to_send = transmit_q.len();
             while to_send > 0 {
                 match self.port.send(transmit_q.as_mut_slice()) {
@@ -72,7 +73,7 @@ impl<B: Batch, Tx: PacketTx> Executable for SendBatch<B, Tx> {
             }
         }
 
-        if drop_q.len() > 0 {
+        if !drop_q.is_empty() {
             let len = drop_q.len();
             let ptr = drop_q.as_mut_ptr();
             unsafe {

@@ -1,5 +1,5 @@
 use fallible_iterator::FallibleIterator;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::{buffer, ParseError};
 
 pub use self::link_layer_addr::*;
@@ -185,13 +185,10 @@ mod tests {
                 let mut undefined = false;
                 let mut iter = advert.options();
                 while let Ok(Some(option)) = iter.next() {
-                    match option {
-                        NdpOption::Undefined(option_type, length) => {
-                            assert_eq!(7, option_type);
-                            assert_eq!(1, length);
-                            undefined = true;
-                        },
-                        _ => (),
+                    if let NdpOption::Undefined(option_type, length) = option {
+                        assert_eq!(7, option_type);
+                        assert_eq!(1, length);
+                        undefined = true;
                     }
                 }
 

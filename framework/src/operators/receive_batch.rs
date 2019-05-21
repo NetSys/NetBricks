@@ -1,6 +1,6 @@
 use super::{Batch, PacketError};
 use interface::PacketRx;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::RawPacket;
 
 pub const BATCH_SIZE: usize = 32;

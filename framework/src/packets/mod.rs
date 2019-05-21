@@ -1,6 +1,6 @@
 use common::Result;
 use failure::Fail;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 
 pub use self::ethernet::*;
 pub use self::raw::*;
@@ -75,6 +75,14 @@ pub trait Packet {
     #[inline]
     fn len(&self) -> usize {
         unsafe { (*self.mbuf()).data_len() - self.offset() }
+    }
+
+    /// Returns if the length of the packet is empty or not
+    #[inline]
+    fn is_empty(&self) -> bool {
+        {
+            self.len() == 0
+        }
     }
 
     /// Returns the buffer offset where the packet payload begins

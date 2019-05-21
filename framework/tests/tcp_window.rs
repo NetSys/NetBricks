@@ -82,7 +82,7 @@ fn round_to_power_of_2_test() {
 #[test]
 fn creation_test() {
     let mut i = 32;
-    while i <= 1073741824 / 2 {
+    while i <= 1_073_741_824 / 2 {
         // /2 so test passes on host with 1024MB Hugepages
         let ro = ReorderedBuffer::new(i).unwrap();
         assert_eq!(i, ro.buffer_size());

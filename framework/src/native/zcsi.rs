@@ -1,4 +1,4 @@
-use super::MBuf;
+use super::mbuf::MBuf;
 use packets::ethernet::MacAddr;
 use std::os::raw::c_char;
 #[link(name = "zcsi")]

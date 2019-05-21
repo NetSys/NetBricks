@@ -48,11 +48,11 @@ impl fmt::Display for ProtocolNumber {
         write!(
             f,
             "{}",
-            match self {
-                &ProtocolNumbers::Tcp => "TCP".to_string(),
-                &ProtocolNumbers::Udp => "UDP".to_string(),
-                &ProtocolNumbers::Ipv6Route => "IPv6 Route".to_string(),
-                &ProtocolNumbers::Icmpv6 => "ICMPv6".to_string(),
+            match *self {
+                ProtocolNumbers::Tcp => "TCP".to_string(),
+                ProtocolNumbers::Udp => "UDP".to_string(),
+                ProtocolNumbers::Ipv6Route => "IPv6 Route".to_string(),
+                ProtocolNumbers::Icmpv6 => "ICMPv6".to_string(),
                 _ => format!("0x{:02x}", self.0),
             }
         )
@@ -85,7 +85,7 @@ pub trait IpPacket: Packet {
     /// on a lower layer packet.
     fn set_dst(&mut self, dst: IpAddr) -> Result<()>;
 
-    /// Returns the pseudo-header sum for layer 4 checksum computation
+    /// Returns the pseudo-header for layer 4 checksum computation
     fn pseudo_header(&self, packet_len: u16, protocol: ProtocolNumber) -> PseudoHeader;
 }
 

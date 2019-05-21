@@ -1,5 +1,7 @@
+#![allow(clippy::not_unsafe_ptr_arg_deref, clippy::mut_from_ref)]
+
 use common::Result;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::{buffer, Fixed, MacAddr, ParseError};
 use std::fmt;
 

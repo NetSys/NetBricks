@@ -55,7 +55,6 @@ struct FlowUsed {
 }
 
 trait Stamper {
-    #[inline]
     fn stamp_flow(&mut self, flow: Flow) -> Result<()>;
 }
 
@@ -126,7 +125,7 @@ fn nat(packet: RawPacket, nat_ip: Ipv4Addr) -> Result<Tcp<Ipv4>> {
                 flow_vec[assigned_port as usize].flow = flow;
                 flow_vec[assigned_port as usize].used = true;
 
-                let mut outgoing_flow = flow.clone();
+                let mut outgoing_flow = flow;
                 outgoing_flow.set_src_ip(IpAddr::V4(nat_ip));
                 outgoing_flow.set_src_port(assigned_port);
                 let rev_flow = outgoing_flow.reverse();

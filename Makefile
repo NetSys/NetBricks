@@ -4,23 +4,14 @@ BASE_DIR = $(shell git rev-parse --show-toplevel)
 POOL_SIZE ?= 512
 GH=git@github.com:williamofockham
 
-.PHONY: init build build-all build-nb build-ex native build-rel build-rel-ex \
-        fmt clean run run-rel test
-
-init:
-	@mkdir -p $(BASE_DIR)/.git/hooks && ln -s -f $(BASE_DIR)/.hooks/pre-commit $(BASE_DIR)/.git/hooks/pre-commit
-	-git clone $(GH)/utils.git
-	-ln -s utils/Vagrantfile
-	-git clone --recurse-submodules $(GH)/moongen.git
+.PHONY: build build-all build-ex build-nb build-rel build-rel-ex clean fmt \
+        init lint native run run-rel test
 
 build:
 	@./build.sh build
 
 build-all:
 	@./build.sh build_all
-
-build-nb:
-	@./build.sh build_fmwk
 
 build-ex:
 ifdef EXAMPLE
@@ -29,8 +20,8 @@ else
 	@./build.sh build_example
 endif
 
-native:
-	@./build.sh build_native
+build-nb:
+	@./build.sh build_fmwk
 
 build-rel:
 	@./build.sh build_rel
@@ -42,11 +33,23 @@ else
 	@./build.sh build_example
 endif
 
+clean:
+	@./build.sh clean
+
 fmt:
 	@./build.sh fmt
 
-clean:
-	@./build.sh clean
+init:
+	@mkdir -p $(BASE_DIR)/.git/hooks && ln -s -f $(BASE_DIR)/.hooks/pre-commit $(BASE_DIR)/.git/hooks/pre-commit
+	-git clone $(GH)/utils.git
+	-ln -s utils/Vagrantfile
+	-git clone --recurse-submodules $(GH)/moongen.git
+
+lint:
+	@./build.sh lint
+
+native:
+	@./build.sh build_native
 
 run:
 ifdef EXAMPLE

@@ -2,6 +2,12 @@
 name = "macswap"
 version = "0.1.0"
 authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+description = "Example: mac swap"
+license = "..."
+repository = "https://github.com/williamofockham/NetBricks/tree/master/examples/macswap"
+readme = "..."
+keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
+categories = ["network-functions", "framework"]
 
 [dependencies]
 netbricks = { path = "../../framework"}

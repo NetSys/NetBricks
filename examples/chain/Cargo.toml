@@ -2,9 +2,15 @@
 name = "chain"
 version = "0.1.0"
 authors = ["Aurojit Panda <apanda@cs.berkeley.edu>", "William of Ockham <williamofockham@gmail.com>"]
+description = "Example: chaining"
+license = "..."
+repository = "https://github.com/williamofockham/NetBricks/tree/master/examples/chain"
+readme = "..."
+keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
+categories = ["network-functions", "framework"]
 
 [dependencies]
-getopts = "*"
+getopts = ">= 0.2"
 netbricks = { path = "../../framework" }
 
 [features]

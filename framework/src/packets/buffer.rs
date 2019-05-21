@@ -1,6 +1,8 @@
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+
 use common::Result;
 use failure::Fail;
-use native::zcsi::MBuf;
+use native::mbuf::MBuf;
 use packets::Fixed;
 use std::slice;
 
@@ -119,7 +121,7 @@ pub fn trim(mbuf: *mut MBuf, to_len: usize) -> Result<()> {
             (*mbuf).remove_data_end(data_len - to_len);
             Ok(())
         } else {
-            return Err(BufferError::NotResized.into());
+            Err(BufferError::NotResized.into())
         }
     }
 }
@@ -210,7 +212,7 @@ mod tests {
         dpdk_test! {
             unsafe {
                 let mbuf = mbuf_alloc();
-                assert!(alloc(mbuf, 0, 999999).is_err());
+                assert!(alloc(mbuf, 0, 999_999).is_err());
             }
         }
     }
@@ -287,11 +289,11 @@ mod tests {
                 let _ = alloc(mbuf, 0, 20);
                 let _ = write_item::<[u8;16]>(mbuf, 0, &BUFFER);
                 let item = read_item::<[u8;16]>(mbuf, 0).unwrap();
-                assert_eq!(&BUFFER, &(*item));
+                assert_eq!(BUFFER, *item);
 
                 // read from the wrong offset should return junk
                 let item = read_item::<[u8;16]>(mbuf, 2).unwrap();
-                assert!(&BUFFER != &(*item));
+                assert!(BUFFER != *item);
 
                 // read exceeds buffer should err
                 assert!(read_item::<[u8;16]>(mbuf, 10).is_err());
@@ -307,11 +309,11 @@ mod tests {
                 let _ = alloc(mbuf, 0, 20);
                 let _ = write_slice(mbuf, 0, &BUFFER);
                 let slice = read_slice::<u8>(mbuf, 0, 16).unwrap();
-                assert_eq!(&BUFFER, &(*slice));
+                assert_eq!(BUFFER, *slice);
 
                 // read from the wrong offset should return junk
                 let slice = read_slice::<u8>(mbuf, 2, 16).unwrap();
-                assert!(&BUFFER != &(*slice));
+                assert!(BUFFER != *slice);
 
                 // read exceeds buffer should err
                 assert!(read_slice::<u8>(mbuf, 10, 16).is_err());

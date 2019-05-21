@@ -2,6 +2,7 @@ use super::super::{PacketRx, PacketTx};
 use super::PortStats;
 use allocators::*;
 use common::*;
+use native::mbuf::MBuf;
 use native::zcsi::*;
 use std::fmt;
 use std::sync::atomic::Ordering;

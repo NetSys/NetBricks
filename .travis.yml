@@ -23,3 +23,6 @@ jobs:
     - stage: test
       script:
         - make -f docker.mk run-tests
+    - stage: lint
+      script:
+        - make -f docker.mk run-lint

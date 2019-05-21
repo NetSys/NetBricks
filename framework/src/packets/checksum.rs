@@ -1,3 +1,5 @@
+#![allow(clippy::cast_ptr_alignment)]
+
 use common::Result;
 use packets::ip::{IpAddrMismatchError, ProtocolNumber};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
@@ -67,8 +69,8 @@ impl PseudoHeader {
             + (src & 0xFFFF)
             + (dst >> 16)
             + (dst & 0xFFFF)
-            + protocol.0 as u32
-            + packet_len as u32
+            + u32::from(protocol.0)
+            + u32::from(packet_len)
     }
 
     /*  https://tools.ietf.org/html/rfc2460#section-8.1
@@ -103,10 +105,10 @@ impl PseudoHeader {
         packet_len: u16,
         protocol: ProtocolNumber,
     ) -> u32 {
-        src.segments().iter().fold(0, |acc, &x| acc + x as u32)
-            + dst.segments().iter().fold(0, |acc, &x| acc + x as u32)
-            + packet_len as u32
-            + protocol.0 as u32
+        src.segments().iter().fold(0, |acc, &x| acc + u32::from(x))
+            + dst.segments().iter().fold(0, |acc, &x| acc + u32::from(x))
+            + u32::from(packet_len)
+            + u32::from(protocol.0)
     }
 }
 
@@ -129,11 +131,11 @@ impl PseudoHeader {
 pub fn compute(pseudo_header_sum: u16, payload: &[u8]) -> u16 {
     let len = payload.len();
     let mut data = payload;
-    let mut checksum = pseudo_header_sum as u32;
+    let mut checksum = u32::from(pseudo_header_sum);
 
     // odd # of bytes, we add the last byte with padding separately
     if len % 2 > 0 {
-        checksum += (payload[len - 1] as u32) << 8;
+        checksum += u32::from(payload[len - 1]) << 8;
         data = &payload[..(len - 1)];
     }
 
@@ -142,13 +144,13 @@ pub fn compute(pseudo_header_sum: u16, payload: &[u8]) -> u16 {
 
     checksum = data
         .iter()
-        .fold(checksum, |acc, &x| acc + u16::from_be(x) as u32);
+        .fold(checksum, |acc, &x| acc + u32::from(u16::from_be(x)));
 
     while checksum >> 16 != 0 {
         checksum = (checksum >> 16) + (checksum & 0xFFFF);
     }
 
-    return !(checksum as u16);
+    !(checksum as u16)
 }
 
 /// Computes the internet checksum via incremental update
@@ -165,8 +167,8 @@ pub fn compute_inc(old_checksum: u16, old_value: &[u16], new_value: &[u16]) -> u
     let mut checksum = old_value
         .iter()
         .zip(new_value.iter())
-        .fold(!old_checksum as u32, |acc, (&old, &new)| {
-            acc + !old as u32 + new as u32
+        .fold(u32::from(!old_checksum), |acc, (&old, &new)| {
+            acc + u32::from(!old) + u32::from(new)
         });
 
     while checksum >> 16 != 0 {
