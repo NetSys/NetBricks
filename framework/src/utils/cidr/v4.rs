@@ -6,12 +6,23 @@ use utils::cidr::{Cidr, CidrParseError};
 
 const IPV4ADDR_BITS: usize = 32;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Ipv4Cidr {
     address: Ipv4Addr,
     length: usize,
     prefix: u32,
     mask: u32,
+}
+
+impl Default for Ipv4Cidr {
+    fn default() -> Ipv4Cidr {
+        Ipv4Cidr {
+            address: Ipv4Addr::UNSPECIFIED,
+            length: Default::default(),
+            prefix: Default::default(),
+            mask: Default::default(),
+        }
+    }
 }
 
 impl Cidr for Ipv4Cidr {

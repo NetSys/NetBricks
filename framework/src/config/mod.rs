@@ -9,7 +9,7 @@ pub const NUM_RXD: i32 = 128;
 pub const NUM_TXD: i32 = 128;
 
 /// NetBricks configuration
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, PartialEq)]
 pub struct NetBricksConfiguration {
     /// Name, this is passed on to DPDK. If you want to run multiple DPDK apps,
     /// this needs to be unique per application.
@@ -65,7 +65,7 @@ impl fmt::Display for NetBricksConfiguration {
 }
 
 /// Port (network device) configuration
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, PartialEq)]
 pub struct PortConfiguration {
     /// Name. The exact semantics vary by backend. For DPDK, we allow things of the form:
     ///    <PCI ID> : Hardware device with PCI ID

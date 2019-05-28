@@ -336,6 +336,11 @@ impl<E: IpPacket> Tcp<E> {
     }
 
     #[inline]
+    pub fn syn_ack(&self) -> bool {
+        self.syn() && self.ack()
+    }
+
+    #[inline]
     pub fn fin(&self) -> bool {
         (self.header().flags & FIN) != 0
     }
@@ -654,7 +659,7 @@ pub mod tests {
             let flow = tcp.flow();
 
             assert_eq!("2001:db8:85a3::1", flow.src_ip().to_string());
-            assert_eq!("2001:db8:85a3::8a2e:370:7334", flow.dst_ip().to_string());
+            assert_eq!("2001:db8:85a3::8a2e:370:7333", flow.dst_ip().to_string());
             assert_eq!(3464, flow.src_port());
             assert_eq!(1024, flow.dst_port());
             assert_eq!(ProtocolNumbers::Tcp, flow.protocol());

@@ -6,12 +6,23 @@ use utils::cidr::{Cidr, CidrParseError};
 
 const IPV6ADDR_BITS: usize = 128;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Ipv6Cidr {
     address: Ipv6Addr,
     length: usize,
     prefix: u128,
     mask: u128,
+}
+
+impl Default for Ipv6Cidr {
+    fn default() -> Ipv6Cidr {
+        Ipv6Cidr {
+            address: Ipv6Addr::UNSPECIFIED,
+            length: Default::default(),
+            prefix: Default::default(),
+            mask: Default::default(),
+        }
+    }
 }
 
 impl Cidr for Ipv6Cidr {

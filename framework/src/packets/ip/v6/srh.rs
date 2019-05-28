@@ -390,12 +390,28 @@ impl<E: Ipv6Packet> IpPacket for SegmentRouting<E> {
 
     #[inline]
     fn dst(&self) -> IpAddr {
-        self.envelope().dst()
+        IpAddr::V6(self.segments()[0])
     }
 
     #[inline]
     fn set_dst(&mut self, dst: IpAddr) -> Result<()> {
-        self.envelope_mut().set_dst(dst)
+        if let IpAddr::V6(v6_dst) = dst {
+            let mut segments = vec![v6_dst];
+            for segment in self.segments().iter().skip(1) {
+                segments.push(*segment)
+            }
+
+            self.set_segments(&segments)?;
+
+            if self.segments_left() == 0 {
+                println!("Fuck");
+                self.envelope_mut().set_dst(dst)
+            } else {
+                Ok(())
+            }
+        } else {
+            unreachable!()
+        }
     }
 
     // From https://tools.ietf.org/html/rfc8200#section-8.1
@@ -407,14 +423,9 @@ impl<E: Ipv6Packet> IpPacket for SegmentRouting<E> {
     // Address field of the IPv6 header.
     #[inline]
     fn pseudo_header(&self, packet_len: u16, protocol: ProtocolNumber) -> PseudoHeader {
-        let dst = if self.segments_left() > 0 {
-            let segments = self.segments();
-            segments[segments.len() - 1]
-        } else {
-            match self.dst() {
-                IpAddr::V6(dst) => dst,
-                _ => unreachable!(),
-            }
+        let dst = match self.dst() {
+            IpAddr::V6(dst) => dst,
+            _ => unreachable!(),
         };
 
         let src = match self.src() {
@@ -598,7 +609,7 @@ pub mod tests {
             // computed matches what happens when it's the last (and only)
             // segment in the list.
             let mut srh_ret = tcp.deparse();
-            assert!(srh_ret.set_segments(&[segment4]).is_ok());
+            assert!(srh_ret.set_segments(&[segment1]).is_ok());
             assert_eq!(1, srh_ret.segments().len());
             srh_ret.set_segments_left(1);
 
@@ -607,12 +618,12 @@ pub mod tests {
             assert_eq!(expected, tcp_ret.checksum());
 
             // Let's make sure that if segments left is 0, then our checksum
-            // is not calculated from the last segment.
+            // is still the same segment.
             let mut srh_fin = tcp_ret.deparse();
             srh_fin.set_segments_left(0);
             let mut tcp_fin = srh_fin.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
             tcp_fin.cascade();
-            assert_ne!(expected, tcp_fin.checksum());
+            assert_eq!(expected, tcp_fin.checksum());
         }
     }
 

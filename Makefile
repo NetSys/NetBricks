@@ -5,7 +5,7 @@ POOL_SIZE ?= 512
 GH=git@github.com:williamofockham
 
 .PHONY: build build-all build-ex build-nb build-rel build-rel-ex clean fmt \
-        init lint native run run-rel test
+        init lint native run run-rel test watch watch-test
 
 build:
 	@./build.sh build
@@ -67,9 +67,19 @@ endif
 
 test:
 ifdef TEST
+	@unset RUST_BACKTRACE
 	@./build.sh build_example $(TEST)
 	@./build.sh test $(TEST)
+	@export RUST_BACKTRACE=1
 else
+	@unset RUST_BACKTRACE
 	@./build.sh build
 	@./build.sh test
+	@export RUST_BACKTRACE=1
 endif
+
+watch:
+	@cargo watch --poll -x build -w framework/src
+
+watch-test:
+	@cargo watch --poll -x test -w framework/src
