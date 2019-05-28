@@ -404,7 +404,6 @@ impl<E: Ipv6Packet> IpPacket for SegmentRouting<E> {
             self.set_segments(&segments)?;
 
             if self.segments_left() == 0 {
-                println!("Fuck");
                 self.envelope_mut().set_dst(dst)
             } else {
                 Ok(())
