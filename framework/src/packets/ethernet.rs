@@ -1,9 +1,11 @@
-#![allow(clippy::many_single_char_names)]
-
 use common::Result;
+use failure::Fail;
+use hex;
 use native::mbuf::MBuf;
 use packets::{buffer, Fixed, Header, Packet, RawPacket};
+use serde::{de, Deserialize, Deserializer};
 use std::fmt;
+use std::str::FromStr;
 
 /* Ethernet Type II Frame
 
@@ -28,17 +30,24 @@ use std::fmt;
 /// MAC address
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C, packed)]
-pub struct MacAddr(pub [u8; 6]);
+pub struct MacAddr([u8; 6]);
 
 impl MacAddr {
     pub const UNSPECIFIED: Self = MacAddr([0, 0, 0, 0, 0, 0]);
 
+    #[allow(clippy::many_single_char_names)]
     pub fn new(a: u8, b: u8, c: u8, d: u8, e: u8, f: u8) -> Self {
         MacAddr([a, b, c, d, e, f])
     }
 
     pub fn new_from_slice(slice: &[u8]) -> Self {
         MacAddr([slice[0], slice[1], slice[2], slice[3], slice[4], slice[5]])
+    }
+
+    /// Returns the six bytes the MAC address consists of
+    #[allow(clippy::trivially_copy_pass_by_ref)]
+    pub fn octets(&self) -> [u8; 6] {
+        self.0
     }
 }
 
@@ -49,6 +58,30 @@ impl fmt::Display for MacAddr {
             "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
             self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5]
         )
+    }
+}
+
+#[derive(Debug, Fail)]
+#[fail(display = "Failed to parse '{}' as MAC address.", _0)]
+pub struct MacParseError(String);
+
+impl FromStr for MacAddr {
+    type Err = MacParseError;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match hex::decode(s.replace(":", "").replace("-", "")) {
+            Ok(ref octets) if octets.len() == 6 => Ok(MacAddr::new_from_slice(octets.as_slice())),
+            _ => Err(MacParseError(s.to_owned())),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for MacAddr {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = <String>::deserialize(deserializer)?;
+        MacAddr::from_str(&s).map_err(de::Error::custom)
     }
 }
 
@@ -275,6 +308,22 @@ mod tests {
         assert_eq!(
             "12:34:56:ab:cd:ef",
             MacAddr::new(0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF).to_string()
+        );
+    }
+
+    #[test]
+    fn string_to_mac_addr() {
+        assert_eq!(
+            MacAddr::new(0, 0, 0, 0, 0, 0),
+            "00:00:00:00:00:00".parse().unwrap()
+        );
+        assert_eq!(
+            MacAddr::new(255, 255, 255, 255, 255, 255),
+            "ff:ff:ff:ff:ff:ff".parse().unwrap()
+        );
+        assert_eq!(
+            MacAddr::new(0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF),
+            "12:34:56:ab:cd:ef".parse().unwrap()
         );
     }
 

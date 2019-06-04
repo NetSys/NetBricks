@@ -21,6 +21,7 @@ extern crate crossbeam;
 extern crate failure;
 extern crate fallible_iterator;
 extern crate fnv;
+extern crate hex;
 #[macro_use]
 extern crate lazy_static;
 extern crate libc;
