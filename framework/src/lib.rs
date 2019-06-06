@@ -30,6 +30,9 @@ extern crate log;
 extern crate net2;
 #[cfg(unix)]
 extern crate nix;
+#[cfg(any(test, feature = "test"))]
+#[cfg_attr(any(test, feature = "test"), macro_use)]
+extern crate proptest;
 extern crate rayon;
 extern crate regex;
 #[cfg(feature = "sctp")]
@@ -40,10 +43,6 @@ extern crate serde_derive;
 extern crate tokio;
 extern crate tokio_signal;
 extern crate twox_hash;
-
-#[cfg(test)]
-#[macro_use]
-extern crate proptest;
 
 // need these first so other modules in netbricks can use the macros
 #[macro_use]
@@ -61,5 +60,7 @@ pub mod runtime;
 pub mod scheduler;
 pub mod shared_state;
 pub mod state;
+#[cfg(feature = "test")]
+pub mod testing;
 pub mod tests;
 pub mod utils;

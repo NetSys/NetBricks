@@ -4,6 +4,7 @@ use hex;
 use native::mbuf::MBuf;
 use packets::{buffer, Fixed, Header, Packet, RawPacket};
 use serde::{de, Deserialize, Deserializer};
+use std::convert::From;
 use std::fmt;
 use std::str::FromStr;
 
@@ -40,10 +41,6 @@ impl MacAddr {
         MacAddr([a, b, c, d, e, f])
     }
 
-    pub fn new_from_slice(slice: &[u8]) -> Self {
-        MacAddr([slice[0], slice[1], slice[2], slice[3], slice[4], slice[5]])
-    }
-
     /// Returns the six bytes the MAC address consists of
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn octets(&self) -> [u8; 6] {
@@ -61,6 +58,12 @@ impl fmt::Display for MacAddr {
     }
 }
 
+impl From<[u8; 6]> for MacAddr {
+    fn from(octets: [u8; 6]) -> MacAddr {
+        MacAddr(octets)
+    }
+}
+
 #[derive(Debug, Fail)]
 #[fail(display = "Failed to parse '{}' as MAC address.", _0)]
 pub struct MacParseError(String);
@@ -69,7 +72,11 @@ impl FromStr for MacAddr {
     type Err = MacParseError;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match hex::decode(s.replace(":", "").replace("-", "")) {
-            Ok(ref octets) if octets.len() == 6 => Ok(MacAddr::new_from_slice(octets.as_slice())),
+            Ok(ref v) if v.len() == 6 => {
+                let mut octets = [0; 6];
+                octets.copy_from_slice(&v[..]);
+                Ok(octets.into())
+            }
             _ => Err(MacParseError(s.to_owned())),
         }
     }

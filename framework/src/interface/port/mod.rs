@@ -6,8 +6,8 @@ use interface::{PacketRx, PacketTx};
 use native::mbuf::MBuf;
 use std::sync::atomic::AtomicUsize;
 
-mod virt_port;
 mod phy_port;
+mod virt_port;
 
 /// Statistics for PMD port.
 struct PortStats {

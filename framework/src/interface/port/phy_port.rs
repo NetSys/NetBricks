@@ -458,7 +458,7 @@ impl PmdPort {
 
     #[inline]
     pub fn mac_address(&self) -> MacAddr {
-        let mut address = MacAddr::new_from_slice(&[0; 8]);
+        let mut address = MacAddr::new(0, 0, 0, 0, 0, 0);
         unsafe {
             zcsi::rte_eth_macaddr_get(self.port, &mut address as *mut MacAddr);
             address
