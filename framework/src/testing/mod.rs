@@ -11,6 +11,8 @@
 //! ```
 
 pub(crate) mod arbitrary;
+pub(crate) mod packet;
 pub(crate) mod strategy;
 
+pub use self::packet::*;
 pub use self::strategy::*;
