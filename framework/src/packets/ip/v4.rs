@@ -149,7 +149,7 @@ pub struct Ipv4Header {
 impl Default for Ipv4Header {
     fn default() -> Ipv4Header {
         Ipv4Header {
-            version_ihl: 4 << 4,
+            version_ihl: 0x45,
             dscp_ecn: 0,
             total_length: 0,
             identification: 0,
@@ -186,8 +186,9 @@ impl Ipv4 {
         self.header().version_ihl & 0x0f
     }
 
+    #[allow(dead_code)]
     #[inline]
-    pub fn set_ihl(&mut self, ihl: u8) {
+    fn set_ihl(&mut self, ihl: u8) {
         self.header_mut().version_ihl = (self.header().version_ihl & 0x0f) | (ihl & 0x0f);
     }
 
