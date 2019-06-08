@@ -201,8 +201,8 @@ impl<E: Ipv6Packet> SegmentRouting<E> {
     }
 
     #[inline]
-    pub fn segments(&self) -> &mut [Segment] {
-        unsafe { &mut (*self.segments) }
+    pub fn segments(&self) -> &[Segment] {
+        unsafe { &(*self.segments) }
     }
 
     /// Sets the segment list
