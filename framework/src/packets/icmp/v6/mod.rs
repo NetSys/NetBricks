@@ -1,24 +1,19 @@
-use common::Result;
-use native::mbuf::MBuf;
-use packets::ip::v6::Ipv6Packet;
-use packets::ip::ProtocolNumbers;
-use packets::{buffer, checksum, Fixed, Header, Packet, ParseError};
-use std::fmt;
+mod echo_reply;
+mod echo_request;
+mod ndp;
+mod too_big;
 
 pub use self::echo_reply::*;
 pub use self::echo_request::*;
-pub use self::ndp::neighbor_advert::*;
-pub use self::ndp::neighbor_solicit::*;
-pub use self::ndp::options::*;
-pub use self::ndp::router_advert::*;
-pub use self::ndp::router_solicit::*;
 pub use self::ndp::*;
 pub use self::too_big::*;
 
-pub mod echo_reply;
-pub mod echo_request;
-pub mod ndp;
-pub mod too_big;
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use crate::packets::ip::v6::Ipv6Packet;
+use crate::packets::ip::ProtocolNumbers;
+use crate::packets::{buffer, checksum, Fixed, Header, Packet, ParseError};
+use std::fmt;
 
 /*  From (https://tools.ietf.org/html/rfc4443)
     The ICMPv6 messages have the following general format:
@@ -401,36 +396,36 @@ impl<T: Ipv6Packet> Icmpv6Parse for T {
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
+pub const ICMPV6_PACKET: [u8; 62] = [
+    // ** ethernet header
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+    0x86, 0xDD,
+    // ** IPv6 header
+    0x60, 0x00, 0x00, 0x00,
+    // payload length
+    0x00, 0x08,
+    0x3a,
+    0xff,
+    0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b,
+    0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+    // ** ICMPv6 header
+    // unknown type
+    0xFF,
+    // code
+    0x00,
+    // checksum
+    0x01, 0xf0,
+    // data
+    0x00, 0x00, 0x00, 0x00
+];
+
+#[cfg(test)]
 mod tests {
     use super::*;
-    use dpdk_test;
-    use packets::ip::v6::Ipv6;
-    use packets::{Ethernet, RawPacket};
-
-    #[rustfmt::skip]
-    const ICMPV6_PACKET: [u8; 62] = [
-        // ** ethernet header
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-        0x86, 0xDD,
-        // ** IPv6 header
-        0x60, 0x00, 0x00, 0x00,
-        // payload length
-        0x00, 0x08,
-        0x3a,
-        0xff,
-        0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xd4, 0xf0, 0x45, 0xff, 0xfe, 0x0c, 0x66, 0x4b,
-        0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-        // ** ICMPv6 header
-        // unknown type
-        0xFF,
-        // code
-        0x00,
-        // checksum
-        0x01, 0xf0,
-        // data
-        0x00, 0x00, 0x00, 0x00
-    ];
+    use crate::packets::ip::v6::Ipv6;
+    use crate::packets::{Ethernet, RawPacket};
 
     #[test]
     fn size_of_icmpv6_header() {
@@ -453,8 +448,6 @@ mod tests {
 
     #[test]
     fn downcast_icmpv6() {
-        use packets::icmp::v6::ndp::router_advert::tests::ROUTER_ADVERT_PACKET;
-
         dpdk_test! {
             let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
@@ -469,8 +462,6 @@ mod tests {
 
     #[test]
     fn compute_checksum() {
-        use packets::icmp::v6::ndp::router_advert::tests::ROUTER_ADVERT_PACKET;
-
         dpdk_test! {
             let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();

@@ -1,12 +1,18 @@
-use packets::icmp::v6::{Icmpv6, Icmpv6Packet, Icmpv6Payload, NdpOptionsIterator};
-use packets::ip::v6::Ipv6Packet;
-use packets::Packet;
+mod neighbor_advert;
+mod neighbor_solicit;
+mod options;
+mod router_advert;
+mod router_solicit;
 
-pub mod neighbor_advert;
-pub mod neighbor_solicit;
-pub mod options;
-pub mod router_advert;
-pub mod router_solicit;
+pub use self::neighbor_advert::*;
+pub use self::neighbor_solicit::*;
+pub use self::options::*;
+pub use self::router_advert::*;
+pub use self::router_solicit::*;
+
+use super::{Icmpv6, Icmpv6Packet, Icmpv6Payload};
+use crate::packets::ip::v6::Ipv6Packet;
+use crate::packets::Packet;
 
 /// NDP message payload marker
 pub trait NdpPayload: Icmpv6Payload {}

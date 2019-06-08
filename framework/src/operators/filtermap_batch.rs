@@ -1,6 +1,6 @@
 use super::{Batch, PacketError};
+use crate::packets::Packet;
 use failure::Error;
-use packets::Packet;
 
 /// Lazily-evaluate filter_map operator
 ///

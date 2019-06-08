@@ -1,7 +1,7 @@
-use common::Result;
-use native::mbuf::MBuf;
-use native::zcsi;
-use packets::{buffer, Header, Packet};
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use crate::native::zcsi;
+use crate::packets::{buffer, Header, Packet};
 
 /// Unit header
 impl Header for () {}
@@ -147,7 +147,7 @@ unsafe impl Send for RawPacket {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dpdk_test;
+    use crate::packets::UDP_PACKET;
 
     #[test]
     fn new_raw_packet() {
@@ -158,8 +158,6 @@ mod tests {
 
     #[test]
     fn raw_packet_from_bytes() {
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             assert!(RawPacket::from_bytes(&UDP_PACKET).is_ok());
         }

@@ -1,5 +1,5 @@
 use super::mbuf::MBuf;
-use packets::ethernet::MacAddr;
+use packets::MacAddr;
 use std::os::raw::c_char;
 #[link(name = "zcsi")]
 extern "C" {

@@ -10,9 +10,9 @@
 //! netbricks = { version = "1.0", features = ["test"] }
 //! ```
 
-pub(crate) mod arbitrary;
-pub(crate) mod packet;
-pub(crate) mod strategy;
+mod arbitrary;
+mod packet;
+mod strategy;
 
 pub use self::packet::*;
 pub use self::strategy::*;

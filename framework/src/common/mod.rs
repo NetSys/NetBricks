@@ -1,4 +1,4 @@
-pub use self::errors::*;
-
 #[macro_use]
-pub mod errors;
+mod errors;
+
+pub use self::errors::*;

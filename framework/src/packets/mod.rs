@@ -1,20 +1,20 @@
-use common::Result;
-use failure::Fail;
-use native::mbuf::MBuf;
+pub mod buffer;
+pub mod checksum;
+mod ethernet;
+pub mod icmp;
+pub mod ip;
+mod raw;
+mod tcp;
+mod udp;
 
 pub use self::ethernet::*;
 pub use self::raw::*;
 pub use self::tcp::*;
 pub use self::udp::*;
 
-pub mod buffer;
-pub mod checksum;
-pub mod ethernet;
-pub mod icmp;
-pub mod ip;
-pub mod raw;
-pub mod tcp;
-pub mod udp;
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use failure::Fail;
 
 /// Type that has a fixed size
 ///

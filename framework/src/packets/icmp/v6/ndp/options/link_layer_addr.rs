@@ -1,8 +1,6 @@
-#![allow(clippy::not_unsafe_ptr_arg_deref, clippy::mut_from_ref)]
-
-use common::Result;
-use native::mbuf::MBuf;
-use packets::{buffer, Fixed, MacAddr, ParseError};
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use crate::packets::{buffer, Fixed, MacAddr, ParseError};
 use std::fmt;
 
 /*  From https://tools.ietf.org/html/rfc4861#section-4.6.1
@@ -62,7 +60,12 @@ impl LinkLayerAddress {
     }
 
     #[inline]
-    fn fields(&self) -> &mut LinkLayerAddressFields {
+    fn fields(&self) -> &LinkLayerAddressFields {
+        unsafe { &(*self.fields) }
+    }
+
+    #[inline]
+    fn fields_mut(&mut self) -> &mut LinkLayerAddressFields {
         unsafe { &mut (*self.fields) }
     }
 
@@ -83,7 +86,7 @@ impl LinkLayerAddress {
 
     #[inline]
     pub fn set_addr(&mut self, addr: MacAddr) {
-        self.fields().addr = addr;
+        self.fields_mut().addr = addr;
     }
 }
 

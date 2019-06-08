@@ -1,8 +1,12 @@
-use failure::Error;
-use interface::PacketTx;
-use native::mbuf::MBuf;
-use packets::Packet;
-use std::collections::HashMap;
+mod emit_batch;
+mod filter_batch;
+mod filtermap_batch;
+mod foreach_batch;
+mod groupby_batch;
+mod map_batch;
+mod queue_batch;
+mod receive_batch;
+mod send_batch;
 
 pub use self::emit_batch::*;
 pub use self::filter_batch::*;
@@ -14,15 +18,13 @@ pub use self::queue_batch::*;
 pub use self::receive_batch::*;
 pub use self::send_batch::*;
 
-mod emit_batch;
-mod filter_batch;
-mod filtermap_batch;
-mod foreach_batch;
-mod groupby_batch;
-mod map_batch;
-mod queue_batch;
-mod receive_batch;
-mod send_batch;
+use crate::interface::PacketTx;
+use crate::native::mbuf::MBuf;
+use crate::packets::Packet;
+use failure::Error;
+use std::collections::HashMap;
+
+const BATCH_SIZE: usize = 32;
 
 /// Error when processing packets
 #[derive(Debug)]
@@ -153,18 +155,16 @@ pub trait Batch {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::*;
-    use compose;
-    use dpdk_test;
-    use packets::ip::v4::Ipv4;
-    use packets::ip::ProtocolNumbers;
-    use packets::{EtherTypes, Ethernet, RawPacket};
+    use crate::compose;
+    use crate::packets::icmp::v4::ICMPV4_PACKET;
+    use crate::packets::ip::v4::Ipv4;
+    use crate::packets::ip::ProtocolNumbers;
+    use crate::packets::{EtherTypes, Ethernet, MacAddr, RawPacket, TCP_PACKET, UDP_PACKET};
 
     #[test]
     fn filter_operator() {
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             let (producer, batch) = single_threaded_batch::<RawPacket>(1);
             let mut batch = batch.filter(|_| false);
@@ -176,8 +176,6 @@ pub mod tests {
 
     #[test]
     fn map_operator() {
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             let (producer, batch) = single_threaded_batch::<RawPacket>(1);
             let mut batch = batch.map(|p| p.parse::<Ethernet>());
@@ -190,22 +188,18 @@ pub mod tests {
 
     #[test]
     fn filter_map_operator() {
-        use packets::icmp::v4::tests::ICMPV4_PACKET;
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             let (producer, batch) = single_threaded_batch::<RawPacket>(2);
             let mut batch = batch.filter_map(|p| {
                 let v4 = p.parse::<Ethernet>()?.parse::<Ipv4>()?;
                 if v4.protocol() == ProtocolNumbers::Udp {
-                    let mut eth  = v4.deparse();
+                    let mut eth = v4.deparse();
                     eth.swap_addresses();
                     Ok(Some(eth.parse::<Ipv4>()?))
                 } else {
                     Ok(None)
                 }
             });
-
 
             producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
             producer.enqueue(RawPacket::from_bytes(&ICMPV4_PACKET).unwrap());
@@ -224,8 +218,6 @@ pub mod tests {
 
     #[test]
     fn for_each_operator() {
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             let mut invoked = 0;
 
@@ -246,10 +238,6 @@ pub mod tests {
 
     #[test]
     fn group_by_operator() {
-        use packets::icmp::v4::tests::ICMPV4_PACKET;
-        use packets::tcp::tests::TCP_PACKET;
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             let (producer, batch) = single_threaded_batch::<RawPacket>(2);
 
@@ -278,7 +266,7 @@ pub mod tests {
                                 })
                             }
                         );
-                    }
+                    },
                 );
 
             producer.enqueue(RawPacket::from_bytes(&TCP_PACKET).unwrap());
@@ -295,9 +283,6 @@ pub mod tests {
 
     #[test]
     fn emit_operator() {
-        use packets::ethernet::MacAddr;
-        use packets::tcp::tests::TCP_PACKET;
-
         dpdk_test! {
             let (producer, batch) = single_threaded_batch::<RawPacket>(1);
             let mut batch = batch

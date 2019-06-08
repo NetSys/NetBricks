@@ -1,13 +1,14 @@
-use common::Result;
-use native::mbuf::MBuf;
-use packets::checksum::PseudoHeader;
-use packets::ip::{IpAddrMismatchError, IpPacket, ProtocolNumber};
-use packets::{buffer, Ethernet, Fixed, Header, Packet};
-use std::fmt;
-use std::net::{IpAddr, Ipv6Addr};
+mod srh;
 
 pub use self::srh::*;
-pub mod srh;
+
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use crate::packets::checksum::PseudoHeader;
+use crate::packets::ip::{IpAddrMismatchError, IpPacket, ProtocolNumber};
+use crate::packets::{buffer, Ethernet, Fixed, Header, Packet};
+use std::fmt;
+use std::net::{IpAddr, Ipv6Addr};
 
 /// Common behaviors shared by IPv6 and extension packets
 pub trait Ipv6Packet: IpPacket {}
@@ -398,45 +399,45 @@ impl IpPacket for Ipv6 {
 impl Ipv6Packet for Ipv6 {}
 
 #[cfg(test)]
-pub mod tests {
-    use super::*;
-    use dpdk_test;
-    use packets::ip::ProtocolNumbers;
-    use packets::RawPacket;
+#[rustfmt::skip]
+pub const IPV6_PACKET: [u8; 78] = [
+    // ** ethernet header
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+    0x86, 0xDD,
+    // ** IPv6 header
+    // version, dscp, ecn, flow label
+    0x60, 0x00, 0x00, 0x00,
+    // payload length
+    0x00, 0x18,
+    // next Header
+    0x11,
+    // hop limit
+    0x02,
+    // src addr
+    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+    // dst addr
+    0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
+    // ** TCP header
+    // src_port = 36869, dst_port = 23
+    0x90, 0x05, 0x00, 0x17,
+    // seq_no = 1913975060
+    0x72, 0x14, 0xf1, 0x14,
+    // ack_no = 0
+    0x00, 0x00, 0x00, 0x00,
+    // data_offset = 24, flags = 0x02
+    0x60, 0x02,
+    // window = 8760, checksum = 0xa92c, urgent = 0
+    0x22, 0x38, 0xa9, 0x2c, 0x00, 0x00,
+    // options
+    0x02, 0x04, 0x05, 0xb4
+];
 
-    #[rustfmt::skip]
-    pub const IPV6_PACKET: [u8; 78] = [
-        // ** ethernet header
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-        0x86, 0xDD,
-        // ** IPv6 header
-        // version, dscp, ecn, flow label
-        0x60, 0x00, 0x00, 0x00,
-        // payload length
-        0x00, 0x18,
-        // next Header
-        0x11,
-        // hop limit
-        0x02,
-        // src addr
-        0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-        // dst addr
-        0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0x00, 0x00, 0x00, 0x00, 0x8a, 0x2e, 0x03, 0x70, 0x73, 0x34,
-        // ** TCP header
-        // src_port = 36869, dst_port = 23
-        0x90, 0x05, 0x00, 0x17,
-        // seq_no = 1913975060
-        0x72, 0x14, 0xf1, 0x14,
-        // ack_no = 0
-        0x00, 0x00, 0x00, 0x00,
-        // data_offset = 24, flags = 0x02
-        0x60, 0x02,
-        // window = 8760, checksum = 0xa92c, urgent = 0
-        0x22, 0x38, 0xa9, 0x2c, 0x00, 0x00,
-        // options
-        0x02, 0x04, 0x05, 0xb4
-    ];
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::packets::ip::ProtocolNumbers;
+    use crate::packets::RawPacket;
 
     #[test]
     fn size_of_ipv6_header() {

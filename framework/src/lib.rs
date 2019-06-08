@@ -47,6 +47,8 @@ extern crate twox_hash;
 // need these first so other modules in netbricks can use the macros
 #[macro_use]
 pub mod common;
+#[macro_use]
+pub mod tests;
 pub mod allocators;
 pub mod config;
 pub mod control;
@@ -62,5 +64,4 @@ pub mod shared_state;
 pub mod state;
 #[cfg(feature = "test")]
 pub mod testing;
-pub mod tests;
 pub mod utils;

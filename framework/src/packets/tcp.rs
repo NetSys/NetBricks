@@ -1,7 +1,7 @@
-use common::Result;
-use native::mbuf::MBuf;
-use packets::ip::{Flow, IpPacket, ProtocolNumbers};
-use packets::{buffer, checksum, Fixed, Header, Packet};
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use crate::packets::ip::{Flow, IpPacket, ProtocolNumbers};
+use crate::packets::{buffer, checksum, Fixed, Header, Packet};
 use std::fmt;
 use std::net::IpAddr;
 
@@ -555,46 +555,46 @@ impl<E: IpPacket> Packet for Tcp<E> {
 }
 
 #[cfg(test)]
-pub mod tests {
-    use super::*;
-    use dpdk_test;
-    use packets::ip::v4::Ipv4;
-    use packets::ip::v6::{Ipv6, SegmentRouting};
-    use packets::{Ethernet, RawPacket};
-    use std::net::{Ipv4Addr, Ipv6Addr};
+#[rustfmt::skip]
+pub const TCP_PACKET: [u8; 58] = [
+    // ** ethernet header
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+    0x08, 0x00,
+    // ** IPv4 header
+    0x45, 0x00,
+    // IPv4 payload length
+    0x00, 0x2c,
+    // ident = 2232, flags = 4, frag_offset = 0
+    0x08, 0xb8, 0x40, 0x00,
+    // ttl = 255, protocol = TCP, checksum = 0x9997
+    0xff, 0x06, 0x99, 0x97,
+    // src = 139.133.217.110
+    0x8b, 0x85, 0xd9, 0x6e,
+    // dst = 139.133.233.2
+    0x8b, 0x85, 0xe9, 0x02,
+    // ** TCP header
+    // src_port = 36869, dst_port = 23
+    0x90, 0x05, 0x00, 0x17,
+    // seq_no = 1913975060
+    0x72, 0x14, 0xf1, 0x14,
+    // ack_no = 0
+    0x00, 0x00, 0x00, 0x00,
+    // data_offset = 6, flags = 0x02
+    0x60, 0x02,
+    // window = 8760, checksum = 0xa92c, urgent = 0
+    0x22, 0x38, 0xa9, 0x2c, 0x00, 0x00,
+    // options
+    0x02, 0x04, 0x05, 0xb4
+];
 
-    #[rustfmt::skip]
-    pub const TCP_PACKET: [u8; 58] = [
-        // ** ethernet header
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-        0x08, 0x00,
-        // ** IPv4 header
-        0x45, 0x00,
-        // IPv4 payload length
-        0x00, 0x2c,
-        // ident = 2232, flags = 4, frag_offset = 0
-        0x08, 0xb8, 0x40, 0x00,
-        // ttl = 255, protocol = TCP, checksum = 0x9997
-        0xff, 0x06, 0x99, 0x97,
-        // src = 139.133.217.110
-        0x8b, 0x85, 0xd9, 0x6e,
-        // dst = 139.133.233.2
-        0x8b, 0x85, 0xe9, 0x02,
-        // ** TCP header
-        // src_port = 36869, dst_port = 23
-        0x90, 0x05, 0x00, 0x17,
-        // seq_no = 1913975060
-        0x72, 0x14, 0xf1, 0x14,
-        // ack_no = 0
-        0x00, 0x00, 0x00, 0x00,
-        // data_offset = 6, flags = 0x02
-        0x60, 0x02,
-        // window = 8760, checksum = 0xa92c, urgent = 0
-        0x22, 0x38, 0xa9, 0x2c, 0x00, 0x00,
-        // options
-        0x02, 0x04, 0x05, 0xb4
-    ];
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::packets::ip::v4::Ipv4;
+    use crate::packets::ip::v6::{Ipv6, SegmentRouting, SRH_PACKET};
+    use crate::packets::{Ethernet, RawPacket};
+    use std::net::{Ipv4Addr, Ipv6Addr};
 
     #[test]
     fn size_of_tcp_header() {
@@ -648,8 +648,6 @@ pub mod tests {
 
     #[test]
     fn tcp_flow_v6() {
-        use packets::ip::v6::srh::tests::SRH_PACKET;
-
         dpdk_test! {
             let packet = RawPacket::from_bytes(&SRH_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();

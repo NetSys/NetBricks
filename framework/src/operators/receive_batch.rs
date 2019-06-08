@@ -1,9 +1,7 @@
-use super::{Batch, PacketError};
-use interface::PacketRx;
-use native::mbuf::MBuf;
-use packets::RawPacket;
-
-pub const BATCH_SIZE: usize = 32;
+use super::{Batch, PacketError, BATCH_SIZE};
+use crate::interface::PacketRx;
+use crate::native::mbuf::MBuf;
+use crate::packets::RawPacket;
 
 /// Receive operator
 ///

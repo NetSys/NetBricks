@@ -1,9 +1,7 @@
-#![allow(clippy::mut_from_ref)]
-
 use super::MTU;
-use common::Result;
-use native::mbuf::MBuf;
-use packets::{buffer, Fixed, ParseError};
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use crate::packets::{buffer, Fixed, ParseError};
 use std::fmt;
 
 /*  From https://tools.ietf.org/html/rfc4861#section-4.6.4
@@ -73,7 +71,12 @@ impl Mtu {
     }
 
     #[inline]
-    fn fields(&self) -> &mut MtuFields {
+    fn fields(&self) -> &MtuFields {
+        unsafe { &(*self.fields) }
+    }
+
+    #[inline]
+    fn fields_mut(&mut self) -> &mut MtuFields {
         unsafe { &mut (*self.fields) }
     }
 
@@ -91,7 +94,7 @@ impl Mtu {
     }
 
     pub fn set_mtu(&mut self, mtu: u32) {
-        self.fields().mtu = u32::to_be(mtu);
+        self.fields_mut().mtu = u32::to_be(mtu);
     }
 }
 

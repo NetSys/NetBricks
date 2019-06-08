@@ -1,5 +1,5 @@
 use super::{Batch, PacketError};
-use packets::Packet;
+use crate::packets::Packet;
 
 /// Lazily-evaluated emit operator
 ///

@@ -1,9 +1,7 @@
-#![allow(clippy::mut_from_ref)]
-
 use super::PREFIX_INFORMATION;
-use common::Result;
-use native::mbuf::MBuf;
-use packets::{buffer, Fixed, ParseError};
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use crate::packets::{buffer, Fixed, ParseError};
 use std::fmt;
 use std::net::Ipv6Addr;
 
@@ -149,7 +147,12 @@ impl PrefixInformation {
     }
 
     #[inline]
-    fn fields(&self) -> &mut PrefixInformationFields {
+    fn fields(&self) -> &PrefixInformationFields {
+        unsafe { &(*self.fields) }
+    }
+
+    #[inline]
+    fn fields_mut(&mut self) -> &mut PrefixInformationFields {
         unsafe { &mut (*self.fields) }
     }
 
@@ -170,7 +173,7 @@ impl PrefixInformation {
 
     #[inline]
     pub fn set_prefix_length(&mut self, prefix_length: u8) {
-        self.fields().prefix_length = prefix_length
+        self.fields_mut().prefix_length = prefix_length
     }
 
     #[inline]
@@ -180,12 +183,12 @@ impl PrefixInformation {
 
     #[inline]
     pub fn set_on_link(&mut self) {
-        self.fields().flags |= ONLINK;
+        self.fields_mut().flags |= ONLINK;
     }
 
     #[inline]
     pub fn unset_on_link(&mut self) {
-        self.fields().flags &= !ONLINK;
+        self.fields_mut().flags &= !ONLINK;
     }
 
     #[inline]
@@ -195,12 +198,12 @@ impl PrefixInformation {
 
     #[inline]
     pub fn set_autonomous(&mut self) {
-        self.fields().flags |= AUTO;
+        self.fields_mut().flags |= AUTO;
     }
 
     #[inline]
     pub fn unset_autonomous(&mut self) {
-        self.fields().flags &= !AUTO;
+        self.fields_mut().flags &= !AUTO;
     }
 
     #[inline]
@@ -210,7 +213,7 @@ impl PrefixInformation {
 
     #[inline]
     pub fn set_valid_lifetime(&mut self, valid_lifetime: u32) {
-        self.fields().valid_lifetime = u32::to_be(valid_lifetime);
+        self.fields_mut().valid_lifetime = u32::to_be(valid_lifetime);
     }
 
     #[inline]
@@ -220,7 +223,7 @@ impl PrefixInformation {
 
     #[inline]
     pub fn set_preferred_lifetime(&mut self, preferred_lifetime: u32) {
-        self.fields().preferred_lifetime = u32::to_be(preferred_lifetime);
+        self.fields_mut().preferred_lifetime = u32::to_be(preferred_lifetime);
     }
 
     #[inline]
@@ -230,7 +233,7 @@ impl PrefixInformation {
 
     #[inline]
     pub fn set_prefix(&mut self, prefix: Ipv6Addr) {
-        self.fields().prefix = prefix;
+        self.fields_mut().prefix = prefix;
     }
 }
 

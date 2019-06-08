@@ -1,5 +1,5 @@
 use super::{Batch, PacketError};
-use packets::{Packet, RawPacket};
+use crate::packets::{Packet, RawPacket};
 use std::cell::RefCell;
 use std::clone::Clone;
 use std::collections::VecDeque;
@@ -199,15 +199,12 @@ pub fn mpsc_batch() -> (MpscProducer, QueueBatch<Receiver<RawPacket>>) {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::*;
-    use dpdk_test;
-    use packets::RawPacket;
+    use crate::packets::{RawPacket, UDP_PACKET};
 
     #[test]
     fn single_threaded() {
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             let (producer, mut batch) = single_threaded_batch::<RawPacket>(1);
             producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
@@ -218,8 +215,6 @@ pub mod tests {
 
     #[test]
     fn mpsc() {
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             let (producer, mut batch) = mpsc_batch();
             producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());

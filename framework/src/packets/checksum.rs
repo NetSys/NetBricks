@@ -1,7 +1,5 @@
-#![allow(clippy::cast_ptr_alignment)]
-
-use common::Result;
-use packets::ip::{IpAddrMismatchError, ProtocolNumber};
+use crate::common::Result;
+use crate::packets::ip::{IpAddrMismatchError, ProtocolNumber};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::slice;
 
@@ -128,6 +126,7 @@ impl PseudoHeader {
 ///     same set of octets, including the checksum field.  If the result
 ///     is all 1 bits (-0 in 1's complement arithmetic), the check
 ///     succeeds.
+#[allow(clippy::cast_ptr_alignment)]
 pub fn compute(pseudo_header_sum: u16, payload: &[u8]) -> u16 {
     let len = payload.len();
     let mut data = payload;

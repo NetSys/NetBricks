@@ -1,12 +1,12 @@
-use common::Result;
-use failure::Fail;
-use packets::checksum::PseudoHeader;
-use packets::Packet;
-use std::fmt;
-use std::net::IpAddr;
-
 pub mod v4;
 pub mod v6;
+
+use crate::common::Result;
+use crate::packets::checksum::PseudoHeader;
+use crate::packets::Packet;
+use failure::Fail;
+use std::fmt;
+use std::net::IpAddr;
 
 /// Assigned internet protocol number
 ///

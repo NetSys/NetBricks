@@ -1,7 +1,7 @@
-use common::Result;
-use native::mbuf::MBuf;
-use packets::ip::{Flow, IpPacket, ProtocolNumbers};
-use packets::{buffer, checksum, Fixed, Header, Packet};
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use crate::packets::ip::{Flow, IpPacket, ProtocolNumbers};
+use crate::packets::{buffer, checksum, Fixed, Header, Packet};
 use std::fmt;
 use std::net::IpAddr;
 
@@ -290,39 +290,39 @@ impl<E: IpPacket> Packet for Udp<E> {
 }
 
 #[cfg(test)]
-pub mod tests {
-    use super::*;
-    use dpdk_test;
-    use packets::ip::v4::Ipv4;
-    use packets::{Ethernet, RawPacket};
-    use std::net::{Ipv4Addr, Ipv6Addr};
+#[rustfmt::skip]
+pub const UDP_PACKET: [u8; 52] = [
+    // ** ethernet header
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+    0x08, 0x00,
+    // ** IPv4 header
+    0x45, 0x00,
+    // IPv4 payload length
+    0x00, 0x26,
+    // ident = 43849, flags = 4, frag_offset = 0
+    0xab, 0x49, 0x40, 0x00,
+    // ttl = 255, protocol = UDP, checksum = 0xf700
+    0xff, 0x11, 0xf7, 0x00,
+    // src = 139.133.217.110
+    0x8b, 0x85, 0xd9, 0x6e,
+    // dst = 139.133.233.2
+    0x8b, 0x85, 0xe9, 0x02,
+    // ** UDP header
+    // src_port = 39376, dst_port = 1087
+    0x99, 0xd0, 0x04, 0x3f,
+    // UDP length = 18, checksum = 0x7228
+    0x00, 0x12, 0x72, 0x28,
+    // ** UDP payload
+    0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x68, 0x65, 0x6c, 0x6c, 0x6f
+];
 
-    #[rustfmt::skip]
-    pub const UDP_PACKET: [u8; 52] = [
-        // ** ethernet header
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-        0x08, 0x00,
-        // ** IPv4 header
-        0x45, 0x00,
-        // IPv4 payload length
-        0x00, 0x26,
-        // ident = 43849, flags = 4, frag_offset = 0
-        0xab, 0x49, 0x40, 0x00,
-        // ttl = 255, protocol = UDP, checksum = 0xf700
-        0xff, 0x11, 0xf7, 0x00,
-        // src = 139.133.217.110
-        0x8b, 0x85, 0xd9, 0x6e,
-        // dst = 139.133.233.2
-        0x8b, 0x85, 0xe9, 0x02,
-        // ** UDP header
-        // src_port = 39376, dst_port = 1087
-        0x99, 0xd0, 0x04, 0x3f,
-        // UDP length = 18, checksum = 0x7228
-        0x00, 0x12, 0x72, 0x28,
-        // ** UDP payload
-        0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x68, 0x65, 0x6c, 0x6c, 0x6f
-    ];
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::packets::ip::v4::Ipv4;
+    use crate::packets::{Ethernet, RawPacket};
+    use std::net::{Ipv4Addr, Ipv6Addr};
 
     #[test]
     fn size_of_udp_header() {

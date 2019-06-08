@@ -1,8 +1,8 @@
-use common::Result;
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use crate::packets::{buffer, Fixed, Header, Packet, RawPacket};
 use failure::Fail;
 use hex;
-use native::mbuf::MBuf;
-use packets::{buffer, Fixed, Header, Packet, RawPacket};
 use serde::{de, Deserialize, Deserializer};
 use std::convert::From;
 use std::fmt;
@@ -295,7 +295,7 @@ impl Packet for Ethernet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dpdk_test;
+    use crate::packets::UDP_PACKET;
 
     #[test]
     fn size_of_ethernet_header() {
@@ -343,8 +343,6 @@ mod tests {
 
     #[test]
     fn parse_ethernet_packet() {
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
@@ -357,8 +355,6 @@ mod tests {
 
     #[test]
     fn reset_reparse_ethernet_packet() {
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
             let ethernet = packet.parse::<Ethernet>().unwrap();
@@ -373,8 +369,6 @@ mod tests {
 
     #[test]
     fn swap_addresses() {
-        use packets::udp::tests::UDP_PACKET;
-
         dpdk_test! {
             let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
             let mut ethernet = packet.parse::<Ethernet>().unwrap();

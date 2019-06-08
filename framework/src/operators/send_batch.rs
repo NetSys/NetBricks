@@ -1,9 +1,9 @@
 use super::{Batch, PacketError, BATCH_SIZE};
-use interface::PacketTx;
-use native::mbuf::MBuf;
-use native::zcsi::mbuf_free_bulk;
-use packets::Packet;
-use scheduler::Executable;
+use crate::interface::PacketTx;
+use crate::native::mbuf::MBuf;
+use crate::native::zcsi::mbuf_free_bulk;
+use crate::packets::Packet;
+use crate::scheduler::Executable;
 
 /// Send operator
 ///

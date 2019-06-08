@@ -1,9 +1,9 @@
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
-use common::Result;
+use crate::common::Result;
+use crate::native::mbuf::MBuf;
+use crate::packets::Fixed;
 use failure::Fail;
-use native::mbuf::MBuf;
-use packets::Fixed;
 use std::slice;
 
 /// Errors related to DPDK message buffer access
@@ -159,10 +159,9 @@ pub fn write_slice<T: Fixed>(mbuf: *mut MBuf, offset: usize, slice: &[T]) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dpdk_test;
-    use native::zcsi::mbuf_alloc;
+    use crate::native::zcsi::mbuf_alloc;
 
-    pub const BUFFER: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+    const BUFFER: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
     #[test]
     fn alloc_buffer_tail() {
@@ -287,16 +286,16 @@ mod tests {
             unsafe {
                 let mbuf = mbuf_alloc();
                 let _ = alloc(mbuf, 0, 20);
-                let _ = write_item::<[u8;16]>(mbuf, 0, &BUFFER);
-                let item = read_item::<[u8;16]>(mbuf, 0).unwrap();
+                let _ = write_item::<[u8; 16]>(mbuf, 0, &BUFFER);
+                let item = read_item::<[u8; 16]>(mbuf, 0).unwrap();
                 assert_eq!(BUFFER, *item);
 
                 // read from the wrong offset should return junk
-                let item = read_item::<[u8;16]>(mbuf, 2).unwrap();
+                let item = read_item::<[u8; 16]>(mbuf, 2).unwrap();
                 assert!(BUFFER != *item);
 
                 // read exceeds buffer should err
-                assert!(read_item::<[u8;16]>(mbuf, 10).is_err());
+                assert!(read_item::<[u8; 16]>(mbuf, 10).is_err());
             }
         }
     }

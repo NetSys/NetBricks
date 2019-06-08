@@ -8,7 +8,7 @@ use config::{PortConfiguration, NUM_RXD, NUM_TXD};
 use failure::Fail;
 use native::mbuf::MBuf;
 use native::zcsi;
-use packets::ethernet::MacAddr;
+use packets::MacAddr;
 use regex::Regex;
 use std::cmp::min;
 use std::ffi::CString;
