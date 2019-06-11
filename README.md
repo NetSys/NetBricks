@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/williamofockham/NetBricks.svg?branch=master)](https://travis-ci.org/williamofockham/NetBricks)
+[![codecov](https://codecov.io/gh/williamofockham/NetBricks/branch/master/graph/badge.svg)](https://codecov.io/gh/williamofockham/NetBricks)
 
 [NetBricks](http://netbricks.io/) is a Rust based framework for NFV development. Please refer to the
 [paper](https://people.eecs.berkeley.edu/~apanda/assets/papers/osdi16.pdf) for information

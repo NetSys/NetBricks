@@ -8,7 +8,7 @@ MOUNTS = -v /lib/modules:/lib/modules \
          -v /usr/src:/usr/src \
          -v /dev/hugepages:/dev/hugepages
 
-.PHONY: pull-sandbox run run-lint run-tests
+.PHONY: pull-sandbox run run-cov run-lint run-tests
 
 pull-sandbox:
 	@docker pull $(SANDBOX)
@@ -21,13 +21,13 @@ run: pull-sandbox
 		-v $(BASE_DIR)/moongen:/opt/moongen \
 		$(SANDBOX) /bin/bash
 
-run-tests: pull-sandbox
+run-cov: pull-sandbox
 	@docker run -it --rm --privileged --network=host \
 		-w /opt/netbricks \
 		$(MOUNTS) \
 		-v $(BASE_DIR):/opt/netbricks \
 		-v $(BASE_DIR)/moongen:/opt/moongen \
-		$(SANDBOX) make test
+		$(SANDBOX) make cov
 
 run-lint: pull-sandbox
 	@docker run -it --rm --privileged --network=host \
@@ -36,3 +36,11 @@ run-lint: pull-sandbox
 		-v $(BASE_DIR):/opt/netbricks \
 		-v $(BASE_DIR)/moongen:/opt/moongen \
 		$(SANDBOX) make lint
+
+run-tests: pull-sandbox
+	@docker run -it --rm --privileged --network=host \
+		-w /opt/netbricks \
+		$(MOUNTS) \
+		-v $(BASE_DIR):/opt/netbricks \
+		-v $(BASE_DIR)/moongen:/opt/moongen \
+		$(SANDBOX) make test

@@ -16,6 +16,7 @@ target/
 /native/test/test
 /native/*.o
 /native/*.so
+cobertura.xml
 
 # Remove rustfmt backups
 *.rs.bk

@@ -4,7 +4,7 @@ BASE_DIR = $(shell git rev-parse --show-toplevel)
 POOL_SIZE ?= 512
 GH=git@github.com:williamofockham
 
-.PHONY: build build-all build-ex build-nb build-rel build-rel-ex clean fmt \
+.PHONY: build build-all build-ex build-nb build-rel build-rel-ex clean cov fmt \
         init lint native run run-rel test watch watch-test
 
 build:
@@ -32,6 +32,9 @@ ifdef EXAMPLE
 else
 	@./build.sh build_example
 endif
+
+cov:
+	@./build.sh cov
 
 clean:
 	@./build.sh clean

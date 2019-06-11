@@ -200,6 +200,10 @@ case $TASK in
     clean)
         clean
         ;;
+    cov)
+        build_fmwk
+        ${CARGO} tarpaulin --root framework --out Xml
+        ;;
     debug)
         shift
         if [ $# -le 0 ]; then
@@ -292,7 +296,7 @@ case $TASK in
 
             pushd $BASE_DIR/framework
             export LD_LIBRARY_PATH="${NATIVE_LIB_PATH}:${DPDK_LD_PATH}:${LD_LIBRARY_PATH}"
-            ${CARGO} test
+            ${CARGO} test -- --nocapture
             popd
 
             for testname in ${examples[@]}; do
@@ -321,16 +325,16 @@ case $TASK in
           build_fmwk: Just build NetBricks framework.
           build_native: Build the DPDK C API.
           build_rel: Build a release of the project (this includes framework and all examples).
-          clean: Remove all built files
+          clean: Remove all built files.
+          cov: Run test coverage.
           debug: Debug one of the examples (Must specify example name and examples).
-          doc: Run rustdoc and produce documentation
+          doc: Run rustdoc and produce documentation.
           env: Environment variables, run as eval \`./build.sh env\`.
-          fmt: Format all files via rustfmt. 
+          fmt: Format all files via rustfmt.
           lint: Run clippy to lint all files.
           run: Run one of the examples (Must specify example name and arguments).
           run_rel: Run one of the examples in release mode (Must specify example name and arguments).
           sctp: Check if sctp library is present.
           test: Run a specific test or all tests.
 endhelp
-
 esac

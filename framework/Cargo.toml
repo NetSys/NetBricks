@@ -43,8 +43,10 @@ performance = []
 sctp = ["rust-sctp"]
 test = ["proptest"]
 
-[dev-dependencies]
-proptest = "0.9"
+[dev-dependencies.proptest]
+version = "0.9"
+default-features = false
+features = ["default-code-coverage"]
 
 [build-dependencies]
 # Use Bindgen to generate DPDK structures.

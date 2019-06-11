@@ -23,6 +23,9 @@ jobs:
     - stage: test
       script:
         - make -f docker.mk run-tests
+      after_success:
+        - make -f docker.mk run-cov && bash <(curl -s https://codecov.io/bash)
     - stage: lint
       script:
         - make -f docker.mk run-lint
+
