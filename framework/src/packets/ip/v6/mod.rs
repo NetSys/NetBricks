@@ -132,7 +132,7 @@ impl Default for Ipv6Header {
 impl Header for Ipv6Header {}
 
 /// IPv6 packet
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Ipv6 {
     envelope: Ethernet,
     mbuf: *mut MBuf,
