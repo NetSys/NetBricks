@@ -21,7 +21,6 @@ extern crate config as config_rs;
 extern crate failure;
 extern crate fallible_iterator;
 extern crate fnv;
-#[cfg(any(test, feature = "test"))]
 extern crate futures;
 extern crate hex;
 #[macro_use]
@@ -47,7 +46,8 @@ extern crate tokio_threadpool;
 extern crate twox_hash;
 
 // need these first so other modules in netbricks can use the macros
-#[macro_use]
+#[cfg(any(test, feature = "test"))]
+#[cfg_attr(any(test, feature = "test"), macro_use)]
 pub mod tests;
 
 #[macro_use]
