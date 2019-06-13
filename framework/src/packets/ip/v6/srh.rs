@@ -128,6 +128,14 @@ pub type Segment = Ipv6Addr;
 #[fail(display = "Segment list length must be greater than 0")]
 pub struct BadSegmentsError;
 
+/// Error for invalid segments left
+#[derive(Debug, Fail)]
+#[fail(
+    display = "Segments left {} must be less than segment list length {}",
+    _0, _1
+)]
+pub struct SegmentsLeftOutOfBoundError(u8, usize);
+
 #[derive(Debug)]
 pub struct SegmentRouting<E: Ipv6Packet> {
     envelope: E,
@@ -168,8 +176,32 @@ impl<E: Ipv6Packet> SegmentRouting<E> {
         self.header().segments_left
     }
 
+    /// Sets the segments left and the IPv6 `dst` to match.
+    ///
+    /// Given a segment list of 3 segments, `[a, b, c]`, if the
+    /// `segments_left` is set to 2, then the IPv6 `dst` is set
+    /// to the (n + 1)th segment in the list, which is `c`.
+    ///
+    /// # Remarks
+    ///
+    /// `segments` should be set before setting `segments_left`
+    /// because the new `dst` value is taken from the segments
+    /// list.
     #[inline]
-    pub fn set_segments_left(&mut self, segments_left: u8) {
+    pub fn set_segments_left(&mut self, segments_left: u8) -> Result<()> {
+        if let Some(&segment) = self.segments().get(segments_left as usize) {
+            self.header_mut().segments_left = segments_left;
+            self.envelope_mut().set_dst(IpAddr::V6(segment))
+        } else {
+            Err(SegmentsLeftOutOfBoundError(segments_left, self.segments().len()).into())
+        }
+    }
+
+    // hack, internal setter intended for proptest packet generator
+    // to skip the consistency check. do not use otherwise.
+    #[cfg(feature = "test")]
+    #[doc(hidden)]
+    pub(crate) fn __set_segments_left(&mut self, segments_left: u8) {
         self.header_mut().segments_left = segments_left;
     }
 
@@ -576,6 +608,24 @@ mod tests {
     }
 
     #[test]
+    fn set_segments_left() {
+        dpdk_test! {
+            let packet = RawPacket::from_bytes(&SRH_PACKET).unwrap();
+            let ethernet = packet.parse::<Ethernet>().unwrap();
+            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+            let mut srh = ipv6.parse::<SegmentRouting<Ipv6>>().unwrap();
+
+            // packet has 3 segments
+            assert!(srh.set_segments_left(1).is_ok());
+            assert_eq!(1, srh.segments_left());
+            assert_eq!(srh.segments()[1], srh.envelope().dst());
+
+            assert!(srh.set_segments_left(10).is_err());
+            assert_eq!(1, srh.segments_left());
+        }
+    }
+
+    #[test]
     fn check_checksum() {
         dpdk_test! {
             let packet = RawPacket::from_bytes(&SRH_PACKET).unwrap();
@@ -592,7 +642,7 @@ mod tests {
                 .set_segments(&[segment1, segment2, segment3, segment4])
                 .is_ok());
             assert_eq!(4, srh.segments().len());
-            srh.set_segments_left(3);
+            srh.set_segments_left(3).unwrap();
 
             let mut tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
 
@@ -612,7 +662,7 @@ mod tests {
             let mut srh_ret = tcp.deparse();
             assert!(srh_ret.set_segments(&[segment1]).is_ok());
             assert_eq!(1, srh_ret.segments().len());
-            srh_ret.set_segments_left(1);
+            srh_ret.set_segments_left(0).unwrap();
 
             let mut tcp_ret = srh_ret.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
             tcp_ret.cascade();
@@ -621,7 +671,7 @@ mod tests {
             // Let's make sure that if segments left is 0, then our checksum
             // is still the same segment.
             let mut srh_fin = tcp_ret.deparse();
-            srh_fin.set_segments_left(0);
+            srh_fin.set_segments_left(0).unwrap();
             let mut tcp_fin = srh_fin.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
             tcp_fin.cascade();
             assert_eq!(expected, tcp_fin.checksum());

@@ -259,7 +259,7 @@ fn srh<E: Debug + Ipv6Packet>(
         .prop_map(move |(packet, segments, segments_left, tag)| {
             let mut packet = packet.push::<SegmentRouting<E>>().unwrap();
             packet.set_segments(&segments).unwrap();
-            packet.set_segments_left(segments_left);
+            packet.__set_segments_left(segments_left);
             packet.set_tag(tag);
             packet.set_next_header(next_header);
             packet
