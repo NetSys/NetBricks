@@ -105,7 +105,7 @@ use std::fmt;
 */
 
 /// NDP router advertisement message
-#[derive(Default, Debug)]
+#[derive(Clone, Copy, Default, Debug)]
 #[repr(C, packed)]
 pub struct RouterAdvertisement {
     current_hop_limit: u8,

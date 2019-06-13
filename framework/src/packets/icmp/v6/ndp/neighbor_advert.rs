@@ -79,7 +79,7 @@ const S_FLAG: u8 = 0b0100_0000;
 const O_FLAG: u8 = 0b0010_0000;
 
 /// NDP neighbor advertisement message
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub struct NeighborAdvertisement {
     flags: u8,

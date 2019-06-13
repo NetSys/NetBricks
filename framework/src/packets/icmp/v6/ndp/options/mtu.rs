@@ -27,7 +27,7 @@ use std::fmt;
                     the link.
 */
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
 struct MtuFields {
     option_type: u8,
