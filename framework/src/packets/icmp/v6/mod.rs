@@ -87,7 +87,7 @@ impl fmt::Display for Icmpv6Type {
 }
 
 /// ICMPv6 packet header
-#[derive(Default, Debug)]
+#[derive(Clone, Copy, Default, Debug)]
 #[repr(C, packed)]
 pub struct Icmpv6Header {
     msg_type: u8,

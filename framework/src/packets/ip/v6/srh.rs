@@ -92,7 +92,7 @@ use std::net::{IpAddr, Ipv6Addr};
 ///
 /// The segment routing header contains only the fixed portion of the
 /// header. `segment_list` and `tlv` are parsed separately.
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct SegmentRoutingHeader {
     next_header: u8,

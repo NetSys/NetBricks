@@ -21,7 +21,7 @@ use std::fmt;
 */
 
 /// Packet too big message
-#[derive(Default, Debug)]
+#[derive(Clone, Copy, Default, Debug)]
 #[repr(C, packed)]
 pub struct PacketTooBig {
     mtu: u32,

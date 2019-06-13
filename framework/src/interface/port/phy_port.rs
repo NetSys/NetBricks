@@ -366,7 +366,7 @@ impl PmdPort {
             port_config.txd,
             port_config.loopback,
             port_config.tso,
-            port_config.csum,
+            port_config.csumoffload,
         )
     }
 

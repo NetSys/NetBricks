@@ -123,14 +123,17 @@ impl fmt::Display for EtherType {
             match *self {
                 EtherTypes::Ipv4 => "IPv4".to_string(),
                 EtherTypes::Ipv6 => "IPv6".to_string(),
-                _ => format!("0x{:04x}", self.0),
+                _ => {
+                    let t = self.0;
+                    format!("0x{:04x}", t)
+                }
             }
         )
     }
 }
 
 /// Ethernet header
-#[derive(Default, Debug)]
+#[derive(Clone, Copy, Default, Debug)]
 #[repr(C, packed)]
 pub struct EthernetHeader {
     dst: MacAddr,

@@ -28,7 +28,7 @@ use std::fmt;
 */
 
 /// Echo request message
-#[derive(Default, Debug)]
+#[derive(Clone, Copy, Default, Debug)]
 #[repr(C, packed)]
 pub struct EchoRequest {
     identifier: u16,

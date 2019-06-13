@@ -83,14 +83,14 @@ pub struct PortConfiguration {
     pub txd: i32,
     pub loopback: bool,
     pub tso: bool,
-    pub csum: bool,
+    pub csumoffload: bool,
 }
 
 impl fmt::Display for PortConfiguration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "name: {}, rxq: {:?}, txq: {:?}, rxd: {}, txd: {}, loopback: {}, tso: {}, csum: {}",
+            "name: {}, rxq: {:?}, txq: {:?}, rxd: {}, txd: {}, loopback: {}, tso: {}, csumoffload: {}",
             self.name,
             self.rx_queues,
             self.tx_queues,
@@ -98,7 +98,7 @@ impl fmt::Display for PortConfiguration {
             self.txd,
             self.loopback,
             self.tso,
-            self.csum,
+            self.csumoffload,
         )
     }
 }
@@ -191,7 +191,7 @@ impl Source for CommandLine {
                         ("txd".to_string(), Value::new(uri, i64::from(NUM_TXD))),
                         ("loopback".to_string(), Value::new(uri, false)),
                         ("tso".to_string(), Value::new(uri, false)),
-                        ("csum".to_string(), Value::new(uri, false)),
+                        ("csumoffload".to_string(), Value::new(uri, false)),
                     ]
                     .iter()
                     .cloned()
