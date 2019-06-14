@@ -156,7 +156,10 @@ impl Dequeue for Receiver<RawPacket> {
 
     fn dequeue(&self) -> Option<Self::Item> {
         match self.try_recv() {
-            Ok(packet) => Some(packet),
+            Ok(mut packet) => {
+                packet.unown();
+                Some(packet)
+            }
             Err(TryRecvError::Empty) => None,
             Err(TryRecvError::Disconnected) => {
                 // Only way to get an error is if the sender disconnected,

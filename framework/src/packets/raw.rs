@@ -12,6 +12,7 @@ impl Header for () {}
 #[derive(Debug)]
 pub struct RawPacket {
     mbuf: *mut MBuf,
+    owned: bool,
 }
 
 // Compare RawPackets. This probably isn't something you want to be doing a lot of at runtime.
@@ -38,7 +39,7 @@ impl RawPacket {
             if mbuf.is_null() {
                 Err(buffer::BufferError::FailAlloc.into())
             } else {
-                Ok(RawPacket { mbuf })
+                Ok(RawPacket { mbuf, owned: true })
             }
         }
     }
@@ -53,13 +54,21 @@ impl RawPacket {
 
     /// Creates a new packet from a MBuf
     pub fn from_mbuf(mbuf: *mut MBuf) -> Self {
-        RawPacket { mbuf }
+        RawPacket { mbuf, owned: false }
     }
 
     /// Returns the reference count of the underlying buffer
     #[inline]
     pub fn refcnt(&self) -> u16 {
         unsafe { (*self.mbuf).refcnt() }
+    }
+
+    /// Gives up the ownership of the underlying buffer
+    ///
+    /// This prevents freeing the `MBuf` when the variable goes out
+    /// of scope.
+    pub(crate) fn unown(&mut self) {
+        self.owned = false;
     }
 }
 
@@ -136,6 +145,27 @@ impl Packet for RawPacket {
     #[inline]
     fn deparse(self) -> Self::Envelope {
         self
+    }
+
+    #[inline]
+    default fn reset(self) -> RawPacket {
+        self
+    }
+}
+
+// only free the underlying mbuf if it's created by the raw packet.
+// otherwise if the mbuf is passed in externally on creation, then
+// the external allocator is responsible for freeing the mbuf. for
+// example, the receive operator bulk allocates mbufs, and then
+// the send operator bulk frees them. raw packet will not attempt
+// to free the mbuf on drop in that case.
+impl Drop for RawPacket {
+    fn drop(&mut self) {
+        if self.owned {
+            unsafe {
+                zcsi::mbuf_free(self.mbuf);
+            }
+        }
     }
 }
 
