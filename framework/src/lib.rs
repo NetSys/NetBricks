@@ -21,7 +21,6 @@ extern crate config as config_rs;
 extern crate failure;
 extern crate fallible_iterator;
 extern crate fnv;
-extern crate futures;
 extern crate hex;
 #[macro_use]
 extern crate lazy_static;
