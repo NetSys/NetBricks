@@ -268,6 +268,24 @@ impl<E: Ipv6Packet> SegmentRouting<E> {
             Err(BadSegmentsError.into())
         }
     }
+
+    /// Returns the current segment in the segment list.
+    #[inline]
+    pub fn current_segment(&self) -> Segment {
+        self.segments()[self.segments_left() as usize]
+    }
+
+    /// Returns the previous segment in the segment list.
+    #[inline]
+    pub fn previous_segment(&self) -> Segment {
+        self.segments()[self.segments_left() as usize + 1]
+    }
+
+    /// Returns the next segment in the segment list.
+    #[inline]
+    pub fn next_segment(&self) -> Segment {
+        self.segments()[self.segments_left() as usize - 1]
+    }
 }
 
 impl<E: Ipv6Packet> fmt::Display for SegmentRouting<E> {
@@ -619,6 +637,10 @@ mod tests {
             assert!(srh.set_segments_left(1).is_ok());
             assert_eq!(1, srh.segments_left());
             assert_eq!(srh.segments()[1], srh.envelope().dst());
+
+            assert_eq!("2001:db8:85a3::8a2e:370:7333", srh.next_segment().to_string());
+            assert_eq!("2001:db8:85a3::8a2e:370:7334", srh.current_segment().to_string());
+            assert_eq!("2001:db8:85a3::8a2e:370:7335", srh.previous_segment().to_string());
 
             assert!(srh.set_segments_left(10).is_err());
             assert_eq!(1, srh.segments_left());
