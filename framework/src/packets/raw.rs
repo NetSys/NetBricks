@@ -178,18 +178,15 @@ unsafe impl Send for RawPacket {}
 mod tests {
     use super::*;
     use crate::packets::UDP_PACKET;
+    use crate::testing::dpdk_test;
 
-    #[test]
+    #[dpdk_test]
     fn new_raw_packet() {
-        dpdk_test! {
-            assert!(RawPacket::new().is_ok());
-        }
+        assert!(RawPacket::new().is_ok());
     }
 
-    #[test]
+    #[dpdk_test]
     fn raw_packet_from_bytes() {
-        dpdk_test! {
-            assert!(RawPacket::from_bytes(&UDP_PACKET).is_ok());
-        }
+        assert!(RawPacket::from_bytes(&UDP_PACKET).is_ok());
     }
 }

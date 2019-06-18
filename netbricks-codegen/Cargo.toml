@@ -1,0 +1,22 @@
+[package]
+name = "netbricks-codegen"
+version = "0.1.0"
+authors = ["William of Ockham <Occam_Engineering@comcast.com>"]
+description = "A network function framework written in Rust and using DPDK"
+license = "ISC"
+repository = "https://github.com/williamofockham/NetBricks"
+readme = "../README.md"
+keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
+categories = ["network-functions", "framework"]
+
+[lib]
+doctest = false
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "0.4"
+quote = "0.6"
+syn = { version = "0.15", features = ["extra-traits", "full"] }
+
+[features]
+nightly = ["proc-macro2/nightly"]

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "framework",
+    "netbricks-codegen",
     "examples/acl-fw",
     "examples/chain",
     "examples/collect-metrics",

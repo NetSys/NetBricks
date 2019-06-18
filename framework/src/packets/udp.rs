@@ -322,6 +322,7 @@ mod tests {
     use super::*;
     use crate::packets::ip::v4::Ipv4;
     use crate::packets::{Ethernet, RawPacket};
+    use crate::testing::dpdk_test;
     use std::net::{Ipv4Addr, Ipv6Addr};
 
     #[test]
@@ -329,87 +330,77 @@ mod tests {
         assert_eq!(8, UdpHeader::size());
     }
 
-    #[test]
+    #[dpdk_test]
     fn parse_udp_packet() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
+        let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+        let udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
 
-            assert_eq!(39376, udp.src_port());
-            assert_eq!(1087, udp.dst_port());
-            assert_eq!(18, udp.length());
-            assert_eq!(0x7228, udp.checksum());
-        }
+        assert_eq!(39376, udp.src_port());
+        assert_eq!(1087, udp.dst_port());
+        assert_eq!(18, udp.length());
+        assert_eq!(0x7228, udp.checksum());
     }
 
-    #[test]
+    #[dpdk_test]
     fn udp_flow_v4() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
-            let flow = udp.flow();
+        let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+        let udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
+        let flow = udp.flow();
 
-            assert_eq!("139.133.217.110", flow.src_ip().to_string());
-            assert_eq!("139.133.233.2", flow.dst_ip().to_string());
-            assert_eq!(39376, flow.src_port());
-            assert_eq!(1087, flow.dst_port());
-            assert_eq!(ProtocolNumbers::Udp, flow.protocol());
-        }
+        assert_eq!("139.133.217.110", flow.src_ip().to_string());
+        assert_eq!("139.133.233.2", flow.dst_ip().to_string());
+        assert_eq!(39376, flow.src_port());
+        assert_eq!(1087, flow.dst_port());
+        assert_eq!(ProtocolNumbers::Udp, flow.protocol());
     }
 
-    #[test]
+    #[dpdk_test]
     fn set_src_dst_ip() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let mut udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
+        let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+        let mut udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
 
-            let old_checksum = udp.checksum();
-            let new_ip = Ipv4Addr::new(10, 0, 0, 0);
-            assert!(udp.set_src_ip(new_ip.into()).is_ok());
-            assert!(udp.checksum() != old_checksum);
-            assert_eq!(new_ip.to_string(), udp.envelope().src().to_string());
+        let old_checksum = udp.checksum();
+        let new_ip = Ipv4Addr::new(10, 0, 0, 0);
+        assert!(udp.set_src_ip(new_ip.into()).is_ok());
+        assert!(udp.checksum() != old_checksum);
+        assert_eq!(new_ip.to_string(), udp.envelope().src().to_string());
 
-            let old_checksum = udp.checksum();
-            let new_ip = Ipv4Addr::new(20, 0, 0, 0);
-            assert!(udp.set_dst_ip(new_ip.into()).is_ok());
-            assert!(udp.checksum() != old_checksum);
-            assert_eq!(new_ip.to_string(), udp.envelope().dst().to_string());
+        let old_checksum = udp.checksum();
+        let new_ip = Ipv4Addr::new(20, 0, 0, 0);
+        assert!(udp.set_dst_ip(new_ip.into()).is_ok());
+        assert!(udp.checksum() != old_checksum);
+        assert_eq!(new_ip.to_string(), udp.envelope().dst().to_string());
 
-            // can't set v6 addr on a v4 packet
-            assert!(udp.set_src_ip(Ipv6Addr::UNSPECIFIED.into()).is_err());
-        }
+        // can't set v6 addr on a v4 packet
+        assert!(udp.set_src_ip(Ipv6Addr::UNSPECIFIED.into()).is_err());
     }
 
-    #[test]
+    #[dpdk_test]
     fn compute_checksum() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let mut udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
+        let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+        let mut udp = ipv4.parse::<Udp<Ipv4>>().unwrap();
 
-            let expected = udp.checksum();
-            // no payload change but force a checksum recompute anyway
-            udp.cascade();
-            assert_eq!(expected, udp.checksum());
-        }
+        let expected = udp.checksum();
+        // no payload change but force a checksum recompute anyway
+        udp.cascade();
+        assert_eq!(expected, udp.checksum());
     }
 
-    #[test]
+    #[dpdk_test]
     fn push_udp_packet() {
-        dpdk_test! {
-            let packet = RawPacket::new().unwrap();
-            let ethernet = packet.push::<Ethernet>().unwrap();
-            let ipv4 = ethernet.push::<Ipv4>().unwrap();
-            let udp = ipv4.push::<Udp<Ipv4>>().unwrap();
+        let packet = RawPacket::new().unwrap();
+        let ethernet = packet.push::<Ethernet>().unwrap();
+        let ipv4 = ethernet.push::<Ipv4>().unwrap();
+        let udp = ipv4.push::<Udp<Ipv4>>().unwrap();
 
-            assert_eq!(UdpHeader::size(), udp.len());
-        }
+        assert_eq!(UdpHeader::size(), udp.len());
     }
 }

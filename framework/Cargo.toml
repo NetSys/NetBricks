@@ -6,12 +6,18 @@ description = "A network function framework written in Rust and using DPDK"
 build = "build.rs"
 license = "ISC"
 repository = "https://github.com/williamofockham/NetBricks"
-readme = "README.md"
+readme = "../README.md"
 keywords = ["netbricks", "network-functions", "nfs", "packet-processing"]
 categories = ["network-functions", "framework"]
 
 [lib]
 doctest = false
+name = "netbricks"
+path = "src/lib.rs"
+
+[badges]
+travis-ci = { repository = "williamofockham/NetBricks", branch = "master" }
+codecov = { repository = "williamofockham/NetBricks", branch = "master", service = "github" }
 
 [dependencies]
 clap = "2.33"
@@ -23,6 +29,7 @@ hex = "0.3"
 lazy_static = ">= 1.3"
 libc = ">= 0.2"
 log = { version = "0.4", features = ["std", "serde"] }
+netbricks-codegen = { path = "../netbricks-codegen" }
 net2 = "0.2"
 # NIX restricts us to just unix for now, we can fix this if someone cares at a later point.
 nix = ">= 0.13"

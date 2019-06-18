@@ -299,6 +299,7 @@ impl Packet for Ethernet {
 mod tests {
     use super::*;
     use crate::packets::UDP_PACKET;
+    use crate::testing::dpdk_test;
 
     #[test]
     fn size_of_ethernet_header() {
@@ -344,51 +345,44 @@ mod tests {
         assert_eq!("0x0000", EtherType::new(0).to_string());
     }
 
-    #[test]
+    #[dpdk_test]
     fn parse_ethernet_packet() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
+        let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
 
-            assert_eq!("00:00:00:00:00:01", ethernet.dst().to_string());
-            assert_eq!("00:00:00:00:00:02", ethernet.src().to_string());
-            assert_eq!(EtherTypes::Ipv4, ethernet.ether_type());
-        }
+        assert_eq!("00:00:00:00:00:01", ethernet.dst().to_string());
+        assert_eq!("00:00:00:00:00:02", ethernet.src().to_string());
+        assert_eq!(EtherTypes::Ipv4, ethernet.ether_type());
     }
 
-    #[test]
+    #[dpdk_test]
     fn reset_reparse_ethernet_packet() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let reset = ethernet.reset();
-            let reset_ethernet = reset.parse::<Ethernet>().unwrap();
+        let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let reset = ethernet.reset();
+        let reset_ethernet = reset.parse::<Ethernet>().unwrap();
 
-            assert_eq!("00:00:00:00:00:01", reset_ethernet.dst().to_string());
-            assert_eq!("00:00:00:00:00:02", reset_ethernet.src().to_string());
-            assert_eq!(EtherTypes::Ipv4, reset_ethernet.ether_type());
-        }
+        assert_eq!("00:00:00:00:00:01", reset_ethernet.dst().to_string());
+        assert_eq!("00:00:00:00:00:02", reset_ethernet.src().to_string());
+        assert_eq!(EtherTypes::Ipv4, reset_ethernet.ether_type());
     }
 
-    #[test]
+    #[dpdk_test]
     fn swap_addresses() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
-            let mut ethernet = packet.parse::<Ethernet>().unwrap();
-            ethernet.swap_addresses();
+        let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+        let mut ethernet = packet.parse::<Ethernet>().unwrap();
+        ethernet.swap_addresses();
 
-            assert_eq!("00:00:00:00:00:02", ethernet.dst().to_string());
-            assert_eq!("00:00:00:00:00:01", ethernet.src().to_string());
-        }
+        assert_eq!("00:00:00:00:00:02", ethernet.dst().to_string());
+        assert_eq!("00:00:00:00:00:01", ethernet.src().to_string());
     }
 
-    #[test]
+    #[dpdk_test]
     fn push_ethernet_packet() {
-        dpdk_test! {
-            let packet = RawPacket::new().unwrap();
-            let ethernet = packet.push::<Ethernet>().unwrap();
+        let packet = RawPacket::new().unwrap();
+        let ethernet = packet.push::<Ethernet>().unwrap();
 
-            assert_eq!(EthernetHeader::size(), ethernet.len());
-        }
+        assert_eq!(EthernetHeader::size(), ethernet.len());
     }
+
 }

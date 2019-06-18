@@ -205,27 +205,25 @@ pub fn mpsc_batch() -> (MpscProducer, QueueBatch<Receiver<RawPacket>>) {
 mod tests {
     use super::*;
     use crate::packets::{RawPacket, UDP_PACKET};
+    use crate::testing::dpdk_test;
 
-    #[test]
+    #[dpdk_test]
     fn single_threaded() {
-        dpdk_test! {
-            let (producer, mut batch) = single_threaded_batch::<RawPacket>(1);
-            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+        let (producer, mut batch) = single_threaded_batch::<RawPacket>(1);
+        producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
 
-            assert!(batch.next().unwrap().is_ok());
-        }
+        assert!(batch.next().unwrap().is_ok());
     }
 
-    #[test]
+    #[dpdk_test]
     fn mpsc() {
-        dpdk_test! {
-            let (producer, mut batch) = mpsc_batch();
-            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+        let (producer, mut batch) = mpsc_batch();
+        producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
 
-            let thread = std::thread::spawn(move || {
-                assert!(batch.next().unwrap().is_ok());
-            });
-            thread.join().unwrap()
-        }
+        let thread = std::thread::spawn(move || {
+            assert!(batch.next().unwrap().is_ok());
+        });
+        thread.join().unwrap()
     }
+
 }

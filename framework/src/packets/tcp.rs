@@ -594,6 +594,7 @@ mod tests {
     use crate::packets::ip::v4::Ipv4;
     use crate::packets::ip::v6::{Ipv6, SegmentRouting, SRH_PACKET};
     use crate::packets::{Ethernet, RawPacket};
+    use crate::testing::dpdk_test;
     use std::net::{Ipv4Addr, Ipv6Addr};
 
     #[test]
@@ -601,119 +602,107 @@ mod tests {
         assert_eq!(20, TcpHeader::size());
     }
 
-    #[test]
+    #[dpdk_test]
     fn parse_tcp_packet() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
+        let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+        let tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
 
-            assert_eq!(36869, tcp.src_port());
-            assert_eq!(23, tcp.dst_port());
-            assert_eq!(1_913_975_060, tcp.seq_no());
-            assert_eq!(0, tcp.ack_no());
-            assert_eq!(6, tcp.data_offset());
-            assert_eq!(8760, tcp.window());
-            assert_eq!(0xa92c, tcp.checksum());
-            assert_eq!(0, tcp.urgent_pointer());
-            assert!(!tcp.ns());
-            assert!(!tcp.cwr());
-            assert!(!tcp.ece());
-            assert!(!tcp.urg());
-            assert!(!tcp.ack());
-            assert!(!tcp.psh());
-            assert!(!tcp.rst());
-            assert!(tcp.syn());
-            assert!(!tcp.fin());
-        }
+        assert_eq!(36869, tcp.src_port());
+        assert_eq!(23, tcp.dst_port());
+        assert_eq!(1_913_975_060, tcp.seq_no());
+        assert_eq!(0, tcp.ack_no());
+        assert_eq!(6, tcp.data_offset());
+        assert_eq!(8760, tcp.window());
+        assert_eq!(0xa92c, tcp.checksum());
+        assert_eq!(0, tcp.urgent_pointer());
+        assert!(!tcp.ns());
+        assert!(!tcp.cwr());
+        assert!(!tcp.ece());
+        assert!(!tcp.urg());
+        assert!(!tcp.ack());
+        assert!(!tcp.psh());
+        assert!(!tcp.rst());
+        assert!(tcp.syn());
+        assert!(!tcp.fin());
     }
 
-    #[test]
+    #[dpdk_test]
     fn tcp_flow_v4() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
-            let flow = tcp.flow();
+        let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+        let tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
+        let flow = tcp.flow();
 
-            assert_eq!("139.133.217.110", flow.src_ip().to_string());
-            assert_eq!("139.133.233.2", flow.dst_ip().to_string());
-            assert_eq!(36869, flow.src_port());
-            assert_eq!(23, flow.dst_port());
-            assert_eq!(ProtocolNumbers::Tcp, flow.protocol());
-        }
+        assert_eq!("139.133.217.110", flow.src_ip().to_string());
+        assert_eq!("139.133.233.2", flow.dst_ip().to_string());
+        assert_eq!(36869, flow.src_port());
+        assert_eq!(23, flow.dst_port());
+        assert_eq!(ProtocolNumbers::Tcp, flow.protocol());
     }
 
-    #[test]
+    #[dpdk_test]
     fn tcp_flow_v6() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&SRH_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            let srh = ipv6.parse::<SegmentRouting<Ipv6>>().unwrap();
-            let tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
-            let flow = tcp.flow();
+        let packet = RawPacket::from_bytes(&SRH_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let srh = ipv6.parse::<SegmentRouting<Ipv6>>().unwrap();
+        let tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
+        let flow = tcp.flow();
 
-            assert_eq!("2001:db8:85a3::1", flow.src_ip().to_string());
-            assert_eq!("2001:db8:85a3::8a2e:370:7333", flow.dst_ip().to_string());
-            assert_eq!(3464, flow.src_port());
-            assert_eq!(1024, flow.dst_port());
-            assert_eq!(ProtocolNumbers::Tcp, flow.protocol());
-        }
+        assert_eq!("2001:db8:85a3::1", flow.src_ip().to_string());
+        assert_eq!("2001:db8:85a3::8a2e:370:7333", flow.dst_ip().to_string());
+        assert_eq!(3464, flow.src_port());
+        assert_eq!(1024, flow.dst_port());
+        assert_eq!(ProtocolNumbers::Tcp, flow.protocol());
     }
 
-    #[test]
+    #[dpdk_test]
     fn set_src_dst_ip() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let mut tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
+        let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+        let mut tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
 
-            let old_checksum = tcp.checksum();
-            let new_ip = Ipv4Addr::new(10, 0, 0, 0);
-            assert!(tcp.set_src_ip(new_ip.into()).is_ok());
-            assert!(tcp.checksum() != old_checksum);
-            assert_eq!(new_ip.to_string(), tcp.envelope().src().to_string());
+        let old_checksum = tcp.checksum();
+        let new_ip = Ipv4Addr::new(10, 0, 0, 0);
+        assert!(tcp.set_src_ip(new_ip.into()).is_ok());
+        assert!(tcp.checksum() != old_checksum);
+        assert_eq!(new_ip.to_string(), tcp.envelope().src().to_string());
 
-            let old_checksum = tcp.checksum();
-            let new_ip = Ipv4Addr::new(20, 0, 0, 0);
-            assert!(tcp.set_dst_ip(new_ip.into()).is_ok());
-            assert!(tcp.checksum() != old_checksum);
-            assert_eq!(new_ip.to_string(), tcp.envelope().dst().to_string());
+        let old_checksum = tcp.checksum();
+        let new_ip = Ipv4Addr::new(20, 0, 0, 0);
+        assert!(tcp.set_dst_ip(new_ip.into()).is_ok());
+        assert!(tcp.checksum() != old_checksum);
+        assert_eq!(new_ip.to_string(), tcp.envelope().dst().to_string());
 
-            // can't set v6 addr on a v4 packet
-            assert!(tcp.set_src_ip(Ipv6Addr::UNSPECIFIED.into()).is_err());
-        }
+        // can't set v6 addr on a v4 packet
+        assert!(tcp.set_src_ip(Ipv6Addr::UNSPECIFIED.into()).is_err());
     }
 
-    #[test]
+    #[dpdk_test]
     fn compute_checksum() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
-            let mut tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
+        let packet = RawPacket::from_bytes(&TCP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+        let mut tcp = ipv4.parse::<Tcp<Ipv4>>().unwrap();
 
-            let expected = tcp.checksum();
-            // no payload change but force a checksum recompute anyway
-            tcp.cascade();
-            assert_eq!(expected, tcp.checksum());
-        }
+        let expected = tcp.checksum();
+        // no payload change but force a checksum recompute anyway
+        tcp.cascade();
+        assert_eq!(expected, tcp.checksum());
     }
 
-    #[test]
+    #[dpdk_test]
     fn push_tcp_packet() {
-        dpdk_test! {
-            let packet = RawPacket::new().unwrap();
-            let ethernet = packet.push::<Ethernet>().unwrap();
-            let ipv4 = ethernet.push::<Ipv4>().unwrap();
-            let tcp = ipv4.push::<Tcp<Ipv4>>().unwrap();
+        let packet = RawPacket::new().unwrap();
+        let ethernet = packet.push::<Ethernet>().unwrap();
+        let ipv4 = ethernet.push::<Ipv4>().unwrap();
+        let tcp = ipv4.push::<Tcp<Ipv4>>().unwrap();
 
-            assert_eq!(TcpHeader::size(), tcp.len());
-            assert_eq!(5, tcp.data_offset());
-        }
+        assert_eq!(TcpHeader::size(), tcp.len());
+        assert_eq!(5, tcp.data_offset());
     }
 }

@@ -506,75 +506,70 @@ mod tests {
     use super::*;
     use crate::packets::ip::ProtocolNumbers;
     use crate::packets::{Ethernet, RawPacket, UDP_PACKET};
+    use crate::testing::dpdk_test;
 
     #[test]
     fn size_of_ipv4_header() {
         assert_eq!(20, Ipv4Header::size());
     }
 
-    #[test]
+    #[dpdk_test]
     fn parse_ipv4_packet() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv4 = ethernet.parse::<Ipv4>().unwrap();
+        let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv4 = ethernet.parse::<Ipv4>().unwrap();
 
-            assert_eq!(4, ipv4.version());
-            assert_eq!(5, ipv4.ihl());
-            assert_eq!(38, ipv4.total_length());
-            assert_eq!(43849, ipv4.identification());
-            assert_eq!(true, ipv4.dont_fragment());
-            assert_eq!(false, ipv4.more_fragments());
-            assert_eq!(0, ipv4.fragment_offset());
-            assert_eq!(0, ipv4.dscp());
-            assert_eq!(0, ipv4.ecn());
-            assert_eq!(255, ipv4.ttl());
-            assert_eq!(ProtocolNumbers::Udp, ipv4.protocol());
-            assert_eq!(0xf700, ipv4.checksum());
-            assert_eq!("139.133.217.110", ipv4.src().to_string());
-            assert_eq!("139.133.233.2", ipv4.dst().to_string());
-        }
+        assert_eq!(4, ipv4.version());
+        assert_eq!(5, ipv4.ihl());
+        assert_eq!(38, ipv4.total_length());
+        assert_eq!(43849, ipv4.identification());
+        assert_eq!(true, ipv4.dont_fragment());
+        assert_eq!(false, ipv4.more_fragments());
+        assert_eq!(0, ipv4.fragment_offset());
+        assert_eq!(0, ipv4.dscp());
+        assert_eq!(0, ipv4.ecn());
+        assert_eq!(255, ipv4.ttl());
+        assert_eq!(ProtocolNumbers::Udp, ipv4.protocol());
+        assert_eq!(0xf700, ipv4.checksum());
+        assert_eq!("139.133.217.110", ipv4.src().to_string());
+        assert_eq!("139.133.233.2", ipv4.dst().to_string());
     }
 
-    #[test]
+    #[dpdk_test]
     fn parse_ipv4_setter_checks() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let mut ipv4 = ethernet.parse::<Ipv4>().unwrap();
+        let packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let mut ipv4 = ethernet.parse::<Ipv4>().unwrap();
 
-            // Flags
-            assert_eq!(true, ipv4.dont_fragment());
-            assert_eq!(false, ipv4.more_fragments());
-            ipv4.unset_dont_fragment();
-            assert_eq!(false, ipv4.dont_fragment());
-            ipv4.set_more_fragments();
-            assert_eq!(true, ipv4.more_fragments());
-            ipv4.set_fragment_offset(5);
-            assert_eq!(5, ipv4.fragment_offset());
-            ipv4.clear_flags();
-            assert_eq!(false, ipv4.dont_fragment());
-            assert_eq!(false, ipv4.more_fragments());
+        // Flags
+        assert_eq!(true, ipv4.dont_fragment());
+        assert_eq!(false, ipv4.more_fragments());
+        ipv4.unset_dont_fragment();
+        assert_eq!(false, ipv4.dont_fragment());
+        ipv4.set_more_fragments();
+        assert_eq!(true, ipv4.more_fragments());
+        ipv4.set_fragment_offset(5);
+        assert_eq!(5, ipv4.fragment_offset());
+        ipv4.clear_flags();
+        assert_eq!(false, ipv4.dont_fragment());
+        assert_eq!(false, ipv4.more_fragments());
 
-            // DSCP & ECN
-            assert_eq!(0, ipv4.dscp());
-            assert_eq!(0, ipv4.ecn());
-            ipv4.set_dscp(10);
-            ipv4.set_ecn(3);
-            assert_eq!(10, ipv4.dscp());
-            assert_eq!(3, ipv4.ecn());
-        }
+        // DSCP & ECN
+        assert_eq!(0, ipv4.dscp());
+        assert_eq!(0, ipv4.ecn());
+        ipv4.set_dscp(10);
+        ipv4.set_ecn(3);
+        assert_eq!(10, ipv4.dscp());
+        assert_eq!(3, ipv4.ecn());
     }
 
-    #[test]
+    #[dpdk_test]
     fn push_ipv4_packet() {
-        dpdk_test! {
-            let packet = RawPacket::new().unwrap();
-            let ethernet = packet.push::<Ethernet>().unwrap();
-            let ipv4 = ethernet.push::<Ipv4>().unwrap();
+        let packet = RawPacket::new().unwrap();
+        let ethernet = packet.push::<Ethernet>().unwrap();
+        let ipv4 = ethernet.push::<Ipv4>().unwrap();
 
-            assert_eq!(4, ipv4.version());
-            assert_eq!(Ipv4Header::size(), ipv4.len());
-        }
+        assert_eq!(4, ipv4.version());
+        assert_eq!(Ipv4Header::size(), ipv4.len());
     }
 }

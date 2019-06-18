@@ -438,60 +438,55 @@ mod tests {
     use super::*;
     use crate::packets::ip::ProtocolNumbers;
     use crate::packets::RawPacket;
+    use crate::testing::dpdk_test;
 
     #[test]
     fn size_of_ipv6_header() {
         assert_eq!(40, Ipv6Header::size());
     }
 
-    #[test]
+    #[dpdk_test]
     fn parse_ipv6_packet() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&IPV6_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let packet = RawPacket::from_bytes(&IPV6_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
 
-            assert_eq!(6, ipv6.version());
-            assert_eq!(0, ipv6.dscp());
-            assert_eq!(0, ipv6.ecn());
-            assert_eq!(0, ipv6.flow_label());
-            assert_eq!(24, ipv6.payload_len());
-            assert_eq!(ProtocolNumbers::Udp, ipv6.next_header());
-            assert_eq!(2, ipv6.hop_limit());
-            assert_eq!("2001:db8:85a3::1", ipv6.src().to_string());
-            assert_eq!("2001:db8:85a3::8a2e:370:7334", ipv6.dst().to_string());
-        }
+        assert_eq!(6, ipv6.version());
+        assert_eq!(0, ipv6.dscp());
+        assert_eq!(0, ipv6.ecn());
+        assert_eq!(0, ipv6.flow_label());
+        assert_eq!(24, ipv6.payload_len());
+        assert_eq!(ProtocolNumbers::Udp, ipv6.next_header());
+        assert_eq!(2, ipv6.hop_limit());
+        assert_eq!("2001:db8:85a3::1", ipv6.src().to_string());
+        assert_eq!("2001:db8:85a3::8a2e:370:7334", ipv6.dst().to_string());
     }
 
-    #[test]
+    #[dpdk_test]
     fn parse_ipv6_setter_checks() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&IPV6_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let mut ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let packet = RawPacket::from_bytes(&IPV6_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let mut ipv6 = ethernet.parse::<Ipv6>().unwrap();
 
-            assert_eq!(6, ipv6.version());
-            assert_eq!(0, ipv6.dscp());
-            assert_eq!(0, ipv6.ecn());
-            assert_eq!(0, ipv6.flow_label());
-            ipv6.set_dscp(10);
-            ipv6.set_ecn(3);
-            assert_eq!(6, ipv6.version());
-            assert_eq!(10, ipv6.dscp());
-            assert_eq!(3, ipv6.ecn());
-            assert_eq!(0, ipv6.flow_label());
-        }
+        assert_eq!(6, ipv6.version());
+        assert_eq!(0, ipv6.dscp());
+        assert_eq!(0, ipv6.ecn());
+        assert_eq!(0, ipv6.flow_label());
+        ipv6.set_dscp(10);
+        ipv6.set_ecn(3);
+        assert_eq!(6, ipv6.version());
+        assert_eq!(10, ipv6.dscp());
+        assert_eq!(3, ipv6.ecn());
+        assert_eq!(0, ipv6.flow_label());
     }
 
-    #[test]
+    #[dpdk_test]
     fn push_ipv6_packet() {
-        dpdk_test! {
-            let packet = RawPacket::new().unwrap();
-            let ethernet = packet.push::<Ethernet>().unwrap();
-            let ipv6 = ethernet.push::<Ipv6>().unwrap();
+        let packet = RawPacket::new().unwrap();
+        let ethernet = packet.push::<Ethernet>().unwrap();
+        let ipv6 = ethernet.push::<Ipv6>().unwrap();
 
-            assert_eq!(6, ipv6.version());
-            assert_eq!(Ipv6Header::size(), ipv6.len());
-        }
+        assert_eq!(6, ipv6.version());
+        assert_eq!(Ipv6Header::size(), ipv6.len());
     }
 }

@@ -426,66 +426,59 @@ mod tests {
     use super::*;
     use crate::packets::ip::v6::Ipv6;
     use crate::packets::{Ethernet, RawPacket};
+    use crate::testing::dpdk_test;
 
     #[test]
     fn size_of_icmpv6_header() {
         assert_eq!(4, Icmpv6Header::size());
     }
 
-    #[test]
+    #[dpdk_test]
     fn parse_icmpv6_packet() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&ICMPV6_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
+        let packet = RawPacket::from_bytes(&ICMPV6_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
 
-            assert_eq!(Icmpv6Type::new(0xFF), icmpv6.msg_type());
-            assert_eq!(0, icmpv6.code());
-            assert_eq!(0x01f0, icmpv6.checksum());
-        }
+        assert_eq!(Icmpv6Type::new(0xFF), icmpv6.msg_type());
+        assert_eq!(0, icmpv6.code());
+        assert_eq!(0x01f0, icmpv6.checksum());
     }
 
-    #[test]
+    #[dpdk_test]
     fn downcast_icmpv6() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
-            let advert = icmpv6.downcast::<RouterAdvertisement>().unwrap();
+        let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
+        let advert = icmpv6.downcast::<RouterAdvertisement>().unwrap();
 
-            // check one accessor that belongs to `RouterAdvertisement`
-            assert_eq!(64, advert.current_hop_limit());
-        }
+        // check one accessor that belongs to `RouterAdvertisement`
+        assert_eq!(64, advert.current_hop_limit());
     }
 
-    #[test]
+    #[dpdk_test]
     fn compute_checksum() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            let mut icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
+        let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let mut icmpv6 = ipv6.parse::<Icmpv6<Ipv6, ()>>().unwrap();
 
-            let expected = icmpv6.checksum();
-            // no payload change but force a checksum recompute anyway
-            icmpv6.cascade();
-            assert_eq!(expected, icmpv6.checksum());
-        }
+        let expected = icmpv6.checksum();
+        // no payload change but force a checksum recompute anyway
+        icmpv6.cascade();
+        assert_eq!(expected, icmpv6.checksum());
     }
 
-    #[test]
+    #[dpdk_test]
     fn matchable_icmpv6_packets() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&ICMPV6_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
-            if let Ok(Icmpv6Message::Undefined(icmpv6)) = ipv6.parse_icmpv6() {
-                assert_eq!(Icmpv6Type::new(0xFF), icmpv6.msg_type());
-            } else {
-                panic!("bad packet");
-            }
+        let packet = RawPacket::from_bytes(&ICMPV6_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        if let Ok(Icmpv6Message::Undefined(icmpv6)) = ipv6.parse_icmpv6() {
+            assert_eq!(Icmpv6Type::new(0xFF), icmpv6.msg_type());
+        } else {
+            panic!("bad packet");
         }
     }
 }

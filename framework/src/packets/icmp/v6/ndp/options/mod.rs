@@ -159,44 +159,41 @@ mod tests {
     use crate::packets::icmp::v6::{Icmpv6Message, Icmpv6Parse, NdpPacket};
     use crate::packets::ip::v6::Ipv6;
     use crate::packets::{Ethernet, Packet, RawPacket};
+    use crate::testing::dpdk_test;
 
-    #[test]
+    #[dpdk_test]
     fn invalid_ndp_option_length() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&INVALID_OPTION_LENGTH).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let packet = RawPacket::from_bytes(&INVALID_OPTION_LENGTH).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
 
-            if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
-                assert!(advert.options().next().is_err());
-            } else {
-                panic!("bad packet");
-            }
+        if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
+            assert!(advert.options().next().is_err());
+        } else {
+            panic!("bad packet");
         }
     }
 
-    #[test]
+    #[dpdk_test]
     fn undefined_ndp_option() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&UNDEFINED_OPTION).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let packet = RawPacket::from_bytes(&UNDEFINED_OPTION).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
 
-            if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
-                let mut undefined = false;
-                let mut iter = advert.options();
-                while let Ok(Some(option)) = iter.next() {
-                    if let NdpOption::Undefined(option_type, length) = option {
-                        assert_eq!(7, option_type);
-                        assert_eq!(1, length);
-                        undefined = true;
-                    }
+        if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
+            let mut undefined = false;
+            let mut iter = advert.options();
+            while let Ok(Some(option)) = iter.next() {
+                if let NdpOption::Undefined(option_type, length) = option {
+                    assert_eq!(7, option_type);
+                    assert_eq!(1, length);
+                    undefined = true;
                 }
-
-                assert!(undefined);
-            } else {
-                panic!("bad packet");
             }
+
+            assert!(undefined);
+        } else {
+            panic!("bad packet");
         }
     }
 }

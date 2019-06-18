@@ -379,22 +379,18 @@ pub fn v4_tcp() -> impl Strategy<Value = RawPacket> {
 /// # Example
 ///
 /// ```
-/// dpdk_test! {
-///     let mut runner = TestRunner::default();
-///     runner.run(
-///         &(v4_tcp(fieldmap! {
-///             field::ipv4_src => "127.0.0.1".parse(),
-///             field::tcp_dst_port => 80,
-///         })),
-///         |packet| {
-///             let packet = packet.parse::<Ethernet>().unwrap();
-///             let v4 = packet.parse::<Ipv4>().unwrap();
-///             assert_eq!("127.0.0.1".parse(), v4.src());
-///             let tcp = v4.parse::<Tcp<Ipv4>>().unwrap();
-///             assert_eq!(80, tcp.dst_port());
-///             Ok(())
-///         }
-///     ).unwrap();
+/// #[dpdk_test]
+/// fn v4_tcp_packet() {
+///     proptest!(|(packet in v4_tcp_with(fieldmap! {
+///         field::ipv4_src => "127.0.0.1".parse(),
+///         field::tcp_dst_port => 80
+///     }))| {
+///         let packet = packet.parse::<Ethernet>().unwrap();
+///         let v4 = packet.parse::<Ipv4>().unwrap();
+///         assert_eq!("127.0.0.1".parse(), v4.src());
+///         let tcp = v4.parse::<Tcp<Ipv4>>().unwrap();
+///         assert_eq!(80, tcp.dst_port());
+///     });
 /// }
 /// ```
 pub fn v4_tcp_with(map: StrategyMap) -> impl Strategy<Value = RawPacket> {
@@ -409,7 +405,7 @@ pub fn v4_tcp_with(map: StrategyMap) -> impl Strategy<Value = RawPacket> {
 /// `ether_type` is always `EtherTypes::Ipv4` and `next_header` is always
 /// `ProtocolNumbers::Udp`.
 pub fn v4_udp() -> impl Strategy<Value = RawPacket> {
-    v4_tcp_with(fieldmap! {})
+    v4_udp_with(fieldmap! {})
 }
 
 /// Returns a strategy to generate IPv4 UDP packets
@@ -421,22 +417,18 @@ pub fn v4_udp() -> impl Strategy<Value = RawPacket> {
 /// # Example
 ///
 /// ```
-/// dpdk_test! {
-///     let mut runner = TestRunner::default();
-///     runner.run(
-///         &(v4_udp(fieldmap! {
-///             field::ipv4_src => "127.0.0.1".parse(),
-///             field::udp_dst_port => 53,
-///         })),
-///         |packet| {
-///             let packet = packet.parse::<Ethernet>().unwrap();
-///             let v4 = packet.parse::<Ipv4>().unwrap();
-///             assert_eq!("127.0.0.1".parse(), v4.src());
-///             let udp = v4.parse::<Udp<Ipv4>>().unwrap();
-///             assert_eq!(53, udp.dst_port());
-///             Ok(())
-///         }
-///     ).unwrap();
+/// #[dpdk_test]
+/// fn v4_udp_packet() {
+///     proptest!(|(packet in v4_udp_with(fieldmap! {
+///         field::ipv4_src => "127.0.0.1".parse(),
+///         field::udp_dst_port => 53,
+///     }))| {
+///         let packet = packet.parse::<Ethernet>().unwrap();
+///         let v4 = packet.parse::<Ipv4>().unwrap();
+///         prop_assert_eq!("127.0.0.1".parse(), v4.src());
+///         let udp = v4.parse::<Udp<Ipv4>>().unwrap();
+///         prop_assert_eq!(53, udp.dst_port());
+///     });
 /// }
 /// ```
 pub fn v4_udp_with(map: StrategyMap) -> impl Strategy<Value = RawPacket> {
@@ -463,22 +455,18 @@ pub fn v6_tcp() -> impl Strategy<Value = RawPacket> {
 /// # Example
 ///
 /// ```
-/// dpdk_test! {
-///     let mut runner = TestRunner::default();
-///     runner.run(
-///         &(v6_tcp(fieldmap! {
-///             field::ipv6_src => "::1".parse(),
-///             field::tcp_dst_port => 80,
-///         })),
-///         |packet| {
-///             let packet = packet.parse::<Ethernet>().unwrap();
-///             let v6 = packet.parse::<Ipv6>().unwrap();
-///             assert_eq!("::1".parse(), v6.src());
-///             let tcp = v6.parse::<Tcp<Ipv6>>().unwrap();
-///             assert_eq!(80, tcp.dst_port());
-///             Ok(())
-///         }
-///     ).unwrap();
+/// #[dpdk_test]
+/// fn v6_tcp_packet() {
+///     proptest!(|(packet in v6_tcp_with(fieldmap! {
+///         field::ipv6_src => "::1".parse(),
+///         field::tcp_dst_port => 80,
+///     }))| {
+///         let packet = packet.parse::<Ethernet>().unwrap();
+///         let v6 = packet.parse::<Ipv6>().unwrap();
+///         prop_assert_eq!("::1".parse(), v6.src());
+///         let tcp = v6.parse::<Tcp<Ipv6>>().unwrap();
+///         prop_assert_eq!(80, tcp.dst_port());
+///     });
 /// }
 /// ```
 pub fn v6_tcp_with(map: StrategyMap) -> impl Strategy<Value = RawPacket> {
@@ -493,7 +481,7 @@ pub fn v6_tcp_with(map: StrategyMap) -> impl Strategy<Value = RawPacket> {
 /// `ether_type` is always `EtherTypes::Ipv6` and `next_header` is always
 /// `ProtocolNumbers::Udp`.
 pub fn v6_udp() -> impl Strategy<Value = RawPacket> {
-    v6_tcp_with(fieldmap! {})
+    v6_udp_with(fieldmap! {})
 }
 
 /// Returns a strategy to generate IPv6 UDP packets
@@ -505,22 +493,18 @@ pub fn v6_udp() -> impl Strategy<Value = RawPacket> {
 /// # Example
 ///
 /// ```
-/// dpdk_test! {
-///     let mut runner = TestRunner::default();
-///     runner.run(
-///         &(v6_udp(fieldmap! {
-///             field::ipv6_src => "::1".parse(),
-///             field::udp_dst_port => 53,
-///         })),
-///         |packet| {
-///             let packet = packet.parse::<Ethernet>().unwrap();
-///             let v6 = packet.parse::<Ipv6>().unwrap();
-///             assert_eq!("::1".parse(), v6.src());
-///             let udp = v6.parse::<Udp<Ipv6>>().unwrap();
-///             assert_eq!(53, udp.dst_port());
-///             Ok(())
-///         }
-///     ).unwrap();
+/// #[dpdk_test]
+/// fn v6_udp_packet() {
+///     proptest!(|(packet in v6_udp_with(fieldmap! {
+///         field::ipv6_src => "::1".parse(),
+///         field::udp_dst_port => 53,
+///     }))| {
+///         let packet = packet.parse::<Ethernet>().unwrap();
+///         let v6 = packet.parse::<Ipv6>().unwrap();
+///         prop_assert_eq!("::1".parse(), v6.src());
+///         let udp = v6.parse::<Udp<Ipv6>>().unwrap();
+///         prop_assert_eq!(53, udp.dst_port());
+///     });
 /// }
 /// ```
 pub fn v6_udp_with(map: StrategyMap) -> impl Strategy<Value = RawPacket> {
@@ -566,6 +550,23 @@ pub fn sr_tcp() -> impl Strategy<Value = RawPacket> {
 ///             Ok(())
 ///         }
 ///     ).unwrap();
+/// }
+/// ```
+/// #[dpdk_test]
+/// fn sr_tcp_packet() {
+///     proptest!(|(packet in sr_tcp_with(fieldmap! {
+///         field::ipv6_src => "::1".parse(),
+///         field::sr_segments => vec!["::2".parse(), "::3".parse()]
+///         field::tcp_dst_port => 80,
+///     }))| {
+///         let packet = packet.parse::<Ethernet>().unwrap();
+///         let v6 = packet.parse::<Ipv6>().unwrap();
+///         prop_assert_eq!("::1".parse(), v6.src());
+///         let srh = v6.parse::<SegmentRouting<Ipv6>>().unwrap();
+///         prop_assert_eq!(2, srh.segments().len());
+///         let tcp = srh.parse::<Tcp<SegmentRouting<Ipv6>>>().unwrap();
+///         prop_assert_eq!(80, tcp.dst_port());
+///     });
 /// }
 /// ```
 pub fn sr_tcp_with(map: StrategyMap) -> impl Strategy<Value = RawPacket> {

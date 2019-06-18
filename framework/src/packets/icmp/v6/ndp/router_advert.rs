@@ -270,6 +270,7 @@ mod tests {
     use crate::packets::icmp::v6::{Icmpv6Message, Icmpv6Parse, Icmpv6Types, NdpOption, NdpPacket};
     use crate::packets::ip::v6::Ipv6;
     use crate::packets::{Ethernet, Fixed, Packet, RawPacket};
+    use crate::testing::dpdk_test;
     use fallible_iterator::FallibleIterator;
 
     #[test]
@@ -277,51 +278,47 @@ mod tests {
         assert_eq!(12, RouterAdvertisement::size());
     }
 
-    #[test]
+    #[dpdk_test]
     fn parse_router_advertisement_packet() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
 
-            if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
-                assert_eq!(Icmpv6Types::RouterAdvertisement, advert.msg_type());
-                assert_eq!(0, advert.code());
-                assert_eq!(0xf50c, advert.checksum());
-                assert_eq!(64, advert.current_hop_limit());
-                assert!(!advert.managed_addr_cfg());
-                assert!(advert.other_cfg());
-                assert_eq!(3600, advert.router_lifetime());
-                assert_eq!(0, advert.reachable_time());
-                assert_eq!(0, advert.retrans_timer());
-            } else {
-                panic!("bad packet");
-            }
+        if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
+            assert_eq!(Icmpv6Types::RouterAdvertisement, advert.msg_type());
+            assert_eq!(0, advert.code());
+            assert_eq!(0xf50c, advert.checksum());
+            assert_eq!(64, advert.current_hop_limit());
+            assert!(!advert.managed_addr_cfg());
+            assert!(advert.other_cfg());
+            assert_eq!(3600, advert.router_lifetime());
+            assert_eq!(0, advert.reachable_time());
+            assert_eq!(0, advert.retrans_timer());
+        } else {
+            panic!("bad packet");
         }
     }
 
-    #[test]
+    #[dpdk_test]
     fn find_source_link_layer_address() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let packet = RawPacket::from_bytes(&ROUTER_ADVERT_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
 
-            if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
-                let mut slla_found = false;
-                let mut iter = advert.options();
-                while let Ok(Some(option)) = iter.next() {
-                    if let NdpOption::SourceLinkLayerAddress(addr) = option {
-                        assert_eq!(1, addr.length());
-                        assert_eq!("70:3a:cb:1b:f9:7a", addr.addr().to_string());
-                        slla_found = true;
-                    }
+        if let Ok(Icmpv6Message::RouterAdvertisement(advert)) = ipv6.parse_icmpv6() {
+            let mut slla_found = false;
+            let mut iter = advert.options();
+            while let Ok(Some(option)) = iter.next() {
+                if let NdpOption::SourceLinkLayerAddress(addr) = option {
+                    assert_eq!(1, addr.length());
+                    assert_eq!("70:3a:cb:1b:f9:7a", addr.addr().to_string());
+                    slla_found = true;
                 }
-
-                assert!(slla_found);
-            } else {
-                panic!("bad packet");
             }
+
+            assert!(slla_found);
+        } else {
+            panic!("bad packet");
         }
     }
 }

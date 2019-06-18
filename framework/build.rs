@@ -18,8 +18,6 @@ fn main() {
         .unwrap()
         .join("target")
         .join("native");
-    //println!("DPDK {:?}", dpdk_libs.to_str());
-    // Use DPDK directory as -L
     println!(
         "cargo:rustc-link-search=native={}",
         dpdk_libs.to_str().unwrap()

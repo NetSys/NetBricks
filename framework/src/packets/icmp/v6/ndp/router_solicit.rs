@@ -102,25 +102,24 @@ mod tests {
     use crate::packets::icmp::v6::{Icmpv6Message, Icmpv6Parse, Icmpv6Types};
     use crate::packets::ip::v6::Ipv6;
     use crate::packets::{Ethernet, Fixed, Packet, RawPacket};
+    use crate::testing::dpdk_test;
 
     #[test]
     fn size_of_router_solicitation() {
         assert_eq!(4, RouterSolicitation::size());
     }
 
-    #[test]
+    #[dpdk_test]
     fn parse_router_solicitation_packet() {
-        dpdk_test! {
-            let packet = RawPacket::from_bytes(&ROUTER_SOLICIT_PACKET).unwrap();
-            let ethernet = packet.parse::<Ethernet>().unwrap();
-            let ipv6 = ethernet.parse::<Ipv6>().unwrap();
+        let packet = RawPacket::from_bytes(&ROUTER_SOLICIT_PACKET).unwrap();
+        let ethernet = packet.parse::<Ethernet>().unwrap();
+        let ipv6 = ethernet.parse::<Ipv6>().unwrap();
 
-            if let Ok(Icmpv6Message::RouterSolicitation(solicit)) = ipv6.parse_icmpv6() {
-                assert_eq!(Icmpv6Types::RouterSolicitation, solicit.msg_type());
-                assert_eq!(0, solicit.reserved());
-            } else {
-                panic!("bad packet");
-            }
+        if let Ok(Icmpv6Message::RouterSolicitation(solicit)) = ipv6.parse_icmpv6() {
+            assert_eq!(Icmpv6Types::RouterSolicitation, solicit.msg_type());
+            assert_eq!(0, solicit.reserved());
+        } else {
+            panic!("bad packet");
         }
     }
 }

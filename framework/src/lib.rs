@@ -12,7 +12,6 @@
 // https://github.com/rust-lang/rust/issues/31844
 #![feature(specialization)]
 
-// For cache aware allocation
 extern crate alloc;
 #[macro_use]
 extern crate clap;
@@ -28,6 +27,8 @@ extern crate libc;
 #[macro_use]
 extern crate log;
 extern crate net2;
+extern crate self as netbricks;
+extern crate netbricks_codegen;
 #[cfg(unix)]
 extern crate nix;
 #[cfg(any(test, feature = "test"))]
@@ -44,11 +45,6 @@ extern crate tokio_signal;
 extern crate tokio_threadpool;
 extern crate twox_hash;
 
-// need these first so other modules in netbricks can use the macros
-#[cfg(any(test, feature = "test"))]
-#[cfg_attr(any(test, feature = "test"), macro_use)]
-pub mod tests;
-
 #[macro_use]
 pub mod common;
 pub mod allocators;
@@ -64,6 +60,6 @@ pub mod runtime;
 pub mod scheduler;
 pub mod shared_state;
 pub mod state;
-#[cfg(feature = "test")]
+#[cfg(any(test, feature = "test"))]
 pub mod testing;
 pub mod utils;

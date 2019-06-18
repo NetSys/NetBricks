@@ -162,150 +162,139 @@ mod tests {
     use crate::packets::ip::v4::Ipv4;
     use crate::packets::ip::ProtocolNumbers;
     use crate::packets::{EtherTypes, Ethernet, MacAddr, RawPacket, TCP_PACKET, UDP_PACKET};
+    use crate::testing::dpdk_test;
 
-    #[test]
+    #[dpdk_test]
     fn filter_operator() {
-        dpdk_test! {
-            let (producer, batch) = single_threaded_batch::<RawPacket>(1);
-            let mut batch = batch.filter(|_| false);
-            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+        let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+        let mut batch = batch.filter(|_| false);
+        producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
 
-            assert!(batch.next().unwrap().is_err());
-        }
+        assert!(batch.next().unwrap().is_err());
     }
 
-    #[test]
+    #[dpdk_test]
     fn map_operator() {
-        dpdk_test! {
-            let (producer, batch) = single_threaded_batch::<RawPacket>(1);
-            let mut batch = batch.map(|p| p.parse::<Ethernet>());
-            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+        let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+        let mut batch = batch.map(|p| p.parse::<Ethernet>());
+        producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
 
-            let packet = batch.next().unwrap().unwrap();
-            assert_eq!(EtherTypes::Ipv4, packet.ether_type());
-        }
+        let packet = batch.next().unwrap().unwrap();
+        assert_eq!(EtherTypes::Ipv4, packet.ether_type());
     }
 
-    #[test]
+    #[dpdk_test]
     fn filter_map_operator() {
-        dpdk_test! {
-            let (producer, batch) = single_threaded_batch::<RawPacket>(2);
-            let mut batch = batch.filter_map(|p| {
-                let v4 = p.parse::<Ethernet>()?.parse::<Ipv4>()?;
-                if v4.protocol() == ProtocolNumbers::Udp {
-                    let mut eth = v4.deparse();
-                    eth.swap_addresses();
-                    Ok(Some(eth.parse::<Ipv4>()?))
-                } else {
-                    Ok(None)
-                }
+        let (producer, batch) = single_threaded_batch::<RawPacket>(2);
+        let mut batch = batch.filter_map(|p| {
+            let v4 = p.parse::<Ethernet>()?.parse::<Ipv4>()?;
+            if v4.protocol() == ProtocolNumbers::Udp {
+                let mut eth = v4.deparse();
+                eth.swap_addresses();
+                Ok(Some(eth.parse::<Ipv4>()?))
+            } else {
+                Ok(None)
+            }
+        });
+
+        producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+        producer.enqueue(RawPacket::from_bytes(&ICMPV4_PACKET).unwrap());
+
+        let udp_packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
+        let ethernet = udp_packet.parse::<Ethernet>().unwrap();
+        let p1 = batch.next().unwrap().unwrap();
+        assert_eq!(ProtocolNumbers::Udp, p1.protocol());
+        let p1v4 = p1.deparse();
+        assert_eq!(ethernet.dst(), p1v4.src());
+        assert_eq!(ethernet.src(), p1v4.dst());
+
+        assert!(batch.next().unwrap().is_err());
+    }
+
+    #[dpdk_test]
+    fn for_each_operator() {
+        let mut invoked = 0;
+
+        {
+            let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+            let mut batch = batch.for_each(|_| {
+                invoked += 1;
+                Ok(())
+            });
+            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+
+            let _ = batch.next();
+        }
+
+        assert_eq!(1, invoked);
+    }
+
+    #[dpdk_test]
+    fn group_by_operator() {
+        let (producer, batch) = single_threaded_batch::<RawPacket>(2);
+
+        let mut batch = batch
+            .map(|p| p.parse::<Ethernet>()?.parse::<Ipv4>())
+            .group_by(
+                |p| p.protocol(),
+                |groups| {
+                    compose!(
+                        groups,
+                        ProtocolNumbers::Tcp => |group| {
+                            group.map(|mut p| {
+                                p.set_ttl(1);
+                                Ok(p)
+                            })
+                        },
+                        ProtocolNumbers::Udp => |group| {
+                            group.map(|mut p| {
+                                p.set_ttl(2);
+                                Ok(p)
+                            })
+                        },
+                        _ => |group| {
+                            group.filter(|_| {
+                                false
+                            })
+                        }
+                    );
+                },
+            );
+
+        producer.enqueue(RawPacket::from_bytes(&TCP_PACKET).unwrap());
+        producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
+        producer.enqueue(RawPacket::from_bytes(&ICMPV4_PACKET).unwrap());
+
+        let p1 = batch.next().unwrap().unwrap();
+        assert_eq!(1, p1.ttl());
+        let p2 = batch.next().unwrap().unwrap();
+        assert_eq!(2, p2.ttl());
+        assert!(batch.next().unwrap().is_err());
+    }
+
+    #[dpdk_test]
+    fn emit_operator() {
+        let (producer, batch) = single_threaded_batch::<RawPacket>(1);
+        let mut batch = batch
+            .map(|p| p.parse::<Ethernet>())
+            .map(|mut e| {
+                // ff:ff:ff:ff:ff:ff
+                e.set_src(MacAddr::new(255, 255, 255, 255, 255, 255));
+                Ok(e)
+            })
+            .emit()
+            .map(|mut e| {
+                e.set_src(MacAddr::new(0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF));
+                Ok(e)
             });
 
-            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
-            producer.enqueue(RawPacket::from_bytes(&ICMPV4_PACKET).unwrap());
+        producer.enqueue(RawPacket::from_bytes(&TCP_PACKET).unwrap());
 
-            let udp_packet = RawPacket::from_bytes(&UDP_PACKET).unwrap();
-            let ethernet = udp_packet.parse::<Ethernet>().unwrap();
-            let p1 = batch.next().unwrap().unwrap();
-            assert_eq!(ProtocolNumbers::Udp, p1.protocol());
-            let p1v4 = p1.deparse();
-            assert_eq!(ethernet.dst(), p1v4.src());
-            assert_eq!(ethernet.src(), p1v4.dst());
-
-            assert!(batch.next().unwrap().is_err());
-        }
-    }
-
-    #[test]
-    fn for_each_operator() {
-        dpdk_test! {
-            let mut invoked = 0;
-
-            {
-                let (producer, batch) = single_threaded_batch::<RawPacket>(1);
-                let mut batch = batch.for_each(|_| {
-                    invoked += 1;
-                    Ok(())
-                });
-                producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
-
-                let _ = batch.next();
-            }
-
-            assert_eq!(1, invoked);
-        }
-    }
-
-    #[test]
-    fn group_by_operator() {
-        dpdk_test! {
-            let (producer, batch) = single_threaded_batch::<RawPacket>(2);
-
-            let mut batch = batch
-                .map(|p| p.parse::<Ethernet>()?.parse::<Ipv4>())
-                .group_by(
-                    |p| p.protocol(),
-                    |groups| {
-                        compose!(
-                            groups,
-                            ProtocolNumbers::Tcp => |group| {
-                                group.map(|mut p| {
-                                    p.set_ttl(1);
-                                    Ok(p)
-                                })
-                            },
-                            ProtocolNumbers::Udp => |group| {
-                                group.map(|mut p| {
-                                    p.set_ttl(2);
-                                    Ok(p)
-                                })
-                            },
-                            _ => |group| {
-                                group.filter(|_| {
-                                    false
-                                })
-                            }
-                        );
-                    },
-                );
-
-            producer.enqueue(RawPacket::from_bytes(&TCP_PACKET).unwrap());
-            producer.enqueue(RawPacket::from_bytes(&UDP_PACKET).unwrap());
-            producer.enqueue(RawPacket::from_bytes(&ICMPV4_PACKET).unwrap());
-
-            let p1 = batch.next().unwrap().unwrap();
-            assert_eq!(1, p1.ttl());
-            let p2 = batch.next().unwrap().unwrap();
-            assert_eq!(2, p2.ttl());
-            assert!(batch.next().unwrap().is_err());
-        }
-    }
-
-    #[test]
-    fn emit_operator() {
-        dpdk_test! {
-            let (producer, batch) = single_threaded_batch::<RawPacket>(1);
-            let mut batch = batch
-                .map(|p| p.parse::<Ethernet>())
-                .map(|mut e| {
-                    // ff:ff:ff:ff:ff:ff
-                    e.set_src(MacAddr::new(255, 255, 255, 255, 255, 255));
-                    Ok(e)
-                })
-                .emit()
-                .map(|mut e| {
-                    e.set_src(MacAddr::new(0x12, 0x34, 0x56, 0xAB, 0xCD, 0xEF));
-                    Ok(e)
-                });
-
-            producer.enqueue(RawPacket::from_bytes(&TCP_PACKET).unwrap());
-
-            let next = batch.next().unwrap();
-            assert!(next.is_err());
-            if let Err(PacketError::Emit(mbuf)) = next {
-                let eth = RawPacket::from_mbuf(mbuf).parse::<Ethernet>().unwrap();
-                assert_eq!("ff:ff:ff:ff:ff:ff", eth.src().to_string());
-            }
+        let next = batch.next().unwrap();
+        assert!(next.is_err());
+        if let Err(PacketError::Emit(mbuf)) = next {
+            let eth = RawPacket::from_mbuf(mbuf).parse::<Ethernet>().unwrap();
+            assert_eq!("ff:ff:ff:ff:ff:ff", eth.src().to_string());
         }
     }
 }
