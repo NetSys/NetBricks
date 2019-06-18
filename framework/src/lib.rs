@@ -27,7 +27,6 @@ extern crate libc;
 #[macro_use]
 extern crate log;
 extern crate net2;
-extern crate self as netbricks;
 extern crate netbricks_codegen;
 #[cfg(unix)]
 extern crate nix;
@@ -37,6 +36,7 @@ extern crate proptest;
 extern crate regex;
 #[cfg(feature = "sctp")]
 extern crate sctp;
+extern crate self as netbricks;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;

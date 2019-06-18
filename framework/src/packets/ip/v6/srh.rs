@@ -634,9 +634,18 @@ mod tests {
         assert_eq!(1, srh.segments_left());
         assert_eq!(srh.segments()[1], srh.envelope().dst());
 
-        assert_eq!("2001:db8:85a3::8a2e:370:7333", srh.next_segment().to_string());
-        assert_eq!("2001:db8:85a3::8a2e:370:7334", srh.current_segment().to_string());
-        assert_eq!("2001:db8:85a3::8a2e:370:7335", srh.previous_segment().to_string());
+        assert_eq!(
+            "2001:db8:85a3::8a2e:370:7333",
+            srh.next_segment().to_string()
+        );
+        assert_eq!(
+            "2001:db8:85a3::8a2e:370:7334",
+            srh.current_segment().to_string()
+        );
+        assert_eq!(
+            "2001:db8:85a3::8a2e:370:7335",
+            srh.previous_segment().to_string()
+        );
 
         assert!(srh.set_segments_left(10).is_err());
         assert_eq!(1, srh.segments_left());
