@@ -1,6 +1,6 @@
 mod echo_reply;
 mod echo_request;
-mod ndp;
+pub mod ndp;
 mod too_big;
 
 pub use self::echo_reply::*;

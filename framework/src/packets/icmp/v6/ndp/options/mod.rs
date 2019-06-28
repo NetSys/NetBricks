@@ -9,6 +9,8 @@ pub use self::prefix_info::*;
 use crate::native::mbuf::MBuf;
 use crate::packets::{buffer, ParseError};
 use fallible_iterator::FallibleIterator;
+use packets::icmp::v6::ndp::Fields;
+use packets::Fixed;
 
 const SOURCE_LINK_LAYER_ADDR: u8 = 1;
 const TARGET_LINK_LAYER_ADDR: u8 = 2;
@@ -24,6 +26,48 @@ pub enum NdpOption {
     Mtu(Mtu),
     /// An undefined NDP option
     Undefined(u8, u8),
+}
+
+
+pub trait Fields: Fixed {}
+
+pub trait NdpOptionsTrait {
+    #[doc(hidden)]
+    fn push_option(&self) -> Result<Self, NdpOption>
+        where
+            Self: Sized;
+    /// The header type of the packet
+    type fields: Fields;
+
+    fn fields(&self) -> &Self::Fields;
+}
+
+
+impl NdpOptionsTrait for NdpOption {
+
+    #[doc(hidden)]
+    #[inline]
+    fn push_option(&self) -> Result<Self, NdpOption> {
+
+        buffer::alloc(mbuf, self.offset, Self::Fields::size())?;
+        let option = buffer::write_item::<Self::Fields>(self.mbuf, self.offset, &Default::default())?;
+
+        Ok(NdpOption {
+            envelope,
+            mbuf,
+            offset,
+            option,
+        })
+    }
+
+    type fields = ();
+
+    #[doc(hidden)]
+    #[inline]
+    fn fields(&self) -> &Self::Fields {
+        unsafe { &(*self.fields) }
+    }
+
 }
 
 /// NDP options iterator
